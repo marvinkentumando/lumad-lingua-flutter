@@ -1,0 +1,157 @@
+# Role-Based Access Control (RBAC) — Implementation Plan
+
+## Overview
+
+This plan outlines how to implement hardcoded role-based access in Lumad Lingua so that each user role sees a **different bottom navigation bar** and can only access **their permitted screens**.
+
+---
+
+## Roles & Screen Access
+
+| Screen | Learner | Contributor | Validator | Educator | Admin |
+|---|:---:|:---:|:---:|:---:|:---:|
+| Home (Dashboard) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Archive Map | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Dictionary | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Learning Hub | ✅ | ✅ | — | ✅ | ✅ |
+| Profile | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Contributor | — | ✅ | — | — | ✅ |
+| Validator | — | — | ✅ | — | ✅ |
+| Educator Dashboard | — | — | — | ✅ | ✅ |
+| Admin Panel | — | — | — | — | ✅ |
+
+## Bottom Nav Tabs Per Role
+
+| Role | Tabs |
+|---|---|
+| **Learner** | Home · Map · Words · Learn · You |
+| **Contributor** | Home · Map · Words · Add · You |
+| **Validator** | Home · Map · Words · Check · You |
+| **Educator** | Home · Map · Words · Teach · You |
+| **Admin** | Home · Map · Words · Admin · You |
+
+---
+
+## Step-by-Step Implementation
+
+### Step 1: Create a Role Provider
+
+Create a new file `lib/providers/role_provider.dart` that holds the current user's role as an enum. Since we're hardcoding everything, this will default to `learner` and can be changed from the login screen or profile.
+
+```dart
+// lib/providers/role_provider.dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+enum UserRole { learner, contributor, validator, educator, admin }
+
+class RoleNotifier extends Notifier<UserRole> {
+  @override
+  UserRole build() => UserRole.learner;
+
+  void setRole(UserRole role) => state = role;
+}
+
+final roleProvider = NotifierProvider<RoleNotifier, UserRole>(
+  RoleNotifier.new,
+);
+```
+
+### Step 2: Define Nav Config Per Role
+
+Create a helper that maps each role to its navigation items and routes. This keeps the `MainLayout` clean.
+
+```dart
+// lib/config/role_nav_config.dart
+import 'package:flutter/material.dart';
+import '../providers/role_provider.dart';
+
+class NavItem {
+  final IconData icon;
+  final String label;
+  final String route;
+  const NavItem(this.icon, this.label, this.route);
+}
+
+List<NavItem> getNavItemsForRole(UserRole role) {
+  // Common tabs everyone gets
+  const home = NavItem(Icons.home_rounded, 'HOME', '/');
+  const map = NavItem(Icons.map_rounded, 'MAP', '/map');
+  const words = NavItem(Icons.menu_book_rounded, 'WORDS', '/dictionary');
+  const profile = NavItem(Icons.person_rounded, 'YOU', '/profile');
+
+  switch (role) {
+    case UserRole.learner:
+      return [home, map, words, NavItem(Icons.school_rounded, 'LEARN', '/learning'), profile];
+    case UserRole.contributor:
+      return [home, map, words, NavItem(Icons.add_circle_rounded, 'ADD', '/contribute'), profile];
+    case UserRole.validator:
+      return [home, map, words, NavItem(Icons.verified_rounded, 'CHECK', '/validate'), profile];
+    case UserRole.educator:
+      return [home, map, words, NavItem(Icons.history_edu_rounded, 'TEACH', '/educator-dashboard'), profile];
+    case UserRole.admin:
+      return [home, map, words, NavItem(Icons.admin_panel_settings_rounded, 'ADMIN', '/admin'), profile];
+  }
+}
+```
+
+### Step 3: Update the Login Screen
+
+Add role selection to the login page. When the user taps "Sign In", set the role in the provider before navigating.
+
+```dart
+// In login_screen.dart — add a role selector dropdown/chips
+// On login:
+ref.read(roleProvider.notifier).setRole(selectedRole);
+context.go('/');
+```
+
+### Step 4: Refactor MainLayout
+
+Replace the current hardcoded 9-tab `BottomNavigationBar` with a dynamic one driven by the role provider.
+
+Key changes to [main_layout.dart](file:///c:/Users/Aspire-3/Desktop/Lumad%20Lingua%20Flutter/lib/screens/main_layout.dart):
+- Read `roleProvider` to get the current role
+- Call `getNavItemsForRole(role)` to get the nav items
+- Build the `BottomNavigationBar` from that list
+- Derive `currentIndex` by matching the current route against the nav items
+
+### Step 5: Guard Routes (Optional but Recommended)
+
+Add a redirect in GoRouter that checks the user's role. If a learner tries to navigate to `/admin`, redirect them back to `/`.
+
+```dart
+// In main.dart router config
+redirect: (context, state) {
+  final container = ProviderScope.containerOf(context);
+  final role = container.read(roleProvider);
+  final loc = state.uri.toString();
+  
+  // Block unauthorized routes
+  if (loc.startsWith('/admin') && role != UserRole.admin) return '/';
+  if (loc.startsWith('/validate') && role != UserRole.validator && role != UserRole.admin) return '/';
+  if (loc.startsWith('/contribute') && role != UserRole.contributor && role != UserRole.admin) return '/';
+  if (loc.startsWith('/educator') && role != UserRole.educator && role != UserRole.admin) return '/';
+  
+  return null; // Allow navigation
+},
+```
+
+### Step 6: Conditionally Show Dashboard Sections
+
+Some dashboard cards should only appear for certain roles (e.g., "Daily Rituals" for learners, "Pending Reviews" for validators). Use the role provider in the dashboard to conditionally render widgets.
+
+---
+
+## Implementation Order
+
+| # | Task | File(s) |
+|---|---|---|
+| 1 | Create `role_provider.dart` | `lib/providers/role_provider.dart` |
+| 2 | Create `role_nav_config.dart` | `lib/config/role_nav_config.dart` |
+| 3 | Add role selector to Login screen | `lib/screens/login_screen.dart` |
+| 4 | Refactor `MainLayout` nav bar | `lib/screens/main_layout.dart` |
+| 5 | Add route guards to GoRouter | `lib/main.dart` |
+| 6 | Conditionally render dashboard sections | `lib/screens/dashboard_screen.dart` |
+
+> [!TIP]
+> Since you want everything hardcoded first, steps 1–4 are the most impactful. Steps 5–6 are polish that can come after.

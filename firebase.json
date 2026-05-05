@@ -1,0 +1,28 @@
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "lumadlingua",
+          "appId": "1:941151806887:android:6c4a37937ae32e76fb8282",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "lumadlingua",
+          "configurations": {
+            "android": "1:941151806887:android:6c4a37937ae32e76fb8282",
+            "ios": "1:941151806887:ios:1d749c9a2fb11b30fb8282",
+            "macos": "1:941151806887:ios:1d749c9a2fb11b30fb8282",
+            "web": "1:941151806887:web:993ab6d91b5511e8fb8282",
+            "windows": "1:941151806887:web:48de1b5050db0807fb8282"
+          }
+        }
+      }
+    }
+  }
+}

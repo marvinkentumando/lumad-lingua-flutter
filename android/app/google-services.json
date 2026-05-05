@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "941151806887",
+    "project_id": "lumadlingua",
+    "storage_bucket": "lumadlingua.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:941151806887:android:6c4a37937ae32e76fb8282",
+        "android_client_info": {
+          "package_name": "com.example.lumad_lingua"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCNKBx20FxwqjZ4d2J0ghBiwpSgiDtUuZM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,1454 @@
+import 'dart:math' show cos, sin;
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_typography.dart';
+import 'package:lumad_lingua/services/auth_service.dart';
+import '../providers/learning_provider.dart';
+import '../providers/theme_provider.dart';
+import '../widgets/brand_card.dart';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:lumad_lingua/services/firebase_service.dart';
+import '../providers/role_provider.dart';
+import '../providers/contributor_request_provider.dart';
+import '../providers/artifact_provider.dart';
+import '../models/artifact.dart';
+import 'package:go_router/go_router.dart';
+import '../widgets/impact_card.dart';
+import '../services/impact_service.dart';
+import '../widgets/daily_check_in_board.dart';
+import '../widgets/level_up_modal.dart';
+import '../widgets/skeleton.dart';
+import '../widgets/graceful_image.dart';
+import '../widgets/branded_empty_state.dart';
+
+
+class ProfileScreen extends ConsumerWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+    final currentXp = ref.watch(xpProvider);
+    final currentRole = ref.watch(roleProvider);
+    final profile = ref.watch(userProfileProvider).value;
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: authState.when(
+        loading: () => _buildProfileSkeleton(),
+        error: (e, _) => Center(child: Text('Error: $e')),
+        data: (user) {
+          return SafeArea(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                children: [
+                  const SizedBox(height: 40),
+                  _buildAvatarSection(context, ref, user, currentRole, profile),
+                  if (profile?['bio'] != null &&
+                      (profile?['bio'] as String).isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 40),
+                      child: Text(
+                        profile!['bio'],
+                        textAlign: TextAlign.center,
+                        style: AppTypography.body.copyWith(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white60
+                              : AppColors.creamText2,
+                          fontStyle: FontStyle.italic,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 40),
+                  _buildStatsRow(
+                    context,
+                    ref,
+                    currentRole,
+                    user?.uid ?? '',
+                    currentXp,
+                    profile,
+                  ),
+                  const SizedBox(height: 40),
+                  if (currentRole == UserRole.learner)
+                    _buildArtifactsSection(context, ref)
+                  else
+                    _buildContributionImpact(
+                      context,
+                      ref,
+                      currentRole,
+                      user?.uid ?? '',
+                    ),
+                  const SizedBox(height: 40),
+                  _buildJourneyManagement(
+                    context,
+                    ref,
+                    currentRole,
+                    user,
+                    profile,
+                  ),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String _getRoleBadge(UserRole role, Map<String, dynamic>? profile) {
+    final location = profile?['location'] ?? 'PHILIPPINES';
+    switch (role) {
+      case UserRole.admin:
+        return 'SYSTEM OVERSEER  •  $location';
+      case UserRole.validator:
+        return 'ELDER VALIDATOR  •  $location';
+      case UserRole.educator:
+        return 'WISDOM GUIDE  •  $location';
+      case UserRole.contributor:
+        return 'CULTURAL KEEPER  •  $location';
+      case UserRole.learner:
+        return 'ELDER PATHFINDER  •  $location';
+    }
+  }
+
+  Widget _buildAvatarSection(
+    BuildContext context,
+    WidgetRef ref,
+    dynamic user,
+    UserRole role,
+    Map<String, dynamic>? profile,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      children: [
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            // Diamond glow effect
+            Transform.rotate(
+              angle: 45 * 3.14 / 180,
+              child: Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  color: (isDark ? Colors.white : Colors.black).withValues(
+                    alpha: 0.02,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: AppColors.gold500,
+                shape: BoxShape.circle,
+              ),
+              child: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 70,
+                    backgroundColor: Colors.black,
+                    backgroundImage: user?.photoURL != null
+                        ? NetworkImage(user!.photoURL!)
+                        : null,
+                    child: user?.photoURL == null
+                        ? const Icon(
+                            Icons.person_rounded,
+                            size: 80,
+                            color: Colors.white,
+                          )
+                        : null,
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 8,
+                    child: GestureDetector(
+                      onTap: () => _pickAndUploadImage(context, ref, user?.uid),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: AppColors.gold500,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.edit_rounded,
+                          size: 16,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ).animate().scale(
+          begin: const Offset(0.8, 0.8),
+          duration: 600.ms,
+          curve: Curves.easeOutBack,
+        ),
+        const SizedBox(height: 24),
+        Text(
+          user?.displayName ?? profile?['username'] ?? 'Tribe Member',
+          style: AppTypography.h1ExtraBold.copyWith(
+            color: isDark ? AppColors.gold500 : AppColors.forest500,
+            fontSize: 32,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _getRoleBadge(role, profile),
+          style: AppTypography.label.copyWith(
+            color: isDark ? Colors.white38 : AppColors.creamText3,
+            fontSize: 12,
+            letterSpacing: 1.5,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatsRow(
+    BuildContext context,
+    WidgetRef ref,
+    UserRole role,
+    String userId,
+    int xp,
+    Map<String, dynamic>? profile,
+  ) {
+    if (role == UserRole.learner) {
+      final streak = profile?['streak'] as int? ?? 0;
+      final words = profile?['wordCount'] as int? ?? 0;
+      return _ProfileStatsRow(xp: xp, streak: streak, words: words);
+    }
+    return _StaffStatsRow(role: role, userId: userId);
+  }
+
+  Widget _buildContributionImpact(
+    BuildContext context,
+    WidgetRef ref,
+    UserRole role,
+    String userId,
+  ) {
+    final impactAsync = ref.watch(contributionImpactProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Contribution Impact',
+          style: AppTypography.h3.copyWith(
+            color: isDark ? AppColors.gold500 : AppColors.forest500,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 20),
+        impactAsync.when(
+          data: (impact) => ImpactCard(
+            studentsHelped: impact.studentsHelpedToday,
+            totalEncounters: impact.totalReach,
+            accuracyRate: impact.accuracyRate,
+            wordsValidated: impact.validatedWords,
+          ),
+          loading: () => const Skeleton(height: 120, borderRadius: 24),
+          error: (_, __) => const SizedBox.shrink(),
+        ),
+      ],
+    ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1);
+  }
+
+  Widget _buildArtifactsSection(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final artifactsAsync = ref.watch(userArtifactsProvider);
+    final stats = ref.watch(artifactStatsProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Earned Artifacts',
+                  style: AppTypography.h3.copyWith(
+                    color: isDark ? AppColors.gold500 : AppColors.forest500,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  '${stats['earned']} of ${stats['total']} recovered',
+                  style: AppTypography.body.copyWith(
+                    color: isDark ? Colors.white38 : AppColors.creamText2,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+            GestureDetector(
+              onTap: () => context.push('/achievements'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: AppColors.gold500.withValues(alpha: 0.3),
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'VIEW ALL',
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.gold500,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 10,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        artifactsAsync.when(
+          data: (artifacts) {
+            if (artifacts.isEmpty) {
+              return const BrandedEmptyState(
+                title: 'No Artifacts',
+                message: 'You haven\'t earned any ancestral artifacts yet. Continue your journey to recover lost cultural treasures.',
+                icon: Icons.lock_outline,
+              );
+            }
+            return SizedBox(
+              height: 160,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                itemCount: artifacts.length > 3 ? 3 : artifacts.length,
+                separatorBuilder: (context, _) => const SizedBox(width: 16),
+                itemBuilder: (context, index) {
+                  return _buildArtifactCard(context, artifacts[index]);
+                },
+              ),
+            );
+          },
+          loading: () => _buildArtifactScrollSkeleton(),
+          error: (e, _) => Text(
+            'Error loading artifacts',
+            style: TextStyle(color: AppColors.semanticRed),
+          ),
+        ),
+      ],
+    ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1);
+  }
+
+  Widget _buildArtifactCard(BuildContext context, Artifact artifact) {
+    final isEarned = artifact.isEarned;
+    final tierColor = _getTierColor(artifact.tier);
+
+    return GestureDetector(
+      onTap: () => context.push('/artifact-detail', extra: artifact),
+      child: Hero(
+        tag: 'artifact_${artifact.id}',
+        child: BrandCard(
+        theme: isEarned ? BrandCardTheme.cream : BrandCardTheme.vibrant,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        borderRadius: 24,
+        child: SizedBox(
+          width: 110,
+          child: Column(
+            children: [
+              // Emoji/Image badge
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isEarned
+                      ? tierColor.withValues(alpha: 0.1)
+                      : Colors.black26,
+                  border: Border.all(
+                    color: isEarned
+                        ? tierColor.withValues(alpha: 0.5)
+                        : Colors.white10,
+                    width: 2,
+                  ),
+                  boxShadow: isEarned
+                      ? [
+                          BoxShadow(
+                            color: tierColor.withValues(alpha: 0.2),
+                            blurRadius: 10,
+                            spreadRadius: 2,
+                          ),
+                        ]
+                      : null,
+                ),
+                alignment: Alignment.center,
+                child: Opacity(
+                  opacity: isEarned ? 1.0 : 0.3,
+                  child: artifact.imageUrl.isNotEmpty
+                      ? GracefulImage(
+                          imageUrl: artifact.imageUrl,
+                          width: 52,
+                          height: 52,
+                          borderRadius: 26,
+                        )
+                      : Text(
+                          artifact.emoji,
+                          style: const TextStyle(fontSize: 26),
+                        ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                artifact.title,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.label.copyWith(
+                  color: isEarned ? Colors.black : Colors.white38,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (!isEarned) ...[
+                // Progress Bar for in-progress artifacts
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: artifact.progress,
+                    minHeight: 4,
+                    backgroundColor: Colors.white10,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      tierColor.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${artifact.currentProgress}/${artifact.targetValue}',
+                  style: AppTypography.label.copyWith(
+                    fontSize: 8,
+                    color: Colors.white24,
+                  ),
+                ),
+              ] else
+                Text(
+                  artifact.tier.name.toUpperCase(),
+                  style: AppTypography.label.copyWith(
+                    fontSize: 8,
+                    color: Colors.black54,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+      ),
+    );
+  }
+
+  Color _getTierColor(ArtifactTier tier) {
+    switch (tier) {
+      case ArtifactTier.ancient:
+        return AppColors.gold500;
+      case ArtifactTier.sacred:
+        return Colors.purpleAccent;
+      case ArtifactTier.legendary:
+        return Colors.orangeAccent;
+      case ArtifactTier.epic:
+        return Colors.deepPurpleAccent;
+      case ArtifactTier.rare:
+        return Colors.blueAccent;
+      case ArtifactTier.common:
+        return Colors.greenAccent;
+    }
+  }
+
+  Widget _buildJourneyManagement(
+    BuildContext context,
+    WidgetRef ref,
+    UserRole role,
+    dynamic user,
+    Map<String, dynamic>? profile,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Journey Management',
+          style: AppTypography.h3.copyWith(
+            color: isDark ? AppColors.gold500 : AppColors.forest500,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 20),
+        _buildManagementTile(
+          context,
+          isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+          isDark ? 'Bright Mode' : 'Ancient Mode',
+          'Toggle your path visibility',
+          onTap: () => ref.read(themeNotifierProvider.notifier).toggleTheme(),
+        ),
+        const SizedBox(height: 12),
+        _buildManagementTile(
+          context,
+          Icons.settings_suggest_rounded,
+          'Edit Profile',
+          'Update your location and bio',
+          onTap: () => _showEditProfileDialog(
+            context,
+            ref,
+            userId: user?.uid ?? '',
+            profile: profile,
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (role == UserRole.learner || role == UserRole.educator)
+          ref
+              .watch(pendingContributorRequestProvider)
+              .when(
+                data: (pendingRequest) {
+                  if (pendingRequest != null) {
+                    if (pendingRequest.status == 'rejected') {
+                      return _buildManagementTile(
+                        context,
+                        Icons.error_outline_rounded,
+                        'Request Denied',
+                        'Your application was not approved',
+                        onTap: () => _showDeniedDialog(context, pendingRequest.message ?? 'No additional details provided.'),
+                      );
+                    }
+                    return _buildManagementTile(
+                      context,
+                      Icons.hourglass_empty_rounded,
+                      'Request Pending',
+                      'Tap to cancel your application',
+                      onTap: () => _cancelContributorRequest(context, ref, pendingRequest.id),
+                    );
+                  }
+                  return _buildManagementTile(
+                    context,
+                    Icons.edit_note_rounded,
+                    'Become a Contributor',
+                    'Help expand the language core',
+                    onTap: () => _requestContributorRole(context, ref, profile),
+                  );
+                },
+                loading: () => const Skeleton(height: 80, borderRadius: 35),
+                error: (e, _) => const SizedBox.shrink(),
+              ),
+        const SizedBox(height: 40),
+        _buildLogOut(context, ref),
+        const SizedBox(height: 40),
+      ],
+    ).animate().fadeIn(delay: 600.ms).slideY(begin: 0.1);
+  }
+
+  Widget _buildManagementTile(
+    BuildContext context,
+    IconData icon,
+    String title,
+    String sub, {
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap:
+          onTap ??
+          () {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('Opening $title...')));
+          },
+      child: BrandCard(
+        theme: BrandCardTheme.gold,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        borderRadius: 35,
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.black, size: 24),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppTypography.h3.copyWith(
+                      color: Colors.black,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 18,
+                    ),
+                  ),
+                  Text(
+                    sub,
+                    style: AppTypography.body.copyWith(
+                      color: Colors.black54,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: Colors.black54),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _requestContributorRole(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic>? profile,
+  ) async {
+    final user = ref.read(authStateProvider).value;
+    if (user != null) {
+      final confirm = await showModalBottomSheet<bool>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: AppColors.forest900.withValues(alpha: 0.95),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 24),
+              Text(
+                'Become a Contributor',
+                style: AppTypography.h2.copyWith(color: AppColors.gold500),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Would you like to request contributor status? An administrator will review your profile and history before granting access.',
+                textAlign: TextAlign.center,
+                style: AppTypography.body.copyWith(color: Colors.white70),
+              ),
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('CANCEL', style: TextStyle(color: Colors.white38)),
+                    ),
+                  ),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500),
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('SUBMIT', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (confirm == true) {
+        try {
+          await ref
+              .read(firebaseServiceProvider)
+              .submitContributorRequest(
+                user.uid,
+                profile?['username'] ?? user.displayName ?? 'Tribe Member',
+                user.email ?? '',
+              );
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Request submitted successfully!'),
+                backgroundColor: AppColors.semanticGreen,
+              ),
+            );
+          }
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Submission failed: $e'),
+                backgroundColor: AppColors.semanticRed,
+              ),
+            );
+          }
+        }
+      }
+    }
+  }
+
+  Future<void> _cancelContributorRequest(BuildContext context, WidgetRef ref, String requestId) async {
+    try {
+      await ref.read(firebaseServiceProvider).cancelContributorRequest(requestId);
+      if (context.mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request cancelled.'), backgroundColor: AppColors.semanticGreen));
+      }
+    } catch (e) {
+      if (context.mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.semanticRed));
+      }
+    }
+  }
+
+  void _showDeniedDialog(BuildContext context, String message) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: AppColors.forest900.withValues(alpha: 0.95),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          border: Border.all(color: AppColors.semanticRed.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 24),
+            Text('Request Denied', style: AppTypography.h2.copyWith(color: AppColors.semanticRed)),
+            const SizedBox(height: 16),
+            Text(message, textAlign: TextAlign.center, style: AppTypography.body.copyWith(color: Colors.white70)),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticRed),
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileSkeleton() {
+    return const SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          children: [
+            SizedBox(height: 40),
+            Skeleton(width: 140, height: 140, isCircle: true),
+            SizedBox(height: 24),
+            Skeleton(width: 200, height: 32),
+            SizedBox(height: 8),
+            Skeleton(width: 150, height: 16),
+            SizedBox(height: 40),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Skeleton(width: 100, height: 100, borderRadius: 50),
+                Skeleton(width: 100, height: 100, borderRadius: 50),
+                Skeleton(width: 100, height: 100, borderRadius: 50),
+              ],
+            ),
+            SizedBox(height: 40),
+            Skeleton(height: 160, borderRadius: 24),
+            SizedBox(height: 40),
+            Skeleton(height: 80, borderRadius: 35),
+            SizedBox(height: 12),
+            Skeleton(height: 80, borderRadius: 35),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildArtifactScrollSkeleton() {
+    return SizedBox(
+      height: 160,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: 3,
+        separatorBuilder: (context, _) => const SizedBox(width: 16),
+        itemBuilder: (context, index) => const Skeleton(width: 110, height: 160, borderRadius: 24),
+      ),
+    );
+  }
+
+  Widget _buildLogOut(BuildContext context, WidgetRef ref) {
+    return Center(
+      child: TextButton(
+        onPressed: () async {
+          // Sign out from Firebase
+          await ref.read(authServiceProvider).signOut();
+
+          // Navigate back to login
+          if (context.mounted) {
+            context.go('/login');
+          }
+        },
+        child: Text(
+          'LOG  OUT',
+          style: AppTypography.label.copyWith(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? AppColors.gold500
+                : AppColors.forest500,
+            letterSpacing: 2,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ).animate().fadeIn(delay: 800.ms),
+    );
+  }
+
+  Future<void> _pickAndUploadImage(
+    BuildContext context,
+    WidgetRef ref,
+    String? userId,
+  ) async {
+    if (userId == null) return;
+
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.forest900,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: AppColors.gold500),
+              title: const Text('Upload New Picture', style: TextStyle(color: Colors.white)),
+              onTap: () => Navigator.pop(context, 'upload'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: AppColors.semanticRed),
+              title: const Text('Remove Picture', style: TextStyle(color: AppColors.semanticRed)),
+              onTap: () => Navigator.pop(context, 'remove'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (action == 'remove') {
+      try {
+        await ref.read(firebaseServiceProvider).updateUserProfile(userId, {
+          'photoURL': null,
+        });
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Profile picture removed.'), backgroundColor: AppColors.semanticGreen),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to remove: $e'), backgroundColor: AppColors.semanticRed),
+          );
+        }
+      }
+      return;
+    }
+
+    if (action != 'upload') return;
+
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+    );
+
+    if (result != null && result.files.single.path != null) {
+      final file = File(result.files.single.path!);
+      try {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Uploading ancestral totem...')),
+          );
+        }
+
+        final url = await ref
+            .read(firebaseServiceProvider)
+            .uploadProfilePicture(userId, file);
+        await ref.read(firebaseServiceProvider).updateUserProfile(userId, {
+          'photoURL': url,
+        });
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profile picture updated!'),
+              backgroundColor: AppColors.semanticGreen,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Upload failed: $e'),
+              backgroundColor: AppColors.semanticRed,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  void _showEditProfileDialog(
+    BuildContext context,
+    WidgetRef ref, {
+    required String userId,
+    Map<String, dynamic>? profile,
+  }) {
+    final nameController = TextEditingController(
+      text: profile?['username'] ?? '',
+    );
+    final locationController = TextEditingController(
+      text: profile?['location'] ?? '',
+    );
+    final bioController = TextEditingController(text: profile?['bio'] ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: AppColors.forest900.withValues(alpha: 0.95),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+                const SizedBox(height: 24),
+                Text(
+                  'Edit Sacred Profile',
+                  style: AppTypography.h2.copyWith(color: AppColors.gold500),
+                ),
+                const SizedBox(height: 24),
+                _buildEditField('Tribe Name', nameController),
+                const SizedBox(height: 16),
+                _buildEditField(
+                  'Location (e.g. Pantukan, DDO)',
+                  locationController,
+                ),
+                const SizedBox(height: 16),
+                _buildEditField(
+                  'Statement/Bio',
+                  bioController,
+                  maxLines: 3,
+                  hint: 'Teaching philosophy or heritage goals...',
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('CANCEL', style: TextStyle(color: Colors.white38)),
+                      ),
+                    ),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500),
+                        onPressed: () async {
+                          try {
+                            await ref.read(firebaseServiceProvider).updateUserProfile(userId, {
+                              'username': nameController.text,
+                              'location': locationController.text,
+                              'bio': bioController.text,
+                            });
+                            if (context.mounted) Navigator.pop(context);
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Update failed: $e')),
+                              );
+                            }
+                          }
+                        },
+                        child: const Text(
+                          'SAVE',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEditField(
+    String label,
+    TextEditingController controller, {
+    int maxLines = 1,
+    String? hint,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: AppTypography.label.copyWith(
+            color: AppColors.gold500,
+            fontSize: 10,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          maxLines: maxLines,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(color: Colors.white24),
+            filled: true,
+            fillColor: Colors.black.withValues(alpha: 0.2),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Animated Stats Row ────────────────────────────────────────────────────
+
+class _ProfileStatsRow extends ConsumerStatefulWidget {
+
+  final int xp;
+  final int streak;
+  final int words;
+  const _ProfileStatsRow({required this.xp, required this.streak, required this.words});
+
+  @override
+  ConsumerState<_ProfileStatsRow> createState() => _ProfileStatsRowState();
+}
+
+class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow>
+    with TickerProviderStateMixin {
+
+  late final AnimationController _xpController;
+  late final AnimationController _streakController;
+  late final AnimationController _wordsController;
+  late final Animation<double> _xpAnim;
+  late final Animation<double> _streakAnim;
+  late final Animation<double> _wordsAnim;
+  late final Animation<double> _arcAnim;
+
+  static const int _xpLevelMax = 2000; // XP to next level
+
+  @override
+  void initState() {
+    super.initState();
+
+    _xpController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+    _streakController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _wordsController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    );
+
+    _xpAnim = Tween<double>(
+      begin: 0,
+      end: widget.xp.toDouble(),
+    ).animate(CurvedAnimation(parent: _xpController, curve: Curves.easeOut));
+    _streakAnim = Tween<double>(begin: 0, end: widget.streak.toDouble())
+        .animate(
+          CurvedAnimation(parent: _streakController, curve: Curves.easeOut),
+        );
+    _wordsAnim = Tween<double>(
+      begin: 0,
+      end: widget.words.toDouble(),
+    ).animate(CurvedAnimation(parent: _wordsController, curve: Curves.easeOut));
+    _arcAnim = Tween<double>(
+      begin: 0,
+      end: (widget.xp % _xpLevelMax) / _xpLevelMax,
+    ).animate(CurvedAnimation(parent: _xpController, curve: Curves.easeOut));
+
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        _xpController.forward();
+        _streakController.forward();
+        _wordsController.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _xpController.dispose();
+    _streakController.dispose();
+    _wordsController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        GestureDetector(
+          onTap: () {
+            final level = (widget.xp / _xpLevelMax).floor() + 1;
+            final rankTitle = level >= 5 ? 'Elder' : (level >= 3 ? 'Warrior' : 'Pathfinder');
+            showLevelUpModal(context, ref, level, rankTitle);
+
+          },
+          child: _buildXpCircle(context),
+        ),
+        GestureDetector(
+          onTap: () => showDailyCheckInBoard(context, widget.streak),
+          child: _buildCountCircle(
+            context,
+            Icons.local_fire_department_rounded,
+            _streakAnim,
+            'DAY STREAK',
+            isInt: true,
+          ),
+        ),
+        _buildCountCircle(
+          context,
+          Icons.menu_book_rounded,
+          _wordsAnim,
+          'WORDS',
+          isInt: true,
+        ),
+      ],
+    ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1);
+  }
+
+  Widget _buildXpCircle(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return AnimatedBuilder(
+      animation: _xpController,
+      builder: (context, _) {
+        final xpVal = _xpAnim.value;
+        final display = xpVal >= 1000
+            ? '${(xpVal / 1000).toStringAsFixed(1)}k'
+            : xpVal.toInt().toString();
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            // Arc progress ring
+            SizedBox(
+              width: 120,
+              height: 120,
+              child: CustomPaint(
+                painter: _XpArcPainter(
+                  progress: _arcAnim.value,
+                  trackColor: (isDark ? Colors.white : Colors.black).withValues(
+                    alpha: 0.08,
+                  ),
+                  arcColor: AppColors.gold500,
+                ),
+              ),
+            ),
+            // Inner card
+            BrandCard(
+              padding: EdgeInsets.zero,
+              borderRadius: 100,
+              child: Container(
+                width: 96,
+                height: 96,
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.flash_on,
+                      color: isDark ? AppColors.gold500 : AppColors.forest500,
+                      size: 18,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      display,
+                      style: AppTypography.h1ExtraBold.copyWith(
+                        color: isDark ? Colors.white : AppColors.forest700,
+                        fontSize: 18,
+                      ),
+                    ),
+                    Text(
+                      'TOTAL XP',
+                      style: AppTypography.label.copyWith(
+                        color: isDark ? Colors.white24 : AppColors.creamText3,
+                        fontSize: 7,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildCountCircle(
+    BuildContext context,
+    IconData icon,
+    Animation<double> anim,
+    String label, {
+    bool isInt = false,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return AnimatedBuilder(
+      animation: anim,
+      builder: (context, _) {
+        final display = isInt
+            ? anim.value.toInt().toString()
+            : anim.value.toStringAsFixed(1);
+        return BrandCard(
+          padding: EdgeInsets.zero,
+          borderRadius: 100,
+          child: Container(
+            width: 100,
+            height: 100,
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  color: isDark ? AppColors.gold500 : AppColors.forest500,
+                  size: 18,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  display,
+                  style: AppTypography.h1ExtraBold.copyWith(
+                    color: isDark ? Colors.white : AppColors.forest700,
+                    fontSize: 20,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: AppTypography.label.copyWith(
+                    color: isDark ? Colors.white24 : AppColors.creamText3,
+                    fontSize: 8,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ─── XP Arc Ring Painter ───────────────────────────────────────────────────
+
+class _XpArcPainter extends CustomPainter {
+  final double progress;
+  final Color trackColor;
+  final Color arcColor;
+
+  const _XpArcPainter({
+    required this.progress,
+    required this.trackColor,
+    required this.arcColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width / 2) - 6;
+    const strokeWidth = 5.0;
+    const startAngle = -2.356; // -135°
+    const totalSweep = 4.712; //  270°
+
+    // Track
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      startAngle,
+      totalSweep,
+      false,
+      Paint()
+        ..color = trackColor
+        ..strokeWidth = strokeWidth
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round,
+    );
+
+    if (progress <= 0) return;
+
+    // Filled arc
+    final arcPaint = Paint()
+      ..shader = SweepGradient(
+        startAngle: startAngle,
+        endAngle: startAngle + totalSweep * progress,
+        colors: [arcColor.withValues(alpha: 0.7), arcColor],
+      ).createShader(Rect.fromCircle(center: center, radius: radius))
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      startAngle,
+      totalSweep * progress,
+      false,
+      arcPaint,
+    );
+
+    // Tip glow dot
+    final endAngle = startAngle + totalSweep * progress;
+    final tipX = center.dx + radius * cos(endAngle);
+    final tipY = center.dy + radius * sin(endAngle);
+    canvas.drawCircle(Offset(tipX, tipY), 4, Paint()..color = arcColor);
+  }
+
+  @override
+  bool shouldRepaint(_XpArcPainter old) => old.progress != progress;
+}
+
+class _StaffStatsRow extends ConsumerWidget {
+  final UserRole role;
+  final String userId;
+
+  const _StaffStatsRow({required this.role, required this.userId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Fetch stats based on role
+    final validationCount = role == UserRole.validator
+        ? ref.watch(validatorActivityCountProvider(userId)).value ?? 0
+        : 0;
+
+    final studentCount = role == UserRole.educator
+        ? ref.watch(totalUsersCountProvider).value ?? 0
+        : 0;
+
+    final contributionCount = role == UserRole.contributor
+        ? ref.watch(contributorWordCountProvider(userId)).value ?? 0
+        : 0;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        if (role == UserRole.validator)
+          _buildMetricCircle(
+            context,
+            Icons.verified_user_rounded,
+            validationCount.toString(),
+            'TOTAL VALIDATIONS',
+          )
+        else if (role == UserRole.educator)
+          _buildMetricCircle(
+            context,
+            Icons.people_rounded,
+            studentCount.toString(),
+            'STUDENTS',
+          )
+        else if (role == UserRole.contributor)
+          _buildMetricCircle(
+            context,
+            Icons.menu_book_rounded,
+            contributionCount.toString(),
+            'CONTRIBUTIONS',
+          ),
+
+        _buildMetricCircle(context, Icons.star_rounded, '4.9', 'RATING'),
+
+        _buildMetricCircle(
+          context,
+          Icons.workspace_premium_rounded,
+          'ELITE',
+          'RANK',
+        ),
+      ],
+    ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1);
+  }
+
+  Widget _buildMetricCircle(
+    BuildContext context,
+    IconData icon,
+    String value,
+    String label,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return BrandCard(
+      padding: EdgeInsets.zero,
+      borderRadius: 100,
+      child: Container(
+        width: 100,
+        height: 100,
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: isDark ? AppColors.gold500 : AppColors.forest500,
+              size: 18,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: AppTypography.h1ExtraBold.copyWith(
+                color: isDark ? Colors.white : AppColors.forest700,
+                fontSize: 18,
+              ),
+            ),
+            Text(
+              label,
+              style: AppTypography.label.copyWith(
+                color: isDark ? Colors.white24 : AppColors.creamText3,
+                fontSize: 7,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
