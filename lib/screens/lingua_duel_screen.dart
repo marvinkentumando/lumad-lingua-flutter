@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
@@ -36,7 +36,7 @@ class _LinguaDuelScreenState extends State<LinguaDuelScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('🔥', style: TextStyle(fontSize: 48)),
+            const Text('ðŸ”¥', style: TextStyle(fontSize: 48)),
             const SizedBox(height: 16),
             Text(
               'MATCH FOUND!',
@@ -157,10 +157,10 @@ class _LinguaDuelScreenState extends State<LinguaDuelScreen> {
               width: 200,
               height: 200,
               decoration: BoxDecoration(
-                color: AppColors.gold500.withValues(alpha: 0.05),
+                color: AppColors.gold500.withOpacity(0.05),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: AppColors.gold500.withValues(alpha: 0.1),
+                  color: AppColors.gold500.withOpacity(0.1),
                   width: 2,
                 ),
               ),
@@ -190,7 +190,7 @@ class _LinguaDuelScreenState extends State<LinguaDuelScreen> {
         leading: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppColors.gold500.withValues(alpha: 0.1),
+            color: AppColors.gold500.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, color: AppColors.gold500),
@@ -243,3 +243,5 @@ class _LinguaDuelScreenState extends State<LinguaDuelScreen> {
     ).animate().fadeIn();
   }
 }
+
+

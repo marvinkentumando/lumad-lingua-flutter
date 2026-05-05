@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -48,7 +48,7 @@ class RecordingCard extends StatelessWidget {
                   boxShadow: isPlaying
                       ? [
                           BoxShadow(
-                            color: AppColors.gold500.withValues(alpha: 0.3),
+                            color: AppColors.gold500.withOpacity(0.3),
                             blurRadius: 12,
                             spreadRadius: 2,
                           ),
@@ -80,7 +80,7 @@ class RecordingCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '$speakerName • $speakerRole',
+                      '$speakerName â€¢ $speakerRole',
                       style: AppTypography.body.copyWith(
                         color: isDark ? Colors.white : AppColors.forest700,
                         fontWeight: FontWeight.bold,
@@ -104,7 +104,7 @@ class RecordingCard extends StatelessWidget {
                             (isPlaying
                                     ? AppColors.forest700
                                     : AppColors.gold500)
-                                .withValues(alpha: 0.4),
+                                .withOpacity(0.4),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -210,7 +210,7 @@ class RecordingCard extends StatelessWidget {
 
           if (audio['transcription'] != null)
             Text(
-              '“${audio['transcription']}”',
+              'â€œ${audio['transcription']}â€',
               style: AppTypography.body.copyWith(
                 color: isDark ? Colors.white70 : AppColors.forest700,
                 fontStyle: FontStyle.italic,
@@ -222,3 +222,5 @@ class RecordingCard extends StatelessWidget {
     );
   }
 }
+
+

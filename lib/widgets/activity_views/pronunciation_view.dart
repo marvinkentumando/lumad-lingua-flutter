@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
@@ -74,7 +74,7 @@ class PronunciationView extends StatelessWidget {
                   recorderController: recorderController!,
                   enableGesture: false,
                   waveStyle: WaveStyle(
-                    waveColor: Colors.white.withValues(alpha: 0.5),
+                    waveColor: Colors.white.withOpacity(0.5),
                     spacing: 4.0,
                     extendWaveform: true,
                     showMiddleLine: false,
@@ -129,3 +129,5 @@ class PronunciationView extends StatelessWidget {
     );
   }
 }
+
+

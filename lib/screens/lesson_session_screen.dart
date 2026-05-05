@@ -10,7 +10,7 @@ import '../services/audio_service.dart';
 import '../widgets/xp_celebration.dart';
 import '../models/lesson_task.dart';
 import '../models/artifact.dart';
-import '../providers/learning_provider.dart'; // currentLessonProvider now lives here
+import '../providers/learning_provider.dart'; 
 import 'package:lumad_lingua/widgets/progress_header.dart';
 import '../widgets/feedback_panel.dart';
 import '../widgets/activity_views/mcq_view.dart';
@@ -30,8 +30,6 @@ import '../widgets/parallax_background.dart';
 import '../widgets/elders_wisdom_panel.dart';
 import '../utils/icon_utils.dart';
 import 'package:confetti/confetti.dart';
-
-// Fix #17: currentLessonProvider removed from here — it's now in learning_provider.dart
 
 class LessonSessionScreen extends ConsumerStatefulWidget {
   const LessonSessionScreen({super.key});
@@ -68,11 +66,9 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
   int _currentTaskXp = 0;
   int _calculatedSessionXp = 0;
 
-  // Fix #4: Guard against re-entry on rapid Continue taps.
   bool _isContinuing = false;
 
   int _shakeCounter = 0;
-  // Fix #2: Tracks DISTINCT tasks that had at least one wrong attempt.
   final Map<String, int> _taskMistakes = {};
 
   // Speech To Text
@@ -91,13 +87,11 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
   LessonTask? _suddenDeathTask;
   bool _showLeaderboardSnippet = false;
 
-  // Fix #5: Levenshtein-based string similarity (0.0 – 1.0)
   double _stringSimilarity(String a, String b) {
     if (a == b) return 1.0;
     if (a.isEmpty || b.isEmpty) return 0.0;
     final m = a.length;
     final n = b.length;
-    // Build DP table
     final dp = List.generate(m + 1, (i) => List.filled(n + 1, 0));
     for (var i = 0; i <= m; i++) {
       dp[i][0] = i;
@@ -140,7 +134,6 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     _recorderController.dispose();
     _confettiController.dispose();
     _speech.stop();
-    // Stop ambient music when leaving the session
     ref.read(audioServiceProvider).stopAmbientMusic();
     super.dispose();
   }
@@ -157,7 +150,6 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
             ref.read(quizSessionProvider.notifier).loadTasks(lesson.tasks);
             _initTaskState();
 
-            // Pre-cache audio assets
             final audioUrls = lesson.tasks
                 .map((t) => t.audioUrl)
                 .where((url) => url != null && url.isNotEmpty)
@@ -167,7 +159,6 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
               ref.read(audioServiceProvider).preCacheAudio(audioUrls);
             }
 
-            // Start theme-aware ambient music
             ref.read(audioServiceProvider).playAmbientMusic(lesson.title);
           }
         });
@@ -287,15 +278,12 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
             : "Review these pairs:\n${incorrectPairs.join('\n')}";
         break;
       case TaskType.pronunciation:
-        // Fix #5: Use Levenshtein-based similarity scoring.
-        // Compare the recognized speech to the target native word.
         isCorrect = false;
         if (_hasRecorded && _lastWords.isNotEmpty) {
           final similarity = _stringSimilarity(
             _lastWords.toLowerCase().trim(),
             task.nativeWord.toLowerCase().trim(),
           );
-          // Threshold: 60% similarity is considered a pass for tonal/dialect variation.
           isCorrect = similarity >= 0.6;
           currentFeedbackSubtitle = isCorrect
               ? "Captured: \"$_lastWords\" (${(similarity * 100).round()}% match). Great effort!"
@@ -322,7 +310,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
         .submitAnswer(
           isCorrect,
           isFirstTry: (_taskMistakes[task.id] ?? 0) == 0,
-          logicalTaskId: task.id, // Fix #18: Pass original task ID
+          logicalTaskId: task.id, 
         );
 
     setState(() {
@@ -332,13 +320,12 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
       if (!savedIsCorrect) {
         ref.read(studentProvider.notifier).decrementHeart();
         _shakeCounter++;
-        // Fix #2: Only count the first failure per distinct task in _taskMistakes.
         if ((_taskMistakes[task.id] ?? 0) == 0) {
           _taskMistakes[task.id] = 1;
         } else {
           _taskMistakes[task.id] = _taskMistakes[task.id]! + 1;
         }
-        _combo = 0; // Break combo
+        _combo = 0; 
         HapticService.error();
         ref.read(audioServiceProvider).playSFX('error');
 
@@ -351,24 +338,19 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           _handleSuddenDeathResult(true);
           return;
         }
-        // Fix #13: Trigger haptic exactly when combo first hits 3.
         final prevCombo = _combo;
         _combo++;
         HapticService.success();
         ref.read(audioServiceProvider).playSFX('success');
 
 
-        // Task XP calculation
-        int taskXp = 20; // Base XP per task
-
-        // Speed Bonus
+        int taskXp = 20; 
         final timeTaken = DateTime.now().difference(_taskStartTime);
         if (timeTaken.inSeconds <= 5) {
           _bonusXp += 5;
           taskXp += 5;
         }
 
-        // Combo Multipliers
         if (_combo >= 5) {
           _bonusXp += 15;
           taskXp += 15;
@@ -378,11 +360,9 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           taskXp += 5;
           HapticService.medium();
         } else if (prevCombo == 2 && _combo == 3) {
-          // Fix #13: First time hitting 3-combo milestone
           HapticService.light();
         }
 
-        // Show per-activity celebration
         _currentTaskXp = taskXp;
 
         if (_combo >= 10) {
@@ -421,7 +401,6 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
   }
 
   void _handleContinue() {
-    // Fix #4: Prevent re-entry on rapid taps.
     if (_isContinuing) return;
     _isContinuing = true;
 
@@ -434,7 +413,6 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
 
     if (state.isCompleted) {
       if (lessonId.isNotEmpty && user != null) {
-        // Calculate stars based on hearts remaining
         int stars = 3;
         if (hearts <= 2) {
           stars = 1;
@@ -442,7 +420,6 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           stars = 2;
         }
 
-        // Fix #2: Use distinct task mistake count for accurate XP display.
         final totalTasks = state.totalTasks;
         final distinctMistakeTasks = _taskMistakes.keys.length;
         final accurateCount = totalTasks - distinctMistakeTasks;
@@ -455,8 +432,6 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           _calculatedSessionXp = sessionXp;
         });
 
-        // Fix #1: Await completeLesson() BEFORE transitioning. Session stats are
-        // committed first; dialogs are shown after the write resolves.
         ref
             .read(firebaseServiceProvider)
             .completeLesson(
@@ -508,7 +483,6 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     }
   }
 
-  // Fix #9: Graceful quit confirmation so no session is lost accidentally.
   void _showQuitConfirmationDialog() {
     showDialog(
       context: context,
@@ -516,7 +490,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
         backgroundColor: AppColors.forest900,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text(
-          '🏃 Leave Session?',
+          '\ud83c\udfc3 Leave Session?',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
@@ -548,7 +522,6 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     );
   }
 
-  // Fix #14: Session summary shown before XP celebration pops the screen.
   void _showSessionSummary({
     required int xpEarned,
     required int stars,
@@ -578,7 +551,6 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Stars row
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(3, (i) {
@@ -596,10 +568,10 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
               const SizedBox(height: 24),
               Text(
                 stars == 3
-                    ? 'Perfect Session! 🎉'
+                    ? 'Perfect Session! \ud83c\udf89'
                     : stars == 2
-                    ? 'Great Work! 🌟'
-                    : 'Lesson Complete! 💪',
+                    ? 'Great Work! \ud83c\udf1f'
+                    : 'Lesson Complete! \ud83d\udcaa',
                 style: AppTypography.h2.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
@@ -607,7 +579,6 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
-              // Stats grid
               _SummaryStatRow(
                 icon: Icons.bolt_rounded,
                 iconColor: AppColors.gold500,
@@ -654,7 +625,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                     ),
                   ),
                   child: Text(
-                    'Continue Learning →',
+                    'Continue Learning \u2192',
                     style: AppTypography.bodyLarge.copyWith(
                       fontWeight: FontWeight.bold,
                       color: AppColors.forest900,
@@ -671,7 +642,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
 
   void _showHeartRecoveryDialog() {
     final studentState = ref.read(studentProvider);
-    final crystalCost = 50;
+    const crystalCost = 50;
     final canAfford = studentState.mistCrystals >= crystalCost;
 
     showDialog(
@@ -681,7 +652,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
         backgroundColor: AppColors.forest900,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text(
-          "Out of Hearts! 💔",
+          "Out of Hearts! \ud83d\udc94",
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
@@ -697,21 +668,21 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
+                color: Colors.white.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Row(
+              child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text("Cost: ", style: TextStyle(color: Colors.white54)),
+                  Text("Cost: ", style: TextStyle(color: Colors.white54)),
                   Text(
                     "$crystalCost ",
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.gold500,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const Icon(
+                  Icon(
                     Icons.auto_awesome,
                     color: AppColors.gold500,
                     size: 18,
@@ -733,7 +704,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              context.pop(); // Exit lesson
+              context.pop(); 
             },
             child: const Text(
               "End Session",
@@ -785,14 +756,14 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
 
     setState(() {
       _isSuddenDeath = true;
-      _suddenDeathTask = tasks[0]; // For demo, use current task as sudden death
+      _suddenDeathTask = tasks[0]; 
       _initTaskState();
     });
   }
 
   void _handleSuddenDeathResult(bool isCorrect) {
     if (isCorrect) {
-      ref.read(studentProvider.notifier).gainHeart(1); // Regain 1 heart
+      ref.read(studentProvider.notifier).gainHeart(1); 
       setState(() {
         _isSuddenDeath = false;
         _suddenDeathTask = null;
@@ -897,7 +868,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
         backgroundColor: AppColors.forest800,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: tierColor.withValues(alpha: 0.5), width: 2),
+          side: BorderSide(color: tierColor.withOpacity(0.5), width: 2),
         ),
         title: Column(
           children: [
@@ -915,10 +886,10 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.05),
+                color: Colors.white.withOpacity(0.05),
                 boxShadow: [
                   BoxShadow(
-                    color: tierColor.withValues(alpha: 0.2),
+                    color: tierColor.withOpacity(0.2),
                     blurRadius: 30,
                     spreadRadius: 10,
                   ),
@@ -942,7 +913,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: tierColor.withValues(alpha: 0.1),
+                color: tierColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -1033,7 +1004,6 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           selectedMeaning: _selectedMeaning,
           onNativeTap: (native) {
             setState(() {
-              // Check if already matched -> Unmatch
               if (_matchedPairs.containsKey(native)) {
                 _matchedPairs.remove(native);
                 return;
@@ -1053,7 +1023,6 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           },
           onMeaningTap: (meaning) {
             setState(() {
-              // Check if already matched -> Unmatch
               String? matchedNative;
               _matchedPairs.forEach((key, value) {
                 if (value == meaning) matchedNative = key;
@@ -1166,7 +1135,6 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                 ),
 
               ),
-              // Spirit Flame Border Glow
               if (_combo >= 10)
                 Positioned.fill(
                   child: IgnorePointer(
@@ -1174,12 +1142,12 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                         Container(
                               decoration: BoxDecoration(
                                 border: Border.all(
-                                  color: Colors.orange.withValues(alpha: 0.4),
+                                  color: Colors.orange.withOpacity(0.4),
                                   width: 8,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.orange.withValues(alpha: 0.2),
+                                    color: Colors.orange.withOpacity(0.2),
                                     blurRadius: 30,
                                     spreadRadius: 10,
                                   ),
@@ -1188,7 +1156,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                             )
                             .animate(onPlay: (c) => c.repeat(reverse: true))
                             .shimmer(
-                              color: Colors.red.withValues(alpha: 0.1),
+                              color: Colors.red.withOpacity(0.1),
                               duration: 2.seconds,
                             ),
                   ),
@@ -1218,7 +1186,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.2),
+                            color: Colors.black.withOpacity(0.2),
                             blurRadius: 10,
                           ),
                         ],
@@ -1232,7 +1200,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              "YOU'RE IN THE TOP 3! 🔥",
+                              "YOU'RE IN THE TOP 3! \ud83d\udd25",
                               style: AppTypography.label.copyWith(
                                 color: AppColors.forest900,
                                 fontWeight: FontWeight.bold,
@@ -1249,7 +1217,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                         boxShadow: _combo >= 5
                             ? [
                                 BoxShadow(
-                                  color: Colors.orange.withValues(alpha: 0.15),
+                                  color: Colors.orange.withOpacity(0.15),
                                   blurRadius: 60,
                                   spreadRadius: -10,
                                 ),
@@ -1257,9 +1225,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                             : (_combo >= 3
                                   ? [
                                       BoxShadow(
-                                        color: AppColors.gold500.withValues(
-                                          alpha: 0.1,
-                                        ),
+                                        color: AppColors.gold500.withOpacity(0.1),
                                         blurRadius: 40,
                                         spreadRadius: -10,
                                       ),
@@ -1344,7 +1310,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.2),
+                                          color: Colors.black.withOpacity(0.2),
                                           blurRadius: 8,
                                           offset: const Offset(0, 2),
                                         ),
@@ -1375,7 +1341,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                                           padding: const EdgeInsets.all(16),
                                           decoration: BoxDecoration(
                                             color: AppColors.semanticRed
-                                                .withValues(alpha: 0.1),
+                                                .withOpacity(0.1),
                                             borderRadius: BorderRadius.circular(
                                               16,
                                             ),
@@ -1423,9 +1389,9 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                                               child: Container(
                                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                                 decoration: BoxDecoration(
-                                                  color: AppColors.gold500.withValues(alpha: 0.1),
+                                                  color: AppColors.gold500.withOpacity(0.1),
                                                   borderRadius: BorderRadius.circular(20),
-                                                  border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
+                                                  border: Border.all(color: AppColors.gold500.withOpacity(0.3)),
                                                 ),
                                                 child: Row(
                                                   mainAxisSize: MainAxisSize.min,
@@ -1474,7 +1440,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                       border: Border(
                         top: BorderSide(
                           color: isDark
-                              ? Colors.white.withValues(alpha: 0.1)
+                              ? Colors.white.withOpacity(0.1)
                               : AppColors.creamBorder,
                         ),
                       ),
@@ -1490,7 +1456,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                                   ? AppColors.gold500
                                   : (isDark
                                         ? Colors.white12
-                                        : Colors.black.withValues(alpha: 0.05)),
+                                        : Colors.black.withOpacity(0.05)),
                               borderRadius: BorderRadius.circular(16),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(16),
@@ -1556,7 +1522,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
 
               if (_isCelebrating)
                 Container(
-                  color: Colors.black.withValues(alpha: 0.85),
+                  color: Colors.black.withOpacity(0.85),
                   child: XPCelebration(
                     xpEarned: _calculatedSessionXp,
                     onComplete: () => _showSessionSummary(
@@ -1576,7 +1542,6 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
   }
 
   Path _drawSpiritSoul(Size size) {
-    // Ethereal flame/spirit shape for high-impact milestones
     var path = Path();
     path.moveTo(size.width * 0.5, size.height * 0.2);
     path.quadraticBezierTo(
@@ -1611,7 +1576,7 @@ class _SummaryStatRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -1619,7 +1584,7 @@ class _SummaryStatRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.15),
+              color: iconColor.withOpacity(0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: iconColor, size: 20),

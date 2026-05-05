@@ -1,0 +1,14 @@
+name: mcp_server_local
+description: A local MCP server for Lumad Lingua.
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  mcp_server: 0.1.0
+  http: ^1.2.0
+  shelf: ^1.4.1
+  uuid: ^4.3.3
+  web_socket_channel: ^2.4.0

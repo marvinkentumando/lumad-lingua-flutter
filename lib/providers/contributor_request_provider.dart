@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/firebase_service.dart';
 import '../models/contributor_request.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -22,3 +22,5 @@ final pendingContributorRequestProvider = StreamProvider<ContributorRequest?>((
       .read(firebaseServiceProvider)
       .getPendingContributorRequest(user.uid);
 });
+
+

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -392,12 +392,12 @@ class _ValidatorEntriesScreenState
                         decoration: BoxDecoration(
                           color: allSelected
                               ? AppColors.forest700
-                              : AppColors.gold500.withValues(alpha: 0.1),
+                              : AppColors.gold500.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: allSelected
                                 ? AppColors.forest600
-                                : AppColors.gold500.withValues(alpha: 0.3),
+                                : AppColors.gold500.withOpacity(0.3),
                           ),
                         ),
                         child: Text(
@@ -430,10 +430,10 @@ class _ValidatorEntriesScreenState
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.gold500.withValues(alpha: 0.1),
+                          color: AppColors.gold500.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: AppColors.gold500.withValues(alpha: 0.3),
+                            color: AppColors.gold500.withOpacity(0.3),
                           ),
                         ),
                         child: Text(
@@ -456,10 +456,10 @@ class _ValidatorEntriesScreenState
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.semanticRed.withValues(alpha: 0.1),
+                          color: AppColors.semanticRed.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: AppColors.semanticRed.withValues(alpha: 0.3),
+                            color: AppColors.semanticRed.withOpacity(0.3),
                           ),
                         ),
                         child: Text(
@@ -486,7 +486,7 @@ class _ValidatorEntriesScreenState
                           ? AppColors.gold500
                           : (isDark
                                 ? Colors.white10
-                                : Colors.black.withValues(alpha: 0.05)),
+                                : Colors.black.withOpacity(0.05)),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: _showHistory
@@ -577,7 +577,7 @@ class _ValidatorEntriesScreenState
                           ),
                           decoration: BoxDecoration(
                             color: isDark
-                                ? Colors.white.withValues(alpha: 0.05)
+                                ? Colors.white.withOpacity(0.05)
                                 : AppColors.forest50,
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -694,7 +694,7 @@ class _ValidatorEntriesScreenState
             ? AppColors.forest800
             : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Column(
         children: [
@@ -791,7 +791,7 @@ class _ValidatorEntriesScreenState
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
         color: isSelected
-            ? AppColors.gold500.withValues(alpha: 0.1)
+            ? AppColors.gold500.withOpacity(0.1)
             : (isDark ? AppColors.forest800 : Colors.white),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
@@ -803,7 +803,7 @@ class _ValidatorEntriesScreenState
         boxShadow: isSelected
             ? [
                 BoxShadow(
-                  color: AppColors.gold500.withValues(alpha: 0.2),
+                  color: AppColors.gold500.withOpacity(0.2),
                   blurRadius: 12,
                   spreadRadius: 2,
                 ),
@@ -852,7 +852,7 @@ class _ValidatorEntriesScreenState
                                 ? AppColors.gold500
                                 : (isDark
                                       ? Colors.white10
-                                      : Colors.black.withValues(alpha: 0.05)),
+                                      : Colors.black.withOpacity(0.05)),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
@@ -937,8 +937,7 @@ class _ValidatorEntriesScreenState
                                 boxShadow: _playingEntryId == entry.id
                                     ? [
                                         BoxShadow(
-                                          color: AppColors.gold500.withValues(
-                                            alpha: 0.3,
+                                          color: AppColors.gold500.withOpacity(0.3,
                                           ),
                                           spreadRadius: 4,
                                           blurRadius: 10,
@@ -1065,9 +1064,9 @@ class _ValidatorEntriesScreenState
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        border: Border.all(color: color.withValues(alpha: 0.5)),
+        border: Border.all(color: color.withOpacity(0.5)),
         borderRadius: BorderRadius.circular(12),
-        color: color.withValues(alpha: 0.05),
+        color: color.withOpacity(0.05),
       ),
       child: Text(
         label,
@@ -1217,7 +1216,7 @@ class _ValidatorEntriesScreenState
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.terracotta.withValues(alpha: 0.2),
+              color: AppColors.terracotta.withOpacity(0.2),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: AppColors.terracotta),
             ),
@@ -1319,11 +1318,11 @@ class _ValidatorEntriesScreenState
                         ),
                         backgroundColor: isDisabled
                             ? Colors.black26
-                            : AppColors.gold500.withValues(alpha: 0.1),
+                            : AppColors.gold500.withOpacity(0.1),
                         side: BorderSide(
                           color: isDisabled
                               ? Colors.white10
-                              : AppColors.gold500.withValues(alpha: 0.3),
+                              : AppColors.gold500.withOpacity(0.3),
                         ),
                         onPressed: isDisabled
                             ? null
@@ -1382,8 +1381,7 @@ class _ValidatorEntriesScreenState
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.terracotta.withValues(
-                          alpha: 0.2,
+                        backgroundColor: AppColors.terracotta.withOpacity(0.2,
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
@@ -1569,7 +1567,7 @@ class _ValidatorEntriesScreenState
                 ),
               ),
               Text(
-                '${entry.phonetic ?? ''} • ${entry.partOfSpeechLabel}',
+                '${entry.phonetic ?? ''} â€¢ ${entry.partOfSpeechLabel}',
                 style: AppTypography.mono.copyWith(
                   color: AppColors.creamText3,
                   fontSize: 16,
@@ -1664,3 +1662,5 @@ class _ValidatorEntriesScreenState
     );
   }
 }
+
+

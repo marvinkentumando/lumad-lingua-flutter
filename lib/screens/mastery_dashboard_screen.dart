@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
@@ -53,7 +53,7 @@ class MasteryDashboardScreen extends ConsumerWidget {
               color: Colors.white,
             ),
             style: IconButton.styleFrom(
-              backgroundColor: Colors.white.withValues(alpha: 0.05),
+              backgroundColor: Colors.white.withOpacity(0.05),
               padding: const EdgeInsets.all(12),
             ),
           ),
@@ -128,7 +128,7 @@ class MasteryDashboardScreen extends ConsumerWidget {
           const SizedBox(height: 20),
           LinearProgressIndicator(
             value: mastery,
-            backgroundColor: Colors.black.withValues(alpha: 0.1),
+            backgroundColor: Colors.black.withOpacity(0.1),
             valueColor: const AlwaysStoppedAnimation<Color>(Colors.black),
             minHeight: 8,
             borderRadius: BorderRadius.circular(4),
@@ -240,7 +240,7 @@ class MasteryDashboardScreen extends ConsumerWidget {
                       end: Alignment.bottomCenter,
                       colors: [
                         AppColors.gold500,
-                        AppColors.gold500.withValues(alpha: 0.1),
+                        AppColors.gold500.withOpacity(0.1),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(8),
@@ -293,3 +293,5 @@ class MasteryDashboardScreen extends ConsumerWidget {
     );
   }
 }
+
+

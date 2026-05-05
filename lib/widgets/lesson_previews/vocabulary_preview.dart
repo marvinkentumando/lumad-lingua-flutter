@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../models/lesson_step.dart';
 import '../activity_views/vocabulary_view.dart';
 
@@ -30,3 +30,5 @@ class VocabularyPreview extends StatelessWidget {
     );
   }
 }
+
+

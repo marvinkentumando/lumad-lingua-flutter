@@ -130,15 +130,15 @@ class MemberProfileScreen extends ConsumerWidget {
     final location = profile['location'] ?? 'PHILIPPINES';
     switch (role) {
       case UserRole.admin:
-        return 'SYSTEM OVERSEER  •  $location';
+        return 'SYSTEM OVERSEER  â€¢  $location';
       case UserRole.validator:
-        return 'ELDER VALIDATOR  •  $location';
+        return 'ELDER VALIDATOR  â€¢  $location';
       case UserRole.educator:
-        return 'WISDOM GUIDE  •  $location';
+        return 'WISDOM GUIDE  â€¢  $location';
       case UserRole.contributor:
-        return 'CULTURAL KEEPER  •  $location';
+        return 'CULTURAL KEEPER  â€¢  $location';
       case UserRole.learner:
-        return 'ELDER PATHFINDER  •  $location';
+        return 'ELDER PATHFINDER  â€¢  $location';
     }
   }
 
@@ -282,9 +282,9 @@ class MemberProfileScreen extends ConsumerWidget {
             return Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildImpactCard(context, '⭐', 'Accuracy', accuracy),
-                _buildImpactCard(context, '🤝', 'Community', rank),
-                _buildImpactCard(context, '🌿', 'Spirit', spirit),
+                _buildImpactCard(context, 'â­', 'Accuracy', accuracy),
+                _buildImpactCard(context, 'ðŸ¤', 'Community', rank),
+                _buildImpactCard(context, 'ðŸŒ¿', 'Spirit', spirit),
               ],
             );
           },
@@ -381,7 +381,7 @@ class MemberProfileScreen extends ConsumerWidget {
           loading: () => const Center(
             child: Skeleton(height: 160, borderRadius: 24),
           ),
-          error: (e, _) => Center(
+          error: (e, _) => const Center(
             child: Text(
               'Error loading artifacts',
               style: TextStyle(color: AppColors.semanticRed),
@@ -415,18 +415,18 @@ class MemberProfileScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isEarned
-                    ? tierColor.withValues(alpha: 0.1)
+                    ? tierColor.withOpacity(0.1)
                     : Colors.black26,
                 border: Border.all(
                   color: isEarned
-                      ? tierColor.withValues(alpha: 0.5)
+                      ? tierColor.withOpacity(0.5)
                       : Colors.white10,
                   width: 2,
                 ),
                 boxShadow: isEarned
                     ? [
                         BoxShadow(
-                          color: tierColor.withValues(alpha: 0.2),
+                          color: tierColor.withOpacity(0.2),
                           blurRadius: 10,
                           spreadRadius: 2,
                         ),
@@ -466,7 +466,7 @@ class MemberProfileScreen extends ConsumerWidget {
                   minHeight: 4,
                   backgroundColor: Colors.white10,
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    tierColor.withValues(alpha: 0.5),
+                    tierColor.withOpacity(0.5),
                   ),
                 ),
               ),
@@ -513,3 +513,5 @@ class MemberProfileScreen extends ConsumerWidget {
     }
   }
 }
+
+

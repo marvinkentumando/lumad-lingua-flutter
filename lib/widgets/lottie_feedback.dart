@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 
 class SuccessLottie extends StatelessWidget {
@@ -44,3 +44,5 @@ class CelebrationLottie extends StatelessWidget {
     );
   }
 }
+
+

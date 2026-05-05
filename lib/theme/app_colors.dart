@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 class AppColors {
   // Forest Green Scale (Primary)
@@ -43,3 +43,5 @@ class AppColors {
   static const Color forestDarkCard = Color(0xFF0F1E11);
   static const Color forestLightCard = Color(0xFF14241A);
 }
+
+

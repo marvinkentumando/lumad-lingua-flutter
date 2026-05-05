@@ -1,4 +1,4 @@
-import 'package:record/record.dart';
+﻿import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -130,3 +130,5 @@ final audioServiceProvider = Provider<AudioService>((ref) {
   ref.onDispose(() => service.dispose());
   return service;
 });
+
+

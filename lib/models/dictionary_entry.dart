@@ -1,4 +1,4 @@
-import 'package:hive/hive.dart';
+﻿import 'package:hive/hive.dart';
 
 part 'dictionary_entry.g.dart';
 
@@ -167,3 +167,5 @@ class DictionaryEntry {
     };
   }
 }
+
+

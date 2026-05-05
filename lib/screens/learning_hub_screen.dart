@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
@@ -72,15 +72,15 @@ class LearningHubScreen extends ConsumerWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.gold500.withValues(alpha: 0.1),
+                          color: AppColors.gold500.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: AppColors.gold500.withValues(alpha: 0.3),
+                            color: AppColors.gold500.withOpacity(0.3),
                           ),
                         ),
                         child: Row(
                           children: [
-                            const Text('✨', style: TextStyle(fontSize: 14)),
+                            const Text('âœ¨', style: TextStyle(fontSize: 14)),
                             const SizedBox(width: 4),
                             Text(
                               '${student.mistCrystals}',
@@ -210,7 +210,7 @@ class LearningHubScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.1),
+                color: iconColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(icon, color: iconColor, size: 24),
@@ -269,8 +269,8 @@ class LearningHubScreen extends ConsumerWidget {
                   color: canAfford
                       ? AppColors.gold500
                       : (isDark
-                            ? Colors.white.withValues(alpha: 0.05)
-                            : Colors.black.withValues(alpha: 0.05)),
+                            ? Colors.white.withOpacity(0.05)
+                            : Colors.black.withOpacity(0.05)),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -286,7 +286,7 @@ class LearningHubScreen extends ConsumerWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '✨',
+                      'âœ¨',
                       style: TextStyle(
                         fontSize: 12,
                         color: canAfford
@@ -343,7 +343,7 @@ class LearningHubScreen extends ConsumerWidget {
                             'Daily Streak',
                             '${studentState.dailyStreak}',
                             'SUN TRAILS',
-                            '🎉',
+                            'ðŸŽ‰',
                             null,
                           ),
                           const SizedBox(width: 16),
@@ -352,7 +352,7 @@ class LearningHubScreen extends ConsumerWidget {
                             'Mist Crystals',
                             '${studentState.mistCrystals}',
                             'EARNED',
-                            '✨',
+                            'âœ¨',
                             () => _showMistCrystalStore(context, ref),
                           ),
                           const SizedBox(width: 16),
@@ -361,7 +361,7 @@ class LearningHubScreen extends ConsumerWidget {
                             'Ancestral XP',
                             '${studentState.xp}',
                             'LEVEL UP',
-                            '🔥',
+                            'ðŸ”¥',
                             null,
                           ),
                         ],
@@ -618,8 +618,8 @@ class LearningHubScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: isDark
-                        ? Colors.white.withValues(alpha: 0.05)
-                        : Colors.black.withValues(alpha: 0.05),
+                        ? Colors.white.withOpacity(0.05)
+                        : Colors.black.withOpacity(0.05),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -667,8 +667,8 @@ class LearningHubScreen extends ConsumerWidget {
                 value: isLocked ? 0.0 : progress,
                 minHeight: 12,
                 backgroundColor: isDark
-                    ? Colors.white.withValues(alpha: 0.05)
-                    : Colors.black.withValues(alpha: 0.05),
+                    ? Colors.white.withOpacity(0.05)
+                    : Colors.black.withOpacity(0.05),
                 valueColor: AlwaysStoppedAnimation(
                   isLocked ? Colors.grey : accentColor,
                 ),
@@ -740,3 +740,5 @@ class LearningHubScreen extends ConsumerWidget {
     }
   }
 }
+
+

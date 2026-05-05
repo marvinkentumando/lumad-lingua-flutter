@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -34,9 +34,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   // Step 2: Path
   final _nativeLanguageController = TextEditingController();
-  String _selectedAvatar = "🦅";
+  String _selectedAvatar = "ðŸ¦…";
   String _learningGoal = "Culture";
-  final List<String> _totems = ["🦅", "🐆", "🐢", "🛶", "🌿", "⛰️", "🏹", "🔥"];
+  final List<String> _totems = ["ðŸ¦…", "ðŸ†", "ðŸ¢", "ðŸ›¶", "ðŸŒ¿", "â›°ï¸", "ðŸ¹", "ðŸ”¥"];
   final List<String> _goals = [
     "Culture",
     "Travel",
@@ -178,8 +178,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     end: Alignment.bottomCenter,
                     colors: [
                       isDark
-                          ? AppColors.forest900.withValues(alpha: 0.7)
-                          : Colors.white.withValues(alpha: 0.8),
+                          ? AppColors.forest900.withOpacity(0.7)
+                          : Colors.white.withOpacity(0.8),
                       isDark ? AppColors.forest900 : AppColors.creamBg,
                     ],
                   ),
@@ -223,8 +223,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                   borderRadius: BorderRadius.circular(24),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: AppColors.semanticGreen.withValues(
-                                        alpha: 0.1 * value,
+                                      color: AppColors.semanticGreen.withOpacity(0.1 * value,
                                       ),
                                       blurRadius: 20 * value,
                                       spreadRadius: 5 * value,
@@ -236,8 +235,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                             },
                           )
                           .shimmer(
-                            color: AppColors.semanticGreen.withValues(
-                              alpha: 0.1,
+                            color: AppColors.semanticGreen.withOpacity(0.1,
                             ),
                             duration: 2.seconds,
                           ),
@@ -303,7 +301,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           decoration: BoxDecoration(
             color: isActive
                 ? AppColors.gold500
-                : Colors.white.withValues(alpha: 0.2),
+                : Colors.white.withOpacity(0.2),
             borderRadius: BorderRadius.circular(3),
           ),
         );
@@ -316,9 +314,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: AppColors.semanticRed.withValues(alpha: 0.1),
+        color: AppColors.semanticRed.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.semanticRed.withValues(alpha: 0.3)),
+        border: Border.all(color: AppColors.semanticRed.withOpacity(0.3)),
       ),
       child: Text(
         _errorMessage!,
@@ -484,7 +482,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.gold500
-                    : Colors.white.withValues(alpha: 0.05),
+                    : Colors.white.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isSelected ? AppColors.gold600 : Colors.transparent,
@@ -493,7 +491,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 boxShadow: isSelected
                     ? [
                         BoxShadow(
-                          color: AppColors.gold500.withValues(alpha: 0.3),
+                          color: AppColors.gold500.withOpacity(0.3),
                           blurRadius: 10,
                         ),
                       ]
@@ -562,3 +560,5 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     ).animate().fadeIn(delay: 600.ms);
   }
 }
+
+

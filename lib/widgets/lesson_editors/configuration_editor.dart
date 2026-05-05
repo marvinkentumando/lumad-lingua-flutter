@@ -146,7 +146,7 @@ class ConfigurationEditor extends ConsumerWidget {
                     otherLessons.any((l) => l.id == prerequisiteId);
 
                 return DropdownButtonFormField<String?>(
-                  initialValue: exists ? prerequisiteId : null,
+                  value: exists ? prerequisiteId : null,
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: isDark ? AppColors.forestDarkCard : Colors.white,
@@ -174,7 +174,7 @@ class ConfigurationEditor extends ConsumerWidget {
               loading: () => const Center(
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
-              error: (err, _) => Text(
+              error: (err, _) => const Text(
                 'Error loading lessons',
                 style: TextStyle(color: AppColors.semanticRed),
               ),
@@ -348,7 +348,7 @@ class ConfigurationEditor extends ConsumerWidget {
                   '+ Add Tag',
                   style: TextStyle(color: AppColors.gold500, fontSize: 10),
                 ),
-                backgroundColor: AppColors.gold500.withValues(alpha: 0.1),
+                backgroundColor: AppColors.gold500.withOpacity(0.1),
                 onPressed: () => _showAddTagDialog(context, tags, isDark),
               ),
             ],
@@ -436,3 +436,5 @@ class ConfigurationEditor extends ConsumerWidget {
     );
   }
 }
+
+

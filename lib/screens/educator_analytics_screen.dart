@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_colors.dart';
@@ -183,7 +183,7 @@ class _EducatorAnalyticsScreenState
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.semanticRed.withValues(alpha: 0.1),
+        color: AppColors.semanticRed.withOpacity(0.1),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Text(
@@ -234,7 +234,7 @@ class _EducatorAnalyticsScreenState
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: isDark
-              ? Colors.white.withValues(alpha: 0.05)
+              ? Colors.white.withOpacity(0.05)
               : AppColors.creamBorder,
         ),
       ),
@@ -282,7 +282,7 @@ class _EducatorAnalyticsScreenState
                         decoration: BoxDecoration(
                           color: isTapped
                               ? AppColors.gold500
-                              : AppColors.gold500.withValues(alpha: 0.6),
+                              : AppColors.gold500.withOpacity(0.6),
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
@@ -485,7 +485,7 @@ class _EducatorAnalyticsScreenState
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isDark
-                ? Colors.white.withValues(alpha: 0.05)
+                ? Colors.white.withOpacity(0.05)
                 : AppColors.creamBorder,
           ),
         ),
@@ -526,7 +526,7 @@ class _EducatorAnalyticsScreenState
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isDark
-              ? Colors.white.withValues(alpha: 0.05)
+              ? Colors.white.withOpacity(0.05)
               : AppColors.creamBorder,
         ),
       ),
@@ -558,7 +558,7 @@ class _EducatorAnalyticsScreenState
                   color: isSelected
                       ? AppColors.gold500
                       : (isDark
-                          ? Colors.white.withValues(alpha: 0.1)
+                          ? Colors.white.withOpacity(0.1)
                           : AppColors.creamBorder),
                 ),
               ),
@@ -590,7 +590,7 @@ class _EducatorAnalyticsScreenState
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isDark
-              ? Colors.white.withValues(alpha: 0.03)
+              ? Colors.white.withOpacity(0.03)
               : AppColors.creamBorder,
         ),
       ),
@@ -669,8 +669,8 @@ class _EducatorAnalyticsScreenState
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isDark
-              ? AppColors.semanticRed.withValues(alpha: 0.1)
-              : AppColors.semanticRed.withValues(alpha: 0.3),
+              ? AppColors.semanticRed.withOpacity(0.1)
+              : AppColors.semanticRed.withOpacity(0.3),
         ),
       ),
       child: Row(
@@ -705,7 +705,7 @@ class _EducatorAnalyticsScreenState
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: AppColors.gold500.withValues(alpha: 0.1),
+              color: AppColors.gold500.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
@@ -729,7 +729,7 @@ class _EducatorAnalyticsScreenState
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.gold500.withValues(alpha: 0.1),
+              color: AppColors.gold500.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: AppColors.gold500, size: 24),
@@ -788,7 +788,7 @@ class _EducatorAnalyticsScreenState
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isDark
-              ? Colors.white.withValues(alpha: 0.05)
+              ? Colors.white.withOpacity(0.05)
               : AppColors.creamBorder,
         ),
       ),
@@ -799,7 +799,7 @@ class _EducatorAnalyticsScreenState
             height: 30,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: rankColor.withValues(alpha: 0.1),
+              color: rankColor.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Text(
@@ -862,8 +862,8 @@ class _GrowthPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          AppColors.semanticGreen.withValues(alpha: 0.3),
-          AppColors.semanticGreen.withValues(alpha: 0.0),
+          AppColors.semanticGreen.withOpacity(0.3),
+          AppColors.semanticGreen.withOpacity(0.0),
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     final path = Path();
@@ -889,3 +889,5 @@ class _GrowthPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+
+

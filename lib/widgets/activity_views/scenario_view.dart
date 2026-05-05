@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 
@@ -48,9 +48,9 @@ class ScenarioView extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: AppColors.gold500.withValues(alpha: 0.1),
+            color: AppColors.gold500.withOpacity(0.1),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
+            border: Border.all(color: AppColors.gold500.withOpacity(0.2)),
           ),
           child: Text(
             scenarioText.isEmpty ? 'Scenario details...' : scenarioText,
@@ -77,13 +77,13 @@ class ScenarioView extends StatelessWidget {
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppColors.semanticBlue.withValues(alpha: 0.1)
-                    : Colors.white.withValues(alpha: 0.05),
+                    ? AppColors.semanticBlue.withOpacity(0.1)
+                    : Colors.white.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isSelected
                       ? AppColors.semanticBlue
-                      : Colors.white.withValues(alpha: 0.1),
+                      : Colors.white.withOpacity(0.1),
                   width: isSelected ? 2.5 : 1.5,
                 ),
               ),
@@ -100,3 +100,5 @@ class ScenarioView extends StatelessWidget {
     );
   }
 }
+
+

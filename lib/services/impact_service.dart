@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ContributionImpact {
   final int studentsHelpedToday;
@@ -26,3 +26,5 @@ final contributionImpactProvider = StreamProvider<ContributionImpact>((ref) {
     );
   }).asBroadcastStream();
 });
+
+

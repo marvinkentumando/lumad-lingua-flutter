@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
@@ -49,7 +49,7 @@ class NotificationScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text("🔔", style: TextStyle(fontSize: 64)),
+                  const Text("ðŸ””", style: TextStyle(fontSize: 64)),
                   const SizedBox(height: 16),
                   Text(
                     "No alerts yet.",
@@ -93,7 +93,7 @@ class NotificationScreen extends ConsumerWidget {
                           decoration: BoxDecoration(
                             color: _getNotificationColor(
                               notification['type'],
-                            ).withValues(alpha: 0.1),
+                            ).withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
                           child: Text(
@@ -164,13 +164,15 @@ class NotificationScreen extends ConsumerWidget {
     switch (type) {
       case 'validation':
       case 'approval':
-        return '🌟';
+        return 'ðŸŒŸ';
       case 'streak':
-        return '🔥';
+        return 'ðŸ”¥';
       case 'achievement':
-        return '🏆';
+        return 'ðŸ†';
       default:
-        return '🔔';
+        return 'ðŸ””';
     }
   }
 }
+
+

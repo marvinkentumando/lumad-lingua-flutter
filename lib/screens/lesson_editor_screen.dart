@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -635,7 +635,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
           child: Container(
             decoration: BoxDecoration(
               border: Border(
-                right: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                right: BorderSide(color: Colors.white.withOpacity(0.1)),
               ),
             ),
             child: _buildStepsList(),
@@ -647,7 +647,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
           child: Container(
             decoration: BoxDecoration(
               border: Border(
-                right: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                right: BorderSide(color: Colors.white.withOpacity(0.1)),
               ),
             ),
             child: _buildContentEditor(),
@@ -756,8 +756,8 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                 ),
                 tileColor: isSelected
                     ? (isDark
-                          ? Colors.white.withValues(alpha: 0.1)
-                          : Colors.black.withValues(alpha: 0.05))
+                          ? Colors.white.withOpacity(0.1)
+                          : Colors.black.withOpacity(0.05))
                     : null,
                 selected: isSelected,
                 onTap: () {
@@ -1013,7 +1013,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.semanticRed.withValues(alpha: 0.1),
+          color: AppColors.semanticRed.withOpacity(0.1),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.semanticRed),
         ),
@@ -1093,3 +1093,5 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
     }
   }
 }
+
+

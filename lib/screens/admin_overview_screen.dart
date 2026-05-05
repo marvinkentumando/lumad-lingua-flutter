@@ -286,7 +286,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                                 children: [
                                   Row(
                                     children: [
-                                      Icon(
+                                      const Icon(
                                         Icons.storage_rounded,
                                         color: AppColors.gold500,
                                       ),
@@ -421,11 +421,11 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.1),
+                      color: Colors.black.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      'SYSTEM OVERSEER  •  COMMANDER',
+                      'SYSTEM OVERSEER  â€¢  COMMANDER',
                       style: AppTypography.label.copyWith(
                         color: isDark ? Colors.white70 : Colors.black87,
                         fontWeight: FontWeight.w900,
@@ -440,7 +440,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: Colors.black.withOpacity(0.05),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -467,7 +467,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: isDark 
-                    ? (h['color'] as Color).withValues(alpha: 0.15)
+                    ? (h['color'] as Color).withOpacity(0.15)
                     : AppColors.creamBorder,
               ),
             ),
@@ -515,16 +515,16 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.forest700.withValues(alpha: 0.5) : Colors.white,
+        color: isDark ? AppColors.forest700.withOpacity(0.5) : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isDark 
-              ? color.withValues(alpha: 0.1)
+              ? color.withOpacity(0.1)
               : AppColors.creamBorder,
         ),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.05),
+            color: color.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -537,7 +537,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: color, size: 20),
@@ -610,21 +610,21 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                           end: Alignment.bottomCenter,
                           colors: [
                             color,
-                            color.withValues(alpha: isTapped ? 0.8 : 0.3),
+                            color.withOpacity(isTapped ? 0.8 : 0.3),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(6),
                         boxShadow: isTapped
                             ? [
                                 BoxShadow(
-                                  color: color.withValues(alpha: 0.4),
+                                  color: color.withOpacity(0.4),
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
                                 ),
                               ]
                             : [
                                 BoxShadow(
-                                  color: color.withValues(alpha: 0.2),
+                                  color: color.withOpacity(0.2),
                                   blurRadius: 4,
                                   offset: const Offset(0, 2),
                                 ),
@@ -698,12 +698,12 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                 width: MediaQuery.of(context).size.width * 0.7 * pct,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [color, color.withValues(alpha: 0.6)],
+                    colors: [color, color.withOpacity(0.6)],
                   ),
                   borderRadius: BorderRadius.circular(4),
                   boxShadow: [
                     BoxShadow(
-                      color: color.withValues(alpha: 0.3),
+                      color: color.withOpacity(0.3),
                       blurRadius: 6,
                     ),
                   ],
@@ -733,3 +733,5 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
     }
   }
 }
+
+

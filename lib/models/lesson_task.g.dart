@@ -1,4 +1,4 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
+﻿// GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'lesson_task.dart';
 
@@ -141,3 +141,5 @@ class TaskTypeAdapter extends TypeAdapter<TaskType> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+
+

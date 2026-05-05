@@ -108,15 +108,15 @@ class ProfileScreen extends ConsumerWidget {
     final location = profile?['location'] ?? 'PHILIPPINES';
     switch (role) {
       case UserRole.admin:
-        return 'SYSTEM OVERSEER  •  $location';
+        return 'SYSTEM OVERSEER  \u2022  $location';
       case UserRole.validator:
-        return 'ELDER VALIDATOR  •  $location';
+        return 'ELDER VALIDATOR  \u2022  $location';
       case UserRole.educator:
-        return 'WISDOM GUIDE  •  $location';
+        return 'WISDOM GUIDE  \u2022  $location';
       case UserRole.contributor:
-        return 'CULTURAL KEEPER  •  $location';
+        return 'CULTURAL KEEPER  \u2022  $location';
       case UserRole.learner:
-        return 'ELDER PATHFINDER  •  $location';
+        return 'ELDER PATHFINDER  \u2022  $location';
     }
   }
 
@@ -140,10 +140,7 @@ class ProfileScreen extends ConsumerWidget {
                 width: 140,
                 height: 140,
                 decoration: BoxDecoration(
-                  color: (isDark ? Colors.white : Colors.black).withValues(
-                    alpha: 0.02,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
+                  color: (isDark ? Colors.white : Colors.black).withOpacity(0.02),
                 ),
               ),
             ),
@@ -307,7 +304,7 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 decoration: BoxDecoration(
                   border: Border.all(
-                    color: AppColors.gold500.withValues(alpha: 0.3),
+                    color: AppColors.gold500.withOpacity(0.3),
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -348,7 +345,7 @@ class ProfileScreen extends ConsumerWidget {
             );
           },
           loading: () => _buildArtifactScrollSkeleton(),
-          error: (e, _) => Text(
+          error: (e, _) => const Text(
             'Error loading artifacts',
             style: TextStyle(color: AppColors.semanticRed),
           ),
@@ -380,18 +377,18 @@ class ProfileScreen extends ConsumerWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: isEarned
-                      ? tierColor.withValues(alpha: 0.1)
+                      ? tierColor.withOpacity(0.1)
                       : Colors.black26,
                   border: Border.all(
                     color: isEarned
-                        ? tierColor.withValues(alpha: 0.5)
+                        ? tierColor.withOpacity(0.5)
                         : Colors.white10,
                     width: 2,
                   ),
                   boxShadow: isEarned
                       ? [
                           BoxShadow(
-                            color: tierColor.withValues(alpha: 0.2),
+                            color: tierColor.withOpacity(0.2),
                             blurRadius: 10,
                             spreadRadius: 2,
                           ),
@@ -436,7 +433,7 @@ class ProfileScreen extends ConsumerWidget {
                     minHeight: 4,
                     backgroundColor: Colors.white10,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      tierColor.withValues(alpha: 0.5),
+                      tierColor.withOpacity(0.5),
                     ),
                   ),
                 ),
@@ -610,7 +607,7 @@ class ProfileScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: Colors.black54),
+            const Icon(Icons.chevron_right_rounded, color: Colors.black54),
           ],
         ),
       ),
@@ -630,9 +627,9 @@ class ProfileScreen extends ConsumerWidget {
         builder: (ctx) => Container(
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            color: AppColors.forest900.withValues(alpha: 0.95),
+            color: AppColors.forest900.withOpacity(0.95),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
+            border: Border.all(color: AppColors.gold500.withOpacity(0.2)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -723,9 +720,9 @@ class ProfileScreen extends ConsumerWidget {
       builder: (ctx) => Container(
         padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
-          color: AppColors.forest900.withValues(alpha: 0.95),
+          color: AppColors.forest900.withOpacity(0.95),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          border: Border.all(color: AppColors.semanticRed.withValues(alpha: 0.3)),
+          border: Border.all(color: AppColors.semanticRed.withOpacity(0.3)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -941,9 +938,9 @@ class ProfileScreen extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            color: AppColors.forest900.withValues(alpha: 0.95),
+            color: AppColors.forest900.withOpacity(0.95),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
+            border: Border.all(color: AppColors.gold500.withOpacity(0.2)),
           ),
           child: SingleChildScrollView(
             child: Column(
@@ -1041,7 +1038,7 @@ class ProfileScreen extends ConsumerWidget {
             hintText: hint,
             hintStyle: const TextStyle(color: Colors.white24),
             filled: true,
-            fillColor: Colors.black.withValues(alpha: 0.2),
+            fillColor: Colors.black.withOpacity(0.2),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -1053,7 +1050,7 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-// ─── Animated Stats Row ────────────────────────────────────────────────────
+// \u2500\u2500\u2500 Animated Stats Row \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
 class _ProfileStatsRow extends ConsumerStatefulWidget {
 
@@ -1184,9 +1181,7 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow>
               child: CustomPaint(
                 painter: _XpArcPainter(
                   progress: _arcAnim.value,
-                  trackColor: (isDark ? Colors.white : Colors.black).withValues(
-                    alpha: 0.08,
-                  ),
+                  trackColor: (isDark ? Colors.white : Colors.black).withOpacity(0.08),
                   arcColor: AppColors.gold500,
                 ),
               ),
@@ -1285,7 +1280,7 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow>
   }
 }
 
-// ─── XP Arc Ring Painter ───────────────────────────────────────────────────
+// \u2500\u2500\u2500 XP Arc Ring Painter \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
 class _XpArcPainter extends CustomPainter {
   final double progress;
@@ -1303,8 +1298,8 @@ class _XpArcPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width / 2) - 6;
     const strokeWidth = 5.0;
-    const startAngle = -2.356; // -135°
-    const totalSweep = 4.712; //  270°
+    const startAngle = -2.356; // -135\u00b0
+    const totalSweep = 4.712; //  270\u00b0
 
     // Track
     canvas.drawArc(
@@ -1326,7 +1321,7 @@ class _XpArcPainter extends CustomPainter {
       ..shader = SweepGradient(
         startAngle: startAngle,
         endAngle: startAngle + totalSweep * progress,
-        colors: [arcColor.withValues(alpha: 0.7), arcColor],
+        colors: [arcColor.withOpacity(0.7), arcColor],
       ).createShader(Rect.fromCircle(center: center, radius: radius))
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke

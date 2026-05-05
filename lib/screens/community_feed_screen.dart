@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -28,7 +28,7 @@ class CommunityFeedScreen extends ConsumerWidget {
                     if (activities.isEmpty) {
                       return const Center(
                         child: Text(
-                          "The community is quiet... for now. 🌿",
+                          "The community is quiet... for now. ðŸŒ¿",
                           style: TextStyle(color: Colors.white24),
                         ),
                       );
@@ -83,7 +83,7 @@ class CommunityFeedScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
+              color: Colors.white.withOpacity(0.05),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -157,9 +157,9 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: themeColor.withValues(alpha: 0.1),
+                color: themeColor.withOpacity(0.1),
                 shape: BoxShape.circle,
-                border: Border.all(color: themeColor.withValues(alpha: 0.3)),
+                border: Border.all(color: themeColor.withOpacity(0.3)),
               ),
               child: Text(
                 widget.activity.emoji,
@@ -218,12 +218,12 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
                           ),
                           decoration: BoxDecoration(
                             color: isLiked
-                                ? AppColors.semanticRed.withValues(alpha: 0.1)
-                                : Colors.white.withValues(alpha: 0.03),
+                                ? AppColors.semanticRed.withOpacity(0.1)
+                                : Colors.white.withOpacity(0.03),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: isLiked
-                                  ? AppColors.semanticRed.withValues(alpha: 0.2)
+                                  ? AppColors.semanticRed.withOpacity(0.2)
                                   : Colors.white10,
                             ),
                           ),
@@ -269,7 +269,7 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.03),
+                            color: Colors.white.withOpacity(0.03),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Colors.white10),
                           ),
@@ -359,7 +359,7 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
               child: Padding(
                 padding: EdgeInsets.all(20),
                 child: Text(
-                  "Conversation starting soon... 🌿",
+                  "Conversation starting soon... ðŸŒ¿",
                   style: TextStyle(color: Colors.white24, fontSize: 12),
                 ),
               ),
@@ -434,3 +434,5 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
     );
   }
 }
+
+

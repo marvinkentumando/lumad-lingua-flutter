@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
@@ -124,11 +124,11 @@ class _EducatorDashboardScreenState
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.1),
+                        color: Colors.black.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        'WISDOM GUIDE  •  ELDER EDUCATOR',
+                        'WISDOM GUIDE  â€¢  ELDER EDUCATOR',
                         style: AppTypography.label.copyWith(
                           color: Colors.black87,
                           fontWeight: FontWeight.w900,
@@ -143,7 +143,7 @@ class _EducatorDashboardScreenState
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: Colors.black.withOpacity(0.05),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -163,7 +163,7 @@ class _EducatorDashboardScreenState
                 children: [
                   Icon(
                     Icons.notifications_none_rounded,
-                    color: Colors.black.withValues(alpha: 0.4),
+                    color: Colors.black.withOpacity(0.4),
                     size: 24,
                   ),
                   if (unreadCount > 0)
@@ -251,7 +251,7 @@ class _EducatorDashboardScreenState
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
         children: [
-          Icon(icon, color: AppColors.gold500.withValues(alpha: 0.5), size: 20),
+          Icon(icon, color: AppColors.gold500.withOpacity(0.5), size: 20),
           const SizedBox(height: 8),
           Text(
             value,
@@ -346,7 +346,7 @@ class _EducatorDashboardScreenState
                 filled: true,
                 fillColor: isDark
                     ? AppColors.forest800
-                    : AppColors.creamBg.withValues(alpha: 0.5),
+                    : AppColors.creamBg.withOpacity(0.5),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
@@ -434,7 +434,7 @@ class _EducatorDashboardScreenState
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isDark
-                  ? Colors.white.withValues(alpha: 0.05)
+                  ? Colors.white.withOpacity(0.05)
                   : AppColors.creamBorder,
             ),
           ),
@@ -476,10 +476,10 @@ class _EducatorDashboardScreenState
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.semanticRed.withValues(alpha: 0.1),
+          color: AppColors.semanticRed.withOpacity(0.1),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: AppColors.semanticRed.withValues(alpha: 0.3),
+            color: AppColors.semanticRed.withOpacity(0.3),
           ),
         ),
         child: Row(
@@ -513,7 +513,7 @@ class _EducatorDashboardScreenState
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.semanticRed.withValues(alpha: 0.15),
+                color: AppColors.semanticRed.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -569,8 +569,8 @@ class _EducatorDashboardScreenState
                 child: LinearProgressIndicator(
                   value: progress,
                   backgroundColor: isDark
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : Colors.black.withValues(alpha: 0.05),
+                      ? Colors.white.withOpacity(0.05)
+                      : Colors.black.withOpacity(0.05),
                   valueColor: const AlwaysStoppedAnimation<Color>(
                     AppColors.gold500,
                   ),
@@ -634,9 +634,9 @@ class _EducatorDashboardScreenState
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isUrgent
-                  ? AppColors.semanticRed.withValues(alpha: 0.3)
+                  ? AppColors.semanticRed.withOpacity(0.3)
                   : (isDark
-                        ? Colors.white.withValues(alpha: 0.05)
+                        ? Colors.white.withOpacity(0.05)
                         : AppColors.creamBorder),
             ),
           ),
@@ -646,7 +646,7 @@ class _EducatorDashboardScreenState
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: (isUrgent ? AppColors.semanticRed : AppColors.gold500)
-                      .withValues(alpha: 0.1),
+                      .withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -683,8 +683,8 @@ class _EducatorDashboardScreenState
               Icon(
                 Icons.chevron_right_rounded,
                 color: isDark
-                    ? Colors.white.withValues(alpha: 0.1)
-                    : AppColors.creamText3.withValues(alpha: 0.3),
+                    ? Colors.white.withOpacity(0.1)
+                    : AppColors.creamText3.withOpacity(0.3),
                 size: 20,
               ),
             ],
@@ -727,7 +727,7 @@ class _EducatorDashboardScreenState
               child: Text(
                 'VIEW ALL',
                 style: AppTypography.label.copyWith(
-                  color: AppColors.gold500.withValues(alpha: 0.6),
+                  color: AppColors.gold500.withOpacity(0.6),
                   fontSize: 10,
                   fontWeight: FontWeight.w900,
                 ),
@@ -761,7 +761,7 @@ class _EducatorDashboardScreenState
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: color.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 16),
@@ -799,3 +799,5 @@ class _EducatorDashboardScreenState
     );
   }
 }
+
+

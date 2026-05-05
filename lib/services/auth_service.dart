@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+﻿import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
@@ -61,7 +61,7 @@ class AuthService {
                 'email': email,
                 'location': location ?? 'Unknown',
                 'tribe': tribe ?? 'General Learner',
-                'avatar': avatar ?? '👤',
+                'avatar': avatar ?? 'ðŸ‘¤',
                 'nativeLanguage': nativeLanguage ?? 'English',
                 'learningGoal': learningGoal ?? 'Culture',
                 'role': 'learner',
@@ -128,3 +128,5 @@ final otherUserProfileProvider =
           .snapshots()
           .map((snapshot) => snapshot.data());
     });
+
+

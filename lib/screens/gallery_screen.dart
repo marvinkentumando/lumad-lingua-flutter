@@ -216,12 +216,12 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                                 decoration: BoxDecoration(
                                   color: _getTierColor(
                                     artifact.tier,
-                                  ).withValues(alpha: 0.2),
+                                  ).withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(
                                     color: _getTierColor(
                                       artifact.tier,
-                                    ).withValues(alpha: 0.5),
+                                    ).withOpacity(0.5),
                                   ),
                                 ),
                                 child: Text(
@@ -260,15 +260,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
     );
   }
 
-  Widget _buildPlaceholderIcon(String type) {
-    return Center(
-      child: Icon(
-        GalleryUtils.getIconData(type),
-        size: 64,
-        color: AppColors.gold700,
-      ),
-    );
-  }
+
 
   Color _getTierColor(ArtifactTier tier) {
     switch (tier) {
@@ -356,7 +348,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                   height: 70,
                   decoration: BoxDecoration(
                     color: badge.isEarned
-                        ? badgeColor.withValues(alpha: 0.2)
+                        ? badgeColor.withOpacity(0.2)
                         : Colors.white10,
                     shape: BoxShape.circle,
                     border: Border.all(
@@ -366,7 +358,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                     boxShadow: badge.isEarned
                         ? [
                             BoxShadow(
-                              color: badgeColor.withValues(alpha: 0.3),
+                              color: badgeColor.withOpacity(0.3),
                               blurRadius: 10,
                               spreadRadius: 2,
                             ),
@@ -473,3 +465,5 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
     },
   ];
 }
+
+

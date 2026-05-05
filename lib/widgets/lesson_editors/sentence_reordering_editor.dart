@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../models/lesson_step.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
@@ -134,7 +134,7 @@ class _SentenceReorderingEditorState extends State<SentenceReorderingEditor> {
                 '+ Add Word',
                 style: TextStyle(color: AppColors.gold500, fontSize: 12),
               ),
-              backgroundColor: AppColors.gold500.withValues(alpha: 0.1),
+              backgroundColor: AppColors.gold500.withOpacity(0.1),
               onPressed: _addWord,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -238,3 +238,5 @@ class _EditableChipState extends State<_EditableChip> {
     );
   }
 }
+
+

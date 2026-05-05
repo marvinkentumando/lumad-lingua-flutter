@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -18,7 +18,7 @@ class DailyCheckInBoard extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.forest900,
           borderRadius: BorderRadius.circular(32),
-          border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3), width: 2),
+          border: Border.all(color: AppColors.gold500.withOpacity(0.3), width: 2),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -52,7 +52,7 @@ class DailyCheckInBoard extends StatelessWidget {
                   return Container(
                     width: 60,
                     decoration: BoxDecoration(
-                      color: isUnlocked ? AppColors.gold500.withValues(alpha: 0.2) : Colors.white10,
+                      color: isUnlocked ? AppColors.gold500.withOpacity(0.2) : Colors.white10,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: isUnlocked ? AppColors.gold500 : Colors.white24,
@@ -101,3 +101,5 @@ void showDailyCheckInBoard(BuildContext context, int currentStreak) {
     builder: (context) => DailyCheckInBoard(currentStreak: currentStreak),
   );
 }
+
+

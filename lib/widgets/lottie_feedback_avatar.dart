@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 
 class LottieFeedbackAvatar extends StatelessWidget {
@@ -55,3 +55,5 @@ class LottieFeedbackAvatar extends StatelessWidget {
     );
   }
 }
+
+

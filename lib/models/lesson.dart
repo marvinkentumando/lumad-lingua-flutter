@@ -1,4 +1,4 @@
-import 'package:hive/hive.dart';
+﻿import 'package:hive/hive.dart';
 import 'lesson_task.dart';
 
 part 'lesson.g.dart';
@@ -117,3 +117,5 @@ class Lesson {
     };
   }
 }
+
+

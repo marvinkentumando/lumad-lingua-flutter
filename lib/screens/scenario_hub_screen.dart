@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
@@ -119,10 +119,10 @@ class ScenarioHubScreen extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.gold500.withValues(alpha: 0.1),
+                      color: AppColors.gold500.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: AppColors.gold500.withValues(alpha: 0.3),
+                        color: AppColors.gold500.withOpacity(0.3),
                       ),
                     ),
                     child: Text(
@@ -185,3 +185,5 @@ class ScenarioHubScreen extends StatelessWidget {
     ).animate().fadeIn().slideX(begin: 0.1);
   }
 }
+
+

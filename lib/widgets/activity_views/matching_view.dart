@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 
@@ -81,9 +81,9 @@ class _MatchingViewState extends State<MatchingView> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: isNativeMatched
-                          ? AppColors.gold500.withValues(alpha: 0.2)
+                          ? AppColors.gold500.withOpacity(0.2)
                           : (widget.selectedNative == native
-                                ? AppColors.semanticBlue.withValues(alpha: 0.3)
+                                ? AppColors.semanticBlue.withOpacity(0.3)
                                 : AppColors.forestDarkCard),
                       border: Border.all(
                         color: isNativeMatched
@@ -118,9 +118,9 @@ class _MatchingViewState extends State<MatchingView> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: isMeaningMatched
-                          ? AppColors.gold500.withValues(alpha: 0.2)
+                          ? AppColors.gold500.withOpacity(0.2)
                           : (widget.selectedMeaning == meaning
-                                ? AppColors.semanticBlue.withValues(alpha: 0.3)
+                                ? AppColors.semanticBlue.withOpacity(0.3)
                                 : AppColors.forest800),
                       border: Border.all(
                         color: isMeaningMatched
@@ -151,3 +151,5 @@ class _MatchingViewState extends State<MatchingView> {
     );
   }
 }
+
+

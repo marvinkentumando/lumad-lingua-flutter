@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
@@ -84,3 +84,5 @@ final savedWordsProvider = NotifierProvider<SavedWordsNotifier, Set<String>>(
     return SavedWordsNotifier();
   },
 );
+
+

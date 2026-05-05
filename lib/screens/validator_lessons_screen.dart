@@ -177,10 +177,10 @@ class _ValidatorLessonsScreenState
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.semanticRed.withValues(alpha: 0.1),
+                      color: AppColors.semanticRed.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: AppColors.semanticRed.withValues(alpha: 0.3),
+                        color: AppColors.semanticRed.withOpacity(0.3),
                       ),
                     ),
                     child: Text(
@@ -339,7 +339,7 @@ class _ValidatorLessonsScreenState
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.gold500.withValues(alpha: 0.1)
+              ? AppColors.gold500.withOpacity(0.1)
               : (Theme.of(context).brightness == Brightness.dark
                     ? AppColors.forest800
                     : Colors.white),
@@ -400,7 +400,7 @@ class _ValidatorLessonsScreenState
             ),
             const SizedBox(height: 12),
             Text(
-              '${lesson.tasks.length} Activities • Unit ${lesson.unitNumber}',
+              '${lesson.tasks.length} Activities â€¢ Unit ${lesson.unitNumber}',
               style: AppTypography.body.copyWith(
                 color: Theme.of(context).brightness == Brightness.dark
                     ? AppColors.creamText3
@@ -493,7 +493,7 @@ class _ValidatorLessonsScreenState
                 filled: true,
                 fillColor: Theme.of(context).brightness == Brightness.dark
                     ? AppColors.forest900
-                    : Colors.black.withValues(alpha: 0.05),
+                    : Colors.black.withOpacity(0.05),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -699,7 +699,7 @@ class _LessonPreviewSheetState extends State<_LessonPreviewSheet> {
       return Container(
         height: 300,
         alignment: Alignment.center,
-        child: Text(
+        child: const Text(
           "No tasks in this lesson.",
           style: TextStyle(color: Colors.white),
         ),
@@ -838,3 +838,5 @@ class _LessonPreviewSheetState extends State<_LessonPreviewSheet> {
     );
   }
 }
+
+

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../models/lesson_step.dart';
 import '../../theme/app_colors.dart';
 import 'configuration_preview.dart';
@@ -41,7 +41,7 @@ class LessonPreviewPanel extends StatelessWidget {
             border: Border.all(color: Colors.black, width: 8),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.5),
+                color: Colors.black.withOpacity(0.5),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -91,3 +91,5 @@ class LessonPreviewPanel extends StatelessWidget {
     }
   }
 }
+
+

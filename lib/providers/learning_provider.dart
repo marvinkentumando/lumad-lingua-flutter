@@ -1,11 +1,11 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/lesson_task.dart';
 import '../models/lesson.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../providers/artifact_provider.dart';
 
-// ── Lesson Loader Provider (moved here from lesson_session_screen.dart) ──────
+// â”€â”€ Lesson Loader Provider (moved here from lesson_session_screen.dart) â”€â”€â”€â”€â”€â”€
 final currentLessonProvider = FutureProvider.family<Lesson?, String>((
   ref,
   lessonId,
@@ -122,7 +122,7 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
             // Keep the original ID so _taskMistakes always keys off the source task.
             newQueue[i] = LessonTask(
               id: task
-                  .id, // ← Fix #18: Use original ID, NOT '${task.id}_harder'
+                  .id, // â† Fix #18: Use original ID, NOT '${task.id}_harder'
               type: TaskType.sentenceReordering,
               questionText: 'Reconstruct the correct translation:',
               sentenceParts: List.from(correctText.split(' '))..shuffle(),
@@ -169,3 +169,5 @@ final quizSessionProvider =
     NotifierProvider<QuizSessionNotifier, QuizSessionState>(() {
       return QuizSessionNotifier();
     });
+
+

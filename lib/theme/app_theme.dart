@@ -38,14 +38,14 @@ class AppTheme {
           borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
         ),
       ),
-      cardTheme: const CardThemeData(
+      cardTheme: const CardTheme(
         color: Colors.white,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(24)),
         ),
       ),
-      dialogTheme: const DialogThemeData(
+      dialogTheme: const DialogTheme(
         backgroundColor: AppColors.creamBg,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(24)),
@@ -55,7 +55,7 @@ class AppTheme {
       textTheme: _buildTextTheme(Brightness.light),
       inputDecorationTheme: _buildInputTheme(Brightness.light),
       dividerTheme: DividerThemeData(
-        color: AppColors.creamBorder.withValues(alpha: 0.5),
+        color: AppColors.creamBorder.withOpacity(0.5),
       ),
     );
   }
@@ -65,7 +65,7 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: AppColors.forest900,
-      colorScheme: ColorScheme.dark(
+      colorScheme: const ColorScheme.dark(
         primary: AppColors.gold500,
         secondary: AppColors.forest400,
         tertiary: AppColors.semanticBlue,
@@ -95,14 +95,14 @@ class AppTheme {
           borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
         ),
       ),
-      cardTheme: const CardThemeData(
+      cardTheme: const CardTheme(
         color: AppColors.forestDarkCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(24)),
         ),
       ),
-      dialogTheme: const DialogThemeData(
+      dialogTheme: const DialogTheme(
         backgroundColor: AppColors.forest900,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(24)),
@@ -112,7 +112,7 @@ class AppTheme {
       textTheme: _buildTextTheme(Brightness.dark),
       inputDecorationTheme: _buildInputTheme(Brightness.dark),
       dividerTheme: DividerThemeData(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: Colors.white.withOpacity(0.1),
       ),
     );
   }
@@ -139,14 +139,14 @@ class AppTheme {
   static InputDecorationTheme _buildInputTheme(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
     final fillColor = isDark
-        ? Colors.white.withValues(alpha: 0.08)
-        : Colors.black.withValues(alpha: 0.05);
+        ? Colors.white.withOpacity(0.08)
+        : Colors.black.withOpacity(0.05);
     final hintColor = isDark
-        ? Colors.white.withValues(alpha: 0.3)
-        : Colors.black.withValues(alpha: 0.3);
+        ? Colors.white.withOpacity(0.3)
+        : Colors.black.withOpacity(0.3);
     final borderColor = isDark
-        ? Colors.white.withValues(alpha: 0.15)
-        : Colors.black.withValues(alpha: 0.1);
+        ? Colors.white.withOpacity(0.15)
+        : Colors.black.withOpacity(0.1);
     final focusedColor = isDark ? AppColors.gold500 : AppColors.forest500;
 
     return InputDecorationTheme(

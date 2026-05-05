@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
 class VineProgressBar extends StatefulWidget {
@@ -69,8 +69,7 @@ class _VineProgressBarState extends State<VineProgressBar>
           painter: _VinePainter(
             progress: _animation.value,
             color: vineColor,
-            backgroundColor: (isDark ? Colors.white : Colors.black).withValues(
-              alpha: 0.05,
+            backgroundColor: (isDark ? Colors.white : Colors.black).withOpacity(0.05,
             ),
           ),
         );
@@ -159,3 +158,5 @@ class _VinePainter extends CustomPainter {
   bool shouldRepaint(covariant _VinePainter oldDelegate) =>
       oldDelegate.progress != progress || oldDelegate.color != color;
 }
+
+

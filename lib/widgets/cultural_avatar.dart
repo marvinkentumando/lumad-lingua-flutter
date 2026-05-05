@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:rive/rive.dart';
 
 class CulturalAvatar extends StatefulWidget {
@@ -65,3 +65,5 @@ class _CulturalAvatarState extends State<CulturalAvatar> {
     );
   }
 }
+
+

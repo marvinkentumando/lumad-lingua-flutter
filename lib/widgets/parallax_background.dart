@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
@@ -60,7 +60,7 @@ class _ParallaxBackgroundState extends State<ParallaxBackground> {
           child: Image.asset(
             widget.backgroundImage,
             fit: BoxFit.cover,
-            color: Colors.black.withValues(alpha: 0.2),
+            color: Colors.black.withOpacity(0.2),
             colorBlendMode: BlendMode.darken,
           ),
         ),
@@ -70,3 +70,5 @@ class _ParallaxBackgroundState extends State<ParallaxBackground> {
     );
   }
 }
+
+

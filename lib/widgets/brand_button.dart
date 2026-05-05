@@ -96,8 +96,8 @@ class _BrandButtonState extends State<BrandButton> {
         break;
       case BrandButtonType.secondary:
         bgColor = isDark
-            ? Colors.white.withValues(alpha: 0.06)
-            : Colors.black.withValues(alpha: 0.04);
+            ? Colors.white.withOpacity(0.06)
+            : Colors.black.withOpacity(0.04);
         textColor = isDisabled
             ? (isDark ? Colors.white24 : Colors.black26)
             : (isDark ? Colors.white : AppColors.forest700);
@@ -106,7 +106,7 @@ class _BrandButtonState extends State<BrandButton> {
           color: isDisabled
               ? (isDark ? Colors.white12 : Colors.black12)
               : (isDark
-                    ? Colors.white.withValues(alpha: 0.15)
+                    ? Colors.white.withOpacity(0.15)
                     : AppColors.forest200),
           width: 2.5,
         );

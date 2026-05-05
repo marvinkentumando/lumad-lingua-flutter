@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -76,11 +76,11 @@ class _BrandSearchBarState extends State<BrandSearchBar> {
 
     // Theme tokens
     final bgColor = isDark
-        ? Colors.black.withValues(alpha: 0.3)
-        : Colors.white.withValues(alpha: 0.8);
+        ? Colors.black.withOpacity(0.3)
+        : Colors.white.withOpacity(0.8);
     final borderColor = isDark
-        ? AppColors.gold500.withValues(alpha: 0.2)
-        : AppColors.forest500.withValues(alpha: 0.1);
+        ? AppColors.gold500.withOpacity(0.2)
+        : AppColors.forest500.withOpacity(0.1);
     final iconColor = isDark ? AppColors.gold500 : AppColors.forest700;
     final textColor = isDark ? Colors.white : AppColors.forest900;
     final hintColor = isDark ? Colors.white38 : AppColors.creamText2;
@@ -99,7 +99,7 @@ class _BrandSearchBarState extends State<BrandSearchBar> {
             ? []
             : [
                 BoxShadow(
-                  color: AppColors.creamShadow.withValues(alpha: 0.1),
+                  color: AppColors.creamShadow.withOpacity(0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -161,7 +161,7 @@ class _BrandSearchBarState extends State<BrandSearchBar> {
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: textColor.withValues(alpha: 0.1),
+                            color: textColor.withOpacity(0.1),
                           ),
                           child: Icon(
                             Icons.close_rounded,
@@ -192,7 +192,7 @@ class _BrandSearchBarState extends State<BrandSearchBar> {
                 Container(
                   width: 1,
                   height: 20,
-                  color: borderColor.withValues(alpha: 0.5),
+                  color: borderColor.withOpacity(0.5),
                 ),
                 const SizedBox(width: 12),
                 GestureDetector(
@@ -206,10 +206,10 @@ class _BrandSearchBarState extends State<BrandSearchBar> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: iconColor.withValues(alpha: 0.1),
+                      color: iconColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: iconColor.withValues(alpha: 0.2),
+                        color: iconColor.withOpacity(0.2),
                       ),
                     ),
                     child: Row(
@@ -246,3 +246,5 @@ class _BrandSearchBarState extends State<BrandSearchBar> {
     );
   }
 }
+
+

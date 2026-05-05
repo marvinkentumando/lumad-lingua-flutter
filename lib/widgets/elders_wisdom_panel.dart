@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -24,12 +24,12 @@ class EldersWisdomPanel extends StatelessWidget {
         color: isDark ? AppColors.forest800 : AppColors.creamBg,
         borderRadius: BorderRadius.circular(32),
         border: Border.all(
-          color: AppColors.gold500.withValues(alpha: 0.3),
+          color: AppColors.gold500.withOpacity(0.3),
           width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.gold500.withValues(alpha: 0.1),
+            color: AppColors.gold500.withOpacity(0.1),
             blurRadius: 40,
             spreadRadius: 5,
           ),
@@ -43,7 +43,7 @@ class EldersWisdomPanel extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.gold500.withValues(alpha: 0.1),
+                  color: AppColors.gold500.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -98,7 +98,7 @@ class EldersWisdomPanel extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: Text(
-              "— The Ancestors",
+              "â€” The Ancestors",
               style: AppTypography.label.copyWith(
                 color: AppColors.gold500,
                 fontSize: 11,
@@ -123,3 +123,5 @@ void showEldersWisdom(BuildContext context, String content) {
     ),
   );
 }
+
+

@@ -145,7 +145,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                             end: Alignment.bottomCenter,
                             colors: [
                               Colors.transparent,
-                              AppColors.forest900.withValues(alpha: 0.6),
+                              AppColors.forest900.withOpacity(0.6),
                               AppColors.forest900,
                             ],
                             stops: const [0.2, 0.7, 1.0],
@@ -192,9 +192,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                       horizontal: 16,
                       vertical: 8,
                     ),
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: AppColors.forest900,
-                      borderRadius: const BorderRadius.vertical(
+                      borderRadius: BorderRadius.vertical(
                         top: Radius.circular(24),
                       ),
                     ),
@@ -332,13 +332,13 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.05),
+                  color: Colors.white.withOpacity(0.05),
                 ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.05),
+                  color: Colors.white.withOpacity(0.05),
                 ),
               ),
               contentPadding: const EdgeInsets.symmetric(vertical: 0),
@@ -361,17 +361,17 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.gold500
-              : Colors.white.withValues(alpha: 0.05),
+              : Colors.white.withOpacity(0.05),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
                 ? AppColors.gold500
-                : Colors.white.withValues(alpha: 0.1),
+                : Colors.white.withOpacity(0.1),
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppColors.gold500.withValues(alpha: 0.3),
+                    color: AppColors.gold500.withOpacity(0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -447,7 +447,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           if (isFirst)
-            const Text('👑', style: TextStyle(fontSize: 32))
+            const Text('ðŸ‘‘', style: TextStyle(fontSize: 32))
                 .animate(onPlay: (c) => c.repeat(reverse: true))
                 .scaleXY(end: 1.15, duration: 800.ms)
                 .shimmer(
@@ -467,7 +467,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
               boxShadow: [
                 if (isFirst)
                   BoxShadow(
-                    color: AppColors.gold500.withValues(alpha: 0.3),
+                    color: AppColors.gold500.withOpacity(0.3),
                     blurRadius: 20,
                     spreadRadius: 2,
                   ),
@@ -513,8 +513,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
               color: isFirst
-                  ? AppColors.gold500.withValues(alpha: 0.1)
-                  : Colors.white.withValues(alpha: 0.05),
+                  ? AppColors.gold500.withOpacity(0.1)
+                  : Colors.white.withOpacity(0.05),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
@@ -537,14 +537,14 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                 end: Alignment.bottomCenter,
                 colors: [
                   color,
-                  color.withValues(alpha: 0.4),
+                  color.withOpacity(0.4),
                   Colors.transparent,
                 ],
               ),
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(20),
               ),
-              border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+              border: Border.all(color: color.withOpacity(0.3), width: 1),
             ),
             child: Column(
               children: [
@@ -590,7 +590,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
           decoration: BoxDecoration(
             color: isMe
                 ? AppColors.forest800
-                : AppColors.forest700.withValues(alpha: 0.4),
+                : AppColors.forest700.withOpacity(0.4),
             borderRadius: BorderRadius.circular(19),
           ),
           child: Row(
@@ -641,7 +641,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                       : null,
                   child: e.avatar == null
                       ? Text(
-                          isMe ? '★' : e.name[0].toUpperCase(),
+                          isMe ? 'â˜…' : e.name[0].toUpperCase(),
                           style: TextStyle(
                             fontSize: 14,
                             color: isMe ? AppColors.forest900 : Colors.white,
@@ -668,7 +668,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                       _getTribalTitle(e.rank),
                       style: AppTypography.label.copyWith(
                         color: isMe
-                            ? AppColors.gold500.withValues(alpha: 0.8)
+                            ? AppColors.gold500.withOpacity(0.8)
                             : Colors.white24,
                         fontSize: 9,
                         fontWeight: FontWeight.w900,
@@ -685,13 +685,13 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                 ),
                 decoration: BoxDecoration(
                   color: isMe
-                      ? AppColors.gold500.withValues(alpha: 0.1)
-                      : Colors.white.withValues(alpha: 0.04),
+                      ? AppColors.gold500.withOpacity(0.1)
+                      : Colors.white.withOpacity(0.04),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isMe
-                        ? AppColors.gold500.withValues(alpha: 0.2)
-                        : Colors.white.withValues(alpha: 0.05),
+                        ? AppColors.gold500.withOpacity(0.2)
+                        : Colors.white.withOpacity(0.05),
                   ),
                 ),
                 child: Text(
@@ -721,10 +721,10 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
       decoration: BoxDecoration(
         color: AppColors.forest900,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
+        border: Border.all(color: AppColors.gold500.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.5),
+            color: Colors.black.withOpacity(0.5),
             blurRadius: 40,
             offset: const Offset(0, -10),
           ),
@@ -760,7 +760,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                 Text(
                   'YOUR POSITION',
                   style: AppTypography.label.copyWith(
-                    color: AppColors.gold500.withValues(alpha: 0.6),
+                    color: AppColors.gold500.withOpacity(0.6),
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
                   ),
@@ -821,3 +821,5 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
         child != oldDelegate.child;
   }
 }
+
+

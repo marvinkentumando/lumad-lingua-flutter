@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
@@ -22,28 +22,28 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
       'level': 24,
       'isOnline': true,
       'streak': 42,
-      'avatar': '👤',
+      'avatar': 'ðŸ‘¤',
     },
     {
       'name': 'Bai Bibyaon',
       'level': 31,
       'isOnline': false,
       'streak': 15,
-      'avatar': '👸',
+      'avatar': 'ðŸ‘¸',
     },
     {
       'name': 'Matigsalug Brave',
       'level': 12,
       'isOnline': true,
       'streak': 3,
-      'avatar': '🏹',
+      'avatar': 'ðŸ¹',
     },
     {
       'name': 'Mandaya Weaver',
       'level': 18,
       'isOnline': false,
       'streak': 8,
-      'avatar': '🧶',
+      'avatar': 'ðŸ§¶',
     },
   ];
 
@@ -104,7 +104,7 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
             children: [
               CircleAvatar(
                 radius: 30,
-                backgroundColor: AppColors.gold500.withValues(alpha: 0.1),
+                backgroundColor: AppColors.gold500.withOpacity(0.1),
                 child: Text(
                   friend['avatar'],
                   style: const TextStyle(fontSize: 30),
@@ -147,7 +147,7 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Text('🔥', style: TextStyle(fontSize: 12)),
+                    const Text('ðŸ”¥', style: TextStyle(fontSize: 12)),
                     const SizedBox(width: 4),
                     Text(
                       '${friend['streak']} DAY STREAK',
@@ -183,3 +183,5 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
     ).animate().fadeIn(delay: (index * 100).ms).slideX(begin: 0.1);
   }
 }
+
+

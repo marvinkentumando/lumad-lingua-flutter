@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Status of a voice submission in the validation pipeline.
 enum VoiceStatus { pending, approved, flagged, rejected }
@@ -102,3 +102,5 @@ class VoiceSubmission {
     return null;
   }
 }
+
+

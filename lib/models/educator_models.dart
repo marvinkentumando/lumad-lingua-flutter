@@ -1,4 +1,4 @@
-import 'lesson.dart';
+﻿import 'lesson.dart';
 
 class EducatorLesson {
   final String id;
@@ -38,7 +38,7 @@ class EducatorLesson {
       id: lesson.id,
       title: lesson.title,
       subtitle:
-          '${lesson.level == 1 ? 'Beginner' : 'Advanced'} • ${lesson.language}',
+          '${lesson.level == 1 ? 'Beginner' : 'Advanced'} â€¢ ${lesson.language}',
       status: lesson.status,
       dialect: lesson.language,
       level: lesson.level == 1 ? 'Beginner' : 'Advanced',
@@ -88,3 +88,5 @@ class StudentLessonProgress {
     this.accuracy = 0.8,
   });
 }
+
+

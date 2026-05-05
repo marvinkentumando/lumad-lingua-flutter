@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:math' as math;
 
@@ -19,7 +19,7 @@ class CrystalBurstAnimation extends StatelessWidget {
         return Positioned(
           left: MediaQuery.of(context).size.width / 2,
           top: MediaQuery.of(context).size.height / 2,
-          child: const Text('✨', style: TextStyle(fontSize: 24))
+          child: const Text('âœ¨', style: TextStyle(fontSize: 24))
               .animate(
                 onComplete: (_) {
                   if (index == 14) onComplete();
@@ -46,3 +46,5 @@ class CrystalBurstAnimation extends StatelessWidget {
     );
   }
 }
+
+

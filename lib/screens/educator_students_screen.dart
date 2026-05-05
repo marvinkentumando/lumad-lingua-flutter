@@ -264,8 +264,7 @@ class _EducatorStudentsScreenState
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.semanticRed.withValues(
-                              alpha: 0.15,
+                            color: AppColors.semanticRed.withOpacity(0.15,
                             ),
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -295,7 +294,7 @@ class _EducatorStudentsScreenState
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: isDark
-                        ? Colors.white.withValues(alpha: 0.05)
+                        ? Colors.white.withOpacity(0.05)
                         : AppColors.creamBorder,
                   ),
                 ),
@@ -421,7 +420,7 @@ class _EducatorStudentsScreenState
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isDark
-                ? Colors.white.withValues(alpha: 0.05)
+                ? Colors.white.withOpacity(0.05)
                 : AppColors.creamBorder,
           ),
         ),
@@ -489,7 +488,7 @@ class _EducatorStudentsScreenState
                 label: Text(filter),
                 backgroundColor: isSelected
                     ? AppColors.gold500
-                    : Colors.white.withValues(alpha: 0.05),
+                    : Colors.white.withOpacity(0.05),
                 labelStyle: TextStyle(
                   color: isSelected
                       ? AppColors.forest900
@@ -519,7 +518,7 @@ class _EducatorStudentsScreenState
                 children: [
                   CircleAvatar(
                     radius: 24,
-                    backgroundColor: AppColors.gold500.withValues(alpha: 0.1),
+                    backgroundColor: AppColors.gold500.withOpacity(0.1),
                     backgroundImage: AssetImage(student.avatar),
                   ),
                   if (student.isStruggling)
@@ -557,7 +556,7 @@ class _EducatorStudentsScreenState
                         ),
                         if (student.streakDays > 3) ...[
                           const SizedBox(width: 6),
-                          Icon(
+                          const Icon(
                             Icons.local_fire_department_rounded,
                             color: AppColors.gold500,
                             size: 14,
@@ -576,7 +575,7 @@ class _EducatorStudentsScreenState
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '• ${student.village}',
+                          'â€¢ ${student.village}',
                           style: AppTypography.label.copyWith(
                             color: isDark ? Colors.white24 : AppColors.creamText3,
                             fontSize: 9,
@@ -592,8 +591,8 @@ class _EducatorStudentsScreenState
                           width: double.infinity,
                           decoration: BoxDecoration(
                             color: isDark
-                                ? Colors.white.withValues(alpha: 0.05)
-                                : Colors.black.withValues(alpha: 0.05),
+                                ? Colors.white.withOpacity(0.05)
+                                : Colors.black.withOpacity(0.05),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -669,8 +668,7 @@ class _EducatorStudentsScreenState
                       children: [
                         CircleAvatar(
                           radius: 40,
-                          backgroundColor: AppColors.gold500.withValues(
-                            alpha: 0.1,
+                          backgroundColor: AppColors.gold500.withOpacity(0.1,
                           ),
                           backgroundImage: AssetImage(student.avatar),
                         ),
@@ -717,7 +715,7 @@ class _EducatorStudentsScreenState
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '• ${student.village}',
+                          'â€¢ ${student.village}',
                           style: AppTypography.label.copyWith(
                             color: isDark ? Colors.white38 : AppColors.creamText3,
                           ),
@@ -805,7 +803,7 @@ class _EducatorStudentsScreenState
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: isDark
-                            ? Colors.white.withValues(alpha: 0.05)
+                            ? Colors.white.withOpacity(0.05)
                             : AppColors.creamBorder,
                       ),
                     ),
@@ -855,7 +853,7 @@ class _EducatorStudentsScreenState
         decoration: BoxDecoration(
           color: AppColors.forestDarkCard,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.03)),
+          border: Border.all(color: Colors.white.withOpacity(0.03)),
         ),
         child: Row(
           children: [
@@ -887,7 +885,7 @@ class _EducatorStudentsScreenState
                         height: 3,
                         width: double.infinity,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.05),
+                          color: Colors.white.withOpacity(0.05),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -1020,7 +1018,7 @@ class _EducatorStudentsScreenState
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
         children: [
-          Icon(icon, color: AppColors.gold500.withValues(alpha: 0.5), size: 20),
+          Icon(icon, color: AppColors.gold500.withOpacity(0.5), size: 20),
           const SizedBox(height: 8),
           Text(
             value,
@@ -1061,8 +1059,8 @@ class _EducatorStudentsScreenState
               height: 16,
               decoration: BoxDecoration(
                 color: isActive
-                    ? AppColors.gold500.withValues(alpha: (index % 4 + 1) * 0.2)
-                    : Colors.white.withValues(alpha: 0.05),
+                    ? AppColors.gold500.withOpacity((index % 4 + 1) * 0.2)
+                    : Colors.white.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(4),
               ),
             );
@@ -1072,3 +1070,5 @@ class _EducatorStudentsScreenState
     );
   }
 }
+
+

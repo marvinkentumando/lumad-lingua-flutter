@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import 'package:file_picker/file_picker.dart';
@@ -114,7 +114,7 @@ class EditorUtils {
             decoration: BoxDecoration(
               border: Border.all(
                 color: isDark
-                    ? Colors.white.withValues(alpha: 0.1)
+                    ? Colors.white.withOpacity(0.1)
                     : AppColors.creamBorder,
                 width: 1.5,
                 style: BorderStyle.solid,
@@ -173,9 +173,9 @@ class EditorUtils {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: hasAudio
-                ? AppColors.gold500.withValues(alpha: 0.3)
+                ? AppColors.gold500.withOpacity(0.3)
                 : (isDark
-                      ? Colors.white.withValues(alpha: 0.05)
+                      ? Colors.white.withOpacity(0.05)
                       : AppColors.creamBorder),
           ),
         ),
@@ -185,8 +185,8 @@ class EditorUtils {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: hasAudio
-                    ? AppColors.gold500.withValues(alpha: 0.1)
-                    : AppColors.semanticRed.withValues(alpha: 0.1),
+                    ? AppColors.gold500.withOpacity(0.1)
+                    : AppColors.semanticRed.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -552,7 +552,7 @@ class _AudioRecorderDialogState extends State<AudioRecorderDialog> {
                         (_isRecording
                                 ? AppColors.semanticRed
                                 : AppColors.gold500)
-                            .withValues(alpha: 0.3),
+                            .withOpacity(0.3),
                     blurRadius: 15,
                     spreadRadius: 5,
                   ),
@@ -581,3 +581,5 @@ class _AudioRecorderDialogState extends State<AudioRecorderDialog> {
     );
   }
 }
+
+

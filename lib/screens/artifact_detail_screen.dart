@@ -23,8 +23,8 @@ class ArtifactDetailScreen extends StatelessWidget {
             expandedHeight: 400.0,
             stretch: true,
             backgroundColor: AppColors.forest900,
-            leading: Padding(
-              padding: const EdgeInsets.all(8.0),
+            leading: const Padding(
+              padding: EdgeInsets.all(8.0),
               child: CircleAvatar(
                 backgroundColor: Colors.black38,
                 child: BackButton(color: AppColors.gold500),
@@ -55,7 +55,7 @@ class ArtifactDetailScreen extends StatelessWidget {
                             child: Icon(
                               _getIcon(artifact.type),
                               size: 100,
-                              color: AppColors.gold500.withValues(alpha: 0.2),
+                              color: AppColors.gold500.withOpacity(0.2),
                             ),
                           ),
                         ),
@@ -88,10 +88,10 @@ class ArtifactDetailScreen extends StatelessWidget {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.gold500.withValues(alpha: 0.1),
+                      color: AppColors.gold500.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: AppColors.gold500.withValues(alpha: 0.3),
+                        color: AppColors.gold500.withOpacity(0.3),
                       ),
                     ),
                     child: Text(
@@ -116,12 +116,12 @@ class ArtifactDetailScreen extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: _getTierColor(
                             artifact.tier,
-                          ).withValues(alpha: 0.1),
+                          ).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
                             color: _getTierColor(
                               artifact.tier,
-                            ).withValues(alpha: 0.5),
+                            ).withOpacity(0.5),
                           ),
                         ),
                         child: Text(
@@ -312,7 +312,7 @@ class ArtifactDetailScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.forest800,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -361,3 +361,5 @@ class ArtifactDetailScreen extends StatelessWidget {
     }
   }
 }
+
+

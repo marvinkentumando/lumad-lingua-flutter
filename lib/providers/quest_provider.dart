@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/quest.dart';
 import '../services/auth_service.dart';
@@ -138,3 +138,5 @@ class QuestNotifier extends Notifier<void> {
 final questActionProvider = NotifierProvider<QuestNotifier, void>(
   () => QuestNotifier(),
 );
+
+

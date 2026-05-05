@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import 'brand_button.dart';
@@ -57,7 +57,7 @@ class FeedbackPanel extends StatelessWidget {
                       Row(
                         children: [
                           Text(
-                            isCorrect ? "🎉 $title" : "💡 $title",
+                            isCorrect ? "ðŸŽ‰ $title" : "ðŸ’¡ $title",
                             style: AppTypography.h2.copyWith(
                               color: Colors.white,
                             ),
@@ -70,7 +70,7 @@ class FeedbackPanel extends StatelessWidget {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.gold500.withValues(alpha: 0.2),
+                                color: AppColors.gold500.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
                                   color: AppColors.gold500,
@@ -92,7 +92,7 @@ class FeedbackPanel extends StatelessWidget {
                       Text(
                         subtitle,
                         style: AppTypography.body.copyWith(
-                          color: Colors.white.withValues(alpha: 0.7),
+                          color: Colors.white.withOpacity(0.7),
                         ),
                       ),
                     ],
@@ -107,7 +107,7 @@ class FeedbackPanel extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: BrandButton(
-                text: "Continue →",
+                text: "Continue â†’",
                 type: isCorrect
                     ? BrandButtonType.success
                     : BrandButtonType.danger,
@@ -120,3 +120,5 @@ class FeedbackPanel extends StatelessWidget {
     );
   }
 }
+
+

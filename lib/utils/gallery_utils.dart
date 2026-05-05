@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 class GalleryUtils {
   static IconData getIconData(String name) {
@@ -47,3 +47,5 @@ class GalleryUtils {
     return Color(int.parse("0x$hexColor"));
   }
 }
+
+

@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
@@ -216,7 +216,7 @@ class FirebaseService {
             .collection('notifications')
             .doc();
         transaction.set(notifRef, {
-          'title': 'Entry Approved! 🌟',
+          'title': 'Entry Approved! ðŸŒŸ',
           'message':
               'Your contribution "$term" has been validated by a $validatorRole and is now live in the dictionary.',
           'type': 'approval',
@@ -265,7 +265,7 @@ class FirebaseService {
             .collection('notifications')
             .doc();
         transaction.set(notifRef, {
-          'title': 'Clarification Needed 📝',
+          'title': 'Clarification Needed ðŸ“',
           'message':
               'A $validatorRole has requested more info for "$term": $feedback',
           'type': 'flagged',
@@ -307,7 +307,7 @@ class FirebaseService {
             .collection('notifications')
             .doc();
         transaction.set(notifRef, {
-          'title': 'Entry Rejected ⚠️',
+          'title': 'Entry Rejected âš ï¸',
           'message': 'Your entry "$term" was not approved: $feedback',
           'type': 'rejection',
           'timestamp': FieldValue.serverTimestamp(),
@@ -601,7 +601,7 @@ class FirebaseService {
             .collection('notifications')
             .doc();
         transaction.set(notifRef, {
-          'title': 'Welcome to the Tribe! 🌿',
+          'title': 'Welcome to the Tribe! ðŸŒ¿',
           'message':
               'Your request to become a Contributor has been approved. You now have access to expansion tools!',
           'type': 'approval',
@@ -694,7 +694,7 @@ class FirebaseService {
             .collection('notifications')
             .doc();
         transaction.set(notifRef, {
-          'title': 'Curriculum Approved! 📚',
+          'title': 'Curriculum Approved! ðŸ“š',
           'message': 'Your lesson "$title" is now live for all students.',
           'type': 'approval',
           'timestamp': FieldValue.serverTimestamp(),
@@ -733,7 +733,7 @@ class FirebaseService {
     final contributorId = data['contributorId'];
     if (contributorId != null) {
       await addNotification(contributorId, {
-        'title': 'Lesson Feedback 📝',
+        'title': 'Lesson Feedback ðŸ“',
         'message':
             'A $validatorRole suggested changes for "${data['title']}": $feedback',
         'type': 'flagged',
@@ -1486,7 +1486,7 @@ class FirebaseService {
       }, SetOptions(merge: true));
     });
   }
-  // ── Voice Submission Operations ──────────────────────────────────────────
+  // â”€â”€ Voice Submission Operations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /// Fetches items that require urgent attention (older than 48 hours or priority).
   Stream<List<ValidationItem>> getUrgentQueueItems() {
@@ -1588,7 +1588,7 @@ class FirebaseService {
         });
   }
 
-  /// Approves a voice submission — awards XP and notifies the contributor.
+  /// Approves a voice submission â€” awards XP and notifies the contributor.
   Future<void> approveVoiceSubmission(
     String id,
     String validatorId,
@@ -1617,7 +1617,7 @@ class FirebaseService {
             .collection('notifications')
             .doc();
         transaction.set(notifRef, {
-          'title': 'Voice Recording Approved! 🎙️',
+          'title': 'Voice Recording Approved! ðŸŽ™ï¸',
           'message':
               'Your recording "$title" has been validated by a $validatorRole.',
           'type': 'approval',
@@ -1655,7 +1655,7 @@ class FirebaseService {
 
     if (contributorId != null) {
       await addNotification(contributorId, {
-        'title': 'Voice Recording Feedback 🎤',
+        'title': 'Voice Recording Feedback ðŸŽ¤',
         'message': 'A $validatorRole requested changes for "$title": $feedback',
         'type': 'flagged',
       });
@@ -1686,7 +1686,7 @@ class FirebaseService {
 
     if (contributorId != null) {
       await addNotification(contributorId, {
-        'title': 'Voice Recording Rejected ⚠️',
+        'title': 'Voice Recording Rejected âš ï¸',
         'message': 'Your recording "$title" was not approved: $feedback',
         'type': 'rejection',
       });
@@ -1711,7 +1711,7 @@ class FirebaseService {
         .map((snap) => snap.size);
   }
 
-  // ── Community Feed Operations ──────────────────────────────────────────
+  // â”€â”€ Community Feed Operations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Stream<List<CommunityActivity>> getCommunityFeed({int limit = 20}) {
     return _db
@@ -1961,7 +1961,7 @@ final educatorAnalyticsProvider = FutureProvider<Map<String, dynamic>>((
   return ref.watch(firebaseServiceProvider).getEducatorAnalytics();
 });
 
-// ── Voice Submission Providers ──────────────────────────────────────────
+// â”€â”€ Voice Submission Providers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 final pendingVoiceSubmissionsProvider =
     StreamProvider.family<List<VoiceSubmission>, int>((ref, limit) {
@@ -1989,8 +1989,10 @@ final pendingLessonsCountProvider = StreamProvider<int>((ref) {
   return ref.watch(firebaseServiceProvider).getPendingLessonsCount();
 });
 
-// ── Community Feed Providers ────────────────────────────────────────────
+// â”€â”€ Community Feed Providers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 final communityFeedProvider = StreamProvider<List<CommunityActivity>>((ref) {
   return ref.watch(firebaseServiceProvider).getCommunityFeed();
 });
+
+

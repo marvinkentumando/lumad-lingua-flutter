@@ -1,4 +1,4 @@
-enum UserRole { learner, contributor, validator, educator, admin }
+﻿enum UserRole { learner, contributor, validator, educator, admin }
 
 class UserProfile {
   final String uid;
@@ -25,3 +25,5 @@ class UserProfile {
     this.isPublicProfile = true,
   });
 }
+
+

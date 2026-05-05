@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../providers/role_provider.dart';
 
 class NavItem {
@@ -69,3 +69,5 @@ List<NavItem> getNavItemsForRole(UserRole role) {
       ];
   }
 }
+
+

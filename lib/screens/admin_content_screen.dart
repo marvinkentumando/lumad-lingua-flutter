@@ -160,20 +160,20 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
                           : null,
                       filled: true,
                       fillColor: isDark 
-                          ? AppColors.forest800.withValues(alpha: 0.5)
+                          ? AppColors.forest800.withOpacity(0.5)
                           : Colors.white,
                       contentPadding: const EdgeInsets.symmetric(vertical: 0),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide(
-                          color: Colors.white.withValues(alpha: 0.05),
+                          color: Colors.white.withOpacity(0.05),
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide(
                           color: isDark 
-                              ? Colors.white.withValues(alpha: 0.05)
+                              ? Colors.white.withOpacity(0.05)
                               : AppColors.creamBorder,
                         ),
                       ),
@@ -249,12 +249,12 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         color: isDark 
-            ? AppColors.forest900.withValues(alpha: 0.8)
+            ? AppColors.forest900.withOpacity(0.8)
             : AppColors.creamBg,
         border: Border(
           bottom: BorderSide(
             color: isDark 
-                ? Colors.white.withValues(alpha: 0.05)
+                ? Colors.white.withOpacity(0.05)
                 : AppColors.creamBorder,
             width: 1,
           ),
@@ -265,13 +265,13 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.gold500.withValues(alpha: 0.1),
+              color: AppColors.gold500.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: AppColors.gold500.withValues(alpha: 0.2),
+                color: AppColors.gold500.withOpacity(0.2),
               ),
             ),
-            child: const Text('🛡️', style: TextStyle(fontSize: 20)),
+            child: const Text('ðŸ›¡ï¸', style: TextStyle(fontSize: 20)),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -289,7 +289,7 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
                 Text(
                   'Content Moderation',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.3),
+                    color: Colors.white.withOpacity(0.3),
                     fontSize: 11,
                   ),
                 ),
@@ -301,7 +301,7 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.05),
+                color: Colors.white.withOpacity(0.05),
               ),
               child: const Icon(
                 Icons.settings_suggest_rounded,
@@ -333,10 +333,10 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
         ? BrandBadgeStyle.dark
         : BrandBadgeStyle.gold;
     final badgeText = status == 'validated'
-        ? '✓ Published'
+        ? 'âœ“ Published'
         : status == 'rejected'
-        ? '✗ Rejected'
-        : '⏳ Pending';
+        ? 'âœ— Rejected'
+        : 'â³ Pending';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -344,12 +344,12 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
           Container(
                 decoration: BoxDecoration(
                   color: isDark 
-                      ? AppColors.forest700.withValues(alpha: 0.3)
+                      ? AppColors.forest700.withOpacity(0.3)
                       : Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: isDark 
-                        ? Colors.white.withValues(alpha: 0.05)
+                        ? Colors.white.withOpacity(0.05)
                         : AppColors.creamBorder,
                   ),
                 ),
@@ -367,7 +367,7 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
                                       : status == 'rejected'
                                       ? AppColors.semanticRed
                                       : AppColors.semanticBlue)
-                                  .withValues(alpha: 0.1),
+                                  .withOpacity(0.1),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Icon(
@@ -400,7 +400,7 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
                             Row(
                               children: [
                                 Text(
-                                  '${data.dialect} · ${data.partOfSpeech}',
+                                  '${data.dialect} Â· ${data.partOfSpeech}',
                                   style: AppTypography.label.copyWith(
                                     color: Colors.white38,
                                     fontSize: 10,
@@ -409,15 +409,14 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
                                 ),
                                 const SizedBox(width: 8),
                                 const Text(
-                                  '·',
+                                  'Â·',
                                   style: TextStyle(color: Colors.white12),
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
                                   'by ${data.contributorName}',
                                   style: AppTypography.mono.copyWith(
-                                    color: AppColors.gold500.withValues(
-                                      alpha: 0.4,
+                                    color: AppColors.gold500.withOpacity(0.4,
                                     ),
                                     fontSize: 10,
                                   ),
@@ -430,8 +429,7 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
                                 child: Text(
                                   'Reason: ${data.rejectionReason}',
                                   style: AppTypography.body.copyWith(
-                                    color: AppColors.semanticRed.withValues(
-                                      alpha: 0.7,
+                                    color: AppColors.semanticRed.withOpacity(0.7,
                                     ),
                                     fontSize: 10,
                                     fontStyle: FontStyle.italic,
@@ -492,7 +490,7 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: (color ?? Colors.white).withValues(alpha: 0.05),
+          color: (color ?? Colors.white).withOpacity(0.05),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: color ?? Colors.white70, size: 18),
@@ -801,7 +799,7 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
                       ),
                     ),
                     value: e.value,
-                    activeThumbColor: AppColors.gold500,
+                    activeColor: AppColors.gold500,
                     onChanged: (v) {
                       HapticService.light();
                       setDialogState(() => _dialectToggles[e.key] = v);
@@ -843,7 +841,7 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: color.withOpacity(0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, color: color, size: 20),
@@ -941,3 +939,5 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
     );
   }
 }
+
+

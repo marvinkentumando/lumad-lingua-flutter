@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../models/lesson_step.dart';
 import '../activity_views/mcq_view.dart';
 
@@ -20,3 +20,5 @@ class MCQPreview extends StatelessWidget {
     );
   }
 }
+
+

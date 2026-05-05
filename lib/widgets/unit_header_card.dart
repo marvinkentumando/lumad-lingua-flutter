@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 
@@ -34,8 +34,7 @@ class UnitHeaderCard extends StatelessWidget {
           color: isDark ? const Color(0xFF242C26) : AppColors.creamBg,
           borderRadius: BorderRadius.circular(32),
           border: Border.all(
-            color: (isDark ? Colors.white : Colors.black).withValues(
-              alpha: 0.05,
+            color: (isDark ? Colors.white : Colors.black).withOpacity(0.05,
             ),
             width: 1.5,
           ),
@@ -48,7 +47,7 @@ class UnitHeaderCard extends StatelessWidget {
               : null,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+              color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
               blurRadius: 30,
               offset: const Offset(0, 15),
             ),
@@ -103,8 +102,8 @@ class UnitHeaderCard extends StatelessWidget {
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: isDark
-                                ? Colors.white.withValues(alpha: 0.05)
-                                : Colors.black.withValues(alpha: 0.05),
+                                ? Colors.white.withOpacity(0.05)
+                                : Colors.black.withOpacity(0.05),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Icon(icon, color: AppColors.gold500, size: 32),
@@ -139,7 +138,7 @@ class UnitHeaderCard extends StatelessWidget {
                                                         : 1))
                                                 .round()
                                         ? AppColors.gold500
-                                        : Colors.grey.withValues(alpha: 0.3),
+                                        : Colors.grey.withOpacity(0.3),
                                     size: 16,
                                   ),
                                 ),
@@ -182,7 +181,7 @@ class UnitHeaderCard extends StatelessWidget {
                         minHeight: 4,
                         backgroundColor: isDark
                             ? Colors.white10
-                            : Colors.black.withValues(alpha: 0.06),
+                            : Colors.black.withOpacity(0.06),
                         valueColor: const AlwaysStoppedAnimation<Color>(
                           AppColors.gold500,
                         ),
@@ -207,7 +206,7 @@ class UnitHeaderCard extends StatelessWidget {
                   width: 40,
                   height: 3,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.3),
+                    color: Colors.white.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(5),
                   ),
                 ),
@@ -219,3 +218,5 @@ class UnitHeaderCard extends StatelessWidget {
     );
   }
 }
+
+

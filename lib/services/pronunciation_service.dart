@@ -1,4 +1,4 @@
-import 'dart:math';
+﻿import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class PronunciationScore {
@@ -46,3 +46,5 @@ class PronunciationService {
     );
   }
 }
+
+

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 
@@ -24,32 +24,30 @@ class BrandBadge extends StatelessWidget {
 
     switch (style) {
       case BrandBadgeStyle.gold:
-        bgColor = AppColors.gold500.withValues(alpha: isDark ? 0.18 : 0.25);
+        bgColor = AppColors.gold500.withOpacity(isDark ? 0.18 : 0.25);
         textColor = isDark ? const Color(0xFF9A7200) : const Color(0xFF7A5A00);
         break;
       case BrandBadgeStyle.green:
-        bgColor = AppColors.semanticGreen.withValues(
-          alpha: isDark ? 0.16 : 0.2,
+        bgColor = AppColors.semanticGreen.withOpacity(isDark ? 0.16 : 0.2,
         );
         textColor = isDark ? const Color(0xFF1F6E33) : const Color(0xFF144D23);
         break;
       case BrandBadgeStyle.blue:
-        bgColor = AppColors.semanticBlue.withValues(
-          alpha: isDark ? 0.14 : 0.18,
+        bgColor = AppColors.semanticBlue.withOpacity(isDark ? 0.14 : 0.18,
         );
         textColor = isDark ? const Color(0xFF1556A8) : const Color(0xFF0D3A73);
         break;
       case BrandBadgeStyle.danger:
-        bgColor = AppColors.semanticRed.withValues(alpha: isDark ? 0.14 : 0.18);
+        bgColor = AppColors.semanticRed.withOpacity(isDark ? 0.14 : 0.18);
         textColor = isDark ? const Color(0xFF981C1C) : const Color(0xFF6A1414);
         break;
       case BrandBadgeStyle.dark:
         bgColor = isDark
-            ? Colors.white.withValues(alpha: 0.07)
-            : Colors.black.withValues(alpha: 0.07);
+            ? Colors.white.withOpacity(0.07)
+            : Colors.black.withOpacity(0.07);
         textColor = isDark
-            ? Colors.white.withValues(alpha: 0.6)
-            : Colors.black.withValues(alpha: 0.6);
+            ? Colors.white.withOpacity(0.6)
+            : Colors.black.withOpacity(0.6);
         break;
       case BrandBadgeStyle.outline:
         bgColor = Colors.transparent;
@@ -79,3 +77,5 @@ class BrandBadge extends StatelessWidget {
     );
   }
 }
+
+

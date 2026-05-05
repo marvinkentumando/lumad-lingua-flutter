@@ -1,4 +1,4 @@
-import 'package:share_plus/share_plus.dart';
+﻿import 'package:share_plus/share_plus.dart';
 import '../models/dictionary_entry.dart';
 
 class SharingService {
@@ -9,10 +9,10 @@ class SharingService {
         '''
 Check out this word from Lumad Lingua!
 
-🌿 Indigenous Word: ${entry.indigenousWord}
-🗣️ Translation: ${entry.translation}
-🌍 Language: ${entry.language}
-📝 Context: ${entry.usageContext}
+ðŸŒ¿ Indigenous Word: ${entry.indigenousWord}
+ðŸ—£ï¸ Translation: ${entry.translation}
+ðŸŒ Language: ${entry.language}
+ðŸ“ Context: ${entry.usageContext}
 
 Learn more at: $webBaseUrl/word/${entry.id}
 ''';
@@ -25,3 +25,5 @@ Learn more at: $webBaseUrl/word/${entry.id}
     );
   }
 }
+
+

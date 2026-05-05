@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../models/lesson_step.dart';
 import '../activity_views/scenario_view.dart';
 
@@ -26,3 +26,5 @@ class ScenarioPreview extends StatelessWidget {
     );
   }
 }
+
+

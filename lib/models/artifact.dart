@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum ArtifactTier { common, rare, sacred, epic, ancient, legendary }
 
@@ -26,7 +26,7 @@ class Artifact {
     required this.id,
     required this.title,
     required this.description,
-    this.emoji = '📜',
+    this.emoji = 'ðŸ“œ',
     this.imageUrl = '',
     this.type = 'artifact',
     this.culturalNote,
@@ -57,7 +57,7 @@ class Artifact {
       id: id,
       title: data['title'] ?? '',
       description: data['description'] ?? '',
-      emoji: data['emoji'] ?? '📜',
+      emoji: data['emoji'] ?? 'ðŸ“œ',
       imageUrl: data['imageUrl'] ?? '',
       type: data['type'] ?? 'artifact',
       culturalNote: data['culturalNote'],
@@ -102,3 +102,5 @@ class Artifact {
   double get progress =>
       (currentProgress / (targetValue > 0 ? targetValue : 1)).clamp(0.0, 1.0);
 }
+
+

@@ -1,4 +1,4 @@
-class HeritageArtifact {
+﻿class HeritageArtifact {
   final String id;
   final String title;
   final String description;
@@ -105,3 +105,5 @@ class GalleryBadge {
     };
   }
 }
+
+

@@ -62,7 +62,7 @@ class _ListeningViewState extends State<ListeningView> {
         Container(
           padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.04),
+            color: Colors.white.withOpacity(0.04),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white12),
           ),
@@ -92,7 +92,7 @@ class _ListeningViewState extends State<ListeningView> {
                             ? () => setState(() => _playsUsed++)
                             : null,
                         icon: const Icon(Icons.replay_rounded, size: 16),
-                        label: Text('Replay'),
+                        label: const Text('Replay'),
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.gold500,
                           textStyle: const TextStyle(fontSize: 13),
@@ -121,7 +121,7 @@ class _ListeningViewState extends State<ListeningView> {
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      'No more replays — choose carefully!',
+                      'No more replays â€” choose carefully!',
                       style: AppTypography.label.copyWith(
                         color: AppColors.semanticRed,
                         fontSize: 11,
@@ -146,3 +146,5 @@ class _ListeningViewState extends State<ListeningView> {
     );
   }
 }
+
+

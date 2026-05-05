@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/geo_recording.dart';
 import '../services/firebase_service.dart';
@@ -59,8 +59,7 @@ class MunicipalityPanel extends ConsumerWidget {
             width: 50,
             height: 4,
             decoration: BoxDecoration(
-              color: (isDark ? Colors.white : Colors.black).withValues(
-                alpha: 0.1,
+              color: (isDark ? Colors.white : Colors.black).withOpacity(0.1,
               ),
               borderRadius: BorderRadius.circular(10),
             ),
@@ -115,13 +114,13 @@ class MunicipalityPanel extends ConsumerWidget {
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           color: favorites.contains(rec.id)
-                              ? AppColors.gold500.withValues(alpha: 0.2)
+                              ? AppColors.gold500.withOpacity(0.2)
                               : Colors.transparent,
                           border: Border.all(
                             color: favorites.contains(rec.id)
                                 ? AppColors.gold500
                                 : (isDark ? Colors.white : Colors.black)
-                                      .withValues(alpha: 0.1),
+                                      .withOpacity(0.1),
                           ),
                           shape: BoxShape.circle,
                         ),
@@ -242,3 +241,5 @@ class MunicipalityPanel extends ConsumerWidget {
     );
   }
 }
+
+

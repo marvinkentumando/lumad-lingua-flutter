@@ -109,7 +109,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '${rawLessons.length} lessons • ${rawLessons.where((l) => l.status == 'PUBLISHED').length} published',
+                                '${rawLessons.length} lessons â€¢ ${rawLessons.where((l) => l.status == 'PUBLISHED').length} published',
                                 style: AppTypography.body.copyWith(
                                   color: isDark ? Colors.white24 : AppColors.creamText3,
                                 ),
@@ -127,7 +127,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: isDark
-                                      ? Colors.white.withValues(alpha: 0.05)
+                                      ? Colors.white.withOpacity(0.05)
                                       : AppColors.creamBorder,
                                 ),
                               ),
@@ -268,7 +268,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isDark
-                ? Colors.white.withValues(alpha: 0.05)
+                ? Colors.white.withOpacity(0.05)
                 : AppColors.creamBorder,
           ),
         ),
@@ -330,7 +330,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isDark
-              ? Colors.white.withValues(alpha: 0.05)
+              ? Colors.white.withOpacity(0.05)
               : AppColors.creamBorder,
         ),
       ),
@@ -396,7 +396,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                     color: isSelected
                         ? AppColors.gold500
                         : (isDark
-                              ? Colors.white.withValues(alpha: 0.1)
+                              ? Colors.white.withOpacity(0.1)
                               : AppColors.creamBorder),
                   ),
                 ),
@@ -643,7 +643,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
               decoration: BoxDecoration(
                 color:
                     (isDestructive ? AppColors.semanticRed : AppColors.gold500)
-                        .withValues(alpha: 0.1),
+                        .withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -681,8 +681,8 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
             Icon(
               Icons.chevron_right_rounded,
               color: isDark
-                  ? Colors.white.withValues(alpha: 0.1)
-                  : AppColors.creamText3.withValues(alpha: 0.3),
+                  ? Colors.white.withOpacity(0.1)
+                  : AppColors.creamText3.withOpacity(0.3),
               size: 20,
             ),
           ],
@@ -714,7 +714,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: (isDraft ? Colors.white : AppColors.gold500)
-                        .withValues(alpha: 0.1),
+                        .withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
@@ -730,8 +730,8 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                   child: Icon(
                     Icons.more_horiz_rounded,
                     color: isDark
-                        ? Colors.white.withValues(alpha: 0.2)
-                        : AppColors.creamText3.withValues(alpha: 0.5),
+                        ? Colors.white.withOpacity(0.2)
+                        : AppColors.creamText3.withOpacity(0.5),
                     size: 20,
                   ),
                 ),
@@ -761,7 +761,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
             if (!isDraft)
               Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.visibility_rounded,
                     color: Colors.white24,
                     size: 12,
@@ -775,7 +775,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Icon(Icons.people_rounded, color: Colors.white24, size: 12),
+                  const Icon(Icons.people_rounded, color: Colors.white24, size: 12),
                   const SizedBox(width: 4),
                   Text(
                     lesson.studentCount.toString(),
@@ -802,7 +802,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  isDraft ? 'DRAFT • v${lesson.version}' : lesson.status,
+                  isDraft ? 'DRAFT â€¢ v${lesson.version}' : lesson.status,
                   style: AppTypography.label.copyWith(
                     color: isDraft
                         ? (isDark ? Colors.white24 : AppColors.creamText3)
@@ -828,7 +828,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
         padding: const EdgeInsets.only(right: 24),
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: AppColors.semanticRed.withValues(alpha: 0.2),
+          color: AppColors.semanticRed.withOpacity(0.2),
           borderRadius: BorderRadius.circular(20),
         ),
         child: const Icon(
@@ -844,7 +844,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
-            title: Text(
+            title: const Text(
               'Delete Lesson?',
               style: TextStyle(color: AppColors.gold500),
             ),
@@ -899,7 +899,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
           decoration: BoxDecoration(
             color: AppColors.forestDarkCard,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.03)),
+            border: Border.all(color: Colors.white.withOpacity(0.03)),
           ),
           child: Row(
             children: [
@@ -907,7 +907,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: (isDraft ? Colors.white : AppColors.gold500)
-                      .withValues(alpha: 0.1),
+                      .withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -941,7 +941,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                         ),
                         if (!isDraft) ...[
                           const SizedBox(width: 10),
-                          Icon(
+                          const Icon(
                             Icons.visibility_rounded,
                             color: Colors.white24,
                             size: 12,
@@ -967,8 +967,8 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                 ),
                 decoration: BoxDecoration(
                   color: isDraft
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : AppColors.semanticGreen.withValues(alpha: 0.15),
+                      ? Colors.white.withOpacity(0.05)
+                      : AppColors.semanticGreen.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -987,3 +987,5 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
     );
   }
 }
+
+

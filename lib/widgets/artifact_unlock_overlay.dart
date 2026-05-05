@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
@@ -49,7 +49,7 @@ class _ArtifactUnlockOverlayState extends ConsumerState<ArtifactUnlockOverlay> {
     final tierColor = _getTierColor();
     return [
       tierColor,
-      tierColor.withValues(alpha: 0.7),
+      tierColor.withOpacity(0.7),
       Colors.white,
       AppColors.gold500,
       Colors.cyanAccent,
@@ -61,7 +61,7 @@ class _ArtifactUnlockOverlayState extends ConsumerState<ArtifactUnlockOverlay> {
     final tierColor = _getTierColor();
 
     return Scaffold(
-      backgroundColor: Colors.black.withValues(alpha: 0.92),
+      backgroundColor: Colors.black.withOpacity(0.92),
       body: Stack(
         children: [
           // Spirit particle celebration layer
@@ -91,10 +91,10 @@ class _ArtifactUnlockOverlayState extends ConsumerState<ArtifactUnlockOverlay> {
                   height: 160,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: tierColor.withValues(alpha: 0.1),
+                    color: tierColor.withOpacity(0.1),
                     boxShadow: [
                       BoxShadow(
-                        color: tierColor.withValues(alpha: 0.4),
+                        color: tierColor.withOpacity(0.4),
                         blurRadius: 80,
                         spreadRadius: 20,
                       ),
@@ -122,9 +122,9 @@ class _ArtifactUnlockOverlayState extends ConsumerState<ArtifactUnlockOverlay> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
-                    color: tierColor.withValues(alpha: 0.15),
+                    color: tierColor.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: tierColor.withValues(alpha: 0.4)),
+                    border: Border.all(color: tierColor.withOpacity(0.4)),
                   ),
                   child: Text(
                     widget.artifact.tier.name.toUpperCase(),
@@ -184,3 +184,5 @@ void showArtifactUnlockOverlay(BuildContext context, Artifact artifact) {
     ),
   );
 }
+
+

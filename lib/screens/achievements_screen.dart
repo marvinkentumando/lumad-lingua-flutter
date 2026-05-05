@@ -43,7 +43,7 @@ class AchievementsScreen extends ConsumerWidget {
     final artifactsAsync = ref.watch(userArtifactsProvider);
     final badgesAsync = user != null
         ? ref.watch(userBadgesStreamProvider(user.uid))
-        : AsyncValue<List<GalleryBadge>>.data([]);
+        : const AsyncValue<List<GalleryBadge>>.data([]);
     final stats = ref.watch(artifactStatsProvider);
 
     return Scaffold(
@@ -190,7 +190,7 @@ class AchievementsScreen extends ConsumerWidget {
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: Divider(color: AppColors.gold500.withValues(alpha: 0.2)),
+          child: Divider(color: AppColors.gold500.withOpacity(0.2)),
         ),
       ],
     );
@@ -249,7 +249,7 @@ class AchievementsScreen extends ConsumerWidget {
       return Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.03),
+          color: Colors.white.withOpacity(0.03),
           borderRadius: BorderRadius.circular(16),
         ),
         child: const Center(
@@ -282,8 +282,8 @@ class AchievementsScreen extends ConsumerWidget {
                     CircleAvatar(
                       radius: 30,
                       backgroundColor: badge.isEarned
-                          ? color.withValues(alpha: 0.1)
-                          : Colors.white.withValues(alpha: 0.05),
+                          ? color.withOpacity(0.1)
+                          : Colors.white.withOpacity(0.05),
                       child: Icon(
                         GalleryUtils.getIconData(badge.iconName),
                         color: badge.isEarned ? color : Colors.white10,
@@ -378,9 +378,9 @@ class AchievementsScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: tierColor.withValues(alpha: 0.1),
+                color: tierColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: tierColor.withValues(alpha: 0.3)),
+                border: Border.all(color: tierColor.withOpacity(0.3)),
               ),
               child: Text(
                 artifact.tier.name.toUpperCase(),
@@ -405,8 +405,8 @@ class AchievementsScreen extends ConsumerWidget {
         itemBuilder: (context, index) => Container(
 
           width: 80,
-          margin: EdgeInsets.only(right: 16),
-          child: Column(
+          margin: const EdgeInsets.only(right: 16),
+          child: const Column(
             children: [
               Skeleton(width: 60, height: 60, isCircle: true),
               SizedBox(height: 8),
@@ -465,3 +465,5 @@ class AchievementsScreen extends ConsumerWidget {
     }
   }
 }
+
+

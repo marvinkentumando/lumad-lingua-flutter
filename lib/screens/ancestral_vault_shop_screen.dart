@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
@@ -78,9 +78,9 @@ class AncestralVaultShopScreen extends ConsumerWidget {
       margin: const EdgeInsets.only(right: 16, top: 12, bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: AppColors.gold500.withValues(alpha: 0.1),
+        color: AppColors.gold500.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
+        border: Border.all(color: AppColors.gold500.withOpacity(0.3)),
       ),
       child: Row(
         children: [
@@ -151,7 +151,7 @@ class AncestralVaultShopScreen extends ConsumerWidget {
                   )
                   .shimmer(
                     duration: 2.seconds,
-                    color: tierColor.withValues(alpha: 0.5),
+                    color: tierColor.withOpacity(0.5),
                   ),
             ),
           ),
@@ -231,13 +231,13 @@ class AncestralVaultShopScreen extends ConsumerWidget {
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: tierColor.withValues(alpha: 0.25),
+                  color: tierColor.withOpacity(0.25),
                   blurRadius: 20,
                   spreadRadius: 0,
                 ),
               ],
               border: Border.all(
-                color: tierColor.withValues(alpha: 0.6),
+                color: tierColor.withOpacity(0.6),
                 width: 1.5,
               ),
             ),
@@ -246,11 +246,11 @@ class AncestralVaultShopScreen extends ConsumerWidget {
           .animate(onPlay: (c) => c.repeat(reverse: true))
           .boxShadow(
             begin: BoxShadow(
-              color: tierColor.withValues(alpha: 0.1),
+              color: tierColor.withOpacity(0.1),
               blurRadius: 10,
             ),
             end: BoxShadow(
-              color: tierColor.withValues(alpha: 0.4),
+              color: tierColor.withOpacity(0.4),
               blurRadius: 30,
             ),
             duration: 2.seconds,
@@ -260,7 +260,7 @@ class AncestralVaultShopScreen extends ConsumerWidget {
       return Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: tierColor.withValues(alpha: 0.3), width: 1),
+          border: Border.all(color: tierColor.withOpacity(0.3), width: 1),
         ),
         child: content,
       );
@@ -422,3 +422,5 @@ class AncestralVaultShopScreen extends ConsumerWidget {
     );
   }
 }
+
+

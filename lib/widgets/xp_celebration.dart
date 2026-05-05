@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -43,7 +43,7 @@ class _XPCelebrationState extends State<XPCelebration> {
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.gold500.withValues(alpha: 0.2),
+                    color: AppColors.gold500.withOpacity(0.2),
                     border: Border.all(color: AppColors.gold500, width: 4),
                   ),
                   child: const Icon(
@@ -98,3 +98,5 @@ class _XPCelebrationState extends State<XPCelebration> {
     );
   }
 }
+
+

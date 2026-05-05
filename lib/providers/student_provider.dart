@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -190,3 +190,5 @@ class StudentNotifier extends Notifier<StudentState> {
 final studentProvider = NotifierProvider<StudentNotifier, StudentState>(() {
   return StudentNotifier();
 });
+
+

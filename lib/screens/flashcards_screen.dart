@@ -1,4 +1,4 @@
-import 'dart:math';
+﻿import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -419,7 +419,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
                               const SizedBox(width: 12),
                               Expanded(
                                 child: BrandButton(
-                                  text: isLast ? 'Finish ✓' : 'Easy ✓',
+                                  text: isLast ? 'Finish âœ“' : 'Easy âœ“',
                                   type: BrandButtonType.primary,
                                   onTap: isLast
                                       ? _showCompletionModal
@@ -429,7 +429,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
                             ] else
                               Expanded(
                                 child: BrandButton(
-                                  text: 'Flip Card  ↕',
+                                  text: 'Flip Card  â†•',
                                   type: BrandButtonType.primary,
                                   onTap: _flipCard,
                                 ),
@@ -449,7 +449,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
 
                         const SizedBox(height: 8),
                         Text(
-                          '← → arrow keys or Space to navigate',
+                          'â† â†’ arrow keys or Space to navigate',
                           style: AppTypography.mono.copyWith(
                             color: Colors.white12,
                             fontSize: 10,
@@ -491,10 +491,10 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.gold500.withValues(alpha: 0.1),
+                color: AppColors.gold500.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: AppColors.gold500.withValues(alpha: 0.3),
+                  color: AppColors.gold500.withOpacity(0.3),
                 ),
               ),
               child: Text(
@@ -611,10 +611,10 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
         decoration: BoxDecoration(
           color: onTap != null
               ? AppColors.forest700
-              : AppColors.forest700.withValues(alpha: 0.3),
+              : AppColors.forest700.withOpacity(0.3),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: Colors.white.withValues(alpha: onTap != null ? 0.08 : 0.03),
+            color: Colors.white.withOpacity(onTap != null ? 0.08 : 0.03),
           ),
         ),
         child: Column(
@@ -647,7 +647,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
     }
     showDialog(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.7),
+      barrierColor: Colors.black.withOpacity(0.7),
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
         child: BrandCard(
@@ -655,7 +655,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('🏆', style: TextStyle(fontSize: 56))
+              const Text('ðŸ†', style: TextStyle(fontSize: 56))
                   .animate(onPlay: (c) => c.repeat(reverse: true))
                   .scaleXY(end: 1.1, duration: 600.ms),
               const SizedBox(height: 16),
@@ -732,7 +732,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('💫', style: TextStyle(fontSize: 56)),
+              const Text('ðŸ’«', style: TextStyle(fontSize: 56)),
               const SizedBox(height: 20),
               Text(
                 'No Flashcards Yet',
@@ -749,7 +749,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
               ),
               const SizedBox(height: 32),
               BrandButton(
-                text: '📖  Go to Dictionary',
+                text: 'ðŸ“–  Go to Dictionary',
                 type: BrandButtonType.primary,
                 onTap: () => Navigator.pop(context),
               ),
@@ -760,3 +760,5 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
     );
   }
 }
+
+

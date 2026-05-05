@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -182,7 +182,7 @@ class _EducatorUnitManagementScreenState
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isDark
-              ? Colors.white.withValues(alpha: 0.05)
+              ? Colors.white.withOpacity(0.05)
               : AppColors.creamBorder,
         ),
       ),
@@ -192,7 +192,7 @@ class _EducatorUnitManagementScreenState
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: AppColors.gold500.withValues(alpha: 0.1),
+            color: AppColors.gold500.withOpacity(0.1),
             shape: BoxShape.circle,
           ),
           child: Center(
@@ -213,7 +213,7 @@ class _EducatorUnitManagementScreenState
           ),
         ),
         subtitle: Text(
-          'Unit ${lesson.unitNumber} • Level ${lesson.level}',
+          'Unit ${lesson.unitNumber} â€¢ Level ${lesson.level}',
           style: AppTypography.body.copyWith(
             color: isDark ? Colors.white38 : AppColors.creamText3,
             fontSize: 12,
@@ -249,3 +249,5 @@ class _EducatorUnitManagementScreenState
     );
   }
 }
+
+
