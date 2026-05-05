@@ -260,15 +260,6 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
     );
   }
 
-  Widget _buildPlaceholderIcon(String type) {
-    return Center(
-      child: Icon(
-        GalleryUtils.getIconData(type),
-        size: 64,
-        color: AppColors.gold700,
-      ),
-    );
-  }
 
   Color _getTierColor(ArtifactTier tier) {
     switch (tier) {

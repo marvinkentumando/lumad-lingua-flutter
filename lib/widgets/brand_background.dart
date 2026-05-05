@@ -207,7 +207,6 @@ class AmbientEnvironmentPainter extends CustomPainter {
       path.moveTo(center.dx, center.dy);
       
       final length = size.height;
-      final width = 100.0;
       
       path.lineTo(
         center.dx + math.cos(angle - 0.05) * length,
