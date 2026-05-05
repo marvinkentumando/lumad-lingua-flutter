@@ -1,9 +1,9 @@
-﻿import 'dart:math';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
 /// A custom "Soul/Spirit" particle system that replaces basic confetti
-/// for high-impact celebrations â€” artifact unlocks, level-ups, milestones.
+/// for high-impact celebrations — artifact unlocks, level-ups, milestones.
 ///
 /// Renders animated particles with ethereal glow, drift, and fade-out.
 class SpiritParticleOverlay extends StatefulWidget {

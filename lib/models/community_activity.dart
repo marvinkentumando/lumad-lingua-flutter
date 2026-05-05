@@ -1,4 +1,4 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Represents a single activity event in the community feed.
 class CommunityActivity {
@@ -40,7 +40,7 @@ class CommunityActivity {
       userPhotoUrl: data['userPhotoUrl'],
       type: data['type'] ?? 'achievement',
       message: data['message'] ?? '',
-      emoji: data['emoji'] ?? 'ðŸŒ¿',
+      emoji: data['emoji'] ?? '🌿',
       likeCount: data['likeCount'] ?? 0,
       commentCount: data['commentCount'] ?? 0,
       likedBy: List<String>.from(data['likedBy'] ?? []),

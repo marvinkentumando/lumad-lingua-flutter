@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import 'brand_button.dart';
@@ -57,7 +57,7 @@ class FeedbackPanel extends StatelessWidget {
                       Row(
                         children: [
                           Text(
-                            isCorrect ? "ðŸŽ‰ $title" : "ðŸ’¡ $title",
+                            isCorrect ? "🎉 $title" : "💡 $title",
                             style: AppTypography.h2.copyWith(
                               color: Colors.white,
                             ),
@@ -107,7 +107,7 @@ class FeedbackPanel extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: BrandButton(
-                text: "Continue â†’",
+                text: "Continue →",
                 type: isCorrect
                     ? BrandButtonType.success
                     : BrandButtonType.danger,

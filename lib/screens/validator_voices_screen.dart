@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -31,7 +31,7 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
   String? _playingId;
   double _playbackSpeed = 1.0;
 
-  // â”€â”€ Real Audio Player state â”€â”€
+  // ── Real Audio Player state ──
   final AudioPlayer _audioPlayer = AudioPlayer();
   Duration _currentPosition = Duration.zero;
   Duration _totalDuration = Duration.zero;
@@ -752,7 +752,7 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
                     Expanded(
                       child: Builder(
                         builder: (context) {
-                          // Progress ratio: 0.0 â†’ 1.0
+                          // Progress ratio: 0.0 → 1.0
                           final double progress =
                               (isPlaying && _totalDuration.inMilliseconds > 0)
                               ? (_currentPosition.inMilliseconds /

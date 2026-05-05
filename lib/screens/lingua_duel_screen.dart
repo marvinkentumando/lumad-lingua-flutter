@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
@@ -36,7 +36,7 @@ class _LinguaDuelScreenState extends State<LinguaDuelScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('ðŸ”¥', style: TextStyle(fontSize: 48)),
+            const Text('🔥', style: TextStyle(fontSize: 48)),
             const SizedBox(height: 16),
             Text(
               'MATCH FOUND!',

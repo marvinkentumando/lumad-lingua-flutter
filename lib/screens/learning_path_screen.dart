@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/firebase_service.dart';
 import '../models/lesson.dart';
@@ -152,9 +152,9 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
         children: [
           _statItem('â¤ï¸', '${studentState.hearts}', AppColors.semanticRed),
           const SizedBox(width: 24),
-          _statItem('âœ¨', '${studentState.mistCrystals}', AppColors.gold500),
+          _statItem('✨', '${studentState.mistCrystals}', AppColors.gold500),
           const SizedBox(width: 24),
-          _statItem('ðŸ”¥', '${studentState.xp}', AppColors.terracotta),
+          _statItem('🔥', '${studentState.xp}', AppColors.terracotta),
         ],
       ),
     );

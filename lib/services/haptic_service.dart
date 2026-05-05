@@ -1,4 +1,4 @@
-﻿import 'package:flutter/services.dart';
+import 'package:flutter/services.dart';
 import 'package:vibration/vibration.dart';
 
 class HapticService {
@@ -64,7 +64,7 @@ class HapticService {
     }
   }
 
-  /// Button press feedback â€” subtle tactile acknowledgment for primary CTAs.
+  /// Button press feedback — subtle tactile acknowledgment for primary CTAs.
   static Future<void> buttonPress() async {
     if (await Vibration.hasVibrator() == true) {
       Vibration.vibrate(duration: 25, amplitude: 80);
@@ -73,7 +73,7 @@ class HapticService {
     }
   }
 
-  /// Level-up feedback â€” dramatic ascending pulse.
+  /// Level-up feedback — dramatic ascending pulse.
   static Future<void> levelUp() async {
     if (await Vibration.hasVibrator() == true) {
       Vibration.vibrate(
@@ -89,7 +89,7 @@ class HapticService {
     }
   }
 
-  /// Sacred artifact unlock â€” slow mystical pulse.
+  /// Sacred artifact unlock — slow mystical pulse.
   static Future<void> artifactUnlock() async {
     if (await Vibration.hasVibrator() == true) {
       Vibration.vibrate(
@@ -103,7 +103,7 @@ class HapticService {
     }
   }
 
-  /// Tab/navigation switch â€” very subtle click.
+  /// Tab/navigation switch — very subtle click.
   static Future<void> navigation() async {
     if (await Vibration.hasVibrator() == true) {
       Vibration.vibrate(duration: 15, amplitude: 40);
@@ -112,7 +112,7 @@ class HapticService {
     }
   }
 
-  /// Streak milestone â€” rhythmic heartbeat pattern.
+  /// Streak milestone — rhythmic heartbeat pattern.
   static Future<void> streak() async {
     if (await Vibration.hasVibrator() == true) {
       Vibration.vibrate(

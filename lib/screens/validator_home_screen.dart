@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
@@ -173,7 +173,7 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    'ELDER VALIDATOR  â€¢  RANK $rank',
+                    'ELDER VALIDATOR  •  RANK $rank',
                     style: AppTypography.label.copyWith(
                       color: isDark ? Colors.white70 : Colors.black87,
                       fontWeight: FontWeight.w900,

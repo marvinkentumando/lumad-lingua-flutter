@@ -133,8 +133,8 @@ class MainLayout extends ConsumerWidget {
 
     if (role == UserRole.learner) {
       final student = ref.watch(studentProvider);
-      label = '${student.mistCrystals} CRYSTALS';
-      icon = Icons.auto_awesome;
+      label = '${student.xp} XP';
+      icon = Icons.flash_on_rounded;
     } else if (role == UserRole.validator) {
       final count = ref.watch(validatorActivityCountProvider(userId)).value ?? 0;
       label = '$count VALIDATIONS';

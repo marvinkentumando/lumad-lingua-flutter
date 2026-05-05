@@ -425,7 +425,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      'SYSTEM OVERSEER  â€¢  COMMANDER',
+                      'SYSTEM OVERSEER  •  COMMANDER',
                       style: AppTypography.label.copyWith(
                         color: isDark ? Colors.white70 : Colors.black87,
                         fontWeight: FontWeight.w900,

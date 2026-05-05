@@ -130,15 +130,15 @@ class MemberProfileScreen extends ConsumerWidget {
     final location = profile['location'] ?? 'PHILIPPINES';
     switch (role) {
       case UserRole.admin:
-        return 'SYSTEM OVERSEER  â€¢  $location';
+        return 'SYSTEM OVERSEER  •  $location';
       case UserRole.validator:
-        return 'ELDER VALIDATOR  â€¢  $location';
+        return 'ELDER VALIDATOR  •  $location';
       case UserRole.educator:
-        return 'WISDOM GUIDE  â€¢  $location';
+        return 'WISDOM GUIDE  •  $location';
       case UserRole.contributor:
-        return 'CULTURAL KEEPER  â€¢  $location';
+        return 'CULTURAL KEEPER  •  $location';
       case UserRole.learner:
-        return 'ELDER PATHFINDER  â€¢  $location';
+        return 'ELDER PATHFINDER  •  $location';
     }
   }
 
@@ -284,7 +284,7 @@ class MemberProfileScreen extends ConsumerWidget {
               children: [
                 _buildImpactCard(context, 'â­', 'Accuracy', accuracy),
                 _buildImpactCard(context, 'ðŸ¤', 'Community', rank),
-                _buildImpactCard(context, 'ðŸŒ¿', 'Spirit', spirit),
+                _buildImpactCard(context, '🌿', 'Spirit', spirit),
               ],
             );
           },

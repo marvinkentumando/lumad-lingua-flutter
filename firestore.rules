@@ -81,12 +81,12 @@ service cloud.firestore {
 
     // --- CONTRIBUTOR REQUESTS ---
     match /contributor_requests/{requestId} {
-      allow read: if isAdmin();
+      allow read: if isValidator();
       allow create: if isSignedIn();
       allow update: if isAdmin();
     }
 
-    // --- LOCAL VOICES ---
+    // --- LOCAL VOICES & SUBMISSIONS ---
     match /municipalities/{muniId} {
       allow read: if true;
       match /recordings/{recId} {
@@ -96,10 +96,53 @@ service cloud.firestore {
       }
     }
 
+    match /voice_submissions/{submissionId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isValidator();
+    }
+
+    // --- CONFIG & METADATA ---
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /badges/{badgeId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // --- TELEMETRY & ANALYTICS ---
+    match /telemetry/{docId} {
+      allow read: if isValidator();
+      allow write: if isSignedIn();
+      match /points/{pointId} {
+        allow read: if isValidator();
+        allow write: if isSignedIn();
+      }
+    }
+
+    // --- COMMUNITY & SOCIAL ---
+    match /community_feed/{activityId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // --- GLOBAL STATS ---
     match /global_stats/{docId} {
       allow read: if true;
       allow write: if isValidator();
+    }
+
+    // --- COLLECTION GROUPS ---
+    match /{path=**}/progress/{lessonId} {
+      allow read: if isValidator() || hasRole('educator');
     }
   }
 }

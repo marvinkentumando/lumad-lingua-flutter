@@ -1,16 +1,93 @@
-# lumad_lingua
+# 🌿 Lumad Lingua
 
-A new Flutter project.
+**Lumad Lingua** is a premium, high-fidelity mobile platform dedicated to the preservation, revitalization, and celebration of the indigenous languages and cultures of the Lumad people in Mindanao, Philippines.
 
-## Getting Started
+Built with Flutter and powered by Firebase, this application offers a rich, interactive learning experience that bridges ancestral wisdom with modern technology.
 
-This project is a starting point for a Flutter application.
+---
 
-A few resources to get you started if this is your first Flutter project:
+## ✨ Core Features
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### 🎓 Interactive Learning Hub
+*   **Structured Lessons**: Comprehensive curriculum covering Mansaka, Mandaya, Manobo, Bagobo, and Kagan, etc.
+*   **Dynamic Tasks**: Varied learning activities including vocabulary drills, grammar exercises, and cultural trivia.
+*   **Gamified Progress**: Earn XP, maintain streaks, and unlock "Elder" ranks as you master new dialects.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### 📖 Ancestral Dictionary
+*   **Multi-Dialect Support**: Unified search across multiple indigenous languages.
+*   **Audio Pronunciation**: Real-world voice submissions for authentic phonetic learning.
+*   **Contribution Pipeline**: Community-driven content where users can submit new terms and recordings.
+
+### 🛡️ Secure Admin Console
+*   **Content Moderation**: Robust auditing tools for Dictionary, Recordings, and Lessons.
+*   **Identity Verification**: Secure, password-protected deletion workflows integrated with Firebase Auth.
+*   **Dialect Governance**: Fine-grained control over active dialects and platform settings.
+
+### 👤 Sacred Profile & Impact
+*   **Cultural Impact Tracking**: Visualize your contribution to language preservation.
+*   **Achievements**: Earn badges and crystal rewards for consistent learning.
+*   **Haptic Feedback**: Immersive sensory experience using advanced haptics and sensors.
+
+---
+
+## 🚀 Tech Stack
+
+*   **Frontend**: Flutter (SDK ^3.5.0)
+*   **State Management**: Riverpod (with Stream/Future providers)
+*   **Backend**: Firebase (Auth, Cloud Firestore, Firebase Storage)
+*   **Navigation**: GoRouter
+*   **Animations**: Rive, Lottie, Flutter Animate, and Custom Canvas Painters.
+*   **Local Storage**: Hive & Shared Preferences.
+*   **Media**: Audio Waveforms, Audioplayers, and Speech-to-Text.
+
+---
+
+## 🛠️ Architecture
+
+The project follows a modular, provider-driven architecture:
+
+```text
+lib/
+├── models/       # Data structures and JSON serialization
+├── providers/    # Riverpod state management & business logic
+├── screens/      # Feature-specific UI components
+├── services/     # API, Firebase, Haptics, and platform services
+├── theme/        # Design system (Gold/Forest/Cream palettes)
+└── widgets/      # Reusable UI components (BrandCard, BrandButton, etc.)
+```
+
+---
+
+## 🏁 Getting Started
+
+### Prerequisites
+*   Flutter SDK (^3.5.0)
+*   Firebase Project (Web/Android/iOS configurations)
+*   `.env` file for API keys and environment variables
+
+### Installation
+1.  Clone the repository:
+    ```bash
+    git clone https://github.com/marvinkentumando/lumad-lingua-flutter.git
+    ```
+2.  Install dependencies:
+    ```bash
+    flutter pub get
+    ```
+3.  Generate Hive adapters (if applicable):
+    ```bash
+    flutter pub run build_runner build
+    ```
+4.  Run the application:
+    ```bash
+    flutter run
+    ```
+
+---
+
+## 📜 Cultural Note
+This project is developed with deep respect for the Lumad communities. All content is intended to support the empowerment of indigenous voices and the continuity of their rich linguistic heritage.
+
+---
+
+Developed by The Lumad Lingua Team.

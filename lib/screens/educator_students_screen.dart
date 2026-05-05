@@ -575,7 +575,7 @@ class _EducatorStudentsScreenState
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'â€¢ ${student.village}',
+                          '• ${student.village}',
                           style: AppTypography.label.copyWith(
                             color: isDark ? Colors.white24 : AppColors.creamText3,
                             fontSize: 9,
@@ -715,7 +715,7 @@ class _EducatorStudentsScreenState
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'â€¢ ${student.village}',
+                          '• ${student.village}',
                           style: AppTypography.label.copyWith(
                             color: isDark ? Colors.white38 : AppColors.creamText3,
                           ),

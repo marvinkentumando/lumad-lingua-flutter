@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -75,9 +75,8 @@ class _BrandSearchBarState extends State<BrandSearchBar> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Theme tokens
-    final bgColor = isDark
-        ? Colors.black.withOpacity(0.3)
-        : Colors.white.withOpacity(0.8);
+    final bgColor =
+        isDark ? Colors.black.withOpacity(0.3) : Colors.white.withOpacity(0.8);
     final borderColor = isDark
         ? AppColors.gold500.withOpacity(0.2)
         : AppColors.forest500.withOpacity(0.1);
@@ -92,9 +91,7 @@ class _BrandSearchBarState extends State<BrandSearchBar> {
       decoration: BoxDecoration(
         color: widget.isMinimal ? Colors.transparent : bgColor,
         borderRadius: BorderRadius.circular(24),
-        border: widget.isMinimal
-            ? null
-            : Border.all(color: borderColor, width: 1.5),
+        border: null,
         boxShadow: widget.isMinimal || isDark
             ? []
             : [
@@ -171,19 +168,19 @@ class _BrandSearchBarState extends State<BrandSearchBar> {
                         ),
                       )
                     : widget.showMic
-                    ? GestureDetector(
-                        key: const ValueKey('mic'),
-                        onTap: () {
-                          HapticFeedback.mediumImpact();
-                          widget.onMicTap?.call();
-                        },
-                        child: Icon(
-                          Icons.mic_none_rounded,
-                          color: iconColor,
-                          size: 22,
-                        ),
-                      )
-                    : const SizedBox.shrink(key: ValueKey('none')),
+                        ? GestureDetector(
+                            key: const ValueKey('mic'),
+                            onTap: () {
+                              HapticFeedback.mediumImpact();
+                              widget.onMicTap?.call();
+                            },
+                            child: Icon(
+                              Icons.mic_none_rounded,
+                              color: iconColor,
+                              size: 22,
+                            ),
+                          )
+                        : const SizedBox.shrink(key: ValueKey('none')),
               ),
 
               // Persistent Filter Section
@@ -242,9 +239,8 @@ class _BrandSearchBarState extends State<BrandSearchBar> {
       borderRadius: 24,
       blur: 15,
       opacity: isDark ? 0.15 : 0.05,
+      border: Border.all(color: Colors.transparent, width: 0),
       child: searchBarContent,
     );
   }
 }
-
-

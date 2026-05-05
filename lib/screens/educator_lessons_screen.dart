@@ -109,7 +109,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '${rawLessons.length} lessons â€¢ ${rawLessons.where((l) => l.status == 'PUBLISHED').length} published',
+                                '${rawLessons.length} lessons • ${rawLessons.where((l) => l.status == 'PUBLISHED').length} published',
                                 style: AppTypography.body.copyWith(
                                   color: isDark ? Colors.white24 : AppColors.creamText3,
                                 ),
@@ -802,7 +802,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  isDraft ? 'DRAFT â€¢ v${lesson.version}' : lesson.status,
+                  isDraft ? 'DRAFT • v${lesson.version}' : lesson.status,
                   style: AppTypography.label.copyWith(
                     color: isDraft
                         ? (isDark ? Colors.white24 : AppColors.creamText3)

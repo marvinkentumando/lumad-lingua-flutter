@@ -121,7 +121,7 @@ class _ListeningViewState extends State<ListeningView> {
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      'No more replays â€” choose carefully!',
+                      'No more replays — choose carefully!',
                       style: AppTypography.label.copyWith(
                         color: AppColors.semanticRed,
                         fontSize: 11,

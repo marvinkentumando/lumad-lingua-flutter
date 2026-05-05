@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -213,7 +213,7 @@ class _EducatorUnitManagementScreenState
           ),
         ),
         subtitle: Text(
-          'Unit ${lesson.unitNumber} â€¢ Level ${lesson.level}',
+          'Unit ${lesson.unitNumber} • Level ${lesson.level}',
           style: AppTypography.body.copyWith(
             color: isDark ? Colors.white38 : AppColors.creamText3,
             fontSize: 12,

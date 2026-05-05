@@ -2,23 +2,35 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/badges.dart';
 import '../models/admin_models.dart';
+import '../models/voice_submission.dart';
+import '../models/lesson.dart';
 import '../services/haptic_service.dart';
+import '../services/auth_service.dart';
 
-class AdminContentScreen extends StatefulWidget {
+class AdminContentScreen extends ConsumerStatefulWidget {
   const AdminContentScreen({super.key});
   @override
-  State<AdminContentScreen> createState() => _AdminContentScreenState();
+  ConsumerState<AdminContentScreen> createState() => _AdminContentScreenState();
 }
 
-class _AdminContentScreenState extends State<AdminContentScreen> {
+class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   bool get isDark => Theme.of(context).brightness == Brightness.dark;
   String _searchQuery = '';
   final TextEditingController _searchCtrl = TextEditingController();
+  final TextEditingController _passwordCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
 
   final Map<String, bool> _dialectToggles = {
     'Mansaka': true,
@@ -102,16 +114,13 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _passwordCtrl.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _filtered;
-    final pending = filtered.where((c) => c.status == 'pending').toList();
-    final published = filtered.where((c) => c.status == 'validated').toList();
-    final rejected = filtered.where((c) => c.status == 'rejected').toList();
-
     return Scaffold(
       backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
       body: Stack(
@@ -129,110 +138,15 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
             child: Column(
               children: [
                 _buildHeader(context),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                  child: TextField(
-                    controller: _searchCtrl,
-                    onChanged: (v) => setState(() => _searchQuery = v),
-                    decoration: InputDecoration(
-                      hintText: 'Search terms or contributors...',
-                      hintStyle: TextStyle(
-                        color: isDark ? Colors.white24 : AppColors.creamText3,
-                        fontSize: 13,
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.search_rounded,
-                        color: AppColors.gold500,
-                        size: 20,
-                      ),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(
-                                Icons.close_rounded,
-                                color: Colors.white38,
-                                size: 18,
-                              ),
-                              onPressed: () {
-                                _searchCtrl.clear();
-                                setState(() => _searchQuery = '');
-                              },
-                            )
-                          : null,
-                      filled: true,
-                      fillColor: isDark 
-                          ? AppColors.forest800.withOpacity(0.5)
-                          : Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(
-                          color: Colors.white.withOpacity(0.05),
-                        ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(
-                          color: isDark 
-                              ? Colors.white.withOpacity(0.05)
-                              : AppColors.creamBorder,
-                        ),
-                      ),
-                    ),
-                    style: TextStyle(color: isDark ? Colors.white : AppColors.creamText),
-                  ),
-                ),
+                _buildSearchBar(),
+                _buildTabBar(),
                 Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+                  child: TabBarView(
+                    controller: _tabController,
                     children: [
-                      if (pending.isNotEmpty) ...[
-                        _sectionLabel('REVIEW QUEUE (${pending.length})'),
-                        const SizedBox(height: 16),
-                        ...pending.asMap().entries.map(
-                          (e) => _contentCard(e.value, e.key),
-                        ),
-                        const SizedBox(height: 32),
-                      ],
-                      if (published.isNotEmpty) ...[
-                        _sectionLabel('PUBLISHED (${published.length})'),
-                        const SizedBox(height: 16),
-                        ...published.asMap().entries.map(
-                          (e) => _contentCard(e.value, e.key + pending.length),
-                        ),
-                        const SizedBox(height: 32),
-                      ],
-                      if (rejected.isNotEmpty) ...[
-                        _sectionLabel('REJECTED (${rejected.length})'),
-                        const SizedBox(height: 16),
-                        ...rejected.asMap().entries.map(
-                          (e) => _contentCard(
-                            e.value,
-                            e.key + pending.length + published.length,
-                          ),
-                        ),
-                      ],
-                      if (filtered.isEmpty)
-                        Center(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 60),
-                            child: Column(
-                              children: [
-                                const Icon(
-                                  Icons.search_off_rounded,
-                                  color: Colors.white10,
-                                  size: 64,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'No matching content.',
-                                  style: AppTypography.h3.copyWith(
-                                    color: Colors.white24,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                      _buildDictionaryTab(),
+                      _buildRecordingsTab(),
+                      _buildLessonsTab(),
                     ],
                   ),
                 ),
@@ -271,7 +185,7 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
                 color: AppColors.gold500.withOpacity(0.2),
               ),
             ),
-            child: const Text('ðŸ›¡ï¸', style: TextStyle(fontSize: 20)),
+            child: const Text('🛡️', style: TextStyle(fontSize: 20)),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -289,7 +203,7 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
                 Text(
                   'Content Moderation',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.3),
+                    color: isDark ? Colors.white.withOpacity(0.3) : AppColors.creamText3,
                     fontSize: 11,
                   ),
                 ),
@@ -301,11 +215,11 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.05),
+                color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.settings_suggest_rounded,
-                color: Colors.white70,
+                color: isDark ? Colors.white70 : AppColors.forest900,
                 size: 20,
               ),
             ),
@@ -316,171 +230,434 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
     );
   }
 
-  Widget _sectionLabel(String label) => Text(
-    label,
-    style: AppTypography.mono.copyWith(
-      color: isDark ? Colors.white24 : AppColors.creamText3,
-      fontSize: 9,
-      letterSpacing: 2,
-    ),
-  );
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: TextField(
+        controller: _searchCtrl,
+        onChanged: (v) => setState(() => _searchQuery = v),
+        decoration: InputDecoration(
+          hintText: 'Search terms or contributors...',
+          hintStyle: TextStyle(
+            color: isDark ? Colors.white24 : AppColors.creamText3,
+            fontSize: 13,
+          ),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            color: AppColors.gold500,
+            size: 20,
+          ),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: Colors.white38,
+                    size: 18,
+                  ),
+                  onPressed: () {
+                    _searchCtrl.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                )
+              : null,
+          filled: true,
+          fillColor: isDark 
+              ? AppColors.forest800.withOpacity(0.5)
+              : Colors.white,
+          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(
+              color: isDark 
+                  ? Colors.white.withOpacity(0.05)
+                  : AppColors.creamBorder,
+            ),
+          ),
+        ),
+        style: TextStyle(color: isDark ? Colors.white : AppColors.creamText),
+      ),
+    );
+  }
 
-  Widget _contentCard(ContentEntry data, int index) {
-    final status = data.status;
-    final badgeStyle = status == 'validated'
+  Widget _buildTabBar() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      height: 48,
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        indicator: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: AppColors.gold500,
+        ),
+        labelColor: Colors.black,
+        unselectedLabelColor: isDark ? Colors.white60 : AppColors.creamText3,
+        labelStyle: AppTypography.label.copyWith(fontWeight: FontWeight.bold, fontSize: 11),
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent,
+        padding: const EdgeInsets.all(4),
+        tabs: const [
+          Tab(text: 'DICTIONARY'),
+          Tab(text: 'RECORDINGS'),
+          Tab(text: 'LESSONS'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDictionaryTab() {
+    final filtered = _filtered;
+    if (filtered.isEmpty) return _buildEmptyState();
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+      itemCount: filtered.length,
+      itemBuilder: (context, index) => _dictionaryCard(filtered[index], index),
+    );
+  }
+
+  Widget _buildRecordingsTab() {
+    final mockRecordings = [
+      VoiceSubmission(
+        id: 'v1',
+        title: 'Traditional Greeting',
+        dialect: 'Mansaka',
+        contributorId: 'u1',
+        contributorName: 'Datu M.',
+        audioUrl: '',
+        transcript: 'Maayong buntag sa inyong tanan.',
+        submittedAt: DateTime.now().subtract(const Duration(days: 2)),
+      ),
+      VoiceSubmission(
+        id: 'v2',
+        title: 'Story of the Moon',
+        dialect: 'Manobo',
+        contributorId: 'u2',
+        contributorName: 'Lola B.',
+        audioUrl: '',
+        transcript: 'Kaniadto, ang bulan...',
+        submittedAt: DateTime.now().subtract(const Duration(days: 4)),
+      ),
+    ];
+
+    final filtered = mockRecordings.where((v) => 
+      v.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+      v.contributorName.toLowerCase().contains(_searchQuery.toLowerCase())
+    ).toList();
+
+    if (filtered.isEmpty) return _buildEmptyState();
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+      itemCount: filtered.length,
+      itemBuilder: (context, index) => _recordingCard(filtered[index], index),
+    );
+  }
+
+  Widget _buildLessonsTab() {
+    final mockLessons = [
+      Lesson(
+        id: 'l1',
+        title: 'Basic Greetings',
+        description: 'Learn how to greet others in Mansaka.',
+        category: 'Foundations',
+        language: 'Mansaka',
+        level: 1,
+        unitNumber: 1,
+        tasks: [],
+      ),
+      Lesson(
+        id: 'l2',
+        title: 'Numbers and Counting',
+        description: 'Master the numbering system of Mandaya.',
+        category: 'Mathematics',
+        language: 'Mandaya',
+        level: 1,
+        unitNumber: 2,
+        tasks: [],
+      ),
+    ];
+
+    final filtered = mockLessons.where((l) => 
+      l.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+      l.category.toLowerCase().contains(_searchQuery.toLowerCase())
+    ).toList();
+
+    if (filtered.isEmpty) return _buildEmptyState();
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+      itemCount: filtered.length,
+      itemBuilder: (context, index) => _lessonCard(filtered[index], index),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off_rounded,
+            color: isDark ? Colors.white10 : Colors.black12,
+            size: 64,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No matching content found.',
+            style: AppTypography.h3.copyWith(
+              color: isDark ? Colors.white24 : AppColors.creamText3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dictionaryCard(ContentEntry data, int index) {
+    return _baseContentCard(
+      index: index,
+      icon: Icons.menu_book_rounded,
+      iconColor: AppColors.gold500,
+      title: data.term,
+      subtitle: '${data.dialect} · ${data.partOfSpeech}',
+      author: 'by ${data.contributorName}',
+      status: data.status,
+      onDelete: () => _showDeletePasswordDialog(data.term, () {
+        setState(() => _content.removeWhere((c) => c.id == data.id));
+      }),
+    );
+  }
+
+  Widget _recordingCard(VoiceSubmission data, int index) {
+    return _baseContentCard(
+      index: index,
+      icon: Icons.mic_rounded,
+      iconColor: AppColors.semanticBlue,
+      title: data.title,
+      subtitle: '${data.dialect} · Audio Recording',
+      author: 'by ${data.contributorName}',
+      status: data.status.name,
+      onDelete: () => _showDeletePasswordDialog(data.title, () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Recording deletion requested'))
+        );
+      }),
+    );
+  }
+
+  Widget _lessonCard(Lesson data, int index) {
+    return _baseContentCard(
+      index: index,
+      icon: Icons.school_rounded,
+      iconColor: AppColors.semanticGreen,
+      title: data.title,
+      subtitle: '${data.language} · ${data.category}',
+      author: 'Level ${data.level} · Unit ${data.unitNumber}',
+      status: 'published',
+      onDelete: () => _showDeletePasswordDialog(data.title, () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Lesson deletion requested'))
+        );
+      }),
+    );
+  }
+
+  Widget _baseContentCard({
+    required int index,
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required String author,
+    required String status,
+    required VoidCallback onDelete,
+  }) {
+    final statusStyle = status == 'validated' || status == 'published' || status == 'approved'
         ? BrandBadgeStyle.green
         : status == 'rejected'
         ? BrandBadgeStyle.dark
         : BrandBadgeStyle.gold;
-    final badgeText = status == 'validated'
-        ? 'âœ“ Published'
-        : status == 'rejected'
-        ? 'âœ— Rejected'
-        : 'â³ Pending';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child:
-          Container(
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.forest700.withOpacity(0.3) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark ? Colors.white.withOpacity(0.05) : AppColors.creamBorder,
+          ),
+          boxShadow: isDark ? [] : [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: isDark 
-                      ? AppColors.forest700.withOpacity(0.3)
-                      : Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: isDark 
-                        ? Colors.white.withOpacity(0.05)
-                        : AppColors.creamBorder,
-                  ),
+                  color: iconColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color:
-                              (status == 'pending'
-                                      ? AppColors.gold500
-                                      : status == 'rejected'
-                                      ? AppColors.semanticRed
-                                      : AppColors.semanticBlue)
-                                  .withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Icon(
-                          status == 'pending'
-                              ? Icons.rate_review_outlined
-                              : status == 'rejected'
-                              ? Icons.cancel_outlined
-                              : Icons.auto_awesome_outlined,
-                          color: status == 'pending'
-                              ? AppColors.gold500
-                              : status == 'rejected'
-                              ? AppColors.semanticRed
-                              : AppColors.semanticBlue,
-                          size: 20,
-                        ),
+                child: Icon(icon, color: iconColor, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTypography.h3.copyWith(
+                        color: isDark ? Colors.white : AppColors.forest500,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              data.term,
-                              style: AppTypography.h3.copyWith(
-                                color: isDark ? Colors.white : AppColors.forest500,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Text(
-                                  '${data.dialect} Â· ${data.partOfSpeech}',
-                                  style: AppTypography.label.copyWith(
-                                    color: Colors.white38,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  'Â·',
-                                  style: TextStyle(color: Colors.white12),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'by ${data.contributorName}',
-                                  style: AppTypography.mono.copyWith(
-                                    color: AppColors.gold500.withOpacity(0.4,
-                                    ),
-                                    fontSize: 10,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (data.rejectionReason != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 6),
-                                child: Text(
-                                  'Reason: ${data.rejectionReason}',
-                                  style: AppTypography.body.copyWith(
-                                    color: AppColors.semanticRed.withOpacity(0.7,
-                                    ),
-                                    fontSize: 10,
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: AppTypography.label.copyWith(
+                        color: isDark ? Colors.white38 : AppColors.creamText3,
+                        fontSize: 11,
                       ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          BrandBadge(text: badgeText, style: badgeStyle),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              if (status == 'pending') ...[
-                                _actionIcon(
-                                  Icons.check_circle_rounded,
-                                  () => _approveContent(data),
-                                  color: AppColors.semanticGreen,
-                                ),
-                                const SizedBox(width: 8),
-                                _actionIcon(
-                                  Icons.cancel_rounded,
-                                  () => _rejectContent(data),
-                                  color: AppColors.semanticRed,
-                                ),
-                                const SizedBox(width: 8),
-                              ],
-                              _actionIcon(
-                                Icons.edit_note_rounded,
-                                () => _showEditContentForm(data),
-                              ),
-                              const SizedBox(width: 8),
-                              _actionIcon(
-                                Icons.delete_sweep_rounded,
-                                () => _deleteContent(data),
-                                color: AppColors.semanticRed,
-                              ),
-                            ],
-                          ),
-                        ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      author,
+                      style: AppTypography.mono.copyWith(
+                        color: AppColors.gold500.withOpacity(0.6),
+                        fontSize: 10,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              )
-              .animate()
-              .fadeIn(delay: Duration(milliseconds: index * 60))
-              .slideX(begin: 0.05),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  BrandBadge(text: status.toUpperCase(), style: statusStyle),
+                  const SizedBox(height: 8),
+                  _actionIcon(
+                    Icons.delete_outline_rounded,
+                    onDelete,
+                    color: AppColors.semanticRed,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ).animate().fadeIn(delay: Duration(milliseconds: index * 50)).slideY(begin: 0.1, curve: Curves.easeOutCubic),
+    );
+  }
+
+  void _showDeletePasswordDialog(String itemName, VoidCallback onConfirm) {
+    _passwordCtrl.clear();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? AppColors.forest800 : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.semanticRed.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.warning_amber_rounded, color: AppColors.semanticRed, size: 32),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Security Check',
+              style: AppTypography.h2.copyWith(color: isDark ? Colors.white : AppColors.forest900),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'To delete "$itemName", please enter your administrator password to confirm.',
+              style: AppTypography.body.copyWith(color: isDark ? Colors.white70 : AppColors.creamText),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _passwordCtrl,
+              obscureText: true,
+              style: TextStyle(color: isDark ? Colors.white : AppColors.forest900),
+              decoration: InputDecoration(
+                hintText: 'Enter Password',
+                hintStyle: TextStyle(color: isDark ? Colors.white24 : AppColors.creamText3),
+                filled: true,
+                fillColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: TextStyle(color: isDark ? Colors.white38 : AppColors.creamText3)),
+          ),
+          BrandButton(
+            text: 'Confirm Delete',
+            type: BrandButtonType.primary,
+            onTap: () async {
+              final authService = ref.read(authServiceProvider);
+              final isValid = await authService.verifyPassword(_passwordCtrl.text);
+              
+              if (!mounted) return;
+              
+              if (isValid) {
+                if (ctx.mounted) Navigator.pop(ctx);
+                onConfirm();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Successfully deleted $itemName'),
+                      backgroundColor: AppColors.semanticGreen,
+                    ),
+                  );
+                }
+              } else {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Incorrect password. Action denied.'),
+                      backgroundColor: AppColors.semanticRed,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -498,166 +675,10 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
     );
   }
 
-  void _approveContent(ContentEntry data) {
-    setState(() => data.status = 'validated');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('"${data.term}" approved'),
-        backgroundColor: AppColors.semanticGreen,
-      ),
-    );
-  }
-
-  void _rejectContent(ContentEntry data) {
-    final reasonCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.forest700,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Reject "${data.term}"?',
-          style: AppTypography.h3.copyWith(color: AppColors.semanticRed),
-        ),
-        content: TextField(
-          controller: reasonCtrl,
-          style: const TextStyle(color: Colors.white),
-          maxLines: 2,
-          decoration: InputDecoration(
-            labelText: 'Reason for rejection',
-            labelStyle: const TextStyle(color: Colors.white54),
-            filled: true,
-            fillColor: AppColors.forest800,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.white54),
-            ),
-          ),
-          BrandButton(
-            text: 'Reject',
-            type: BrandButtonType.primary,
-            onTap: () {
-              Navigator.pop(ctx);
-              setState(() {
-                data.status = 'rejected';
-                data.rejectionReason = reasonCtrl.text.isNotEmpty
-                    ? reasonCtrl.text
-                    : 'No reason provided';
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('"${data.term}" rejected'),
-                  backgroundColor: AppColors.semanticRed,
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _deleteContent(ContentEntry data) {
-    _showConfirmAction(
-      'Delete "${data.term}"?',
-      'This action cannot be undone.',
-      () {
-        setState(() => _content.removeWhere((c) => c.id == data.id));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('"${data.term}" deleted'),
-            backgroundColor: AppColors.semanticRed,
-          ),
-        );
-      },
-    );
-  }
-
-  void _showEditContentForm(ContentEntry data) {
-    final termCtrl = TextEditingController(text: data.term);
-    final dialectCtrl = TextEditingController(text: data.dialect);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.forest700,
-        title: Text(
-          'Edit Content',
-          style: AppTypography.h3.copyWith(color: Colors.white),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: termCtrl,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Term',
-                labelStyle: const TextStyle(color: Colors.white54),
-                filled: true,
-                fillColor: AppColors.forest800,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: dialectCtrl,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Dialect',
-                labelStyle: const TextStyle(color: Colors.white54),
-                filled: true,
-                fillColor: AppColors.forest800,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.white54),
-            ),
-          ),
-          BrandButton(
-            text: 'Save Changes',
-            type: BrandButtonType.primary,
-            onTap: () {
-              Navigator.pop(context);
-              setState(() {
-                data.term = termCtrl.text;
-                data.dialect = dialectCtrl.text;
-              });
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Content updated')));
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showSystemActionsModal() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.forest900,
+      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -672,7 +693,7 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: isDark ? Colors.white24 : Colors.black12,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -681,7 +702,7 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
             Text(
               'SYSTEM ACTIONS',
               style: AppTypography.label.copyWith(
-                color: Colors.white38,
+                color: isDark ? Colors.white38 : AppColors.creamText3,
                 letterSpacing: 2,
               ),
             ),
@@ -696,7 +717,7 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
                 _showDialectSettings();
               },
             ),
-            const Divider(color: Colors.white10),
+            Divider(color: isDark ? Colors.white10 : Colors.black12),
             _systemAction(
               icon: Icons.download_outlined,
               color: AppColors.semanticGreen,
@@ -707,7 +728,7 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
                 _exportData('csv');
               },
             ),
-            const Divider(color: Colors.white10),
+            Divider(color: isDark ? Colors.white10 : Colors.black12),
             _systemAction(
               icon: Icons.code_outlined,
               color: AppColors.gold500,
@@ -718,7 +739,7 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
                 _exportData('json');
               },
             ),
-            const Divider(color: Colors.white10),
+            Divider(color: isDark ? Colors.white10 : Colors.black12),
             _systemAction(
               icon: Icons.cleaning_services_outlined,
               color: AppColors.semanticBlue,
@@ -740,7 +761,7 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
                 );
               },
             ),
-            const Divider(color: Colors.white10),
+            Divider(color: isDark ? Colors.white10 : Colors.black12),
             _systemAction(
               icon: Icons.warning_amber_outlined,
               color: AppColors.semanticRed,
@@ -776,7 +797,7 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: AppColors.forest700,
+          backgroundColor: isDark ? AppColors.forest700 : Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -792,7 +813,7 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
                     title: Text(
                       e.key,
                       style: TextStyle(
-                        color: Colors.white,
+                        color: isDark ? Colors.white : AppColors.forest900,
                         fontWeight: e.value
                             ? FontWeight.bold
                             : FontWeight.normal,
@@ -848,16 +869,16 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
       ),
       title: Text(
         title,
-        style: AppTypography.body.copyWith(color: Colors.white),
+        style: AppTypography.body.copyWith(color: isDark ? Colors.white : AppColors.forest900),
       ),
       subtitle: Text(
         subtitle,
         style: AppTypography.label.copyWith(
-          color: Colors.white38,
+          color: isDark ? Colors.white38 : AppColors.creamText3,
           fontSize: 11,
         ),
       ),
-      trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white24),
+      trailing: Icon(Icons.chevron_right_rounded, color: isDark ? Colors.white24 : Colors.black12),
       onTap: onTap,
     );
   }
@@ -870,24 +891,24 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.forest700,
+        backgroundColor: isDark ? AppColors.forest700 : Colors.white,
         title: Text(
           title,
-          style: AppTypography.h3.copyWith(color: Colors.white),
+          style: AppTypography.h3.copyWith(color: isDark ? Colors.white : AppColors.forest900),
         ),
         content: Text(
           message,
           style: AppTypography.body.copyWith(
-            color: Colors.white70,
+            color: isDark ? Colors.white70 : AppColors.creamText,
             height: 1.5,
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
+            child: Text(
               'Cancel',
-              style: TextStyle(color: Colors.white54),
+              style: TextStyle(color: isDark ? Colors.white54 : AppColors.creamText3),
             ),
           ),
           BrandButton(
@@ -939,5 +960,3 @@ class _AdminContentScreenState extends State<AdminContentScreen> {
     );
   }
 }
-
-

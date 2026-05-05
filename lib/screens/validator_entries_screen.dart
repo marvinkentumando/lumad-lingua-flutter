@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -1567,7 +1567,7 @@ class _ValidatorEntriesScreenState
                 ),
               ),
               Text(
-                '${entry.phonetic ?? ''} â€¢ ${entry.partOfSpeechLabel}',
+                '${entry.phonetic ?? ''} • ${entry.partOfSpeechLabel}',
                 style: AppTypography.mono.copyWith(
                   color: AppColors.creamText3,
                   fontSize: 16,

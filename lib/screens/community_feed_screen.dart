@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -28,7 +28,7 @@ class CommunityFeedScreen extends ConsumerWidget {
                     if (activities.isEmpty) {
                       return const Center(
                         child: Text(
-                          "The community is quiet... for now. ðŸŒ¿",
+                          "The community is quiet... for now. 🌿",
                           style: TextStyle(color: Colors.white24),
                         ),
                       );
@@ -359,7 +359,7 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
               child: Padding(
                 padding: EdgeInsets.all(20),
                 child: Text(
-                  "Conversation starting soon... ðŸŒ¿",
+                  "Conversation starting soon... 🌿",
                   style: TextStyle(color: Colors.white24, fontSize: 12),
                 ),
               ),

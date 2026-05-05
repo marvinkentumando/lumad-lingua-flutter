@@ -1,11 +1,11 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/lesson_task.dart';
 import '../models/lesson.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../providers/artifact_provider.dart';
 
-// â”€â”€ Lesson Loader Provider (moved here from lesson_session_screen.dart) â”€â”€â”€â”€â”€â”€
+// ── Lesson Loader Provider (moved here from lesson_session_screen.dart) ──────
 final currentLessonProvider = FutureProvider.family<Lesson?, String>((
   ref,
   lessonId,

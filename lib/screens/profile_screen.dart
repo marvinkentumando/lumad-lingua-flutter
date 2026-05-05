@@ -1,4 +1,3 @@
-import 'dart:math' show cos, sin;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -1072,7 +1071,6 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow>
   late final Animation<double> _xpAnim;
   late final Animation<double> _streakAnim;
   late final Animation<double> _wordsAnim;
-  late final Animation<double> _arcAnim;
 
   static const int _xpLevelMax = 2000; // XP to next level
 
@@ -1105,10 +1103,6 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow>
       begin: 0,
       end: widget.words.toDouble(),
     ).animate(CurvedAnimation(parent: _wordsController, curve: Curves.easeOut));
-    _arcAnim = Tween<double>(
-      begin: 0,
-      end: (widget.xp % _xpLevelMax) / _xpLevelMax,
-    ).animate(CurvedAnimation(parent: _xpController, curve: Curves.easeOut));
 
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) {
@@ -1171,57 +1165,36 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow>
         final display = xpVal >= 1000
             ? '${(xpVal / 1000).toStringAsFixed(1)}k'
             : xpVal.toInt().toString();
-        return Stack(
+        return Container(
+          width: 100,
+          height: 100,
           alignment: Alignment.center,
-          children: [
-            // Arc progress ring
-            SizedBox(
-              width: 120,
-              height: 120,
-              child: CustomPaint(
-                painter: _XpArcPainter(
-                  progress: _arcAnim.value,
-                  trackColor: (isDark ? Colors.white : Colors.black).withOpacity(0.08),
-                  arcColor: AppColors.gold500,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.flash_on,
+                color: isDark ? AppColors.gold500 : AppColors.forest500,
+                size: 24,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                display,
+                style: AppTypography.h1ExtraBold.copyWith(
+                  color: isDark ? Colors.white : AppColors.forest700,
+                  fontSize: 22,
                 ),
               ),
-            ),
-            // Inner card
-            BrandCard(
-              padding: EdgeInsets.zero,
-              borderRadius: 100,
-              child: Container(
-                width: 96,
-                height: 96,
-                alignment: Alignment.center,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.flash_on,
-                      color: isDark ? AppColors.gold500 : AppColors.forest500,
-                      size: 18,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      display,
-                      style: AppTypography.h1ExtraBold.copyWith(
-                        color: isDark ? Colors.white : AppColors.forest700,
-                        fontSize: 18,
-                      ),
-                    ),
-                    Text(
-                      'TOTAL XP',
-                      style: AppTypography.label.copyWith(
-                        color: isDark ? Colors.white24 : AppColors.creamText3,
-                        fontSize: 7,
-                      ),
-                    ),
-                  ],
+              Text(
+                'TOTAL XP',
+                style: AppTypography.label.copyWith(
+                  color: isDark ? Colors.white24 : AppColors.creamText3,
+                  fontSize: 8,
+                  letterSpacing: 1,
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
@@ -1241,109 +1214,40 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow>
         final display = isInt
             ? anim.value.toInt().toString()
             : anim.value.toStringAsFixed(1);
-        return BrandCard(
-          padding: EdgeInsets.zero,
-          borderRadius: 100,
-          child: Container(
-            width: 100,
-            height: 100,
-            alignment: Alignment.center,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  color: isDark ? AppColors.gold500 : AppColors.forest500,
-                  size: 18,
+        return Container(
+          width: 100,
+          height: 100,
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: isDark ? AppColors.gold500 : AppColors.forest500,
+                size: 24,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                display,
+                style: AppTypography.h1ExtraBold.copyWith(
+                  color: isDark ? Colors.white : AppColors.forest700,
+                  fontSize: 22,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  display,
-                  style: AppTypography.h1ExtraBold.copyWith(
-                    color: isDark ? Colors.white : AppColors.forest700,
-                    fontSize: 20,
-                  ),
+              ),
+              Text(
+                label,
+                style: AppTypography.label.copyWith(
+                  color: isDark ? Colors.white24 : AppColors.creamText3,
+                  fontSize: 8,
+                  letterSpacing: 1,
                 ),
-                Text(
-                  label,
-                  style: AppTypography.label.copyWith(
-                    color: isDark ? Colors.white24 : AppColors.creamText3,
-                    fontSize: 8,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
     );
   }
-}
-
-// \u2500\u2500\u2500 XP Arc Ring Painter \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-
-class _XpArcPainter extends CustomPainter {
-  final double progress;
-  final Color trackColor;
-  final Color arcColor;
-
-  const _XpArcPainter({
-    required this.progress,
-    required this.trackColor,
-    required this.arcColor,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.width / 2) - 6;
-    const strokeWidth = 5.0;
-    const startAngle = -2.356; // -135\u00b0
-    const totalSweep = 4.712; //  270\u00b0
-
-    // Track
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      startAngle,
-      totalSweep,
-      false,
-      Paint()
-        ..color = trackColor
-        ..strokeWidth = strokeWidth
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round,
-    );
-
-    if (progress <= 0) return;
-
-    // Filled arc
-    final arcPaint = Paint()
-      ..shader = SweepGradient(
-        startAngle: startAngle,
-        endAngle: startAngle + totalSweep * progress,
-        colors: [arcColor.withOpacity(0.7), arcColor],
-      ).createShader(Rect.fromCircle(center: center, radius: radius))
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      startAngle,
-      totalSweep * progress,
-      false,
-      arcPaint,
-    );
-
-    // Tip glow dot
-    final endAngle = startAngle + totalSweep * progress;
-    final tipX = center.dx + radius * cos(endAngle);
-    final tipY = center.dy + radius * sin(endAngle);
-    canvas.drawCircle(Offset(tipX, tipY), 4, Paint()..color = arcColor);
-  }
-
-  @override
-  bool shouldRepaint(_XpArcPainter old) => old.progress != progress;
 }
 
 class _StaffStatsRow extends ConsumerWidget {
@@ -1411,38 +1315,35 @@ class _StaffStatsRow extends ConsumerWidget {
     String label,
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return BrandCard(
-      padding: EdgeInsets.zero,
-      borderRadius: 100,
-      child: Container(
-        width: 100,
-        height: 100,
-        alignment: Alignment.center,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: isDark ? AppColors.gold500 : AppColors.forest500,
-              size: 18,
+    return Container(
+      width: 100,
+      height: 100,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            color: isDark ? AppColors.gold500 : AppColors.forest500,
+            size: 24,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: AppTypography.h1ExtraBold.copyWith(
+              color: isDark ? Colors.white : AppColors.forest700,
+              fontSize: 22,
             ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: AppTypography.h1ExtraBold.copyWith(
-                color: isDark ? Colors.white : AppColors.forest700,
-                fontSize: 18,
-              ),
+          ),
+          Text(
+            label,
+            style: AppTypography.label.copyWith(
+              color: isDark ? Colors.white24 : AppColors.creamText3,
+              fontSize: 8,
+              letterSpacing: 1,
             ),
-            Text(
-              label,
-              style: AppTypography.label.copyWith(
-                color: isDark ? Colors.white24 : AppColors.creamText3,
-                fontSize: 7,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

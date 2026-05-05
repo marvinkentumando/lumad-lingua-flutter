@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -80,7 +80,7 @@ class RecordingCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '$speakerName â€¢ $speakerRole',
+                      '$speakerName • $speakerRole',
                       style: AppTypography.body.copyWith(
                         color: isDark ? Colors.white : AppColors.forest700,
                         fontWeight: FontWeight.bold,
@@ -210,7 +210,7 @@ class RecordingCard extends StatelessWidget {
 
           if (audio['transcription'] != null)
             Text(
-              'â€œ${audio['transcription']}â€',
+              '“${audio['transcription']}â€',
               style: AppTypography.body.copyWith(
                 color: isDark ? Colors.white70 : AppColors.forest700,
                 fontStyle: FontStyle.italic,

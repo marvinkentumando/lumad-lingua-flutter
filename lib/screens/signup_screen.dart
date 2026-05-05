@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -36,7 +36,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _nativeLanguageController = TextEditingController();
   String _selectedAvatar = "ðŸ¦…";
   String _learningGoal = "Culture";
-  final List<String> _totems = ["ðŸ¦…", "ðŸ†", "ðŸ¢", "ðŸ›¶", "ðŸŒ¿", "â›°ï¸", "ðŸ¹", "ðŸ”¥"];
+  final List<String> _totems = ["ðŸ¦…", "ðŸ†", "ðŸ¢", "ðŸ›¶", "🌿", "â›°ï¸", "ðŸ¹", "🔥"];
   final List<String> _goals = [
     "Culture",
     "Travel",

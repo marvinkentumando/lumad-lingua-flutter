@@ -39,6 +39,7 @@ class AchievementsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final user = ref.watch(authStateProvider).value;
     final artifactsAsync = ref.watch(userArtifactsProvider);
     final badgesAsync = user != null
@@ -47,7 +48,7 @@ class AchievementsScreen extends ConsumerWidget {
     final stats = ref.watch(artifactStatsProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.forest900,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Ancestral Honors'),
         backgroundColor: Colors.transparent,
@@ -65,14 +66,16 @@ class AchievementsScreen extends ConsumerWidget {
                   Text(
                     "Your Legacy",
                     style: AppTypography.display.copyWith(
-                      color: AppColors.gold500,
+                      color: isDark ? AppColors.gold500 : AppColors.forest500,
                       fontSize: 32,
                     ),
                   ).animate().fadeIn().slideX(begin: -0.2),
                   const SizedBox(height: 8),
                   Text(
                     "Tracing your journey through the ancestral wisdom.",
-                    style: AppTypography.body.copyWith(color: Colors.white54),
+                    style: AppTypography.body.copyWith(
+                      color: isDark ? Colors.white54 : AppColors.creamText2,
+                    ),
                   ).animate().fadeIn(delay: 200.ms),
                   const SizedBox(height: 32),
                   _buildStatsRow(stats),
@@ -201,15 +204,15 @@ class AchievementsScreen extends ConsumerWidget {
       children: [
         _buildStatItem(
           "Collected",
-          "${stats['count'] ?? 0}",
+          "${stats['earned'] ?? 0}",
           Icons.auto_awesome,
         ),
         const SizedBox(width: 16),
-        _buildStatItem("Sacred", "${stats['sacred'] ?? 0}", Icons.temple_hindu),
+        _buildStatItem("Total", "${stats['total'] ?? 0}", Icons.temple_hindu),
         const SizedBox(width: 16),
         _buildStatItem(
           "Rank",
-          stats['rank'] ?? "Novice",
+          (stats['earned'] ?? 0) >= 10 ? "Elder" : ((stats['earned'] ?? 0) >= 5 ? "Warrior" : "Novice"),
           Icons.workspace_premium,
         ),
       ],

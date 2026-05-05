@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
@@ -128,7 +128,7 @@ class _EducatorDashboardScreenState
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        'WISDOM GUIDE  â€¢  ELDER EDUCATOR',
+                        'WISDOM GUIDE  •  ELDER EDUCATOR',
                         style: AppTypography.label.copyWith(
                           color: Colors.black87,
                           fontWeight: FontWeight.w900,

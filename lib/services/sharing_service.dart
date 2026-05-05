@@ -1,4 +1,4 @@
-﻿import 'package:share_plus/share_plus.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/dictionary_entry.dart';
 
 class SharingService {
@@ -9,7 +9,7 @@ class SharingService {
         '''
 Check out this word from Lumad Lingua!
 
-ðŸŒ¿ Indigenous Word: ${entry.indigenousWord}
+🌿 Indigenous Word: ${entry.indigenousWord}
 ðŸ—£ï¸ Translation: ${entry.translation}
 ðŸŒ Language: ${entry.language}
 ðŸ“ Context: ${entry.usageContext}

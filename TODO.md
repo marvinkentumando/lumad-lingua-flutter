@@ -45,6 +45,34 @@ This roadmap focuses on elevating the **User Experience (UI/UX)** and core **Fun
 - [ ] **Screen Reader Support**: Conduct a full audit of all custom UI widgets to ensure proper semantics for TalkBack/VoiceOver accessibility.
 - [ ] **Dynamic Layout Optimization**: Refine layouts for tablets and foldables, ensuring the Learning Path and Map adapt to larger aspect ratios.
 
+
+## ✨ Phase 14: Micro-Interactions & Tactile Feedback
+*Focusing on the subtle details that make the app feel alive and responsive.*
+- [ ] **Custom Splash/Ripples**: Replace default Material ripples with subtle, color-matched splashes (e.g., Gold500 on Forest backgrounds) to align with brand colors.
+- [ ] **Interactive Physics**: Implement scale-down physics on tap (spring-based animations) for all primary buttons and cards to make them feel tactile.
+- [ ] **Animated Empty States**: Upgrade static empty state illustrations with continuous, gently looping animations (using Lottie or Rive) to bring life to empty screens.
+
+## 🪟 Phase 15: Spatial Depth & Glassmorphism
+*Creating depth and hierarchy without relying on heavy borders or flat colors.*
+- [ ] **Frosted Overlays**: Transition solid bottom sheets and modals to use `BackdropFilter`, creating a premium glassmorphic effect over the map and learning paths.
+- [ ] **Layered Elevation**: Implement nuanced, multi-layered drop shadows for floating action buttons and prominent cards to improve visual hierarchy.
+- [ ] **Sticky Blurred Headers**: Enhance long scrolling lists (Dictionary, Leaderboards) with sticky headers that softly blur the content scrolling beneath them.
+
+## 🌊 Phase 16: Fluid Navigation & Gestures
+*Making traversal through the app feel seamless and deeply intuitive.*
+- [ ] **Branded Pull-to-Refresh**: Build a custom refresh indicator (e.g., a rotating ancestral sun or tribal motif) to replace the default circular spinner.
+- [ ] **Edge-Swipe Parallax**: Add subtle parallax background shifts when users edge-swipe to navigate back between nested screens.
+- [ ] **Multi-Stage Snapping Modals**: Refine bottom sheets to support continuous multi-stage drag snapping (e.g., peek, half-screen, full-screen) with smooth deceleration curves.
+
+## 🧰 Phase 17: Quality of Life (QoL) & Basic Utility
+*Small, practical features that significantly improve daily usability.*
+- [ ] **Recent Searches & Bookmarks**: Add a "Recent Searches" history to the dictionary and a "Save/Bookmark" button for quick access to specific words.
+- [ ] **Copy to Clipboard**: Include a quick copy icon next to dictionary definitions and example sentences.
+- [ ] **Offline Indicator**: Add a subtle, non-intrusive banner or icon that lets users know when they are viewing cached data without an active internet connection.
+- [ ] **Report an Issue / Flagging**: Implement a simple "Flag" button on dictionary entries and lessons so users can report typos or broken audio to admins.
+- [ ] **Audio Autoplay Toggle**: Add a setting allowing users to choose whether pronunciation audio plays automatically or requires a manual tap.
+- [ ] **Account Management**: Add essential account features in settings, allowing users to export their data or delete their accounts seamlessly.
+
 ---
 
 ## ✅ Completed & Milestone Archive

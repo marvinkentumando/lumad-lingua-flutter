@@ -1,4 +1,4 @@
-﻿import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
@@ -61,7 +61,7 @@ class AuthService {
                 'email': email,
                 'location': location ?? 'Unknown',
                 'tribe': tribe ?? 'General Learner',
-                'avatar': avatar ?? 'ðŸ‘¤',
+                'avatar': avatar ?? '👤',
                 'nativeLanguage': nativeLanguage ?? 'English',
                 'learningGoal': learningGoal ?? 'Culture',
                 'role': 'learner',
@@ -99,6 +99,23 @@ class AuthService {
 
   Future<void> signOut() async {
     await _auth.signOut();
+  }
+
+  Future<bool> verifyPassword(String password) async {
+    final user = _auth.currentUser;
+    if (user == null || user.email == null) return false;
+    
+    try {
+      AuthCredential credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: password,
+      );
+      await user.reauthenticateWithCredential(credential);
+      return true;
+    } catch (e) {
+      if (kDebugMode) debugPrint("Password verification failed: $e");
+      return false;
+    }
   }
 }
 

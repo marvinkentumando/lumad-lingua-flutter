@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../brand_button.dart';
@@ -31,7 +31,7 @@ class ConfigurationPreview extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          '$difficulty â€¢ $dialect',
+          '$difficulty • $dialect',
           style: AppTypography.label.copyWith(color: AppColors.gold500),
         ),
         const SizedBox(height: 16),

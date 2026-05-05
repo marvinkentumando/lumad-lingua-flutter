@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -98,7 +98,7 @@ class EldersWisdomPanel extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: Text(
-              "â€” The Ancestors",
+              "— The Ancestors",
               style: AppTypography.label.copyWith(
                 color: AppColors.gold500,
                 fontSize: 11,

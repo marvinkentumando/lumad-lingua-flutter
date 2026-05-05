@@ -400,7 +400,7 @@ class _ValidatorLessonsScreenState
             ),
             const SizedBox(height: 12),
             Text(
-              '${lesson.tasks.length} Activities â€¢ Unit ${lesson.unitNumber}',
+              '${lesson.tasks.length} Activities • Unit ${lesson.unitNumber}',
               style: AppTypography.body.copyWith(
                 color: Theme.of(context).brightness == Brightness.dark
                     ? AppColors.creamText3

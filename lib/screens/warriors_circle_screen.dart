@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
@@ -22,7 +22,7 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
       'level': 24,
       'isOnline': true,
       'streak': 42,
-      'avatar': 'ðŸ‘¤',
+      'avatar': '👤',
     },
     {
       'name': 'Bai Bibyaon',
@@ -147,7 +147,7 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Text('ðŸ”¥', style: TextStyle(fontSize: 12)),
+                    const Text('🔥', style: TextStyle(fontSize: 12)),
                     const SizedBox(width: 4),
                     Text(
                       '${friend['streak']} DAY STREAK',

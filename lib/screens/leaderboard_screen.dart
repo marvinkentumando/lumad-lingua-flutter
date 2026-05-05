@@ -447,7 +447,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           if (isFirst)
-            const Text('ðŸ‘‘', style: TextStyle(fontSize: 32))
+            const Text('👑', style: TextStyle(fontSize: 32))
                 .animate(onPlay: (c) => c.repeat(reverse: true))
                 .scaleXY(end: 1.15, duration: 800.ms)
                 .shimmer(
@@ -641,7 +641,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                       : null,
                   child: e.avatar == null
                       ? Text(
-                          isMe ? 'â˜…' : e.name[0].toUpperCase(),
+                          isMe ? '★' : e.name[0].toUpperCase(),
                           style: TextStyle(
                             fontSize: 14,
                             color: isMe ? AppColors.forest900 : Colors.white,

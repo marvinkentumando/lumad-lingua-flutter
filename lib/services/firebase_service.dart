@@ -1,4 +1,4 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
@@ -216,7 +216,7 @@ class FirebaseService {
             .collection('notifications')
             .doc();
         transaction.set(notifRef, {
-          'title': 'Entry Approved! ðŸŒŸ',
+          'title': 'Entry Approved! 🌟',
           'message':
               'Your contribution "$term" has been validated by a $validatorRole and is now live in the dictionary.',
           'type': 'approval',
@@ -601,7 +601,7 @@ class FirebaseService {
             .collection('notifications')
             .doc();
         transaction.set(notifRef, {
-          'title': 'Welcome to the Tribe! ðŸŒ¿',
+          'title': 'Welcome to the Tribe! 🌿',
           'message':
               'Your request to become a Contributor has been approved. You now have access to expansion tools!',
           'type': 'approval',
@@ -694,7 +694,7 @@ class FirebaseService {
             .collection('notifications')
             .doc();
         transaction.set(notifRef, {
-          'title': 'Curriculum Approved! ðŸ“š',
+          'title': 'Curriculum Approved! 📚',
           'message': 'Your lesson "$title" is now live for all students.',
           'type': 'approval',
           'timestamp': FieldValue.serverTimestamp(),
@@ -1486,7 +1486,7 @@ class FirebaseService {
       }, SetOptions(merge: true));
     });
   }
-  // â”€â”€ Voice Submission Operations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Voice Submission Operations ──────────────────────────────────────────
 
   /// Fetches items that require urgent attention (older than 48 hours or priority).
   Stream<List<ValidationItem>> getUrgentQueueItems() {
@@ -1588,7 +1588,7 @@ class FirebaseService {
         });
   }
 
-  /// Approves a voice submission â€” awards XP and notifies the contributor.
+  /// Approves a voice submission — awards XP and notifies the contributor.
   Future<void> approveVoiceSubmission(
     String id,
     String validatorId,
@@ -1655,7 +1655,7 @@ class FirebaseService {
 
     if (contributorId != null) {
       await addNotification(contributorId, {
-        'title': 'Voice Recording Feedback ðŸŽ¤',
+        'title': 'Voice Recording Feedback 🎤',
         'message': 'A $validatorRole requested changes for "$title": $feedback',
         'type': 'flagged',
       });
@@ -1711,7 +1711,7 @@ class FirebaseService {
         .map((snap) => snap.size);
   }
 
-  // â”€â”€ Community Feed Operations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Community Feed Operations ──────────────────────────────────────────
 
   Stream<List<CommunityActivity>> getCommunityFeed({int limit = 20}) {
     return _db
@@ -1961,7 +1961,7 @@ final educatorAnalyticsProvider = FutureProvider<Map<String, dynamic>>((
   return ref.watch(firebaseServiceProvider).getEducatorAnalytics();
 });
 
-// â”€â”€ Voice Submission Providers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Voice Submission Providers ──────────────────────────────────────────
 
 final pendingVoiceSubmissionsProvider =
     StreamProvider.family<List<VoiceSubmission>, int>((ref, limit) {
@@ -1989,7 +1989,7 @@ final pendingLessonsCountProvider = StreamProvider<int>((ref) {
   return ref.watch(firebaseServiceProvider).getPendingLessonsCount();
 });
 
-// â”€â”€ Community Feed Providers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Community Feed Providers ────────────────────────────────────────────
 
 final communityFeedProvider = StreamProvider<List<CommunityActivity>>((ref) {
   return ref.watch(firebaseServiceProvider).getCommunityFeed();

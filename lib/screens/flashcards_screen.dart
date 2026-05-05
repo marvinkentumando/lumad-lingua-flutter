@@ -1,4 +1,4 @@
-﻿import 'dart:math';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -419,7 +419,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
                               const SizedBox(width: 12),
                               Expanded(
                                 child: BrandButton(
-                                  text: isLast ? 'Finish âœ“' : 'Easy âœ“',
+                                  text: isLast ? 'Finish ✓' : 'Easy ✓',
                                   type: BrandButtonType.primary,
                                   onTap: isLast
                                       ? _showCompletionModal
@@ -429,7 +429,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
                             ] else
                               Expanded(
                                 child: BrandButton(
-                                  text: 'Flip Card  â†•',
+                                  text: 'Flip Card  ↕',
                                   type: BrandButtonType.primary,
                                   onTap: _flipCard,
                                 ),
@@ -449,7 +449,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
 
                         const SizedBox(height: 8),
                         Text(
-                          'â† â†’ arrow keys or Space to navigate',
+                          'â† → arrow keys or Space to navigate',
                           style: AppTypography.mono.copyWith(
                             color: Colors.white12,
                             fontSize: 10,
@@ -732,7 +732,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('ðŸ’«', style: TextStyle(fontSize: 56)),
+              const Text('💫', style: TextStyle(fontSize: 56)),
               const SizedBox(height: 20),
               Text(
                 'No Flashcards Yet',
@@ -749,7 +749,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
               ),
               const SizedBox(height: 32),
               BrandButton(
-                text: 'ðŸ“–  Go to Dictionary',
+                text: '📖  Go to Dictionary',
                 type: BrandButtonType.primary,
                 onTap: () => Navigator.pop(context),
               ),

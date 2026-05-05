@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
@@ -80,7 +80,7 @@ class LearningHubScreen extends ConsumerWidget {
                         ),
                         child: Row(
                           children: [
-                            const Text('âœ¨', style: TextStyle(fontSize: 14)),
+                            const Text('✨', style: TextStyle(fontSize: 14)),
                             const SizedBox(width: 4),
                             Text(
                               '${student.mistCrystals}',
@@ -286,7 +286,7 @@ class LearningHubScreen extends ConsumerWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      'âœ¨',
+                      '✨',
                       style: TextStyle(
                         fontSize: 12,
                         color: canAfford
@@ -343,7 +343,7 @@ class LearningHubScreen extends ConsumerWidget {
                             'Daily Streak',
                             '${studentState.dailyStreak}',
                             'SUN TRAILS',
-                            'ðŸŽ‰',
+                            '☀️',
                             null,
                           ),
                           const SizedBox(width: 16),
@@ -352,7 +352,7 @@ class LearningHubScreen extends ConsumerWidget {
                             'Mist Crystals',
                             '${studentState.mistCrystals}',
                             'EARNED',
-                            'âœ¨',
+                            '✨',
                             () => _showMistCrystalStore(context, ref),
                           ),
                           const SizedBox(width: 16),
@@ -361,7 +361,7 @@ class LearningHubScreen extends ConsumerWidget {
                             'Ancestral XP',
                             '${studentState.xp}',
                             'LEVEL UP',
-                            'ðŸ”¥',
+                            '🔥',
                             null,
                           ),
                         ],
@@ -525,7 +525,8 @@ class LearningHubScreen extends ConsumerWidget {
     VoidCallback? onTap,
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Expanded(
+    return SizedBox(
+      width: 160,
       child: GestureDetector(
         onTap: onTap,
         child: BrandCard(
