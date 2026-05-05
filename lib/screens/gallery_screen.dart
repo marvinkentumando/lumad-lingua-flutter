@@ -260,7 +260,10 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
     );
   }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> e3a3d887a8d9e652a0d03a7af3bbcafd8c6ee331
 
   Color _getTierColor(ArtifactTier tier) {
     switch (tier) {
