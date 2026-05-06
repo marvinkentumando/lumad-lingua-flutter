@@ -167,7 +167,7 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
             // Keep the original ID so _taskMistakes always keys off the source task.
             newQueue[i] = LessonTask(
               id: task
-                  .id, // â† Fix #18: Use original ID, NOT '${task.id}_harder'
+                  .id, // ← Fix #18: Use original ID, NOT '${task.id}_harder'
               type: TaskType.sentenceReordering,
               questionText: 'Reconstruct the correct translation:',
               sentenceParts: List.from(correctText.split(' '))..shuffle(),

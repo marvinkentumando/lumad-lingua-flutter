@@ -49,7 +49,7 @@ class NotificationScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text("ðŸ””", style: TextStyle(fontSize: 64)),
+                  const Text("🔔", style: TextStyle(fontSize: 64)),
                   const SizedBox(height: 16),
                   Text(
                     "No alerts yet.",
@@ -168,9 +168,9 @@ class NotificationScreen extends ConsumerWidget {
       case 'streak':
         return '🔥';
       case 'achievement':
-        return 'ðŸ†';
+        return '🏆';
       default:
-        return 'ðŸ””';
+        return '🔔';
     }
   }
 }

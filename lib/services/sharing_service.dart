@@ -10,9 +10,9 @@ class SharingService {
 Check out this word from Lumad Lingua!
 
 🌿 Indigenous Word: ${entry.indigenousWord}
-ðŸ—£ï¸ Translation: ${entry.translation}
-ðŸŒ Language: ${entry.language}
-ðŸ“ Context: ${entry.usageContext}
+🗣️ Translation: ${entry.translation}
+🌍 Language: ${entry.language}
+📝 Context: ${entry.usageContext}
 
 Learn more at: $webBaseUrl/word/${entry.id}
 ''';

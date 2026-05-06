@@ -291,7 +291,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 color: AppColors.gold500.withOpacity(0.2),
               ),
             ),
-            child: const Text('ðŸ›¡ï¸', style: TextStyle(fontSize: 20)),
+            child: const Text('🛡️', style: TextStyle(fontSize: 20)),
           ),
           const SizedBox(width: 16),
           Expanded(

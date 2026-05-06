@@ -112,7 +112,7 @@ class StreakHistoryScreen extends ConsumerWidget {
                     border: Border.all(color: AppColors.gold500.withOpacity(0.3)),
                   ),
                   child: Text(
-                    '${student.dailyStreak} DAYS',
+                    '${student.displayedStreak} DAYS',
                     style: GoogleFonts.outfit(
                       color: AppColors.gold500,
                       fontWeight: FontWeight.w900,
@@ -125,7 +125,7 @@ class StreakHistoryScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           Text(
-            student.dailyStreak > 0 
+            student.displayedStreak > 0 
               ? 'You\'re on fire!' 
               : 'Start your journey today!',
             style: AppTypography.h2.copyWith(
@@ -284,8 +284,8 @@ class StreakHistoryScreen extends ConsumerWidget {
         const SizedBox(height: 16),
         ...milestones.map((m) {
           final days = m['days'] as int;
-          final isUnlocked = student.dailyStreak >= days;
-          final progress = (student.dailyStreak / days).clamp(0.0, 1.0);
+          final isUnlocked = student.displayedStreak >= days;
+          final progress = (student.displayedStreak / days).clamp(0.0, 1.0);
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),

@@ -1,4 +1,4 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -11,6 +11,7 @@ class StudentState {
   final int hearts;
   final int streakShields;
   final Map<String, dynamic> lessonProgress;
+  final DateTime? lastActive;
 
   StudentState({
     required this.mistCrystals,
@@ -19,6 +20,7 @@ class StudentState {
     required this.hearts,
     required this.streakShields,
     required this.lessonProgress,
+    this.lastActive,
   });
 
   StudentState copyWith({
@@ -28,6 +30,7 @@ class StudentState {
     int? hearts,
     int? streakShields,
     Map<String, dynamic>? lessonProgress,
+    DateTime? lastActive,
   }) {
     return StudentState(
       mistCrystals: mistCrystals ?? this.mistCrystals,
@@ -36,6 +39,7 @@ class StudentState {
       hearts: hearts ?? this.hearts,
       streakShields: streakShields ?? this.streakShields,
       lessonProgress: lessonProgress ?? this.lessonProgress,
+      lastActive: lastActive ?? this.lastActive,
     );
   }
 
@@ -61,6 +65,19 @@ class StudentState {
     final progressXp = xp - currentLevelXp;
     final totalXpNeeded = nextLevelXp - currentLevelXp;
     return (progressXp / totalXpNeeded).clamp(0.0, 1.0);
+  }
+
+  int get displayedStreak {
+    if (lastActive == null) return 0;
+    final now = DateTime.now();
+    final difference = DateTime(now.year, now.month, now.day)
+        .difference(
+          DateTime(lastActive!.year, lastActive!.month, lastActive!.day),
+        )
+        .inDays;
+    // If more than 1 day has passed, the streak is effectively broken in the UI
+    if (difference > 1) return 0;
+    return dailyStreak;
   }
 }
 
@@ -96,6 +113,7 @@ class StudentNotifier extends Notifier<StudentState> {
       hearts: resolvedHearts,
       streakShields: profile?['streakShields'] ?? 0,
       lessonProgress: progress,
+      lastActive: (profile?['lastActive'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -126,7 +144,28 @@ class StudentNotifier extends Notifier<StudentState> {
   }
 
   void incrementStreak() {
-    state = state.copyWith(dailyStreak: state.dailyStreak + 1);
+    final now = DateTime.now();
+    final lastActive = state.lastActive;
+    
+    bool shouldIncrementLocally = false;
+    if (lastActive == null) {
+      shouldIncrementLocally = true;
+    } else {
+      final difference = DateTime(now.year, now.month, now.day)
+          .difference(DateTime(lastActive.year, lastActive.month, lastActive.day))
+          .inDays;
+      if (difference >= 1) {
+        shouldIncrementLocally = true;
+      }
+    }
+
+    if (shouldIncrementLocally) {
+      state = state.copyWith(
+        dailyStreak: state.dailyStreak + 1,
+        lastActive: now,
+      );
+    }
+    
     final user = ref.read(authStateProvider).value;
     if (user != null) {
       ref.read(firebaseServiceProvider).incrementStreak(user.uid);

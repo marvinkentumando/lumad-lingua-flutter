@@ -22,6 +22,7 @@ import '../widgets/level_up_modal.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/graceful_image.dart';
 import '../widgets/branded_empty_state.dart';
+import '../widgets/profile_avatar.dart';
 
 
 class StaffProfileScreen extends ConsumerWidget {
@@ -151,19 +152,10 @@ class StaffProfileScreen extends ConsumerWidget {
               ),
               child: Stack(
                 children: [
-                  CircleAvatar(
+                  ProfileAvatar(
                     radius: 70,
-                    backgroundColor: Colors.black,
-                    backgroundImage: user?.photoURL != null
-                        ? NetworkImage(user!.photoURL!)
-                        : null,
-                    child: user?.photoURL == null
-                        ? const Icon(
-                            Icons.person_rounded,
-                            size: 80,
-                            color: Colors.white,
-                          )
-                        : null,
+                    photoUrl: profile?['photoURL'] ?? user?.photoURL,
+                    iconSize: 80,
                   ),
                   Positioned(
                     bottom: 0,
@@ -836,6 +828,11 @@ class StaffProfileScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
+              leading: const Icon(Icons.face_retouching_natural_rounded, color: AppColors.gold500),
+              title: const Text('Choose Ancestral Totem', style: TextStyle(color: Colors.white)),
+              onTap: () => Navigator.pop(context, 'character'),
+            ),
+            ListTile(
               leading: const Icon(Icons.photo_library, color: AppColors.gold500),
               title: const Text('Upload New Picture', style: TextStyle(color: Colors.white)),
               onTap: () => Navigator.pop(context, 'upload'),
@@ -849,6 +846,11 @@ class StaffProfileScreen extends ConsumerWidget {
         ),
       ),
     );
+
+    if (action == 'character') {
+      if (context.mounted) _showCharacterPicker(context, ref, userId);
+      return;
+    }
 
     if (action == 'remove') {
       try {
@@ -912,6 +914,102 @@ class StaffProfileScreen extends ConsumerWidget {
         }
       }
     }
+  }
+
+  void _showCharacterPicker(BuildContext context, WidgetRef ref, String userId) {
+    final characters = [
+      'assets/images/lumad_character.png',
+      'assets/images/lumad_character (1).png',
+      'assets/images/lumad_character (2).png',
+      'assets/images/lumad_character (3).png',
+      'assets/images/lumad_character (4).png',
+      'assets/images/lumad_character (5).png',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.forest900,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Choose Your Ancestral Totem',
+              style: AppTypography.h3.copyWith(color: AppColors.gold500),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 280,
+              child: GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                ),
+                itemCount: characters.length,
+                itemBuilder: (context, index) {
+                  return GestureDetector(
+                    onTap: () async {
+                      try {
+                        final url = characters[index];
+                        // 1. Update Firestore
+                        await ref.read(firebaseServiceProvider).updateUserProfile(userId, {
+                          'photoURL': url,
+                        });
+                        
+                        // 2. Update Firebase Auth Profile for sync
+                        final user = ref.read(authServiceProvider).currentUser;
+                        if (user != null) {
+                          await user.updatePhotoURL(url);
+                        }
+
+                        if (context.mounted) Navigator.pop(context);
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed to update: $e')),
+                          );
+                        }
+                      }
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white10),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.asset(
+                          characters[index],
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => const Center(
+                            child: Icon(Icons.broken_image, color: Colors.white24),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showEditProfileDialog(

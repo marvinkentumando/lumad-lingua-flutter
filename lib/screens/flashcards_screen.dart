@@ -449,7 +449,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
 
                         const SizedBox(height: 8),
                         Text(
-                          'â† → arrow keys or Space to navigate',
+                          '← → arrow keys or Space to navigate',
                           style: AppTypography.mono.copyWith(
                             color: Colors.white12,
                             fontSize: 10,
@@ -655,7 +655,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('ðŸ†', style: TextStyle(fontSize: 56))
+              const Text('🏆', style: TextStyle(fontSize: 56))
                   .animate(onPlay: (c) => c.repeat(reverse: true))
                   .scaleXY(end: 1.1, duration: 600.ms),
               const SizedBox(height: 16),

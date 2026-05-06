@@ -16,6 +16,7 @@ import '../services/firebase_service.dart';
 import '../config/role_nav_config.dart';
 import '../services/cultural_theme_service.dart';
 import '../services/haptic_service.dart';
+import '../widgets/profile_avatar.dart';
 
 class MainLayout extends ConsumerWidget {
   final Widget child;
@@ -217,18 +218,21 @@ class MainLayout extends ConsumerWidget {
                 HapticService.selection();
                 context.push('/profile');
               },
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: culturalTheme.accentColor,
-                child: ClipOval(
-                  child: authState.when(
-                    data: (user) => (user as dynamic)?.photoURL != null
-                        ? Image.network((user as dynamic).photoURL!)
-                        : const Icon(Icons.person_rounded, color: Colors.black),
-                    loading: () => const CircularProgressIndicator(),
-                    error: (_, __) =>
-                        const Icon(Icons.person_rounded, color: Colors.black),
-                  ),
+              child: authState.when(
+                data: (user) => ProfileAvatar(
+                  radius: 18,
+                  photoUrl: (user as dynamic)?.photoURL,
+                  iconSize: 20,
+                  backgroundColor: culturalTheme.accentColor,
+                ),
+                loading: () => const CircleAvatar(
+                  radius: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                error: (_, __) => ProfileAvatar(
+                  radius: 18,
+                  iconSize: 20,
+                  backgroundColor: culturalTheme.accentColor,
                 ),
               ),
             ),

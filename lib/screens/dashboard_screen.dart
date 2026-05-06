@@ -1266,7 +1266,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${student.dailyStreak} DAY STREAK',
+                    '${student.displayedStreak} DAYS',
                     style: AppTypography.h3.copyWith(color: Colors.white, fontSize: 16),
                   ),
                   Text(

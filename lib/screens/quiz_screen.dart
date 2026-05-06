@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -303,7 +303,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text("ðŸ†", style: TextStyle(fontSize: 80)),
+              const Text("🏆", style: TextStyle(fontSize: 80)),
               const SizedBox(height: 24),
               Text(
                 "Ancestral Mastery",
@@ -333,13 +333,13 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   String _getTaskEmoji(QuizTaskType type) {
     switch (type) {
       case QuizTaskType.mcq:
-        return "â“";
+        return "❓";
       case QuizTaskType.matching:
-        return "ðŸ§©";
+        return "🧩";
       case QuizTaskType.scrambled:
-        return "ðŸ” ";
+        return "🔠";
       case QuizTaskType.audio:
-        return "ðŸŽ§";
+        return "🎧";
     }
   }
 }

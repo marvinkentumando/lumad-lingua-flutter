@@ -265,7 +265,7 @@ class FirebaseService {
             .collection('notifications')
             .doc();
         transaction.set(notifRef, {
-          'title': 'Clarification Needed ðŸ“',
+          'title': 'Clarification Needed 📝',
           'message':
               'A $validatorRole has requested more info for "$term": $feedback',
           'type': 'flagged',
@@ -307,7 +307,7 @@ class FirebaseService {
             .collection('notifications')
             .doc();
         transaction.set(notifRef, {
-          'title': 'Entry Rejected âš ï¸',
+          'title': 'Entry Rejected ⚠️',
           'message': 'Your entry "$term" was not approved: $feedback',
           'type': 'rejection',
           'timestamp': FieldValue.serverTimestamp(),
@@ -733,7 +733,7 @@ class FirebaseService {
     final contributorId = data['contributorId'];
     if (contributorId != null) {
       await addNotification(contributorId, {
-        'title': 'Lesson Feedback ðŸ“',
+        'title': 'Lesson Feedback 📝',
         'message':
             'A $validatorRole suggested changes for "${data['title']}": $feedback',
         'type': 'flagged',
@@ -1643,7 +1643,7 @@ class FirebaseService {
             .collection('notifications')
             .doc();
         transaction.set(notifRef, {
-          'title': 'Voice Recording Approved! ðŸŽ™ï¸',
+          'title': 'Voice Recording Approved! 🎙️',
           'message':
               'Your recording "$title" has been validated by a $validatorRole.',
           'type': 'approval',
@@ -1712,7 +1712,7 @@ class FirebaseService {
 
     if (contributorId != null) {
       await addNotification(contributorId, {
-        'title': 'Voice Recording Rejected âš ï¸',
+        'title': 'Voice Recording Rejected ⚠️',
         'message': 'Your recording "$title" was not approved: $feedback',
         'type': 'rejection',
       });

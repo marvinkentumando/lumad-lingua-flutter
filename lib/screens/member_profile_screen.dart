@@ -11,6 +11,7 @@ import '../providers/artifact_provider.dart';
 import '../services/firebase_service.dart';
 import '../widgets/skeleton.dart';
 import 'package:go_router/go_router.dart';
+import '../widgets/profile_avatar.dart';
 
 final validatorActivityCountProvider = StreamProvider.family<int, String>((ref, userId) {
   return ref.watch(firebaseServiceProvider).getValidatorActivityCount(userId);
@@ -158,13 +159,10 @@ class MemberProfileScreen extends ConsumerWidget {
             color: AppColors.gold500,
             shape: BoxShape.circle,
           ),
-          child: CircleAvatar(
+          child: ProfileAvatar(
             radius: 70,
-            backgroundColor: Colors.black,
-            backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-            child: photoUrl == null
-                ? const Icon(Icons.person_rounded, size: 80, color: Colors.white)
-                : null,
+            photoUrl: photoUrl,
+            iconSize: 80,
           ),
         ).animate().scale(
           begin: const Offset(0.8, 0.8),
@@ -282,8 +280,8 @@ class MemberProfileScreen extends ConsumerWidget {
             return Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildImpactCard(context, 'â­', 'Accuracy', accuracy),
-                _buildImpactCard(context, 'ðŸ¤', 'Community', rank),
+                _buildImpactCard(context, '⭐', 'Accuracy', accuracy),
+                _buildImpactCard(context, '🤝', 'Community', rank),
                 _buildImpactCard(context, '🌿', 'Spirit', spirit),
               ],
             );

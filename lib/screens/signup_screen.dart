@@ -34,9 +34,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   // Step 2: Path
   final _nativeLanguageController = TextEditingController();
-  String _selectedAvatar = "ðŸ¦…";
+  String _selectedAvatar = "🦅";
   String _learningGoal = "Culture";
-  final List<String> _totems = ["ðŸ¦…", "ðŸ†", "ðŸ¢", "ðŸ›¶", "🌿", "â›°ï¸", "ðŸ¹", "🔥"];
+  final List<String> _totems = ["🦅", "🏆", "🐢", "🛶", "🌿", "⛰️", "🏹", "🔥"];
   final List<String> _goals = [
     "Culture",
     "Travel",

@@ -29,21 +29,21 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
       'level': 31,
       'isOnline': false,
       'streak': 15,
-      'avatar': 'ðŸ‘¸',
+      'avatar': '👸',
     },
     {
       'name': 'Matigsalug Brave',
       'level': 12,
       'isOnline': true,
       'streak': 3,
-      'avatar': 'ðŸ¹',
+      'avatar': '🏹',
     },
     {
       'name': 'Mandaya Weaver',
       'level': 18,
       'isOnline': false,
       'streak': 8,
-      'avatar': 'ðŸ§¶',
+      'avatar': '🧶',
     },
   ];
 

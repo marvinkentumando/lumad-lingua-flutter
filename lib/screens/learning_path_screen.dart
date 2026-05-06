@@ -150,11 +150,14 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _statItem('â¤ï¸', '${studentState.hearts}', AppColors.semanticRed),
+          _statItem('❤️', '${studentState.hearts}', AppColors.semanticRed),
           const SizedBox(width: 24),
           _statItem('✨', '${studentState.mistCrystals}', AppColors.gold500),
           const SizedBox(width: 24),
-          _statItem('🔥', '${studentState.xp}', AppColors.terracotta),
+          GestureDetector(
+            onTap: () => context.push('/streak'),
+            child: _statItem('🔥', '${studentState.displayedStreak}', AppColors.terracotta),
+          ),
         ],
       ),
     );

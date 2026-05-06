@@ -453,6 +453,9 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
               } else if (unlockedBadge) {
                 _showBadgeUnlockedDialog();
               }
+              
+              // Increment daily streak on lesson completion
+              ref.read(studentProvider.notifier).incrementStreak();
             })
             .catchError((error) {
               if (mounted) {

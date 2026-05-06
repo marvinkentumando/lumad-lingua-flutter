@@ -1,4 +1,4 @@
-﻿class AdminUser {
+class AdminUser {
   final String id;
   String name;
   String email;
@@ -78,7 +78,7 @@ class AuditLogEntry {
     required this.actor,
     required this.target,
     required this.timestamp,
-    this.icon = 'ðŸ”§',
+    this.icon = '🔧',
   });
 
   String get timeAgo {

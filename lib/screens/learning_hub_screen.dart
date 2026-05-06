@@ -341,10 +341,10 @@ class LearningHubScreen extends ConsumerWidget {
                           _buildStatCard(
                             context,
                             'Daily Streak',
-                            '${studentState.dailyStreak}',
+                            '${studentState.displayedStreak}',
                             'SUN TRAILS',
                             '☀️',
-                            null,
+                            () => context.push('/streak'),
                           ),
                           const SizedBox(width: 16),
                           _buildStatCard(

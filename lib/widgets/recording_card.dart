@@ -210,7 +210,7 @@ class RecordingCard extends StatelessWidget {
 
           if (audio['transcription'] != null)
             Text(
-              '“${audio['transcription']}â€',
+              '“${audio['transcription']}”',
               style: AppTypography.body.copyWith(
                 color: isDark ? Colors.white70 : AppColors.forest700,
                 fontStyle: FontStyle.italic,
