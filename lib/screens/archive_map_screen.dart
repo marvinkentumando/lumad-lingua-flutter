@@ -112,7 +112,7 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
               ),
 
           // Top Search & Filter Bar
-          Positioned(top: 60, left: 20, right: 20, child: _buildSearchBar()),
+          Positioned(top: 120, left: 20, right: 20, child: _buildSearchBar()),
 
           // Floating Map Controls (Right Side)
           Positioned(

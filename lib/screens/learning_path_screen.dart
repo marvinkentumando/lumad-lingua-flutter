@@ -321,6 +321,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
   ) {
     final List<Widget> children = [];
     final sortedUnits = grouped.keys.toList()..sort();
+    bool activeNodeKeyAssigned = false;
 
     for (var unitNum in sortedUnits) {
       final unitLessons = grouped[unitNum]!;
@@ -334,23 +335,12 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
             sum + (studentState.lessonProgress[l.id]?['stars'] as int? ?? 0),
       );
 
-      children.add(
-        UnitHeaderCard(
-          unitNumber: 'Unit $unitNum',
-          title: unitLessons.first.category,
-          isCompleted: isUnitCompleted,
-          completedCount: completedCount,
-          totalCount: unitLessons.length,
-          icon: IconUtils.getIconData(unitLessons.first.icon),
-          stars: totalStars,
-        ),
-      );
-      children.add(const SizedBox(height: 40));
+      final List<Widget> lessonWidgets = [];
 
-      for (var lesson in unitLessons) {
+      for (var i = 0; i < unitLessons.length; i++) {
+        final lesson = unitLessons[i];
         final progressData = studentState.lessonProgress[lesson.id];
         final isCompleted = progressData?['completed'] == true;
-        final stars = (progressData?['stars'] as num? ?? 0).toInt();
         final bestScore = (progressData?['bestScore'] as num?)?.toInt();
 
         LessonStepStatus status = LessonStepStatus.locked;
@@ -373,12 +363,17 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
         final estimatedMin = (lesson.tasks.length * 2).clamp(2, 60);
 
         final isFirstActive = status == LessonStepStatus.active;
+        bool assignKey = false;
+        if (isFirstActive && !activeNodeKeyAssigned) {
+          assignKey = true;
+          activeNodeKeyAssigned = true;
+        }
 
-        children.add(
+        final isLast = i == unitLessons.length - 1;
+
+        lessonWidgets.add(
           GestureDetector(
-            key: isFirstActive && _activeNodeKey.currentContext == null
-                ? _activeNodeKey
-                : null,
+            key: assignKey ? _activeNodeKey : null,
             onTap: isLocked
                 ? null
                 : () => context.push('/lesson_session?lessonId=${lesson.id}'),
@@ -386,36 +381,34 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
               opacity: isLocked ? 0.5 : 1.0,
               child: LessonStepCard(
                 title: lesson.title,
-                type: lesson.category.toUpperCase(),
                 time: '$estimatedMin min',
                 status: status,
-                stars: stars,
-                icon: isLocked ? Icons.lock : IconUtils.getIconData(lesson.icon),
                 bestScore: bestScore,
                 lessonId: lesson.id,
+                isLast: isLast,
               ),
             ),
           ),
         );
-        children.add(const SizedBox(height: 40));
       }
-      children.add(const SizedBox(height: 20));
+
+      children.add(
+        UnitHeaderCard(
+          unitNumber: 'Unit $unitNum',
+          title: unitLessons.first.title,
+          isCompleted: isUnitCompleted,
+          completedCount: completedCount,
+          totalCount: unitLessons.length,
+          icon: IconUtils.getIconData(unitLessons.first.icon),
+          stars: totalStars,
+          children: lessonWidgets,
+        ),
+      );
+      children.add(const SizedBox(height: 40));
     }
 
     return Stack(
       children: [
-        Positioned(
-          left: 20,
-          top: 0,
-          bottom: 0,
-          child: Container(
-            width: 4,
-            decoration: BoxDecoration(
-              color: AppColors.gold500.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        ),
         Column(children: children),
       ],
     );

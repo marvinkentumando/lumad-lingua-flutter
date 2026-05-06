@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/theme_provider.dart';
@@ -50,6 +50,7 @@ import 'screens/scenario_session_screen.dart';
 import 'screens/lingua_duel_screen.dart';
 import 'screens/mastery_dashboard_screen.dart';
 import 'screens/warriors_circle_screen.dart';
+import 'screens/streak_history_screen.dart';
 
 import 'providers/role_provider.dart';
 
@@ -309,6 +310,10 @@ final _router = GoRouter(
         GoRoute(
           path: '/warriors-circle',
           builder: (context, state) => const WarriorsCircleScreen(),
+        ),
+        GoRoute(
+          path: '/streak',
+          builder: (context, state) => const StreakHistoryScreen(),
         ),
       ],
     ),

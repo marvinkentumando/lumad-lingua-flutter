@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 
@@ -14,14 +14,15 @@ class TopoBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size.infinite,
-      painter: _TopoPainter(
-        lineColor:
-            (Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white
-                    : Colors.black)
-                .withOpacity(opacity),
+    return SizedBox.expand(
+      child: CustomPaint(
+        painter: _TopoPainter(
+          lineColor:
+              (Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : Colors.black)
+                  .withOpacity(opacity),
+        ),
       ),
     );
   }

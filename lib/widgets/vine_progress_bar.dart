@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
 class VineProgressBar extends StatefulWidget {
@@ -64,12 +64,14 @@ class _VineProgressBarState extends State<VineProgressBar>
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
-        return CustomPaint(
-          size: Size(double.infinity, widget.height),
-          painter: _VinePainter(
-            progress: _animation.value,
-            color: vineColor,
-            backgroundColor: (isDark ? Colors.white : Colors.black).withOpacity(0.05,
+        return SizedBox(
+          width: double.infinity,
+          height: widget.height,
+          child: CustomPaint(
+            painter: _VinePainter(
+              progress: _animation.value,
+              color: vineColor,
+              backgroundColor: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
             ),
           ),
         );

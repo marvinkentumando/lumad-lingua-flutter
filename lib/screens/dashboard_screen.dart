@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
@@ -11,7 +12,6 @@ import '../widgets/vine_progress_bar.dart';
 import '../widgets/topo_background.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
-import '../widgets/glass_box.dart';
 import '../widgets/wotd_widget.dart';
 import '../widgets/crystal_burst_animation.dart';
 import '../widgets/skeleton.dart';
@@ -24,6 +24,8 @@ import '../providers/quest_provider.dart';
 import '../models/quest.dart';
 import '../services/haptic_service.dart';
 
+
+import '../providers/learning_provider.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -69,16 +71,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Stack(
       children: [
         Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          backgroundColor: ambientColor,
           body: Stack(
             children: [
               // Dynamic Topo Background
               TopoBackground(baseColor: ambientColor, opacity: 0.08),
 
-              SafeArea(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+              Positioned.fill(
+                child: SafeArea(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -87,6 +90,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       const SizedBox(height: 16),
                       _buildHeroBanner(context, displayName, student),
                       const SizedBox(height: 24),
+                      if (currentRole == UserRole.learner) ...[
+                        _buildStreakSummaryCard(context, student),
+                        const SizedBox(height: 24),
+                      ],
                       const WotdWidget(),
                       const SizedBox(height: 24),
                       if (currentRole == UserRole.learner) ...[
@@ -111,9 +118,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
         if (_showBurst)
           CrystalBurstAnimation(
             onComplete: () => setState(() => _showBurst = false),
@@ -161,113 +169,70 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     String displayName,
     StudentState student,
   ) {
-    return BrandCard(
-      theme: BrandCardTheme.gold,
-      padding: EdgeInsets.zero,
-      borderRadius: 32,
-      child: Row(
-        children: [
-          // Text Content
-          Expanded(
-            flex: 3,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 28, top: 32, bottom: 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Maayong\nAdlaw,\n$displayName!',
-                    style: AppTypography.displayBold.copyWith(
-                      color: Colors.black,
-                      fontSize: 34,
-                      height: 1.1,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'LEVEL ${student.level} \u2022 ${student.levelTitle.toUpperCase()}',
-                    style: AppTypography.label.copyWith(
-                      color: Colors.black54,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 11,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: student.levelProgress,
-                      backgroundColor: Colors.black12,
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        Colors.black54,
-                      ),
-                      minHeight: 4,
-                    ),
-                  ),
-                  const Spacer(),
-                  // Streak Badge (Frost Effect)
-                  GestureDetector(
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Streak history coming soon!'),
-                          backgroundColor: AppColors.semanticBlue,
-                        ),
-                      );
-                    },
-                    child: GlassBox(
-                      borderRadius: 20,
-                      blur: 10,
-                      opacity: 0.15,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text('\ud83d\udd25', style: TextStyle(fontSize: 20)),
-                            const SizedBox(width: 8),
-                            Text(
-                              '${student.dailyStreak}',
-                              style: AppTypography.h2ExtraBold.copyWith(
-                                color: Colors.black87,
-                                fontSize: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'DAY STREAK',
-                              style: AppTypography.label.copyWith(
-                                color: Colors.black45,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
+    return SizedBox(
+      height: 270,
+      child: BrandCard(
+        theme: BrandCardTheme.gold,
+        padding: EdgeInsets.zero,
+        borderRadius: 32,
+        child: Row(
+          children: [
+            // Text Content
+            Expanded(
+              flex: 3,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 28, top: 32, bottom: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Madyaw na\nallaw,\n$displayName!',
+                      style: AppTypography.displayBold.copyWith(
+                        color: Colors.black,
+                        fontSize: 34,
+                        height: 1.1,
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    Text(
+                      'LEVEL ${student.level} \u2022 ${student.levelTitle.toUpperCase()}',
+                      style: AppTypography.label.copyWith(
+                        color: Colors.black54,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 11,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: student.levelProgress,
+                        backgroundColor: Colors.black12,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          Colors.black54,
+                        ),
+                        minHeight: 4,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          // Character Image / Waves GIF
-          Expanded(
-            flex: 2,
-            child: Align(
-              alignment: Alignment.bottomRight,
-              child: Image.asset(
-                'assets/images/lumad_waves.gif',
-                height: 300,
-                fit: BoxFit.contain,
+            // Character Image / Waves GIF
+            Expanded(
+              flex: 2,
+              child: Align(
+                alignment: Alignment.topRight,
+                child: Image.asset(
+                  'assets/images/lumad_waves.gif',
+                  height: 260,
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -295,7 +260,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
             ),
             Text(
-              'RESET IN 4H',
+              'RESET IN ${_getTimeUntilReset()}',
               style: AppTypography.label.copyWith(
                 color: AppColors.gold500.withOpacity(0.3),
                 fontSize: 9,
@@ -594,54 +559,138 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildCurrentLessonCard(BuildContext context) {
+    final latestAsync = ref.watch(latestLessonProvider);
+    final detailsAsync = ref.watch(latestLessonDetailsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    return detailsAsync.when(
+      data: (lesson) {
+        if (lesson == null) {
+          return _buildStartJourneyCard(context);
+        }
+
+        final progressData = latestAsync.value?['data'] ?? {};
+        final stars = progressData['stars'] ?? 0;
+        final progress = stars / 3.0;
+
+        return BrandCard(
+          padding: const EdgeInsets.all(24),
+          borderRadius: 32,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.gold500.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: AppColors.gold500.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Text(
+                      'CURRENT LESSON',
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.gold500,
+                        fontSize: 11,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.gold500,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(
+                      Icons.psychology_rounded,
+                      color: Colors.black,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                lesson.title,
+                style: AppTypography.h1ExtraBold.copyWith(
+                  color: isDark ? Colors.white : AppColors.forest700,
+                  fontSize: 28,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                lesson.description,
+                style: AppTypography.body.copyWith(
+                  color: isDark ? Colors.white38 : AppColors.creamText2,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Lesson Progress',
+                    style: AppTypography.label.copyWith(
+                      color: isDark ? Colors.white54 : AppColors.creamText3,
+                      fontSize: 12,
+                    ),
+                  ),
+                  Text(
+                    '${(progress * 100).round()}%',
+                    style: AppTypography.mono.copyWith(
+                      color: AppColors.gold500,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              VineProgressBar(value: progress),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: BrandButton(
+                  text: progress >= 1.0 ? 'REVIEW ASCENT' : 'CONTINUE ASCENT',
+                  onTap: () {
+                    HapticService.light();
+                    context.go('/learning/path');
+                  },
+                  type: BrandButtonType.primary,
+                  icon: Icons.arrow_forward_rounded,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32),
+          child: CircularProgressIndicator(color: AppColors.gold500),
+        ),
+      ),
+      error: (e, _) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildStartJourneyCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return BrandCard(
       padding: const EdgeInsets.all(24),
       borderRadius: 32,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.gold500.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: AppColors.gold500.withOpacity(0.3),
-                  ),
-                ),
-                child: Text(
-                  'CURRENT LESSON',
-                  style: AppTypography.label.copyWith(
-                    color: AppColors.gold500,
-                    fontSize: 11,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.gold500,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.psychology_rounded,
-                  color: Colors.black,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
           Text(
-            'Spirit of the\nForest',
+            'Start Your Journey',
             style: AppTypography.h1ExtraBold.copyWith(
               color: isDark ? Colors.white : AppColors.forest700,
               fontSize: 28,
@@ -649,42 +698,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Learn the sacred terminology of\nthe highlands.',
+            'Begin your ascent into the highlands and discover the Lumad heritage.',
             style: AppTypography.body.copyWith(
               color: isDark ? Colors.white38 : AppColors.creamText2,
             ),
           ),
           const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Lesson Progress',
-                style: AppTypography.label.copyWith(
-                  color: isDark ? Colors.white54 : AppColors.creamText3,
-                  fontSize: 12,
-                ),
-              ),
-              Text(
-                '75%',
-                style: AppTypography.mono.copyWith(
-                  color: AppColors.gold500,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const VineProgressBar(value: 0.75),
-          const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
             child: BrandButton(
-              text: 'CONTINUE ASCENT',
+              text: 'START UNIT 1',
               onTap: () => context.go('/learning'),
               type: BrandButtonType.primary,
-              icon: Icons.arrow_forward_rounded,
+              icon: Icons.explore_rounded,
             ),
           ),
         ],
@@ -1206,5 +1232,64 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildStreakSummaryCard(BuildContext context, StudentState student) {
+    return GestureDetector(
+      onTap: () {
+        HapticService.light();
+        context.push('/streak');
+      },
+      child: BrandCard(
+        theme: BrandCardTheme.vibrant,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: Row(
+          children: [
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                Icon(
+                  Icons.local_fire_department_rounded,
+                  color: AppColors.gold500.withOpacity(0.2),
+                  size: 48,
+                ).animate(onPlay: (c) => c.repeat()).scale(end: const Offset(1.2, 1.2)),
+                const Icon(
+                  Icons.local_fire_department_rounded,
+                  color: AppColors.gold500,
+                  size: 32,
+                ),
+              ],
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${student.dailyStreak} DAY STREAK',
+                    style: AppTypography.h3.copyWith(color: Colors.white, fontSize: 16),
+                  ),
+                  Text(
+                    'Keep the flame alive!',
+                    style: AppTypography.body.copyWith(color: Colors.white70, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getTimeUntilReset() {
+    final now = DateTime.now();
+    final midnight = DateTime(now.year, now.month, now.day + 1);
+    final diff = midnight.difference(now);
+    final hours = diff.inHours;
+    if (hours > 0) return '${hours}H';
+    final minutes = diff.inMinutes;
+    return '${minutes}M';
   }
 }

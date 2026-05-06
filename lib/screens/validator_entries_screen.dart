@@ -477,46 +477,28 @@ class _ValidatorEntriesScreenState
                 GestureDetector(
                   onTap: () => setState(() => _showHistory = !_showHistory),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: _showHistory
                           ? AppColors.gold500
                           : (isDark
                                 ? Colors.white10
                                 : Colors.black.withOpacity(0.05)),
-                      borderRadius: BorderRadius.circular(20),
+                      shape: BoxShape.circle,
                       border: Border.all(
                         color: _showHistory
                             ? AppColors.gold500
                             : (isDark ? Colors.white24 : AppColors.creamBorder),
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _showHistory
-                              ? Icons.pending_actions_rounded
-                              : Icons.history_rounded,
-                          color: _showHistory
-                              ? AppColors.forest900
-                              : AppColors.gold500,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _showHistory ? 'VIEW PENDING' : 'MY HISTORY',
-                          style: AppTypography.label.copyWith(
-                            color: _showHistory
-                                ? AppColors.forest900
-                                : AppColors.gold500,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
+                    child: Icon(
+                      _showHistory
+                          ? Icons.pending_actions_rounded
+                          : Icons.history_rounded,
+                      color: _showHistory
+                          ? AppColors.forest900
+                          : AppColors.gold500,
+                      size: 20,
                     ),
                   ),
                 ),

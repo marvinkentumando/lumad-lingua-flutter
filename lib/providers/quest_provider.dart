@@ -1,4 +1,3 @@
-﻿import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/quest.dart';
 import '../services/auth_service.dart';
@@ -62,43 +61,27 @@ class QuestNotifier extends Notifier<void> {
     final fbService = ref.read(firebaseServiceProvider);
     final currentQuests = ref.read(dailyQuestsProvider).value ?? [];
     final now = DateTime.now();
+    final dateStr = "${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}";
+    final types = [QuestType.flashcard, QuestType.pronunciation, QuestType.lesson];
+    final todayIds = types.map((t) => 'dyn_${t.name}_$dateStr').toSet();
 
-    // 1. Cleanup old quests (>24h)
-    for (final q in currentQuests) {
-      if (q.isDynamic && q.id.startsWith('dyn_')) {
-        try {
-          final parts = q.id.split('_');
-          if (parts.length >= 3) {
-            final tsStr = parts[2].substring(0, 13);
-            final created = DateTime.fromMillisecondsSinceEpoch(int.parse(tsStr));
-            if (now.difference(created).inHours >= 24) {
-              await fbService.deleteQuest(user.uid, q.id);
-            }
-          }
-        } catch (e) {
-          debugPrint("Quest cleanup error: $e");
-        }
-      }
-    }
+    // 1. Cleanup old or duplicate quests (Aggressive purge)
+    await fbService.purgeLegacyQuests(user.uid, todayIds);
 
-    // 2. Add new unique quests if needed
-    final activeQuests = ref.read(dailyQuestsProvider).value ?? [];
-    if (activeQuests.length >= 3) return;
-
-    final existingTypes = activeQuests.map((q) => q.type).toSet();
-    final needed = 3 - activeQuests.length;
-    final timestamp = now.millisecondsSinceEpoch;
+    // 2. Add new unique quests for today
+    // We want 3 specific types of quests every day
     
-    final allTypes = [QuestType.flashcard, QuestType.pronunciation, QuestType.lesson];
-    final availableTypes = allTypes.where((t) => !existingTypes.contains(t)).toList();
+    for (final type in types) {
+      final questId = 'dyn_${type.name}_$dateStr';
+      
+      // Check if this specific quest already exists in currentQuests
+      final exists = currentQuests.any((q) => q.id == questId);
+      if (exists) continue;
 
-    for (int i = 0; i < needed && i < availableTypes.length; i++) {
-      final type = availableTypes[i];
       Quest? quest;
-
       if (type == QuestType.flashcard) {
         quest = Quest(
-          id: 'dyn_flash_$timestamp$i',
+          id: questId,
           title: 'Forest Memory',
           description: 'Review 5 words from the Highlands.',
           target: 5,
@@ -108,7 +91,7 @@ class QuestNotifier extends Notifier<void> {
         );
       } else if (type == QuestType.pronunciation) {
         quest = Quest(
-          id: 'dyn_mic_$timestamp$i',
+          id: questId,
           title: 'Tribal Voice',
           description: 'Record 2 phrases to preserve our dialect.',
           target: 2,
@@ -118,7 +101,7 @@ class QuestNotifier extends Notifier<void> {
         );
       } else if (type == QuestType.lesson) {
         quest = Quest(
-          id: 'dyn_lesson_$timestamp$i',
+          id: questId,
           title: 'Path of Wisdom',
           description: 'Complete 1 lesson to advance your journey.',
           target: 1,

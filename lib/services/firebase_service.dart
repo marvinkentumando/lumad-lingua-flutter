@@ -1278,6 +1278,32 @@ class FirebaseService {
         );
   }
 
+  Future<void> purgeLegacyQuests(String userId, Set<String> allowedIds) async {
+    final snapshot = await _db
+        .collection('users')
+        .doc(userId)
+        .collection('dailyQuests')
+        .get();
+
+    final batch = _db.batch();
+    bool hasChanges = false;
+
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final isDynamic = data['isDynamic'] == true;
+      if (isDynamic && doc.id.startsWith('dyn_')) {
+        if (!allowedIds.contains(doc.id)) {
+          batch.delete(doc.reference);
+          hasChanges = true;
+        }
+      }
+    }
+
+    if (hasChanges) {
+      await batch.commit();
+    }
+  }
+
   Future<void> addQuest(String userId, Quest quest) async {
     await _db
         .collection('users')

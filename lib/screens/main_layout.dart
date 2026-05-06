@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_typography.dart';
+import '../theme/app_colors.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../widgets/brand_background.dart';
 import '../widgets/dynamic_glass_box.dart';
@@ -165,6 +167,10 @@ class MainLayout extends ConsumerWidget {
         ),
         Row(
           children: [
+            if (role == UserRole.learner) ...[
+              _buildStreakStat(context, ref),
+              const SizedBox(width: 8),
+            ],
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
@@ -230,5 +236,41 @@ class MainLayout extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  Widget _buildStreakStat(BuildContext context, WidgetRef ref) {
+    final student = ref.watch(studentProvider);
+    return GestureDetector(
+      onTap: () {
+        HapticService.light();
+        context.push('/streak');
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(color: AppColors.gold500.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.local_fire_department_rounded,
+              size: 16,
+              color: AppColors.gold500,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '${student.dailyStreak}',
+              style: AppTypography.mono.copyWith(
+                color: AppColors.gold500,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ).animate().fadeIn().slideX(begin: 0.2);
   }
 }

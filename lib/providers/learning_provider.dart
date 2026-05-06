@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/lesson_task.dart';
 import '../models/lesson.dart';
 import '../services/auth_service.dart';
@@ -11,6 +12,50 @@ final currentLessonProvider = FutureProvider.family<Lesson?, String>((
   lessonId,
 ) async {
   return ref.read(firebaseServiceProvider).getLessonById(lessonId);
+});
+
+final latestLessonProvider = Provider<AsyncValue<Map<String, dynamic>>>((ref) {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) return const AsyncValue.data({});
+
+  final progressAsync = ref.watch(userProgressStreamProvider(user.uid));
+
+  return progressAsync.when(
+    data: (progressMap) {
+      if (progressMap.isEmpty) return const AsyncValue.data({});
+
+      String? latestId;
+      DateTime? latestTime;
+      Map<String, dynamic>? latestData;
+
+      progressMap.forEach((id, data) {
+        final ts = data['lastAttempt'] as Timestamp?;
+        if (ts != null) {
+          final time = ts.toDate();
+          if (latestTime == null || time.isAfter(latestTime!)) {
+            latestTime = time;
+            latestId = id;
+            latestData = data;
+          }
+        }
+      });
+
+      if (latestId == null) return const AsyncValue.data({});
+
+      return AsyncValue.data({
+        'id': latestId,
+        'data': latestData,
+      });
+    },
+    loading: () => const AsyncValue.loading(),
+    error: (e, st) => AsyncValue.error(e, st),
+  );
+});
+
+final latestLessonDetailsProvider = FutureProvider<Lesson?>((ref) async {
+  final latest = ref.watch(latestLessonProvider).value;
+  if (latest == null || latest['id'] == null) return null;
+  return ref.read(firebaseServiceProvider).getLessonById(latest['id']);
 });
 
 // Global XP state

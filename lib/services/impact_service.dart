@@ -1,4 +1,4 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ContributionImpact {
   final int studentsHelpedToday;
@@ -14,17 +14,24 @@ class ContributionImpact {
   });
 }
 
-final contributionImpactProvider = StreamProvider<ContributionImpact>((ref) {
+final contributionImpactProvider = StreamProvider<ContributionImpact>((ref) async* {
   // In a real app, this would stream from Firestore tracking collections
   // For now, returning mocked data that updates periodically
-  return Stream.periodic(const Duration(hours: 1), (count) {
+  yield ContributionImpact(
+    studentsHelpedToday: 450,
+    totalReach: 12540,
+    accuracyRate: 0.98,
+    validatedWords: 156,
+  );
+
+  yield* Stream.periodic(const Duration(hours: 1), (count) {
     return ContributionImpact(
-      studentsHelpedToday: 450 + (count % 50),
+      studentsHelpedToday: 450 + ((count + 1) % 50),
       totalReach: 12540,
       accuracyRate: 0.98,
       validatedWords: 156,
     );
-  }).asBroadcastStream();
+  });
 });
 
 
