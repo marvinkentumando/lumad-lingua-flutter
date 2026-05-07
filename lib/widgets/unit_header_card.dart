@@ -11,6 +11,7 @@ class UnitHeaderCard extends StatefulWidget {
   final IconData? icon;
   final int stars;
   final List<Widget> children;
+  final VoidCallback? onTap;
 
   const UnitHeaderCard({
     super.key,
@@ -22,6 +23,7 @@ class UnitHeaderCard extends StatefulWidget {
     this.icon,
     this.stars = 0,
     this.children = const [],
+    this.onTap,
   });
 
   @override
@@ -112,15 +114,15 @@ class _UnitHeaderCardState extends State<UnitHeaderCard> {
             ),
             child: Column(
               children: [
-                // Header section (Tap to expand/collapse)
+                // Header section (Tap to expand/collapse or trigger custom action)
                 GestureDetector(
-                  onTap: widget.children.isNotEmpty
+                  onTap: widget.onTap ?? (widget.children.isNotEmpty
                       ? () {
                           setState(() {
                             _isExpanded = !_isExpanded;
                           });
                         }
-                      : null,
+                      : null),
                   behavior: HitTestBehavior.opaque,
                   child: Padding(
                     padding: const EdgeInsets.all(20),

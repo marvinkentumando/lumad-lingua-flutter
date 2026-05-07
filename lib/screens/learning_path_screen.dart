@@ -11,6 +11,7 @@ import '../widgets/lesson_step_card.dart';
 import '../widgets/skeleton.dart';
 import '../utils/icon_utils.dart';
 import '../providers/student_provider.dart';
+import '../widgets/ambient_topo_background.dart';
 
 class LearningPathScreen extends ConsumerStatefulWidget {
   const LearningPathScreen({super.key});
@@ -24,19 +25,13 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
   bool _isClassic = true;
   late ScrollController _scrollController;
   late AnimationController _pulseController;
-  double _scrollOffset = 0.0;
   bool _hasScrolledToActive = false;
   final GlobalKey _activeNodeKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController()
-      ..addListener(() {
-        setState(() {
-          _scrollOffset = _scrollController.offset;
-        });
-      });
+    _scrollController = ScrollController();
 
     _pulseController = AnimationController(
       vsync: this,
@@ -90,47 +85,28 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
         'Language';
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Stack(
-        children: [
-          // Parallax Topo Background for Mountain mode
-          if (!_isClassic)
-            Positioned(
-              top: -(_scrollOffset * 0.4),
-              left: -(_scrollOffset * 0.1),
-              right: 0,
-              bottom: -(_scrollOffset * 0.4),
-              child: Opacity(
-                opacity: 0.05,
-                child: Image.asset(
-                  'assets/images/topo_map.png',
-                  fit: BoxFit.cover,
-                  repeat: ImageRepeat.repeat,
-                ),
-              ),
-            ),
-
-          SafeArea(
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: [
-                  const SizedBox(height: 10),
-                  _buildHeader(context, resolvedLanguage),
-                  const SizedBox(height: 24),
-                  _buildStatsRow(),
-                  const SizedBox(height: 32),
-                  _buildToggle(),
-                  const SizedBox(height: 48),
-                  _buildPathContent(context),
-                  const SizedBox(height: 60),
-                ],
-              ),
+      backgroundColor: Colors.transparent,
+      body: AmbientTopoBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                _buildHeader(context, resolvedLanguage),
+                const SizedBox(height: 24),
+                _buildStatsRow(),
+                const SizedBox(height: 32),
+                _buildToggle(),
+                const SizedBox(height: 48),
+                _buildPathContent(context),
+                const SizedBox(height: 60),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -395,6 +371,8 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
         );
       }
 
+      final showChildren = !(isUnitCompleted && unitLessons.length == 1);
+
       children.add(
         UnitHeaderCard(
           unitNumber: 'Unit $unitNum',
@@ -404,7 +382,10 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
           totalCount: unitLessons.length,
           icon: IconUtils.getIconData(unitLessons.first.icon),
           stars: totalStars,
-          children: lessonWidgets,
+          children: showChildren ? lessonWidgets : const [],
+          onTap: !showChildren
+              ? () => context.push('/lesson_session?lessonId=${unitLessons.first.id}')
+              : null,
         ),
       );
       children.add(const SizedBox(height: 40));

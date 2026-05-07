@@ -1,5 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_button.dart';
@@ -45,7 +46,7 @@ class _ScenarioSessionScreenState extends State<ScenarioSessionScreen> {
   final Map<String, ScenarioNode> _nodes = {
     'start': ScenarioNode(
       text:
-          "You arrive at the edge of the forest. An elder approaches you and speaks in Mansaka: 'Maayong adlaw, higala. Hain ka padulong?'",
+          "You arrive at the edge of the forest. An elder approaches you and speaks in Mansaka: 'Madyaw na allaw, kailan. Hain kaw padulong?'",
       imagePath: 'assets/images/scenario_forest.png',
       choices: [
         ScenarioChoice(
@@ -106,7 +107,7 @@ class _ScenarioSessionScreenState extends State<ScenarioSessionScreen> {
 
   void _handleChoice(ScenarioChoice choice) {
     if (choice.targetNodeId == 'end') {
-      Navigator.of(context).pop();
+      context.pop();
       return;
     }
     setState(() {
@@ -117,7 +118,7 @@ class _ScenarioSessionScreenState extends State<ScenarioSessionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final node = _nodes[_currentNodeId]!;
+    final node = _nodes[_currentNodeId] ?? _nodes['start']!;
 
     return Scaffold(
       body: Stack(
@@ -157,7 +158,7 @@ class _ScenarioSessionScreenState extends State<ScenarioSessionScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => context.pop(),
             icon: const Icon(Icons.close_rounded, color: Colors.white70),
           ),
           Container(

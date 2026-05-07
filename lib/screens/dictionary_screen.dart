@@ -11,6 +11,7 @@ import '../services/auth_service.dart';
 import '../providers/saved_words_provider.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/brand_search_bar.dart';
+import '../widgets/ambient_topo_background.dart';
 
 class DictionaryScreen extends ConsumerStatefulWidget {
   const DictionaryScreen({super.key});
@@ -83,125 +84,127 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
         : const AsyncValue.data(<SRSProgress>[]);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: dictionaryAsync.when(
-          data: (entries) {
-            return srsAsync.when(
-              data: (srsList) {
-                final srsMap = {for (var s in srsList) s.wordId: s};
+      backgroundColor: Colors.transparent,
+      body: AmbientTopoBackground(
+        child: SafeArea(
+          child: dictionaryAsync.when(
+            data: (entries) {
+              return srsAsync.when(
+                data: (srsList) {
+                  final srsMap = {for (var s in srsList) s.wordId: s};
 
-                return Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 10),
-                          _buildSearchBar(),
-                          const SizedBox(height: 24),
-                          _buildCategoryRow(),
-                          const SizedBox(height: 16),
-                        ],
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 10),
+                            _buildSearchBar(),
+                            const SizedBox(height: 24),
+                            _buildCategoryRow(),
+                            const SizedBox(height: 16),
+                          ],
+                        ),
                       ),
-                    ),
-                    Expanded(
-                      child: PageView.builder(
-                        controller: _pageController,
-                        onPageChanged: (index) {
-                          setState(() {
-                            _selectedCategory = _categories[index];
-                          });
-                        },
-                        itemCount: _categories.length,
-                        itemBuilder: (context, index) {
-                          final category = _categories[index];
-                          var items = entries;
-                          if (category == 'SAVED') {
-                            items = items
-                                .where((e) => savedIds.contains(e.id))
-                                .toList();
-                          } else if (category != 'ALL') {
-                            items = items
-                                .where(
-                                  (e) => e.language.toUpperCase() == category,
-                                )
-                                .toList();
-                          }
+                      Expanded(
+                        child: PageView.builder(
+                          controller: _pageController,
+                          onPageChanged: (index) {
+                            setState(() {
+                              _selectedCategory = _categories[index];
+                            });
+                          },
+                          itemCount: _categories.length,
+                          itemBuilder: (context, index) {
+                            final category = _categories[index];
+                            var items = entries;
+                            if (category == 'SAVED') {
+                              items = items
+                                  .where((e) => savedIds.contains(e.id))
+                                  .toList();
+                            } else if (category != 'ALL') {
+                              items = items
+                                  .where(
+                                    (e) => e.language.toUpperCase() == category,
+                                  )
+                                  .toList();
+                            }
 
-                          if (_searchQuery.isNotEmpty) {
-                            items = items
-                                .where(
-                                  (e) =>
-                                      e.indigenousWord.toLowerCase().contains(
-                                        _searchQuery.toLowerCase(),
-                                      ) ||
-                                      e.translation.toLowerCase().contains(
-                                        _searchQuery.toLowerCase(),
-                                      ),
-                                )
-                                .toList();
-                          }
+                            if (_searchQuery.isNotEmpty) {
+                              items = items
+                                  .where(
+                                    (e) =>
+                                        e.indigenousWord.toLowerCase().contains(
+                                          _searchQuery.toLowerCase(),
+                                        ) ||
+                                        e.translation.toLowerCase().contains(
+                                          _searchQuery.toLowerCase(),
+                                        ),
+                                  )
+                                  .toList();
+                            }
 
-                          items = _applySort(items);
+                            items = _applySort(items);
 
-                          if (items.isEmpty) {
-                            return SingleChildScrollView(
-                              child: _buildNoResultsState(
-                                isSavedTab: category == 'SAVED',
-                              ),
-                            );
-                          }
-
-                          return ListView.builder(
-                            physics: const BouncingScrollPhysics(),
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            itemCount: items.length,
-                            itemBuilder: (context, i) {
-                              final entry = items[i];
-                              final srs = srsMap[entry.id];
-                              return _DictionaryEntryCard(
-                                entry: entry,
-                                isExpanded: _expandedWordId == entry.id,
-                                masteryLevel: srs?.mastery,
-                                onToggleExpanded: () {
-                                  setState(() {
-                                    _expandedWordId =
-                                        _expandedWordId == entry.id
-                                        ? null
-                                        : entry.id;
-                                  });
-                                },
+                            if (items.isEmpty) {
+                              return SingleChildScrollView(
+                                child: _buildNoResultsState(
+                                  isSavedTab: category == 'SAVED',
+                                ),
                               );
-                            },
-                          );
-                        },
+                            }
+
+                            return ListView.builder(
+                              physics: const BouncingScrollPhysics(),
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              itemCount: items.length,
+                              itemBuilder: (context, i) {
+                                final entry = items[i];
+                                final srs = srsMap[entry.id];
+                                return _DictionaryEntryCard(
+                                  entry: entry,
+                                  isExpanded: _expandedWordId == entry.id,
+                                  masteryLevel: srs?.mastery,
+                                  onToggleExpanded: () {
+                                    setState(() {
+                                      _expandedWordId =
+                                          _expandedWordId == entry.id
+                                          ? null
+                                          : entry.id;
+                                    });
+                                  },
+                                );
+                              },
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                  ],
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(
-                child: Text(
-                  'Error loading mastery: $err',
-                  style: const TextStyle(color: AppColors.semanticRed),
+                    ],
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, stack) => Center(
+                  child: Text(
+                    'Error loading mastery: $err',
+                    style: const TextStyle(color: AppColors.semanticRed),
+                  ),
                 ),
+              );
+            },
+            loading: () => ListView.separated(
+              itemCount: 5,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              separatorBuilder: (_, __) => const SizedBox(height: 16),
+              itemBuilder: (_, __) =>
+                  const Skeleton(height: 80, borderRadius: 24),
+            ),
+            error: (err, stack) => Center(
+              child: Text(
+                'Error loading dictionary: $err',
+                style: const TextStyle(color: AppColors.semanticRed),
               ),
-            );
-          },
-          loading: () => ListView.separated(
-            itemCount: 5,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            separatorBuilder: (_, __) => const SizedBox(height: 16),
-            itemBuilder: (_, __) =>
-                const Skeleton(height: 80, borderRadius: 24),
-          ),
-          error: (err, stack) => Center(
-            child: Text(
-              'Error loading dictionary: $err',
-              style: const TextStyle(color: AppColors.semanticRed),
             ),
           ),
         ),

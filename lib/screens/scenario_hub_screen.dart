@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
@@ -84,7 +84,7 @@ class ScenarioHubScreen extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: IconButton(
-        onPressed: () => Navigator.pop(context),
+        onPressed: () => context.pop(),
         icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
       ),
     );
@@ -103,7 +103,7 @@ class ScenarioHubScreen extends StatelessWidget {
       child: InkWell(
         onTap: () {
           // Navigate to scenario session
-          context.push('/scenario-session', extra: id);
+          context.push('/scenario-session/$id');
         },
         child: Padding(
           padding: const EdgeInsets.all(20),

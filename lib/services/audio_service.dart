@@ -16,10 +16,8 @@ class AudioService {
 
   Future<void> playAmbientMusic(String theme) async {
     try {
-      String assetPath = 'audio/ambient_forest.mp3';
-      if (theme.toLowerCase().contains('mountain')) {
-        assetPath = 'audio/ambient_mountain.mp3';
-      }
+      // Mapping to actual file: forest_bg.MP3
+      String assetPath = 'audio/forest_bg.MP3';
       
       await _bgPlayer.stop();
       await _bgPlayer.play(AssetSource(assetPath), volume: 0.4);
@@ -34,19 +32,17 @@ class AudioService {
 
   Future<void> playSFX(String type) async {
     try {
-      String assetPath = 'audio/sfx_success.mp3';
+      String assetPath = 'audio/success.MP3';
       switch (type) {
         case 'error':
-          assetPath = 'audio/sfx_error.mp3';
+          assetPath = 'audio/error.MP3';
           break;
         case 'level_up':
-          assetPath = 'audio/sfx_levelup.mp3';
-          break;
         case 'milestone':
-          assetPath = 'audio/sfx_milestone.mp3';
+          assetPath = 'audio/success_1.MP3'; // Using alternative success for milestones
           break;
         case 'click':
-          assetPath = 'audio/sfx_click.mp3';
+          assetPath = 'audio/click.MP3';
           break;
       }
       await _sfxPlayer.play(AssetSource(assetPath));

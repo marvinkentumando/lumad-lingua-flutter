@@ -23,6 +23,7 @@ import '../widgets/skeleton.dart';
 import '../widgets/graceful_image.dart';
 import '../widgets/branded_empty_state.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/ambient_topo_background.dart';
 
 
 class LearnerProfileScreen extends ConsumerWidget {
@@ -36,70 +37,72 @@ class LearnerProfileScreen extends ConsumerWidget {
     final profile = ref.watch(userProfileProvider).value;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: authState.when(
-        loading: () => _buildProfileSkeleton(),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (user) {
-          return SafeArea(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  const SizedBox(height: 40),
-                  _buildAvatarSection(context, ref, user, currentRole, profile),
-                  if (profile?['bio'] != null &&
-                      (profile?['bio'] as String).isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
-                      child: Text(
-                        profile!['bio'],
-                        textAlign: TextAlign.center,
-                        style: AppTypography.body.copyWith(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white60
-                              : AppColors.creamText2,
-                          fontStyle: FontStyle.italic,
-                          fontSize: 14,
+      backgroundColor: Colors.transparent,
+      body: AmbientTopoBackground(
+        child: authState.when(
+          loading: () => _buildProfileSkeleton(),
+          error: (e, _) => Center(child: Text('Error: $e')),
+          data: (user) {
+            return SafeArea(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 40),
+                    _buildAvatarSection(context, ref, user, currentRole, profile),
+                    if (profile?['bio'] != null &&
+                        (profile?['bio'] as String).isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 40),
+                        child: Text(
+                          profile!['bio'],
+                          textAlign: TextAlign.center,
+                          style: AppTypography.body.copyWith(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white60
+                                : AppColors.creamText2,
+                            fontStyle: FontStyle.italic,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                  const SizedBox(height: 40),
-                  _buildStatsRow(
-                    context,
-                    ref,
-                    currentRole,
-                    user?.uid ?? '',
-                    currentXp,
-                    profile,
-                  ),
-                  const SizedBox(height: 40),
-                  if (currentRole == UserRole.learner)
-                    _buildArtifactsSection(context, ref)
-                  else
-                    _unusedImpact(
+                    ],
+                    const SizedBox(height: 40),
+                    _buildStatsRow(
                       context,
                       ref,
                       currentRole,
                       user?.uid ?? '',
+                      currentXp,
+                      profile,
                     ),
-                  const SizedBox(height: 40),
-                  _buildJourneyManagement(
-                    context,
-                    ref,
-                    currentRole,
-                    user,
-                    profile,
-                  ),
-                  const SizedBox(height: 40),
-                ],
+                    const SizedBox(height: 40),
+                    if (currentRole == UserRole.learner)
+                      _buildArtifactsSection(context, ref)
+                    else
+                      _unusedImpact(
+                        context,
+                        ref,
+                        currentRole,
+                        user?.uid ?? '',
+                      ),
+                    const SizedBox(height: 40),
+                    _buildJourneyManagement(
+                      context,
+                      ref,
+                      currentRole,
+                      user,
+                      profile,
+                    ),
+                    const SizedBox(height: 40),
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

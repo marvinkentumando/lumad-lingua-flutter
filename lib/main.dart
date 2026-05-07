@@ -293,9 +293,9 @@ final _router = GoRouter(
           builder: (context, state) => const ScenarioHubScreen(),
         ),
         GoRoute(
-          path: '/scenario-session',
+          path: '/scenario-session/:scenarioId',
           builder: (context, state) {
-            final id = state.extra as String;
+            final id = state.pathParameters['scenarioId']!;
             return ScenarioSessionScreen(scenarioId: id);
           },
         ),

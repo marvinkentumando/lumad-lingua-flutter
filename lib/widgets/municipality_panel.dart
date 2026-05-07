@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/geo_recording.dart';
 import '../services/firebase_service.dart';
@@ -9,26 +9,24 @@ import 'recording_card.dart';
 class MunicipalityPanel extends ConsumerWidget {
   final GeoRecording rec;
   final ScrollController scrollController;
-  final Set<String> favorites;
   final String? playingAudioId;
   final Duration duration;
   final Duration position;
   final Function(Map<String, dynamic>) onTogglePlay;
   final Function(double) onSeek;
-  final Function(String) onToggleFavorite;
+  final VoidCallback onClose;
   final String Function(Duration) formatDuration;
 
   const MunicipalityPanel({
     super.key,
     required this.rec,
     required this.scrollController,
-    required this.favorites,
     required this.playingAudioId,
     required this.duration,
     required this.position,
     required this.onTogglePlay,
     required this.onSeek,
-    required this.onToggleFavorite,
+    required this.onClose,
     required this.formatDuration,
   });
 
@@ -109,28 +107,19 @@ class MunicipalityPanel extends ConsumerWidget {
                       ],
                     ),
                     GestureDetector(
-                      onTap: () => onToggleFavorite(rec.id),
+                      onTap: onClose,
                       child: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: favorites.contains(rec.id)
-                              ? AppColors.gold500.withOpacity(0.2)
-                              : Colors.transparent,
+                          color: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
                           border: Border.all(
-                            color: favorites.contains(rec.id)
-                                ? AppColors.gold500
-                                : (isDark ? Colors.white : Colors.black)
-                                      .withOpacity(0.1),
+                            color: (isDark ? Colors.white : Colors.black).withOpacity(0.1),
                           ),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          favorites.contains(rec.id)
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border,
-                          color: isDark
-                              ? AppColors.gold500
-                              : AppColors.forest500,
+                          Icons.close_rounded,
+                          color: isDark ? Colors.white70 : Colors.black54,
                           size: 20,
                         ),
                       ),

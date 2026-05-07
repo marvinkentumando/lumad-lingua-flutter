@@ -130,6 +130,7 @@ class MainLayout extends ConsumerWidget {
     CulturalTheme culturalTheme,
     UserRole role,
   ) {
+    final profile = ref.watch(userProfileProvider).value;
     String label = '';
     IconData icon = Icons.flash_on;
     final userId = ref.watch(authStateProvider).value?.uid ?? '';
@@ -221,7 +222,7 @@ class MainLayout extends ConsumerWidget {
               child: authState.when(
                 data: (user) => ProfileAvatar(
                   radius: 18,
-                  photoUrl: (user as dynamic)?.photoURL,
+                  photoUrl: profile?['photoURL'] ?? (user as dynamic)?.photoURL,
                   iconSize: 20,
                   backgroundColor: culturalTheme.accentColor,
                 ),

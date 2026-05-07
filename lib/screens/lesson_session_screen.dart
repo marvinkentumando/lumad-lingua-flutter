@@ -85,6 +85,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
   late ConfettiController _confettiController;
   bool _isSuddenDeath = false;
   LessonTask? _suddenDeathTask;
+  LessonTask? _lastTask;
   bool _showLeaderboardSnippet = false;
 
   double _stringSimilarity(String a, String b) {
@@ -237,6 +238,8 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
   }
 
   void _checkAnswer() {
+    if (_showFeedback) return; // Prevent double submission
+
     final state = ref.read(quizSessionProvider);
     final baseTask = state.currentTask;
     final task = (_isSuddenDeath && _suddenDeathTask != null)
@@ -313,75 +316,70 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           logicalTaskId: task.id, 
         );
 
-    setState(() {
-      _lastAnswerCorrect = savedIsCorrect;
-      _feedbackSubtitle = currentFeedbackSubtitle;
-      _showFeedback = true;
-      if (!savedIsCorrect) {
-        ref.read(studentProvider.notifier).decrementHeart();
-        _shakeCounter++;
-        if ((_taskMistakes[task.id] ?? 0) == 0) {
-          _taskMistakes[task.id] = 1;
+    if (mounted) {
+      setState(() {
+        _lastAnswerCorrect = savedIsCorrect;
+        _feedbackSubtitle = currentFeedbackSubtitle;
+        _showFeedback = true;
+        if (!savedIsCorrect) {
+          ref.read(studentProvider.notifier).decrementHeart();
+          _shakeCounter++;
+          if ((_taskMistakes[task.id] ?? 0) == 0) {
+            _taskMistakes[task.id] = 1;
+          } else {
+            _taskMistakes[task.id] = _taskMistakes[task.id]! + 1;
+          }
+          _combo = 0;
+          HapticService.error();
+          ref.read(audioServiceProvider).playSFX('error');
         } else {
-          _taskMistakes[task.id] = _taskMistakes[task.id]! + 1;
+          final prevCombo = _combo;
+          _combo++;
+          HapticService.success();
+          ref.read(audioServiceProvider).playSFX('success');
+
+          int taskXp = 20;
+          final timeTaken = DateTime.now().difference(_taskStartTime);
+          if (timeTaken.inSeconds <= 5) {
+            _bonusXp += 5;
+            taskXp += 5;
+          }
+
+          if (_combo >= 5) {
+            _bonusXp += 15;
+            taskXp += 15;
+            HapticService.heavy();
+          } else if (_combo >= 3) {
+            _bonusXp += 5;
+            taskXp += 5;
+            HapticService.medium();
+          } else if (prevCombo == 2 && _combo == 3) {
+            HapticService.light();
+          }
+
+          _currentTaskXp = taskXp;
+
+          if (_combo >= 10) {
+            _confettiController.play();
+            HapticService.celebration();
+            ref.read(audioServiceProvider).playSFX('milestone');
+            _checkLeaderboardRank();
+          } else if (_combo >= 5) {
+            _confettiController.play();
+            HapticService.celebration();
+            ref.read(audioServiceProvider).playSFX('milestone');
+          } else if (_combo >= 3) {
+            HapticService.combo();
+
+            ref.read(audioServiceProvider).playSFX('click');
+          }
         }
-        _combo = 0; 
-        HapticService.error();
-        ref.read(audioServiceProvider).playSFX('error');
+      });
+    }
 
-
-        if (_isSuddenDeath) {
-          _handleSuddenDeathResult(false);
-        }
-      } else {
-        if (_isSuddenDeath) {
-          _handleSuddenDeathResult(true);
-          return;
-        }
-        final prevCombo = _combo;
-        _combo++;
-        HapticService.success();
-        ref.read(audioServiceProvider).playSFX('success');
-
-
-        int taskXp = 20; 
-        final timeTaken = DateTime.now().difference(_taskStartTime);
-        if (timeTaken.inSeconds <= 5) {
-          _bonusXp += 5;
-          taskXp += 5;
-        }
-
-        if (_combo >= 5) {
-          _bonusXp += 15;
-          taskXp += 15;
-          HapticService.heavy();
-        } else if (_combo >= 3) {
-          _bonusXp += 5;
-          taskXp += 5;
-          HapticService.medium();
-        } else if (prevCombo == 2 && _combo == 3) {
-          HapticService.light();
-        }
-
-        _currentTaskXp = taskXp;
-
-        if (_combo >= 10) {
-          _confettiController.play();
-          HapticService.celebration();
-          ref.read(audioServiceProvider).playSFX('milestone');
-          _checkLeaderboardRank();
-        } else if (_combo >= 5) {
-          _confettiController.play();
-          HapticService.celebration();
-          ref.read(audioServiceProvider).playSFX('milestone');
-        } else if (_combo >= 3) {
-          HapticService.combo();
-
-          ref.read(audioServiceProvider).playSFX('click');
-        }
-
-      }
-    });
+    if (_isSuddenDeath && mounted) {
+      _handleSuddenDeathResult(savedIsCorrect);
+    }
   }
 
   void _checkLeaderboardRank() {
@@ -1087,7 +1085,14 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     final task = (_isSuddenDeath && _suddenDeathTask != null)
         ? _suddenDeathTask!
         : baseTask;
-    if (task == null) {
+
+    if (task != null) {
+      _lastTask = task;
+    }
+
+    final effectiveTask = task ?? _lastTask;
+
+    if (effectiveTask == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
@@ -1282,7 +1287,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                                 ],
                               ),
                             ),
-                          if (task.grammarTitle != null)
+                          if (effectiveTask.grammarTitle != null)
                             Align(
                               alignment: Alignment.centerRight,
                               child: Padding(
@@ -1295,9 +1300,9 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                                       backgroundColor: Colors.transparent,
                                       isScrollControlled: true,
                                       builder: (context) => GrammarNuggetPanel(
-                                        title: task.grammarTitle!,
-                                        description: task.grammarDescription ?? '',
-                                        examples: task.grammarExamples ?? [],
+                                        title: effectiveTask.grammarTitle!,
+                                        description: effectiveTask.grammarDescription ?? '',
+                                        examples: effectiveTask.grammarExamples ?? [],
                                       ),
                                     );
                                   },
@@ -1375,19 +1380,19 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                                           ),
                                         ).animate().shake(),
                                         const SizedBox(height: 24),
-                                        _buildTaskContent(_suddenDeathTask!),
+                                        _buildTaskContent(effectiveTask),
                                       ],
                                     )
                                   : Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        if (task.hintMetadata.isNotEmpty)
+                                        if (effectiveTask.hintMetadata.isNotEmpty)
                                           Padding(
                                             padding: const EdgeInsets.only(bottom: 24),
                                             child: GestureDetector(
                                               onTap: () {
                                                 HapticService.selection();
-                                                showEldersWisdom(context, task.hintMetadata);
+                                                showEldersWisdom(context, effectiveTask.hintMetadata);
                                               },
                                               child: Container(
                                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -1415,7 +1420,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                                               ).animate(onPlay: (c) => c.repeat(reverse: true)).shimmer(duration: 2.seconds, color: Colors.white12),
                                             ),
                                           ),
-                                        _buildTaskContent(task)
+                                        _buildTaskContent(effectiveTask)
                                             .animate(key: ValueKey(_shakeCounter))
                                             .shakeX(
                                               hz: 6,
@@ -1453,9 +1458,9 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                         Expanded(
                           child: AnimatedOpacity(
                             duration: const Duration(milliseconds: 200),
-                            opacity: _isTaskComplete(task) ? 1.0 : 0.5,
+                            opacity: _isTaskComplete(effectiveTask) ? 1.0 : 0.5,
                             child: Material(
-                              color: _isTaskComplete(task)
+                              color: _isTaskComplete(effectiveTask)
                                   ? AppColors.gold500
                                   : (isDark
                                         ? Colors.white12
@@ -1463,7 +1468,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                               borderRadius: BorderRadius.circular(16),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(16),
-                                onTap: _isTaskComplete(task)
+                                onTap: _isTaskComplete(effectiveTask)
                                     ? () {
                                         HapticService.medium();
                                         _checkAnswer();
@@ -1475,7 +1480,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                                   ),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(16),
-                                    boxShadow: _isTaskComplete(task)
+                                    boxShadow: _isTaskComplete(effectiveTask)
                                         ? [
                                             const BoxShadow(
                                               color: AppColors.gold700,
@@ -1488,7 +1493,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                                     child: Text(
                                       'CHECK',
                                       style: AppTypography.bodyLarge.copyWith(
-                                        color: _isTaskComplete(task)
+                                        color: _isTaskComplete(effectiveTask)
                                             ? AppColors.creamText
                                             : (isDark
                                                   ? Colors.white54

@@ -27,7 +27,6 @@ class ArchiveMapScreen extends ConsumerStatefulWidget {
 class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
   final MapController _mapController = MapController();
   GeoRecording? _selectedRecording;
-  final Set<String> _favorites = {};
   String? _playingAudioId;
   final Set<RecordingLanguage> _selectedLanguages = {};
   String _searchQuery = '';
@@ -156,24 +155,22 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
               maxChildSize: 0.85,
               snap: true,
               builder: (sheetContext, scrollController) {
-                return MunicipalityPanel(
-                  rec: _selectedRecording!,
-                  scrollController: scrollController,
-                  favorites: _favorites,
-                  playingAudioId: _playingAudioId,
-                  duration: _duration,
-                  position: _position,
-                  onTogglePlay: (audio) => _handlePlayback(audio),
-                  onSeek: (value) =>
-                      _audioPlayer.seek(Duration(milliseconds: value.toInt())),
-                  onToggleFavorite: (id) => setState(() {
-                    if (_favorites.contains(id)) {
-                      _favorites.remove(id);
-                    } else {
-                      _favorites.add(id);
-                    }
-                  }),
-                  formatDuration: _formatDuration,
+                return Dismissible(
+                  key: ValueKey('dismiss_${_selectedRecording!.id}'),
+                  direction: DismissDirection.down,
+                  onDismissed: (_) => setState(() => _selectedRecording = null),
+                  child: MunicipalityPanel(
+                    rec: _selectedRecording!,
+                    scrollController: scrollController,
+                    playingAudioId: _playingAudioId,
+                    duration: _duration,
+                    position: _position,
+                    onTogglePlay: (audio) => _handlePlayback(audio),
+                    onSeek: (value) =>
+                        _audioPlayer.seek(Duration(milliseconds: value.toInt())),
+                    onClose: () => setState(() => _selectedRecording = null),
+                    formatDuration: _formatDuration,
+                  ),
                 );
               },
             ),

@@ -24,7 +24,11 @@ class _XPCelebrationState extends State<XPCelebration> {
   void initState() {
     super.initState();
     HapticService.celebration();
-    Future.delayed(const Duration(milliseconds: 3500), widget.onComplete);
+    Future.delayed(const Duration(milliseconds: 3500), () {
+      if (mounted) {
+        widget.onComplete();
+      }
+    });
   }
 
   @override

@@ -9,13 +9,13 @@ import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../providers/role_provider.dart';
 import '../widgets/vine_progress_bar.dart';
-import '../widgets/topo_background.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/wotd_widget.dart';
 import '../widgets/crystal_burst_animation.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/branded_empty_state.dart';
+import '../widgets/ambient_topo_background.dart';
 
 
 import '../services/upload_queue_service.dart';
@@ -55,73 +55,53 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final profile = profileAsync.value;
     final displayName = profile?['username'] ?? 'Tribe Member';
 
-    // Ambient Time-of-Day background logic
-    final hour = DateTime.now().hour;
-    Color ambientColor;
-    if (hour >= 5 && hour < 11) {
-      ambientColor = const Color(0xFF2D4F3C); // Morning Dew
-    } else if (hour >= 11 && hour < 17) {
-      ambientColor = const Color(0xFF1B3022); // Deep Forest
-    } else if (hour >= 17 && hour < 20) {
-      ambientColor = const Color(0xFF4F3422); // Golden Hour
-    } else {
-      ambientColor = const Color(0xFF0F1711); // Midnight Moss
-    }
-
     return Stack(
       children: [
         Scaffold(
-          backgroundColor: ambientColor,
-          body: Stack(
-            children: [
-              // Dynamic Topo Background
-              TopoBackground(baseColor: ambientColor, opacity: 0.08),
-
-              Positioned.fill(
-                child: SafeArea(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-                      _buildSyncIndicator(ref),
-                      const SizedBox(height: 16),
-                      _buildHeroBanner(context, displayName, student),
+          backgroundColor: Colors.transparent,
+          body: AmbientTopoBackground(
+            child: SafeArea(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    _buildSyncIndicator(ref),
+                    const SizedBox(height: 16),
+                    _buildHeroBanner(context, displayName, student),
+                    const SizedBox(height: 24),
+                    if (currentRole == UserRole.learner) ...[
+                      _buildStreakSummaryCard(context, student),
                       const SizedBox(height: 24),
-                      if (currentRole == UserRole.learner) ...[
-                        _buildStreakSummaryCard(context, student),
-                        const SizedBox(height: 24),
-                      ],
-                      const WotdWidget(),
-                      const SizedBox(height: 24),
-                      if (currentRole == UserRole.learner) ...[
-                        _buildDailyQuests(context, questsAsync, ref),
-                        const SizedBox(height: 24),
-                        _buildCurrentLessonCard(context),
-                        const SizedBox(height: 24),
-                        _buildChallengeHub(context),
-                        const SizedBox(height: 24),
-                      ],
-                      _buildMapCard(context),
-                      const SizedBox(height: 32),
-                      _buildVillageEchoes(context),
-                      const SizedBox(height: 32),
-                      _buildArtifactSpotlight(context),
-                      const SizedBox(height: 32),
-                      _buildLeaderboardHeader(context),
-                      const SizedBox(height: 16),
-                      _buildClimbersList(context, ref),
-                      const SizedBox(height: 40),
                     ],
-                  ),
+                    const WotdWidget(),
+                    const SizedBox(height: 24),
+                    if (currentRole == UserRole.learner) ...[
+                      _buildDailyQuests(context, questsAsync, ref),
+                      const SizedBox(height: 24),
+                      _buildCurrentLessonCard(context),
+                      const SizedBox(height: 24),
+                      _buildChallengeHub(context),
+                      const SizedBox(height: 24),
+                    ],
+                    _buildMapCard(context),
+                    const SizedBox(height: 32),
+                    _buildVillageEchoes(context),
+                    const SizedBox(height: 32),
+                    _buildArtifactSpotlight(context),
+                    const SizedBox(height: 32),
+                    _buildLeaderboardHeader(context),
+                    const SizedBox(height: 16),
+                    _buildClimbersList(context, ref),
+                    const SizedBox(height: 40),
+                  ],
                 ),
               ),
             ),
-          ],
+          ),
         ),
-      ),
         if (_showBurst)
           CrystalBurstAnimation(
             onComplete: () => setState(() => _showBurst = false),

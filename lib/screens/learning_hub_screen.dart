@@ -10,6 +10,7 @@ import '../services/auth_service.dart';
 import '../providers/student_provider.dart';
 import '../services/firebase_service.dart';
 import '../models/lesson.dart';
+import '../widgets/ambient_topo_background.dart';
 
 class LearningHubScreen extends ConsumerWidget {
   const LearningHubScreen({super.key});
@@ -310,207 +311,209 @@ class LearningHubScreen extends ConsumerWidget {
     final studentState = ref.watch(studentProvider);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 24),
-                    // Header
-                    Text(
-                      'Your Learning\nPaths',
-                      style: AppTypography.h1ExtraBold.copyWith(
-                        color: isDark ? AppColors.gold500 : AppColors.forest500,
-                        fontSize: 36,
-                        height: 1.1,
-                      ),
-                    ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1),
-                    const SizedBox(height: 32),
-                    // Stats Row
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      child: Row(
-                        children: [
-                          _buildStatCard(
-                            context,
-                            'Daily Streak',
-                            '${studentState.displayedStreak}',
-                            'SUN TRAILS',
-                            '☀️',
-                            () => context.push('/streak'),
-                          ),
-                          const SizedBox(width: 16),
-                          _buildStatCard(
-                            context,
-                            'Mist Crystals',
-                            '${studentState.mistCrystals}',
-                            'EARNED',
-                            '✨',
-                            () => _showMistCrystalStore(context, ref),
-                          ),
-                          const SizedBox(width: 16),
-                          _buildStatCard(
-                            context,
-                            'Ancestral XP',
-                            '${studentState.xp}',
-                            'LEVEL UP',
-                            '🔥',
-                            null,
-                          ),
-                        ],
-                      ),
-                    ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
-                    const SizedBox(height: 32),
-
-                    // Mastery Trends Entry Card
-                    GestureDetector(
-                      onTap: () => context.push('/mastery-dashboard'),
-                      child: BrandCard(
-                        theme: BrandCardTheme.gold,
-                        padding: const EdgeInsets.all(24),
-                        borderRadius: 32,
+      backgroundColor: Colors.transparent,
+      body: AmbientTopoBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 24),
+                      // Header
+                      Text(
+                        'Your Learning\nPaths',
+                        style: AppTypography.h1ExtraBold.copyWith(
+                          color: isDark ? AppColors.gold500 : AppColors.forest500,
+                          fontSize: 36,
+                          height: 1.1,
+                        ),
+                      ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 32),
+                      // Stats Row
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
                         child: Row(
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: const BoxDecoration(
-                                color: Colors.black12,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.auto_graph_rounded,
-                                color: Colors.black,
-                                size: 28,
-                              ),
+                            _buildStatCard(
+                              context,
+                              'Daily Streak',
+                              '${studentState.displayedStreak}',
+                              'SUN TRAILS',
+                              '☀️',
+                              () => context.push('/streak'),
                             ),
-                            const SizedBox(width: 20),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Learning Progress',
-                                    style: AppTypography.h3.copyWith(
-                                      color: Colors.black,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                  Text(
-                                    'View your mastery trends and SRS analytics',
-                                    style: AppTypography.body.copyWith(
-                                      color: Colors.black54,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            const SizedBox(width: 16),
+                            _buildStatCard(
+                              context,
+                              'Mist Crystals',
+                              '${studentState.mistCrystals}',
+                              'EARNED',
+                              '✨',
+                              () => _showMistCrystalStore(context, ref),
                             ),
-                            const Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              color: Colors.black54,
-                              size: 16,
+                            const SizedBox(width: 16),
+                            _buildStatCard(
+                              context,
+                              'Ancestral XP',
+                              '${studentState.xp}',
+                              'LEVEL UP',
+                              '🔥',
+                              null,
                             ),
                           ],
                         ),
-                      ),
-                    ).animate().fadeIn(delay: 250.ms).slideX(begin: 0.1),
+                      ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 32),
 
-                    const SizedBox(height: 24),
-
-
-                    // Progress Cards
-                    ref
-                        .watch(lessonsStreamProvider)
-                        .when(
-                          data: (lessons) {
-                            if (lessons.isEmpty) return const SizedBox();
-
-                            // Group lessons by language
-                            final groupedByLanguage = <String, List<Lesson>>{};
-                            for (var lesson in lessons) {
-                              groupedByLanguage
-                                  .putIfAbsent(lesson.language, () => [])
-                                  .add(lesson);
-                            }
-
-                            return Column(
-                              children: groupedByLanguage.entries.map((entry) {
-                                final language = entry.key;
-                                final languageLessons = entry.value;
-
-                                // Sort lessons to find the current active one
-                                languageLessons.sort(
-                                  (a, b) =>
-                                      a.unitNumber.compareTo(b.unitNumber),
-                                );
-
-                                Lesson? currentLesson;
-                                double totalProgress = 0;
-
-                                for (var lesson in languageLessons) {
-                                  final progressData =
-                                      studentState.lessonProgress[lesson.id];
-                                  final score =
-                                      (progressData?['bestScore'] as num?)
-                                          ?.toDouble() ??
-                                      0.0;
-                                  totalProgress += score / 100.0;
-
-                                  if (score < 100 && currentLesson == null) {
-                                    currentLesson = lesson;
-                                  }
-                                }
-
-                                currentLesson ??= languageLessons.last;
-                                final overallProgress =
-                                    totalProgress / languageLessons.length;
-                                final isLocked = _isLessonLocked(
-                                  currentLesson,
-                                  studentState.lessonProgress,
-                                );
-
-                                return Padding(
-                                  padding: const EdgeInsets.only(
-                                    bottom: 24.0,
-                                    top: 16.0,
-                                  ),
-                                  child: _buildProgressCard(
-                                    context,
-                                    badge: currentLesson.category.toUpperCase(),
-                                    badgeColor: _getCategoryColor(
-                                      currentLesson.category,
+                      // Mastery Trends Entry Card
+                      GestureDetector(
+                        onTap: () => context.push('/mastery-dashboard'),
+                        child: BrandCard(
+                          theme: BrandCardTheme.gold,
+                          padding: const EdgeInsets.all(24),
+                          borderRadius: 32,
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: const BoxDecoration(
+                                  color: Colors.black12,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.auto_graph_rounded,
+                                  color: Colors.black,
+                                  size: 28,
+                                ),
+                              ),
+                              const SizedBox(width: 20),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Learning Progress',
+                                      style: AppTypography.h3.copyWith(
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.w900,
+                                      ),
                                     ),
-                                    language: language,
-                                    unit: currentLesson.title,
-                                    progress: overallProgress.clamp(0.0, 1.0),
-                                    icon: _getIconData(currentLesson.icon),
-                                    accentColor: _getLanguageColor(language),
-                                    hasButton: !isLocked,
-                                    isLocked: isLocked,
-                                    lessonId: currentLesson.id,
-                                  ),
-                                );
-                              }).toList(),
-                            );
-                          },
-                          loading: () =>
-                              const Center(child: CircularProgressIndicator()),
-                          error: (err, _) =>
-                              Text('Error loading lessons: $err'),
+                                    Text(
+                                      'View your mastery trends and SRS analytics',
+                                      style: AppTypography.body.copyWith(
+                                        color: Colors.black54,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                color: Colors.black54,
+                                size: 16,
+                              ),
+                            ],
+                          ),
                         ),
-                    const SizedBox(height: 40),
-                  ],
+                      ).animate().fadeIn(delay: 250.ms).slideX(begin: 0.1),
+
+                      const SizedBox(height: 24),
+
+
+                      // Progress Cards
+                      ref
+                          .watch(lessonsStreamProvider)
+                          .when(
+                            data: (lessons) {
+                              if (lessons.isEmpty) return const SizedBox();
+
+                              // Group lessons by language
+                              final groupedByLanguage = <String, List<Lesson>>{};
+                              for (var lesson in lessons) {
+                                groupedByLanguage
+                                    .putIfAbsent(lesson.language, () => [])
+                                    .add(lesson);
+                              }
+
+                              return Column(
+                                children: groupedByLanguage.entries.map((entry) {
+                                  final language = entry.key;
+                                  final languageLessons = entry.value;
+
+                                  // Sort lessons to find the current active one
+                                  languageLessons.sort(
+                                    (a, b) =>
+                                        a.unitNumber.compareTo(b.unitNumber),
+                                  );
+
+                                  Lesson? currentLesson;
+                                  double totalProgress = 0;
+
+                                  for (var lesson in languageLessons) {
+                                    final progressData =
+                                        studentState.lessonProgress[lesson.id];
+                                    final score =
+                                        (progressData?['bestScore'] as num?)
+                                            ?.toDouble() ??
+                                        0.0;
+                                    totalProgress += score / 100.0;
+
+                                    if (score < 100 && currentLesson == null) {
+                                      currentLesson = lesson;
+                                    }
+                                  }
+
+                                  currentLesson ??= languageLessons.last;
+                                  final overallProgress =
+                                      totalProgress / languageLessons.length;
+                                  final isLocked = _isLessonLocked(
+                                    currentLesson,
+                                    studentState.lessonProgress,
+                                  );
+
+                                  return Padding(
+                                    padding: const EdgeInsets.only(
+                                      bottom: 24.0,
+                                      top: 16.0,
+                                    ),
+                                    child: _buildProgressCard(
+                                      context,
+                                      badge: currentLesson.category.toUpperCase(),
+                                      badgeColor: _getCategoryColor(
+                                        currentLesson.category,
+                                      ),
+                                      language: language,
+                                      unit: currentLesson.title,
+                                      progress: overallProgress.clamp(0.0, 1.0),
+                                      icon: _getIconData(currentLesson.icon),
+                                      accentColor: _getLanguageColor(language),
+                                      hasButton: !isLocked,
+                                      isLocked: isLocked,
+                                      lessonId: currentLesson.id,
+                                    ),
+                                  );
+                                }).toList(),
+                              );
+                            },
+                            loading: () =>
+                                const Center(child: CircularProgressIndicator()),
+                            error: (err, _) =>
+                                Text('Error loading lessons: $err'),
+                          ),
+                      const SizedBox(height: 40),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
