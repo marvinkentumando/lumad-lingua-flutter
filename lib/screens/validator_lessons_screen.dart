@@ -14,6 +14,7 @@ import '../widgets/activity_views/pronunciation_view.dart';
 import '../widgets/activity_views/scenario_view.dart';
 import 'package:lumad_lingua/services/auth_service.dart';
 import '../widgets/activity_views/listening_view.dart';
+import '../widgets/ambient_topo_background.dart';
 
 class ValidatorLessonsScreen extends ConsumerStatefulWidget {
   const ValidatorLessonsScreen({super.key});
@@ -50,7 +51,7 @@ class _ValidatorLessonsScreenState
     final userRole = userAsync.value?['role'] ?? 'VALIDATOR';
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+      backgroundColor: Colors.transparent,
       floatingActionButton: (_isSelectionMode && _selectedIds.isNotEmpty)
           ? FloatingActionButton.extended(
               onPressed: () => _handleBulkApprove(userId, userRole),
@@ -68,7 +69,8 @@ class _ValidatorLessonsScreenState
               ),
             ).animate().scale()
           : null,
-      body: SafeArea(
+      body: AmbientTopoBackground(
+        child: SafeArea(
         child: Column(
           children: [
             _buildHeader(),
@@ -115,8 +117,9 @@ class _ValidatorLessonsScreenState
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   List<Lesson> _filterLessons(List<Lesson> lessons) {
     return lessons.where((l) {

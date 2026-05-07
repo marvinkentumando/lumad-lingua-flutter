@@ -14,6 +14,7 @@ import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../services/haptic_service.dart';
 import 'package:go_router/go_router.dart';
+import '../widgets/ambient_topo_background.dart';
 
 class LeaderboardEntry {
   final String name;
@@ -139,19 +140,10 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     }
 
     return Scaffold(
-      backgroundColor: AppColors.forest900,
-      body: Stack(
+      backgroundColor: Colors.transparent,
+      body: AmbientTopoBackground(
+        child: Stack(
         children: [
-          // Background Topo Map
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.1,
-              child: Image.asset(
-                'assets/images/topo_map.png',
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
 
           CustomScrollView(
             physics: const BouncingScrollPhysics(),
@@ -160,7 +152,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
               SliverAppBar(
                 expandedHeight: 400,
                 pinned: true,
-                backgroundColor: AppColors.forest900,
+                backgroundColor: Colors.transparent,
                 elevation: 0,
                 centerTitle: true,
                 title: Text(
@@ -183,10 +175,6 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                   background: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.asset(
-                        'assets/images/topo_map.png',
-                        fit: BoxFit.cover,
-                      ),
                       // Atmospheric Fog/Mist
                       Container(
                         decoration: BoxDecoration(
@@ -382,8 +370,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
             ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildFilterRow() {
     return Row(

@@ -9,6 +9,7 @@ import '../services/audio_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/brand_button.dart';
+import '../widgets/ambient_topo_background.dart';
 import '../widgets/glass_box.dart';
 import 'package:flutter/services.dart';
 import 'package:confetti/confetti.dart';
@@ -126,7 +127,7 @@ class _ValidatorEntriesScreenState
           );
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+      backgroundColor: Colors.transparent,
       floatingActionButton:
           (_isSelectionMode && _selectedIds.isNotEmpty && !_isProcessing)
           ? FloatingActionButton.extended(
@@ -189,7 +190,8 @@ class _ValidatorEntriesScreenState
               ),
             ).animate().scale()
           : null,
-      body: SafeArea(
+      body: AmbientTopoBackground(
+        child: SafeArea(
         child: Stack(
           children: [
             entriesAsync.when(
@@ -342,8 +344,9 @@ class _ValidatorEntriesScreenState
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildHeader(List<DictionaryEntry> currentList) {
     final isDark = Theme.of(context).brightness == Brightness.dark;

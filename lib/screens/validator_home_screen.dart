@@ -9,6 +9,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../services/auth_service.dart';
 import '../widgets/wotd_widget.dart';
 import '../services/firebase_service.dart';
+import '../widgets/ambient_topo_background.dart';
 
 class ValidatorHomeScreen extends ConsumerStatefulWidget {
   const ValidatorHomeScreen({super.key});
@@ -40,8 +41,9 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
     final progress = (todayVerified / dailyGoal).clamp(0.0, 1.0);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
-      body: SafeArea(
+      backgroundColor: Colors.transparent,
+      body: AmbientTopoBackground(
+        child: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(urgentQueueProvider);
@@ -140,8 +142,9 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildHeader(String name, String rank) {
     return BrandCard(

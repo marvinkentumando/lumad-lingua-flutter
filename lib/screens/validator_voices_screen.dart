@@ -12,6 +12,7 @@ import '../models/voice_submission.dart';
 import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/glass_box.dart';
+import '../widgets/ambient_topo_background.dart';
 
 class ValidatorVoicesScreen extends ConsumerStatefulWidget {
   const ValidatorVoicesScreen({super.key});
@@ -113,7 +114,7 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+      backgroundColor: Colors.transparent,
       floatingActionButton:
           (_isSelectionMode && _selectedIds.isNotEmpty && !_isProcessing)
           ? FloatingActionButton.extended(
@@ -169,7 +170,8 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
               ),
             ).animate().scale()
           : null,
-      body: SafeArea(
+      body: AmbientTopoBackground(
+        child: SafeArea(
         child: Stack(
           children: [
             Column(
@@ -545,8 +547,9 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildVoiceCard(VoiceSubmission item) {
     final isDark = Theme.of(context).brightness == Brightness.dark;

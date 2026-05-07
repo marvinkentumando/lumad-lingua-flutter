@@ -17,6 +17,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
+import '../widgets/ambient_topo_background.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/wotd_widget.dart';
 import '../widgets/impact_card.dart';
@@ -1048,8 +1049,9 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
     final photoUrl = user?.photoURL;
 
     return Scaffold(
-      backgroundColor: AppColors.forest900,
-      body: SafeArea(
+      backgroundColor: Colors.transparent,
+      body: AmbientTopoBackground(
+        child: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.all(24),
@@ -1112,8 +1114,9 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   void _showSuccessDialog(BuildContext context) {
     showDialog(

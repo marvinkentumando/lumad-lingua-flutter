@@ -6,6 +6,7 @@ import '../models/admin_models.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_button.dart';
+import '../widgets/ambient_topo_background.dart';
 
 class AdminUsersScreen extends ConsumerStatefulWidget {
   const AdminUsersScreen({super.key});
@@ -40,18 +41,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   Widget build(BuildContext context) {
     final usersAsync = ref.watch(allUsersProvider);
     return Scaffold(
-      backgroundColor: AppColors.forest900,
-      body: Stack(
+      backgroundColor: Colors.transparent,
+      body: AmbientTopoBackground(
+        child: Stack(
         children: [
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.1,
-              child: Image.asset(
-                'assets/images/topo_map.png',
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
           SafeArea(
             child: Column(
               children: [
@@ -135,8 +128,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                       vertical: 6,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: AppColors.gold500.withValues(alpha: 0.1,
-                                      ),
+                                      color: AppColors.gold500.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Row(
@@ -227,8 +219,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildRoleTabs() {
     final roles = [
@@ -448,7 +441,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                             Text(
                               '${user.xp} XP',
                               style: AppTypography.mono.copyWith(
-                                color: AppColors.gold500.withValues(alpha: isSuspended ? 0.2 : 0.6,
+                                color: AppColors.gold500.withValues(
+                                  alpha: isSuspended ? 0.2 : 0.6,
                                 ),
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,

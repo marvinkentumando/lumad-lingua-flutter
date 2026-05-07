@@ -13,7 +13,6 @@ import '../widgets/skeleton.dart';
 import '../widgets/brand_search_bar.dart';
 import '../widgets/ambient_topo_background.dart';
 import '../providers/search_history_provider.dart';
-import '../providers/user_preferences_provider.dart';
 
 class DictionaryScreen extends ConsumerStatefulWidget {
   const DictionaryScreen({super.key});

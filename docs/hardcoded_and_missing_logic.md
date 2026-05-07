@@ -14,37 +14,45 @@
 - [ ] **Hardcoded UI Strings**: Centralize notification templates and status labels.
 - [x] **Streak UI Modulo Fix**: Fixed the 7-day visual reset in `DailyCheckInBoard`.
 - [x] **Theme Transitions**: Implemented smooth cross-fade animation in `main.dart`.
-
----
-
----
-
-This document tracks areas in the codebase where values are currently hardcoded, logic is mocked/simulated, or critical functions are missing. This serves as a checklist for transitioning from a prototype/MVP to a production-ready system.
+- [ ] **Phase 6: Advanced Gamification & Logic Centralization**
+    - [ ] **Config-Driven Spirit Titles**: Move thresholds and titles from `MemberProfileScreen` to `AppConfig`.
+    - [ ] **Flexible Streak System**: Move cycle duration (7 days) and reward icons to `AppConfig`.
+    - [ ] **Dynamic Language Categories**: Fetch supported languages for `DictionaryScreen` from `AppConfig`.
+    - [ ] **SRS Parameter Tuning**: Move SM-2 constants, deck limits, and reward XP to `AppConfig`.
+- [ ] **Phase 7: Real-time Validator Health**
+    - [ ] **Contributor Accuracy**: Replace hardcoded "98% APPROVAL" in `ValidatorEntriesScreen` with live calculation.
+    - [ ] **Validator Workload Balance**: Implement a "Pending Count" display for validators based on active word streams.
 
 ---
 
 ## 🏗️ Services & Core Logic
+
+### 1. `AppConfig` (`models/app_config.dart`)
+- **Missing Fields**: `streakRewardCycle`, `spiritThresholds`, `supportedLanguages`, `srsSessionSize`, `srsCardXp`.
 
 ---
 
 ## 📱 Screens & UI Components
 
 ### 3. `MemberProfileScreen` (`member_profile_screen.dart`)
-- **Hardcoded Fallbacks**: Location defaults to "PHILIPPINES" if the profile field is null.
-- **Simulated Metrics**: `_buildContributionImpact` uses a simple activity count to "guess" accuracy and rank labels (e.g., `count > 10 ? '98%' : '95%'`).
-- **Preview Limits**: The "Earned Artifacts" section is hardcoded to show a maximum of 3 items.
+- **Spirit Thresholds**: Hardcoded logic for "Legend", "Elder", etc.
 
 ### 4. `LeaderboardScreen` (`leaderboard_screen.dart`)
-- **Fixed Title Thresholds**: Tribal titles (e.g., "ELDER SAGE") are mapped to hardcoded rank numbers (1, 3, 10, 50).
+- **Fixed Title Thresholds**: Tribal titles (e.g., "ELDER SAGE") are mapped to hardcoded rank numbers.
 
 ### 5. `FlashcardsScreen` (`flashcards_screen.dart`)
-- **SRS Intervals**: Leitner intervals are hardcoded as `[1, 2, 4, 7, 14, 30]` days.
 - **Deck Limitations**: Session size is hardcoded to 15 cards.
-- **Reward Logic**: XP per card is hardcoded to 10.
+- **Reward Logic**: XP per card is hardcoded.
 
 ### 6. `DailyCheckInBoard` (`daily_check_in_board.dart`)
-- **Cycle Duration**: Assumes a 7-day streak cycle for UI rendering.
-- **Reward Visuals**: Hardcoded star icon on Day 7 without a backend-driven reward configuration.
+- **Cycle Duration**: Assumes a 7-day streak cycle.
+- **Reward Visuals**: Hardcoded star icon on Day 7.
+
+### 7. `DictionaryScreen` (`dictionary_screen.dart`)
+- **Hardcoded Languages**: The category list is a static array.
+
+### 8. `ValidatorEntriesScreen` (`validator_entries_screen.dart`)
+- **Mocked Stats**: The "98% APPROVAL" label is a static UI element.
 
 ---
 

@@ -132,7 +132,7 @@ class MemberProfileScreen extends ConsumerWidget {
   }
 
   String _getRoleBadge(UserRole role, Map<String, dynamic> profile) {
-    final location = profile['location'] ?? 'PHILIPPINES';
+    final location = profile['location'] ?? 'Unknown';
     switch (role) {
       case UserRole.admin:
         return 'SYSTEM OVERSEER  •  $location';
@@ -403,7 +403,7 @@ class MemberProfileScreen extends ConsumerWidget {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
-                itemCount: earned.length > 3 ? 3 : earned.length,
+                itemCount: earned.length,
                 separatorBuilder: (context, _) => const SizedBox(width: 16),
                 itemBuilder: (context, index) {
                   return _buildArtifactCard(context, earned[index]);

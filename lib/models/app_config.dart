@@ -8,6 +8,9 @@ class AppConfig {
   final String levelUpSfx;
   final int levelUpParticleDuration;
 
+  final int streakRewardCycle;
+  final Map<String, int> spiritThresholds;
+
   AppConfig({
     required this.wordApprovalXp,
     required this.lessonApprovalXp,
@@ -17,6 +20,8 @@ class AppConfig {
     required this.artifactUnlockDuration,
     required this.levelUpSfx,
     required this.levelUpParticleDuration,
+    required this.streakRewardCycle,
+    required this.spiritThresholds,
   });
 
   factory AppConfig.fromFirestore(Map<String, dynamic> data) {
@@ -34,6 +39,14 @@ class AppConfig {
       artifactUnlockDuration: data['artifactUnlockDuration'] ?? 4,
       levelUpSfx: data['levelUpSfx'] ?? 'level_up',
       levelUpParticleDuration: data['levelUpParticleDuration'] ?? 3,
+      streakRewardCycle: data['streakRewardCycle'] ?? 7,
+      spiritThresholds: Map<String, int>.from(data['spiritThresholds'] ?? {
+        'Legend': 5000,
+        'Elder': 2000,
+        'Guardian': 1000,
+        'Seeker': 500,
+        'Novice': 0,
+      }),
     );
   }
 
