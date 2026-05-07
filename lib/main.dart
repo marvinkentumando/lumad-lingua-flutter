@@ -349,7 +349,12 @@ class LumadLinguaApp extends ConsumerWidget {
               maxScaleFactor: 1.3,
             ),
           ),
-          child: child!,
+          child: AnimatedTheme(
+            data: themeMode == ThemeMode.dark ? AppTheme.darkTheme : AppTheme.lightTheme,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeInOut,
+            child: child!,
+          ),
         );
       },
     );

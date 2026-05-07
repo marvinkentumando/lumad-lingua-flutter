@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
+import 'tactile_wrapper.dart';
 
 enum BrandCardTheme { cream, vibrant, gold }
 
@@ -12,6 +13,7 @@ class BrandCard extends StatelessWidget {
   final double borderRadius;
   final bool withAnimation;
   final int delayMs;
+  final VoidCallback? onTap;
 
   const BrandCard({
     super.key,
@@ -22,6 +24,7 @@ class BrandCard extends StatelessWidget {
     this.borderRadius = 32,
     this.withAnimation = false,
     this.delayMs = 0,
+    this.onTap,
   });
 
   @override
@@ -123,6 +126,13 @@ class BrandCard extends StatelessWidget {
           ],
         ),
         child: child,
+      );
+    }
+
+    if (onTap != null) {
+      card = TactileWrapper(
+        onTap: onTap,
+        child: card,
       );
     }
 

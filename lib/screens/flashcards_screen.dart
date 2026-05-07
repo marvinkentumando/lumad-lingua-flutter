@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import '../services/haptic_service.dart';
+import '../widgets/branded_empty_state.dart';
 
 
 class FlashcardsScreen extends ConsumerStatefulWidget {
@@ -117,30 +118,56 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
         SRSProgress(wordId: entry.id, nextReview: DateTime.now());
 
     int newLevel;
-    DateTime? lastFailure = currentSrs.lastFailure;
+    double newEaseFactor = currentSrs.easeFactor;
     int consecutiveCorrect = currentSrs.consecutiveCorrect;
+    int intervalDays;
+    DateTime now = DateTime.now();
+    DateTime? lastFailure = currentSrs.lastFailure;
 
     if (wasCorrect) {
       newLevel = min(currentSrs.level + 1, 5);
       consecutiveCorrect++;
-      ref.read(firebaseServiceProvider).addXp(user.uid, 10);
+      
+      // Performance-based Ease Factor adjustment
+      // If correct, boost ease factor slightly (up to 3.0)
+      newEaseFactor = min(3.0, newEaseFactor + 0.1);
+
+      if (consecutiveCorrect == 1) {
+        intervalDays = 1;
+      } else if (consecutiveCorrect == 2) {
+        intervalDays = 4; // Accelerated learning phase
+      } else {
+        // SM-2 dynamic interval: I(n) = (Previous Interval + Overdue/2) * EF
+        final lastReview = currentSrs.lastReview ?? now.subtract(const Duration(days: 1));
+        final prevInterval = currentSrs.nextReview.difference(lastReview).inDays;
+        final overdueDays = max(0, now.difference(currentSrs.nextReview).inDays);
+        
+        // Bonus for answering correctly when overdue
+        intervalDays = ((prevInterval + (overdueDays / 2)) * newEaseFactor).round();
+      }
+      
+      ref.read(firebaseServiceProvider).addXp(user.uid, 15); // Slightly more XP for smarter learning
     } else {
-      newLevel = max(currentSrs.level - 1, 0);
-      lastFailure = DateTime.now();
+      newLevel = 0; 
       consecutiveCorrect = 0;
+      // Penalty for failure: drop ease factor
+      newEaseFactor = max(1.3, newEaseFactor - 0.2);
+      intervalDays = 1; // Review tomorrow
+      lastFailure = now;
     }
 
-    // Leitner intervals: 1, 2, 4, 7, 14, 30 days
-    final intervals = [1, 2, 4, 7, 14, 30];
-    final nextReview = DateTime.now().add(Duration(days: intervals[newLevel]));
+    // Cap interval to 1 year
+    intervalDays = min(365, max(1, intervalDays));
+    final nextReview = now.add(Duration(days: intervalDays));
 
     final updatedSrs = currentSrs.copyWith(
       level: newLevel,
       nextReview: nextReview,
-      lastReview: DateTime.now(),
+      lastReview: now,
       lastFailure: lastFailure,
       timesReviewed: currentSrs.timesReviewed + 1,
       consecutiveCorrect: consecutiveCorrect,
+      easeFactor: newEaseFactor,
     );
 
     await ref
@@ -236,13 +263,14 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
                       scoreA += max(0, overdue).toDouble();
 
                       // Forgetfulness Curve component:
-                      // Prioritize words wrong long ago over words wrong recently
+                      // Prioritize words failed RECENTLY for immediate reinforcement
                       if (srsA.lastFailure != null) {
                         final timeSinceFail = now
                             .difference(srsA.lastFailure!)
                             .inMinutes;
-                        // Boost score based on how long ago they failed (up to 3 days/4320 mins)
-                        scoreA += min(4320, timeSinceFail) * 1.5;
+                        // Boost score for recent failures (within a 3-day window)
+                        // Newer failures (small timeSinceFail) get higher scores
+                        scoreA += max(0, 4320 - timeSinceFail) * 1.5;
                       }
                     } else {
                       scoreA = 999999; // New cards always first
@@ -256,7 +284,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
                         final timeSinceFail = now
                             .difference(srsB.lastFailure!)
                             .inMinutes;
-                        scoreB += min(4320, timeSinceFail) * 1.5;
+                        scoreB += max(0, 4320 - timeSinceFail) * 1.5;
                       }
                     } else {
                       scoreB = 999999;
@@ -726,35 +754,14 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
   Widget _buildEmptyState() {
     return Scaffold(
       backgroundColor: AppColors.forest800,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(40),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('💫', style: TextStyle(fontSize: 56)),
-              const SizedBox(height: 20),
-              Text(
-                'No Flashcards Yet',
-                style: AppTypography.h2.copyWith(color: Colors.white),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Bookmark words from the Dictionary to start building your personal study deck.',
-                style: AppTypography.body.copyWith(
-                  color: Colors.white38,
-                  height: 1.6,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
-              BrandButton(
-                text: '📖  Go to Dictionary',
-                type: BrandButtonType.primary,
-                onTap: () => Navigator.pop(context),
-              ),
-            ],
-          ),
+      body: BrandedEmptyState(
+        title: 'No Flashcards Yet',
+        message: 'Bookmark words from the Dictionary to start building your personal study deck.',
+        emoji: '💫',
+        action: BrandButton(
+          text: '📖  Go to Dictionary',
+          type: BrandButtonType.primary,
+          onTap: () => Navigator.pop(context),
         ),
       ),
     );

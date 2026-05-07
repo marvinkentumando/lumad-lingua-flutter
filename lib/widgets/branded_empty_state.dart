@@ -6,21 +6,23 @@ import '../theme/app_typography.dart';
 class BrandedEmptyState extends StatelessWidget {
   final String title;
   final String message;
-  final IconData icon;
+  final IconData? icon;
+  final String? emoji;
   final Widget? action;
 
   const BrandedEmptyState({
     super.key,
     required this.title,
     required this.message,
-    required this.icon,
+    this.icon,
+    this.emoji,
     this.action,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40.0),
@@ -37,11 +39,13 @@ class BrandedEmptyState extends StatelessWidget {
                   width: 2,
                 ),
               ),
-              child: Icon(
-                icon,
-                size: 64,
-                color: AppColors.gold500.withValues(alpha: 0.5),
-              ),
+              child: emoji != null
+                  ? Text(emoji!, style: const TextStyle(fontSize: 64))
+                  : Icon(
+                      icon ?? Icons.auto_awesome,
+                      size: 64,
+                      color: AppColors.gold500.withValues(alpha: 0.5),
+                    ),
             )
             .animate(onPlay: (c) => c.repeat(reverse: true))
             .scale(

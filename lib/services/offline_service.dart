@@ -9,6 +9,7 @@ class OfflineService {
   static const String lessonsBoxName = 'offline_lessons';
   static const String dictionaryBoxName = 'offline_dictionary';
   static const String draftLessonsBoxName = 'draft_lessons';
+  static const String searchHistoryBoxName = 'search_history';
 
   bool _initialized = false;
 
@@ -30,6 +31,7 @@ class OfflineService {
       await Hive.openBox<Lesson>(lessonsBoxName);
       await Hive.openBox<DictionaryEntry>(dictionaryBoxName);
       await Hive.openBox<Lesson>(draftLessonsBoxName);
+      await Hive.openBox<String>(searchHistoryBoxName);
 
       _initialized = true;
     } catch (e) {

@@ -45,9 +45,13 @@ class DailyCheckInBoard extends StatelessWidget {
                 itemCount: 7,
                 separatorBuilder: (context, _) => const SizedBox(width: 12),
                 itemBuilder: (context, index) {
-                  final day = index + 1;
-                  final isUnlocked = day <= (currentStreak % 7 == 0 && currentStreak > 0 ? 7 : currentStreak % 7);
-                  final isRewardDay = day == 7;
+                  final dayIndex = index + 1;
+                  // Calculate the actual day numbers for the current 7-day cycle
+                  final weekOffset = ((currentStreak - 1) ~/ 7) * 7;
+                  final displayDay = weekOffset + dayIndex;
+                  
+                  final isUnlocked = displayDay <= currentStreak;
+                  final isRewardDay = dayIndex == 7;
                   
                   return Container(
                     width: 60,
@@ -62,7 +66,7 @@ class DailyCheckInBoard extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text('Day $day', style: AppTypography.label.copyWith(color: isUnlocked ? AppColors.gold500 : Colors.white54, fontSize: 10)),
+                        Text('Day $displayDay', style: AppTypography.label.copyWith(color: isUnlocked ? AppColors.gold500 : Colors.white54, fontSize: 10)),
                         const SizedBox(height: 8),
                         Icon(
                           isRewardDay ? Icons.star_rounded : Icons.local_fire_department_rounded,

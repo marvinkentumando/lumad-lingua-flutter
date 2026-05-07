@@ -6,6 +6,7 @@ import '../theme/app_typography.dart';
 import '../models/artifact.dart';
 import '../services/haptic_service.dart';
 import '../services/audio_service.dart';
+import '../services/firebase_service.dart';
 import 'spirit_particle_overlay.dart';
 
 class ArtifactUnlockOverlay extends ConsumerStatefulWidget {
@@ -23,8 +24,12 @@ class _ArtifactUnlockOverlayState extends ConsumerState<ArtifactUnlockOverlay> {
     super.initState();
     // Fire sensory feedback on artifact reveal
     HapticService.artifactUnlock();
+    
+    // Use config-driven SFX
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(audioServiceProvider).playSFX('milestone');
+      final config = ref.read(appConfigProvider).value;
+      final sfx = config?.artifactUnlockSfx ?? 'milestone';
+      ref.read(audioServiceProvider).playSFX(sfx);
     });
   }
 
@@ -59,6 +64,7 @@ class _ArtifactUnlockOverlayState extends ConsumerState<ArtifactUnlockOverlay> {
   @override
   Widget build(BuildContext context) {
     final tierColor = _getTierColor();
+    final config = ref.watch(appConfigProvider).value;
 
     return Scaffold(
       backgroundColor: Colors.black.withValues(alpha: 0.92),
@@ -66,9 +72,9 @@ class _ArtifactUnlockOverlayState extends ConsumerState<ArtifactUnlockOverlay> {
         children: [
           // Spirit particle celebration layer
           SpiritParticleOverlay(
-            duration: const Duration(seconds: 4),
+            duration: Duration(seconds: config?.artifactUnlockDuration ?? 4),
             colors: _getTierParticleColors(),
-            particleCount: 50,
+            particleCount: config?.artifactUnlockParticleCount ?? 50,
           ),
 
           // Content

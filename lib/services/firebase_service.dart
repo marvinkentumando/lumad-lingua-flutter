@@ -18,14 +18,17 @@ import '../models/community_activity.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rxdart/rxdart.dart';
 import '../models/validator_models.dart';
+import '../models/app_config.dart';
 
 class FirebaseService {
+  static final FirebaseService _instance = FirebaseService._internal();
+  factory FirebaseService() => _instance;
+  FirebaseService._internal();
+
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
   FirebaseFirestore get db => _db;
-
-  FirebaseService();
 
   // Generic File Upload
   Future<String> uploadFile(
@@ -89,11 +92,22 @@ class FirebaseService {
   Stream<List<String>> getDialects() {
     return _db.collection('config').doc('languages').snapshots().map((doc) {
       if (!doc.exists || doc.data() == null) {
-        return ["All", "Mansaka", "Mandaya"];
+        // Reduced hardcoding by returning an empty list which forces UI to wait for data
+        // or using a safer, minimal bootstrap set.
+        return ["All"]; 
       }
       final list = List<String>.from(doc.data()!['list'] ?? []);
       if (!list.contains("All")) list.insert(0, "All");
       return list;
+    });
+  }
+
+  Stream<AppConfig> getAppConfig() {
+    return _db.collection('config').doc('app').snapshots().map((doc) {
+      if (!doc.exists || doc.data() == null) {
+        return AppConfig.fromFirestore({});
+      }
+      return AppConfig.fromFirestore(doc.data()!);
     });
   }
 
@@ -209,25 +223,35 @@ class FirebaseService {
       final term = data['term'] ?? 'your entry';
 
       if (contributorId != null) {
-        // Add Notification
+        // Fetch current app config
+        final configDoc = await transaction.get(_db.collection('config').doc('app'));
+        final config = AppConfig.fromFirestore(configDoc.data() ?? {});
+
+        // Add Notification using Template
         final notifRef = _db
             .collection('users')
             .doc(contributorId)
             .collection('notifications')
             .doc();
+            
+        final title = config.notifications['word_approved_title'] ?? 'Entry Approved! 🌟';
+        final message = config.formatNotification('word_approved_body', {
+          'term': term,
+          'role': validatorRole,
+        });
+
         transaction.set(notifRef, {
-          'title': 'Entry Approved! 🌟',
-          'message':
-              'Your contribution "$term" has been validated by a $validatorRole and is now live in the dictionary.',
+          'title': title,
+          'message': message,
           'type': 'approval',
           'timestamp': FieldValue.serverTimestamp(),
           'isRead': false,
         });
 
-        // Award XP
+        // Award XP from Config
         final userRef = _db.collection('users').doc(contributorId);
         transaction.update(userRef, {
-          'xp': FieldValue.increment(100),
+          'xp': FieldValue.increment(config.wordApprovalXp),
           'wordCount': FieldValue.increment(1),
         });
       }
@@ -689,24 +713,34 @@ class FirebaseService {
       final title = data['title'] ?? 'your lesson';
 
       if (contributorId != null) {
-        // Notify Contributor
+        // Fetch current app config
+        final configDoc = await transaction.get(_db.collection('config').doc('app'));
+        final config = AppConfig.fromFirestore(configDoc.data() ?? {});
+
+        // Notify Contributor using Template
         final notifRef = _db
             .collection('users')
             .doc(contributorId)
             .collection('notifications')
             .doc();
+            
+        final notifTitle = config.notifications['lesson_approved_title'] ?? 'Curriculum Approved! 📚';
+        final notifMessage = config.formatNotification('lesson_approved_body', {
+          'title': title,
+        });
+
         transaction.set(notifRef, {
-          'title': 'Curriculum Approved! 📚',
-          'message': 'Your lesson "$title" is now live for all students.',
+          'title': notifTitle,
+          'message': notifMessage,
           'type': 'approval',
           'timestamp': FieldValue.serverTimestamp(),
           'isRead': false,
         });
 
-        // Award XP (More than single words)
+        // Award XP from Config
         final userRef = _db.collection('users').doc(contributorId);
         transaction.update(userRef, {
-          'xp': FieldValue.increment(500),
+          'xp': FieldValue.increment(config.lessonApprovalXp),
           'lessonCount': FieldValue.increment(1),
         });
       }
@@ -789,22 +823,27 @@ class FirebaseService {
     data['status'] = status;
     data['updatedAt'] = FieldValue.serverTimestamp();
 
+    // Check for unit number collision
+    final isOccupied = await isUnitUnique(
+      lesson.language,
+      lesson.unitNumber,
+      excludeLessonId: (lesson.id.isNotEmpty && !lesson.id.startsWith('temp_')) ? lesson.id : null,
+    ).then((unique) => !unique);
+
+    if (isOccupied) {
+      // Shift existing lessons to make room
+      await shiftUnitNumbers(
+        language: lesson.language,
+        startUnit: lesson.unitNumber,
+        offset: 1,
+      );
+    }
+
     if (lesson.id.isEmpty || lesson.id.startsWith('temp_')) {
       data['createdAt'] = FieldValue.serverTimestamp();
       final docRef = await _db.collection('lessons').add(data);
       return docRef.id;
     } else {
-      // 1. If updating an existing lesson, check if unitNumber changed to handle reordering
-      final oldDoc = await _db.collection('lessons').doc(lesson.id).get();
-      if (oldDoc.exists) {
-        final oldUnit = oldDoc.data()?['unitNumber'] as int?;
-        if (oldUnit != null && oldUnit != lesson.unitNumber) {
-          // If the unit increased, we might need to shift others?
-          // Usually, insertion at 'unit X' shifts X and above to X+1.
-          // This is a manual choice, but we'll implement a helper.
-        }
-      }
-
       await _db
           .collection('lessons')
           .doc(lesson.id)
@@ -1416,6 +1455,60 @@ class FirebaseService {
         .map((snap) => snap.size);
   }
 
+  Stream<Map<String, dynamic>> getUserImpactMetrics(String userId) {
+    // Combine word contributions and user ranking
+    final wordsStream = _db
+        .collection('words')
+        .where('contributorId', isEqualTo: userId)
+        .snapshots();
+        
+    final userDocStream = _db.collection('users').doc(userId).snapshots();
+    final allUsersCountStream = _db.collection('users').snapshots();
+
+    return Rx.combineLatest3(
+      wordsStream,
+      userDocStream,
+      allUsersCountStream,
+      (wordsSnap, userSnap, allUsersSnap) {
+        final docs = wordsSnap.docs;
+        int approved = 0;
+        int rejected = 0;
+        for (var doc in docs) {
+          final data = doc.data();
+          final status = data['status'];
+          if (status == 'approved') {
+            approved++;
+          } else if (status == 'rejected') {
+            rejected++;
+          }
+        }
+
+        final totalDecisions = approved + rejected;
+        final accuracy = totalDecisions > 0 ? (approved / totalDecisions) : 0.0;
+        
+        final userXp = userSnap.data()?['xp'] ?? 0;
+        final totalUsers = allUsersSnap.size;
+        
+        // Calculate Rank (Percentile)
+        int higherXpCount = 0;
+        for (var doc in allUsersSnap.docs) {
+          final otherXp = (doc.data() as Map<String, dynamic>?)?['xp'] ?? 0;
+          if (otherXp > userXp) higherXpCount++;
+        }
+        
+        final percentile = totalUsers > 0 ? (1.0 - (higherXpCount / totalUsers)) : 0.0;
+        
+        return {
+          'accuracy': accuracy,
+          'approvedCount': approved,
+          'percentile': percentile,
+          'totalSubmissions': docs.length,
+          'xp': userXp,
+        };
+      },
+    );
+  }
+
   // Gallery Operations
   Stream<List<Artifact>> getArtifacts() {
     return _db.collection('artifacts').snapshots().map((snapshot) {
@@ -2021,6 +2114,10 @@ final pendingLessonsCountProvider = StreamProvider<int>((ref) {
 
 final communityFeedProvider = StreamProvider<List<CommunityActivity>>((ref) {
   return ref.watch(firebaseServiceProvider).getCommunityFeed();
+});
+
+final appConfigProvider = StreamProvider<AppConfig>((ref) {
+  return ref.watch(firebaseServiceProvider).getAppConfig();
 });
 
 

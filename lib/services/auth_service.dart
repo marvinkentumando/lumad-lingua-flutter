@@ -13,10 +13,19 @@ class AuthService {
 
   Future<UserCredential?> signInWithEmail(String email, String password) async {
     try {
-      return await _auth.signInWithEmailAndPassword(
+      final userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
+
+      if (userCredential.user != null) {
+        await firestore
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .update({'lastLogin': FieldValue.serverTimestamp()});
+      }
+
+      return userCredential;
     } on FirebaseAuthException catch (e) {
       if (kDebugMode) {
         debugPrint("Sign-In Auth Error: ${e.code} - ${e.message}");

@@ -17,6 +17,10 @@ final validatorActivityCountProvider = StreamProvider.family<int, String>((ref, 
   return ref.watch(firebaseServiceProvider).getValidatorActivityCount(userId);
 });
 
+final userImpactMetricsProvider = StreamProvider.family<Map<String, dynamic>, String>((ref, userId) {
+  return ref.watch(firebaseServiceProvider).getUserImpactMetrics(userId);
+});
+
 class MemberProfileScreen extends ConsumerWidget {
   final String userId;
 
@@ -259,7 +263,7 @@ class MemberProfileScreen extends ConsumerWidget {
 
   Widget _buildContributionImpact(BuildContext context, WidgetRef ref, String userId, UserRole role) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final activityAsync = ref.watch(validatorActivityCountProvider(userId));
+    final metricsAsync = ref.watch(userImpactMetricsProvider(userId));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -272,11 +276,42 @@ class MemberProfileScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 20),
-        activityAsync.when(
-          data: (count) {
-            final accuracy = count > 10 ? '98%' : (count > 0 ? '95%' : 'N/A');
-            final rank = count > 50 ? 'Top 5%' : (count > 10 ? 'Top 20%' : 'New');
-            final spirit = count > 100 ? 'Master' : (count > 20 ? 'Elder' : 'Seeker');
+        metricsAsync.when(
+          data: (metrics) {
+            final double accuracyVal = metrics['accuracy'] ?? 0.0;
+            final double percentile = metrics['percentile'] ?? 0.0;
+            final int xp = metrics['xp'] ?? 0;
+            
+            final accuracy = accuracyVal > 0 
+                ? '${(accuracyVal * 100).toStringAsFixed(0)}%' 
+                : 'N/A';
+            
+            // Rank based on real community percentile
+            String rank;
+            if (percentile >= 0.95) {
+              rank = 'Top 5%';
+            } else if (percentile >= 0.80) {
+              rank = 'Top 20%';
+            } else if (percentile >= 0.50) {
+              rank = 'Top 50%';
+            } else {
+              rank = 'Active';
+            }
+
+            // Spirit Title based on XP
+            String spirit;
+            if (xp >= 5000) {
+              spirit = 'Legend';
+            } else if (xp >= 2000) {
+              spirit = 'Elder';
+            } else if (xp >= 1000) {
+              spirit = 'Guardian';
+            } else if (xp >= 500) {
+              spirit = 'Seeker';
+            } else {
+              spirit = 'Novice';
+            }
+
             return Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -287,7 +322,7 @@ class MemberProfileScreen extends ConsumerWidget {
             );
           },
           loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
-          error: (e, _) => Center(child: Text('Error: $e')),
+          error: (e, _) => Center(child: Text('Error calculating impact')),
         ),
       ],
     ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1);

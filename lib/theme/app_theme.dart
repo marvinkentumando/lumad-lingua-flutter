@@ -57,6 +57,9 @@ class AppTheme {
       dividerTheme: DividerThemeData(
         color: AppColors.creamBorder.withValues(alpha: 0.5),
       ),
+      splashColor: AppColors.forest500.withValues(alpha: 0.1),
+      highlightColor: AppColors.forest500.withValues(alpha: 0.05),
+      splashFactory: InkSparkle.splashFactory,
     );
   }
 
@@ -114,6 +117,9 @@ class AppTheme {
       dividerTheme: DividerThemeData(
         color: Colors.white.withValues(alpha: 0.1),
       ),
+      splashColor: AppColors.gold500.withValues(alpha: 0.15),
+      highlightColor: AppColors.gold500.withValues(alpha: 0.05),
+      splashFactory: InkSparkle.splashFactory,
     );
   }
 

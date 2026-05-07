@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -65,22 +64,33 @@ class WordOfDayService {
 
   Future<DictionaryEntry?> _pickNewWord() async {
     try {
-      // 1. Get approved words first (Queries are NOT supported inside transactions)
-      final approvedWordsQuery = _db
+      // 1. Pick a random document by starting at a random ID and wrapping around
+      // This is the most scalable way to get a random document in Firestore
+      final randomId = _db.collection('words').doc().id;
+      
+      var approvedWords = await _db
           .collection('words')
           .where('status', isEqualTo: 'approved')
-          .limit(100);
+          .where(FieldPath.documentId, isGreaterThanOrEqualTo: randomId)
+          .limit(1)
+          .get();
 
-      final approvedWords = await approvedWordsQuery.get();
+      // If no words are found after the random ID, wrap around and start from the beginning
+      if (approvedWords.docs.isEmpty) {
+        approvedWords = await _db
+            .collection('words')
+            .where('status', isEqualTo: 'approved')
+            .where(FieldPath.documentId, isLessThan: randomId)
+            .limit(1)
+            .get();
+      }
 
       if (approvedWords.docs.isEmpty) {
         debugPrint('WOTD: No approved words found in database.');
         return null;
       }
 
-      final random = Random();
-      final nextIndex = random.nextInt(approvedWords.docs.length);
-      final selectedDoc = approvedWords.docs[nextIndex];
+      final selectedDoc = approvedWords.docs.first;
       final entry = DictionaryEntry.fromFirestore(
         selectedDoc.data(),
         selectedDoc.id,

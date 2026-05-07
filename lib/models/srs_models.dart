@@ -15,6 +15,7 @@ class SRSProgress {
   final DateTime? lastFailure;
   final int timesReviewed;
   final int consecutiveCorrect;
+  final double easeFactor;
 
   const SRSProgress({
     required this.wordId,
@@ -24,6 +25,7 @@ class SRSProgress {
     this.lastFailure,
     this.timesReviewed = 0,
     this.consecutiveCorrect = 0,
+    this.easeFactor = 2.5,
   });
 
   MasteryLevel get mastery {
@@ -46,6 +48,7 @@ class SRSProgress {
           : null,
       timesReviewed: data['timesReviewed'] ?? 0,
       consecutiveCorrect: data['consecutiveCorrect'] ?? 0,
+      easeFactor: (data['easeFactor'] ?? 2.5).toDouble(),
     );
   }
 
@@ -60,6 +63,7 @@ class SRSProgress {
           : null,
       'timesReviewed': timesReviewed,
       'consecutiveCorrect': consecutiveCorrect,
+      'easeFactor': easeFactor,
     };
   }
 
@@ -70,6 +74,7 @@ class SRSProgress {
     DateTime? lastFailure,
     int? timesReviewed,
     int? consecutiveCorrect,
+    double? easeFactor,
   }) {
     return SRSProgress(
       wordId: wordId,
@@ -79,6 +84,7 @@ class SRSProgress {
       lastFailure: lastFailure ?? this.lastFailure,
       timesReviewed: timesReviewed ?? this.timesReviewed,
       consecutiveCorrect: consecutiveCorrect ?? this.consecutiveCorrect,
+      easeFactor: easeFactor ?? this.easeFactor,
     );
   }
 }

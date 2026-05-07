@@ -95,13 +95,6 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     super.dispose();
   }
 
-  String _getTribalTitle(int rank) {
-    if (rank == 1) return 'ANCESTRAL GUARDIAN';
-    if (rank <= 3) return 'ELDER SAGE';
-    if (rank <= 10) return 'TRIBE WARRIOR';
-    if (rank <= 50) return 'HUNTER PATHFINDER';
-    return 'SACRED TRAVELER';
-  }
 
   List<LeaderboardEntry> _mapToEntries(
     List<Map<String, dynamic>> data,
