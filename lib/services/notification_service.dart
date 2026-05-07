@@ -28,7 +28,7 @@ class NotificationService {
       iOS: iosSettings,
     );
 
-    await _notifications.initialize(settings);
+    await _notifications.initialize(settings: settings);
   }
 
   Future<void> showStreakWarning() async {
@@ -47,10 +47,10 @@ class NotificationService {
     );
 
     await _notifications.show(
-      0,
-      '🔥 Streak in Danger!',
-      'Keep your daily rhythm alive. Complete a challenge now!',
-      details,
+      id: 0,
+      title: '🔥 Streak in Danger!',
+      body: 'Keep your daily rhythm alive. Complete a challenge now!',
+      notificationDetails: details,
     );
   }
 
@@ -82,13 +82,11 @@ class NotificationService {
     }
 
     await _notifications.zonedSchedule(
-      1,
-      '📖 Word of the Day: $word',
-      'Learn what "$word" means in our ancestral tongue.',
-      scheduledDate,
-      details,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
+      id: 1,
+      title: '📖 Word of the Day: $word',
+      body: 'Learn what "$word" means in our ancestral tongue.',
+      scheduledDate: scheduledDate,
+      notificationDetails: details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
   }

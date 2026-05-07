@@ -874,7 +874,7 @@ class StaffProfileScreen extends ConsumerWidget {
 
     if (action != 'upload') return;
 
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.image,
       allowMultiple: false,
     );

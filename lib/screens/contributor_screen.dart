@@ -1381,7 +1381,7 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
   }
 
   Future<void> _pickAudio(Function(VoidCallback) setModalState) async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.audio,
       allowMultiple: false,
     );

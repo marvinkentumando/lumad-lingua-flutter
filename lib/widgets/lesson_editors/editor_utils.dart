@@ -300,7 +300,7 @@ class EditorUtils {
     required Function(String) onComplete,
   }) async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: allowedExtensions,
       );
