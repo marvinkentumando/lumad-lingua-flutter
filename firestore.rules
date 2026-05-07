@@ -45,8 +45,9 @@ service cloud.firestore {
 
       match /notifications/{notifId} {
         allow read: if isSignedIn() && request.auth.uid == userId;
-        // Allow user to delete their own, or validator to create new ones (approval notifications)
-        allow write: if isSignedIn() && (request.auth.uid == userId || isValidator());
+        // Allow any signed-in user to CREATE a notification for someone else (used for Cheers/Salutes)
+        allow create: if isSignedIn();
+        allow update, delete: if isSignedIn() && (request.auth.uid == userId || isValidator());
       }
 
       match /achievements/{badgeId} {

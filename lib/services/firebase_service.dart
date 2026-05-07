@@ -642,6 +642,7 @@ class FirebaseService {
   Stream<List<Map<String, dynamic>>> getLeaderboardLearners() {
     return _db
         .collection('users')
+        .where('role', isEqualTo: 'learner')
         .orderBy('xp', descending: true)
         .limit(20)
         .snapshots()
@@ -654,6 +655,7 @@ class FirebaseService {
   Stream<List<Map<String, dynamic>>> getLeaderboardContributors() {
     return _db
         .collection('users')
+        .where('role', isEqualTo: 'contributor')
         .orderBy('wordCount', descending: true)
         .limit(20)
         .snapshots()

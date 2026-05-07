@@ -1122,7 +1122,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final name = user['username'] ?? user['name'] ?? 'Anonymous';
     final xp = user['xp'] ?? 0;
-    final avatarUrl = user['avatarUrl'];
+    final avatarUrl = user['photoURL'] ?? user['avatarUrl'];
     final title = _getLevelTitle(xp);
 
     return Padding(

@@ -17,13 +17,12 @@ subprojects {
 
     project.plugins.withId("com.android.library") {
         project.extensions.configure<com.android.build.gradle.LibraryExtension>("android") {
-            compileSdkVersion(35)
-            buildToolsVersion("35.0.0")
+            compileSdkVersion(36)
             ndkVersion = "27.0.12077973"
             (this as ExtensionAware).extra.set("flutter", mapOf(
-                "compileSdkVersion" to 35,
+                "compileSdkVersion" to 36,
                 "minSdkVersion" to 23,
-                "targetSdkVersion" to 35,
+                "targetSdkVersion" to 36,
                 "ndkVersion" to "27.0.12077973"
             ))
         }
