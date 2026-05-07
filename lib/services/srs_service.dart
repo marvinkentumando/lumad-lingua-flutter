@@ -1,4 +1,4 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 enum MasteryLevel { newWord, learning, proficient, mastered }
 
@@ -56,5 +56,6 @@ class SRSService {
 final srsStatsProvider = FutureProvider<SRSStats>((ref) {
   return ref.read(srsServiceProvider).getStats();
 });
+
 
 

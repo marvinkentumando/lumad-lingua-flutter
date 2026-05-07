@@ -650,3 +650,4 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
     );
   }
 }
+

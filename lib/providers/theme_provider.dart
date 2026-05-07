@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ThemeNotifier extends Notifier<ThemeMode> {
@@ -17,5 +17,6 @@ class ThemeNotifier extends Notifier<ThemeMode> {
 final themeNotifierProvider = NotifierProvider<ThemeNotifier, ThemeMode>(
   ThemeNotifier.new,
 );
+
 
 

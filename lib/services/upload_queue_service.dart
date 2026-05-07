@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -62,5 +62,6 @@ class UploadQueueService extends Notifier<bool> {
 final uploadQueueProvider = NotifierProvider<UploadQueueService, bool>(() {
   return UploadQueueService();
 });
+
 
 

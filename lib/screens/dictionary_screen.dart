@@ -737,3 +737,4 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard>
 }
 
 enum _DictionarySort { alphabetical, reverseAlphabetical, newest, oldest }
+

@@ -1,4 +1,4 @@
-﻿enum ActivityType {
+enum ActivityType {
   configuration,
   vocabulary,
   mcq,
@@ -74,5 +74,6 @@ class LessonStep {
     }
   }
 }
+
 
 

@@ -1,4 +1,4 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_service.dart';
 
 enum UserRole { learner, contributor, validator, educator, admin }
@@ -27,5 +27,6 @@ class RoleNotifier extends Notifier<UserRole> {
 }
 
 final roleProvider = NotifierProvider<RoleNotifier, UserRole>(RoleNotifier.new);
+
 
 

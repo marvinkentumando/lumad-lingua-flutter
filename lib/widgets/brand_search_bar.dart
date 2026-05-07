@@ -244,3 +244,4 @@ class _BrandSearchBarState extends State<BrandSearchBar> {
     );
   }
 }
+

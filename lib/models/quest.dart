@@ -1,4 +1,4 @@
-﻿// No imports needed currently
+// No imports needed currently
 
 enum QuestType { xp, pronunciation, lesson, flashcard }
 
@@ -89,5 +89,6 @@ class Quest {
     };
   }
 }
+
 
 

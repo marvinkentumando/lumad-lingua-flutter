@@ -1273,3 +1273,4 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return '${minutes}M';
   }
 }
+

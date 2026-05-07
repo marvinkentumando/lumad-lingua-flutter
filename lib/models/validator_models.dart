@@ -1,4 +1,4 @@
-﻿class ValidatorStats {
+class ValidatorStats {
   final int pendingEntries;
   final int pendingVoices;
   final int pendingLessons;
@@ -42,5 +42,6 @@ class ValidationItem {
     this.priority = 'normal',
   });
 }
+
 
 

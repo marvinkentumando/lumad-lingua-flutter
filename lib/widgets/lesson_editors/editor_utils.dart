@@ -300,7 +300,7 @@ class EditorUtils {
     required Function(String) onComplete,
   }) async {
     try {
-      final result = await FilePicker.pickFiles(
+      final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: allowedExtensions,
       );
@@ -581,5 +581,6 @@ class _AudioRecorderDialogState extends State<AudioRecorderDialog> {
     );
   }
 }
+
 
 

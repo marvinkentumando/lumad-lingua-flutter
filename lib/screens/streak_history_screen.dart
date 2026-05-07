@@ -347,3 +347,4 @@ class StreakHistoryScreen extends ConsumerWidget {
     );
   }
 }
+

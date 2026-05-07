@@ -1,4 +1,4 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/dictionary_entry.dart';
 import '../services/word_of_day_service.dart';
 
@@ -7,5 +7,6 @@ import '../services/word_of_day_service.dart';
 final wordOfTheDayProvider = StreamProvider<DictionaryEntry?>((ref) {
   return ref.watch(wordOfDayServiceProvider).getWordOfDay();
 });
+
 
 

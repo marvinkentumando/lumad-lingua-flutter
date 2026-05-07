@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../models/lesson_step.dart';
 import '../activity_views/sentence_reordering_view.dart';
 
@@ -27,5 +27,6 @@ class SentenceReorderingPreview extends StatelessWidget {
     );
   }
 }
+
 
 

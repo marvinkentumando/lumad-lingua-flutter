@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../models/lesson_step.dart';
 import '../activity_views/matching_view.dart';
 
@@ -31,5 +31,6 @@ class MatchingPreview extends StatelessWidget {
     );
   }
 }
+
 
 

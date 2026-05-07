@@ -279,3 +279,4 @@ class MainLayout extends ConsumerWidget {
     ).animate().fadeIn().slideX(begin: 0.2);
   }
 }
+

@@ -1,4 +1,4 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/artifact.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
@@ -21,5 +21,6 @@ final artifactStatsProvider = Provider((ref) {
 
   return {'earned': earnedCount, 'total': totalCount};
 });
+
 
 

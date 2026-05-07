@@ -1,4 +1,4 @@
-﻿import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart';
 import '../models/geo_recording.dart';
 
 List<AudioRecording> _generateMockAudios(String dialect) {
@@ -463,5 +463,6 @@ final List<GeoRecording> mockRecordings = [
     recordings: _generateMockAudios('Mandaya'),
   ),
 ];
+
 
 

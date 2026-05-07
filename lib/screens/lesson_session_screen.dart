@@ -1616,3 +1616,4 @@ class _SummaryStatRow extends StatelessWidget {
     );
   }
 }
+

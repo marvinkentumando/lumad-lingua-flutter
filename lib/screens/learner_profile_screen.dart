@@ -877,7 +877,7 @@ class LearnerProfileScreen extends ConsumerWidget {
 
     if (action != 'upload') return;
 
-    final result = await FilePicker.pickFiles(
+    final result = await FilePicker.platform.pickFiles(
       type: FileType.image,
       allowMultiple: false,
     );
@@ -1449,3 +1449,4 @@ class _StaffStatsRow extends ConsumerWidget {
     );
   }
 }
+

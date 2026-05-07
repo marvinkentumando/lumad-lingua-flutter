@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 class IconUtils {
   static IconData getIconData(String iconName) {
@@ -36,5 +36,6 @@ class IconUtils {
     }
   }
 }
+
 
 

@@ -1,4 +1,4 @@
-﻿// GENERATED CODE - DO NOT MODIFY BY HAND
+// GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'lesson.dart';
 
@@ -72,5 +72,6 @@ class LessonAdapter extends TypeAdapter<Lesson> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+
 
 

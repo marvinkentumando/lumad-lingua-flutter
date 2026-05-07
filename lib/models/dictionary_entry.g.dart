@@ -1,4 +1,4 @@
-﻿// GENERATED CODE - DO NOT MODIFY BY HAND
+// GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'dictionary_entry.dart';
 
@@ -185,5 +185,6 @@ class ValidationStatusAdapter extends TypeAdapter<ValidationStatus> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+
 
 

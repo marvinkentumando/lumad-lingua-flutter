@@ -1,4 +1,4 @@
-﻿import '../models/dictionary_entry.dart';
+import '../models/dictionary_entry.dart';
 
 final List<DictionaryEntry> mockDictionary = [
   const DictionaryEntry(
@@ -38,5 +38,6 @@ final List<DictionaryEntry> mockDictionary = [
     usageContext: 'Refers to climbing a mountain or stairs.',
   ),
 ];
+
 
 

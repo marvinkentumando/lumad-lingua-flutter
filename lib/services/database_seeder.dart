@@ -1,4 +1,4 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DatabaseSeeder {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -263,5 +263,6 @@ class DatabaseSeeder {
     await batch.commit();
   }
 }
+
 
 

@@ -1,4 +1,4 @@
-﻿import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart';
 
 enum RecordingLanguage { mansaka, mandaya, lumad, manobo }
 
@@ -75,5 +75,6 @@ class GeoRecording {
     );
   }
 }
+
 
 
