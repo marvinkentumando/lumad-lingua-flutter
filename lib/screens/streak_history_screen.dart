@@ -83,7 +83,7 @@ class StreakHistoryScreen extends ConsumerWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.gold500.withOpacity(0.2),
+                      color: AppColors.gold500.withValues(alpha: 0.2),
                       blurRadius: 40,
                       spreadRadius: 10,
                     ),
@@ -107,9 +107,9 @@ class StreakHistoryScreen extends ConsumerWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
+                    color: Colors.black.withValues(alpha: 0.6),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.gold500.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     '${student.displayedStreak} DAYS',
@@ -152,7 +152,7 @@ class StreakHistoryScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.gold500.withOpacity(0.1),
+              color: AppColors.gold500.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.shield_rounded, color: AppColors.gold500, size: 28),

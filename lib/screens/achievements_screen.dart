@@ -117,7 +117,7 @@ class AchievementsScreen extends ConsumerWidget {
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: Divider(color: AppColors.gold500.withOpacity(0.2)),
+          child: Divider(color: AppColors.gold500.withValues(alpha: 0.2)),
         ),
       ],
     );
@@ -186,7 +186,7 @@ class AchievementsScreen extends ConsumerWidget {
                   : Container(
                       width: double.infinity,
                       decoration: BoxDecoration(
-                        color: tierColor.withOpacity(0.1),
+                        color: tierColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Center(

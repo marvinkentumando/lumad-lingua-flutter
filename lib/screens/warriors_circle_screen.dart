@@ -104,7 +104,7 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
             children: [
               CircleAvatar(
                 radius: 30,
-                backgroundColor: AppColors.gold500.withOpacity(0.1),
+                backgroundColor: AppColors.gold500.withValues(alpha: 0.1),
                 child: Text(
                   friend['avatar'],
                   style: const TextStyle(fontSize: 30),

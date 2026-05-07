@@ -93,7 +93,7 @@ class NotificationScreen extends ConsumerWidget {
                           decoration: BoxDecoration(
                             color: _getNotificationColor(
                               notification['type'],
-                            ).withOpacity(0.1),
+                            ).withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: Text(

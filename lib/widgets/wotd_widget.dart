@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -79,7 +79,7 @@ class WotdWidget extends ConsumerWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
+                    color: Colors.white.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -113,7 +113,7 @@ class WotdWidget extends ConsumerWidget {
                         Text(
                           entry.phonetic!,
                           style: AppTypography.mono.copyWith(
-                            color: AppColors.gold500.withOpacity(0.4),
+                            color: AppColors.gold500.withValues(alpha: 0.4),
                             fontSize: 14,
                           ),
                         ),
@@ -156,7 +156,7 @@ class WotdWidget extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(18),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.gold500.withOpacity(0.2),
+                              color: AppColors.gold500.withValues(alpha: 0.2),
                               blurRadius: 15,
                               offset: const Offset(0, 8),
                             ),
@@ -177,7 +177,7 @@ class WotdWidget extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.03),
+                color: Colors.white.withValues(alpha: 0.03),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
@@ -233,7 +233,7 @@ class WotdWidget extends ConsumerWidget {
                           width: 120,
                           height: 14,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.05),
+                            color: Colors.white.withValues(alpha: 0.05),
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
@@ -241,7 +241,7 @@ class WotdWidget extends ConsumerWidget {
                           width: 60,
                           height: 14,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.05),
+                            color: Colors.white.withValues(alpha: 0.05),
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
@@ -258,7 +258,7 @@ class WotdWidget extends ConsumerWidget {
                                 width: 180,
                                 height: 36,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
+                                  color: Colors.white.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
@@ -267,7 +267,7 @@ class WotdWidget extends ConsumerWidget {
                                 width: 100,
                                 height: 14,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.05),
+                                  color: Colors.white.withValues(alpha: 0.05),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                               ),
@@ -278,7 +278,7 @@ class WotdWidget extends ConsumerWidget {
                           width: 56,
                           height: 56,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.05),
+                            color: Colors.white.withValues(alpha: 0.05),
                             borderRadius: BorderRadius.circular(18),
                           ),
                         ),
@@ -289,7 +289,7 @@ class WotdWidget extends ConsumerWidget {
                       height: 60,
                       width: double.infinity,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.03),
+                        color: Colors.white.withValues(alpha: 0.03),
                         borderRadius: BorderRadius.circular(20),
                       ),
                     ),
@@ -298,7 +298,7 @@ class WotdWidget extends ConsumerWidget {
                       height: 48,
                       width: double.infinity,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
+                        color: Colors.white.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
@@ -308,7 +308,7 @@ class WotdWidget extends ConsumerWidget {
               .animate(onPlay: (c) => c.repeat())
               .shimmer(
                 duration: 1.5.seconds,
-                color: Colors.white.withOpacity(0.05),
+                color: Colors.white.withValues(alpha: 0.05),
               ),
     );
   }

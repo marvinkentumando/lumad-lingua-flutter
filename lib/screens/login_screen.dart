@@ -88,8 +88,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     end: Alignment.bottomCenter,
                     colors: [
                       isDark
-                          ? AppColors.forest900.withOpacity(0.7)
-                          : Colors.white.withOpacity(0.8),
+                          ? AppColors.forest900.withValues(alpha: 0.7)
+                          : Colors.white.withValues(alpha: 0.8),
                       isDark ? AppColors.forest900 : AppColors.creamBg,
                     ],
                   ),
@@ -166,9 +166,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: AppColors.semanticRed.withOpacity(0.1),
+        color: AppColors.semanticRed.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.semanticRed.withOpacity(0.3)),
+        border: Border.all(color: AppColors.semanticRed.withValues(alpha: 0.3)),
       ),
       child: Text(
         _errorMessage!,

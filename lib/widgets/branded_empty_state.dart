@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -30,17 +30,17 @@ class BrandedEmptyState extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
-                color: AppColors.gold500.withOpacity(0.05),
+                color: AppColors.gold500.withValues(alpha: 0.05),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: AppColors.gold500.withOpacity(0.1),
+                  color: AppColors.gold500.withValues(alpha: 0.1),
                   width: 2,
                 ),
               ),
               child: Icon(
                 icon,
                 size: 64,
-                color: AppColors.gold500.withOpacity(0.5),
+                color: AppColors.gold500.withValues(alpha: 0.5),
               ),
             )
             .animate(onPlay: (c) => c.repeat(reverse: true))

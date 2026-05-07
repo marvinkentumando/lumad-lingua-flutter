@@ -33,46 +33,46 @@ dependencies:
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
-  go_router: ^14.0.0
-  google_fonts: ^6.2.1
-  flutter_riverpod: ^2.5.1
-  flutter_map: ^7.0.2
+  cupertino_icons: ^1.0.9
+  go_router: ^17.2.3
+  google_fonts: ^8.1.0
+  flutter_riverpod: ^2.6.1
+  flutter_map: ^8.3.0
   latlong2: ^0.9.1
-  flutter_map_marker_cluster: ^1.2.0
-  firebase_core: ^3.0.0
-  cloud_firestore: ^5.0.0
-  firebase_auth: ^5.0.0
-  share_plus: ^12.0.2
+  flutter_map_marker_cluster: ^8.2.2
+  firebase_core: ^4.7.0
+  cloud_firestore: ^6.3.0
+  firebase_auth: ^6.4.0
+  share_plus: ^13.1.0
   speech_to_text: ^7.3.0
-  flutter_dotenv: ^6.0.0
-  record: ^6.1.1
-  audioplayers: ^6.1.1
-  lottie: ^3.1.2
-  path_provider: ^2.1.4
+  flutter_dotenv: ^6.0.1
+  record: ^6.2.0
+  audioplayers: ^6.6.0
+  lottie: ^3.3.3
+  path_provider: ^2.1.5
   flutter_animate: ^4.5.2
-  shared_preferences: ^2.2.3
-  firebase_storage: ^12.0.0
-  file_picker: ^8.1.7
+  shared_preferences: ^2.5.5
+  firebase_storage: ^13.3.0
+  file_picker: ^12.0.0-beta.1
   geocoding: ^4.0.0
-  geolocator: 13.0.2
+  geolocator: ^14.0.1
   intl: ^0.20.2
-  path: ^1.9.0
+  path: ^1.9.1
   hive: ^2.2.3
   hive_flutter: ^1.1.0
-  connectivity_plus: ^6.0.3
+  connectivity_plus: ^7.1.1
   http: ^1.6.0
   flutter_cache_manager: ^3.4.1
   cached_network_image: ^3.4.1
   audio_waveforms: ^2.0.2
   rxdart: ^0.28.0
   confetti: ^0.8.0
-  rive: ^0.13.15
+  rive: ^0.13.11
   sensors_plus: ^7.0.0
   vibration: ^3.1.8
-  animations: ^2.0.11
-  flutter_local_notifications: ^17.2.3
-  timezone: ^0.9.4
+  animations: ^2.2.0
+  flutter_local_notifications: ^21.0.0
+  timezone: ^0.11.0
 
 dev_dependencies:
   flutter_test:
@@ -85,7 +85,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^4.0.0
+  flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

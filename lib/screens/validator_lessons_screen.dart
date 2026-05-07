@@ -177,10 +177,10 @@ class _ValidatorLessonsScreenState
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.semanticRed.withOpacity(0.1),
+                      color: AppColors.semanticRed.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: AppColors.semanticRed.withOpacity(0.3),
+                        color: AppColors.semanticRed.withValues(alpha: 0.3),
                       ),
                     ),
                     child: Text(
@@ -339,7 +339,7 @@ class _ValidatorLessonsScreenState
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.gold500.withOpacity(0.1)
+              ? AppColors.gold500.withValues(alpha: 0.1)
               : (Theme.of(context).brightness == Brightness.dark
                     ? AppColors.forest800
                     : Colors.white),
@@ -493,7 +493,7 @@ class _ValidatorLessonsScreenState
                 filled: true,
                 fillColor: Theme.of(context).brightness == Brightness.dark
                     ? AppColors.forest900
-                    : Colors.black.withOpacity(0.05),
+                    : Colors.black.withValues(alpha: 0.05),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

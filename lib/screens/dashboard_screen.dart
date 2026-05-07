@@ -117,9 +117,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.gold500.withOpacity(0.1),
+        color: AppColors.gold500.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.gold500.withOpacity(0.3)),
+        border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -242,7 +242,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Text(
               'RESET IN ${_getTimeUntilReset()}',
               style: AppTypography.label.copyWith(
-                color: AppColors.gold500.withOpacity(0.3),
+                color: AppColors.gold500.withValues(alpha: 0.3),
                 fontSize: 9,
               ),
             ),
@@ -312,20 +312,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isClaimed
-              ? AppColors.gold500.withOpacity(0.02)
+              ? AppColors.gold500.withValues(alpha: 0.02)
               : (isDone
-                    ? AppColors.gold500.withOpacity(0.1)
-                    : Colors.white.withOpacity(0.02)),
+                    ? AppColors.gold500.withValues(alpha: 0.1)
+                    : Colors.white.withValues(alpha: 0.02)),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: isClaimed
                 ? (isDark
-                      ? Colors.white.withOpacity(0.05)
+                      ? Colors.white.withValues(alpha: 0.05)
                       : AppColors.creamBorder)
                 : (isDone
-                      ? AppColors.gold500.withOpacity(0.3)
+                      ? AppColors.gold500.withValues(alpha: 0.3)
                       : (isDark
-                            ? Colors.white.withOpacity(0.05)
+                            ? Colors.white.withValues(alpha: 0.05)
                             : AppColors.creamBorder)),
           ),
         ),
@@ -335,10 +335,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: isClaimed
-                    ? Colors.white.withOpacity(0.05)
+                    ? Colors.white.withValues(alpha: 0.05)
                     : (isDone
                           ? AppColors.gold500
-                          : Colors.white.withOpacity(0.05)),
+                          : Colors.white.withValues(alpha: 0.05)),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -381,7 +381,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         valueColor: AlwaysStoppedAnimation<Color>(
                           isDone
                               ? AppColors.gold500
-                              : AppColors.gold500.withOpacity(0.5),
+                              : AppColors.gold500.withValues(alpha: 0.5),
                         ),
                         minHeight: 4,
                       ),
@@ -411,7 +411,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.gold500.withOpacity(0.1),
+                      color: AppColors.gold500.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -496,10 +496,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.3),
+              color: color.withValues(alpha: 0.3),
               blurRadius: 15,
               offset: const Offset(0, 8),
             ),
@@ -512,7 +512,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: Colors.white, size: 24),
@@ -568,10 +568,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.gold500.withOpacity(0.1),
+                      color: AppColors.gold500.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: AppColors.gold500.withOpacity(0.3),
+                        color: AppColors.gold500.withValues(alpha: 0.3),
                       ),
                     ),
                     child: Text(
@@ -719,8 +719,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.black.withOpacity(0.1),
-              Colors.black.withOpacity(0.8),
+              Colors.black.withValues(alpha: 0.1),
+              Colors.black.withValues(alpha: 0.8),
             ],
           ),
         ),
@@ -799,9 +799,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.02),
+            color: Colors.white.withValues(alpha: 0.02),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
           ),
           child: Column(
             children: [
@@ -862,7 +862,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ],
           ),
         ),
-        Icon(icon, color: iconColor.withOpacity(0.4), size: 18),
+        Icon(icon, color: iconColor.withValues(alpha: 0.4), size: 18),
       ],
     );
   }
@@ -903,7 +903,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
-                      Colors.black.withOpacity(0.5),
+                      Colors.black.withValues(alpha: 0.5),
                     ],
                   ),
                 ),
@@ -929,10 +929,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.gold500.withOpacity(0.1),
+                            color: AppColors.gold500.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                              color: AppColors.gold500.withOpacity(0.3),
+                              color: AppColors.gold500.withValues(alpha: 0.3),
                             ),
                           ),
                           child: Text(
@@ -1014,7 +1014,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: (isDark ? Colors.white : Colors.black).withOpacity(0.02),
+        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.02),
         borderRadius: BorderRadius.circular(24),
       ),
       child: topLearnersAsync.when(
@@ -1081,9 +1081,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.02),
+          color: Colors.white.withValues(alpha: 0.02),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
         child: const Row(
           children: [
@@ -1230,7 +1230,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               children: [
                 Icon(
                   Icons.local_fire_department_rounded,
-                  color: AppColors.gold500.withOpacity(0.2),
+                  color: AppColors.gold500.withValues(alpha: 0.2),
                   size: 48,
                 ).animate(onPlay: (c) => c.repeat()).scale(end: const Offset(1.2, 1.2)),
                 const Icon(

@@ -73,10 +73,10 @@ class LearningHubScreen extends ConsumerWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.gold500.withOpacity(0.1),
+                          color: AppColors.gold500.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: AppColors.gold500.withOpacity(0.3),
+                            color: AppColors.gold500.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Row(
@@ -211,7 +211,7 @@ class LearningHubScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
+                color: iconColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(icon, color: iconColor, size: 24),
@@ -270,8 +270,8 @@ class LearningHubScreen extends ConsumerWidget {
                   color: canAfford
                       ? AppColors.gold500
                       : (isDark
-                            ? Colors.white.withOpacity(0.05)
-                            : Colors.black.withOpacity(0.05)),
+                            ? Colors.white.withValues(alpha: 0.05)
+                            : Colors.black.withValues(alpha: 0.05)),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -622,8 +622,8 @@ class LearningHubScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: isDark
-                        ? Colors.white.withOpacity(0.05)
-                        : Colors.black.withOpacity(0.05),
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.black.withValues(alpha: 0.05),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -671,8 +671,8 @@ class LearningHubScreen extends ConsumerWidget {
                 value: isLocked ? 0.0 : progress,
                 minHeight: 12,
                 backgroundColor: isDark
-                    ? Colors.white.withOpacity(0.05)
-                    : Colors.black.withOpacity(0.05),
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.black.withValues(alpha: 0.05),
                 valueColor: AlwaysStoppedAnimation(
                   isLocked ? Colors.grey : accentColor,
                 ),

@@ -86,18 +86,18 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                             )
                           : null,
                       filled: true,
-                      fillColor: AppColors.forest800.withOpacity(0.5),
+                      fillColor: AppColors.forest800.withValues(alpha: 0.5),
                       contentPadding: const EdgeInsets.symmetric(vertical: 0),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide(
-                          color: Colors.white.withOpacity(0.05),
+                          color: Colors.white.withValues(alpha: 0.05),
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide(
-                          color: Colors.white.withOpacity(0.05),
+                          color: Colors.white.withValues(alpha: 0.05),
                         ),
                       ),
                     ),
@@ -135,7 +135,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                       vertical: 6,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: AppColors.gold500.withOpacity(0.1,
+                                      color: AppColors.gold500.withValues(alpha: 0.1,
                                       ),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
@@ -253,7 +253,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 label: Text(r),
                 backgroundColor: isSelected
                     ? AppColors.gold500
-                    : Colors.white.withOpacity(0.05),
+                    : Colors.white.withValues(alpha: 0.05),
                 labelStyle: TextStyle(
                   color: isSelected ? AppColors.forest900 : Colors.white70,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -272,10 +272,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: AppColors.forest900.withOpacity(0.8),
+        color: AppColors.forest900.withValues(alpha: 0.8),
         border: Border(
           bottom: BorderSide(
-            color: Colors.white.withOpacity(0.05),
+            color: Colors.white.withValues(alpha: 0.05),
             width: 1,
           ),
         ),
@@ -285,10 +285,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.gold500.withOpacity(0.1),
+              color: AppColors.gold500.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: AppColors.gold500.withOpacity(0.2),
+                color: AppColors.gold500.withValues(alpha: 0.2),
               ),
             ),
             child: const Text('🛡️', style: TextStyle(fontSize: 20)),
@@ -309,7 +309,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 Text(
                   'User Management',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                     fontSize: 11,
                   ),
                 ),
@@ -351,12 +351,12 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
           : const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.forest700.withOpacity(0.3),
+          color: AppColors.forest700.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSuspended
-                ? AppColors.semanticRed.withOpacity(0.4)
-                : Colors.white.withOpacity(0.05),
+                ? AppColors.semanticRed.withValues(alpha: 0.4)
+                : Colors.white.withValues(alpha: 0.05),
             width: isSuspended ? 1.5 : 1,
           ),
         ),
@@ -379,13 +379,13 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                           border: Border.all(
                             color: isSuspended
                                 ? Colors.white24
-                                : color.withOpacity(0.3),
+                                : color.withValues(alpha: 0.3),
                             width: 2,
                           ),
                         ),
                         child: CircleAvatar(
                           radius: 22,
-                          backgroundColor: color.withOpacity(0.1),
+                          backgroundColor: color.withValues(alpha: 0.1),
                           child: Text(
                             user.name[0],
                             style: TextStyle(
@@ -448,7 +448,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                             Text(
                               '${user.xp} XP',
                               style: AppTypography.mono.copyWith(
-                                color: AppColors.gold500.withOpacity(isSuspended ? 0.2 : 0.6,
+                                color: AppColors.gold500.withValues(alpha: isSuspended ? 0.2 : 0.6,
                                 ),
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
@@ -530,7 +530,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   children: [
                     CircleAvatar(
                       radius: 40,
-                      backgroundColor: color.withOpacity(0.1),
+                      backgroundColor: color.withValues(alpha: 0.1),
                       child: Text(
                         user.name[0],
                         style: TextStyle(
@@ -605,10 +605,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.semanticRed.withOpacity(0.1),
+                    color: AppColors.semanticRed.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: AppColors.semanticRed.withOpacity(0.3),
+                      color: AppColors.semanticRed.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
@@ -664,7 +664,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
           children: [
             Icon(
               icon,
-              color: AppColors.gold500.withOpacity(0.5),
+              color: AppColors.gold500.withValues(alpha: 0.5),
               size: 18,
             ),
             const SizedBox(height: 6),
@@ -729,7 +729,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: selectedRole,
+                initialValue: selectedRole,
                 dropdownColor: AppColors.forest800,
                 decoration: InputDecoration(
                   labelText: 'Role',
@@ -806,7 +806,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -1033,7 +1033,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, color: isCurrent ? color : Colors.white24, size: 20),
@@ -1096,5 +1096,6 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     );
   }
 }
+
 
 

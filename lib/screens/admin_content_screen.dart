@@ -163,12 +163,12 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         color: isDark 
-            ? AppColors.forest900.withOpacity(0.8)
+            ? AppColors.forest900.withValues(alpha: 0.8)
             : AppColors.creamBg,
         border: Border(
           bottom: BorderSide(
             color: isDark 
-                ? Colors.white.withOpacity(0.05)
+                ? Colors.white.withValues(alpha: 0.05)
                 : AppColors.creamBorder,
             width: 1,
           ),
@@ -179,10 +179,10 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.gold500.withOpacity(0.1),
+              color: AppColors.gold500.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: AppColors.gold500.withOpacity(0.2),
+                color: AppColors.gold500.withValues(alpha: 0.2),
               ),
             ),
             child: const Text('🛡️', style: TextStyle(fontSize: 20)),
@@ -203,7 +203,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                 Text(
                   'Content Moderation',
                   style: TextStyle(
-                    color: isDark ? Colors.white.withOpacity(0.3) : AppColors.creamText3,
+                    color: isDark ? Colors.white.withValues(alpha: 0.3) : AppColors.creamText3,
                     fontSize: 11,
                   ),
                 ),
@@ -215,7 +215,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
               ),
               child: Icon(
                 Icons.settings_suggest_rounded,
@@ -262,7 +262,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
               : null,
           filled: true,
           fillColor: isDark 
-              ? AppColors.forest800.withOpacity(0.5)
+              ? AppColors.forest800.withValues(alpha: 0.5)
               : Colors.white,
           contentPadding: const EdgeInsets.symmetric(vertical: 0),
           border: OutlineInputBorder(
@@ -273,7 +273,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
             borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide(
               color: isDark 
-                  ? Colors.white.withOpacity(0.05)
+                  ? Colors.white.withValues(alpha: 0.05)
                   : AppColors.creamBorder,
             ),
           ),
@@ -288,7 +288,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
       margin: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       height: 48,
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03),
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(16),
       ),
       child: TabBar(
@@ -490,14 +490,14 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
         decoration: BoxDecoration(
-          color: isDark ? AppColors.forest700.withOpacity(0.3) : Colors.white,
+          color: isDark ? AppColors.forest700.withValues(alpha: 0.3) : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isDark ? Colors.white.withOpacity(0.05) : AppColors.creamBorder,
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.creamBorder,
           ),
           boxShadow: isDark ? [] : [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -511,7 +511,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
+                  color: iconColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(icon, color: iconColor, size: 24),
@@ -541,7 +541,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                     Text(
                       author,
                       style: AppTypography.mono.copyWith(
-                        color: AppColors.gold500.withOpacity(0.6),
+                        color: AppColors.gold500.withValues(alpha: 0.6),
                         fontSize: 10,
                       ),
                     ),
@@ -579,7 +579,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.semanticRed.withOpacity(0.1),
+                color: AppColors.semanticRed.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.warning_amber_rounded, color: AppColors.semanticRed, size: 32),
@@ -667,7 +667,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: (color ?? Colors.white).withOpacity(0.05),
+          color: (color ?? Colors.white).withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: color ?? Colors.white70, size: 18),
@@ -820,7 +820,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                       ),
                     ),
                     value: e.value,
-                    activeColor: AppColors.gold500,
+                    activeThumbColor: AppColors.gold500,
                     onChanged: (v) {
                       HapticService.light();
                       setDialogState(() => _dialectToggles[e.key] = v);
@@ -862,7 +862,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, color: color, size: 20),

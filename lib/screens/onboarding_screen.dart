@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
@@ -112,11 +112,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Container(
               padding: const EdgeInsets.all(40),
               decoration: BoxDecoration(
-                color: accentColor.withOpacity(0.1),
+                color: accentColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
-                border: Border.all(color: accentColor.withOpacity(0.3), width: 2),
+                border: Border.all(color: accentColor.withValues(alpha: 0.3), width: 2),
                 boxShadow: [
-                  BoxShadow(color: accentColor.withOpacity(0.1), blurRadius: 40, spreadRadius: 10),
+                  BoxShadow(color: accentColor.withValues(alpha: 0.1), blurRadius: 40, spreadRadius: 10),
                 ],
               ),
               child: Icon(icon, size: 100, color: accentColor),
@@ -192,7 +192,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
-              color: AppColors.gold500.withOpacity(0.3),
+              color: AppColors.gold500.withValues(alpha: 0.3),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),

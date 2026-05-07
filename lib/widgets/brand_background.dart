@@ -66,8 +66,8 @@ class _BrandBackgroundState extends ConsumerState<BrandBackground>
           child: CustomPaint(
             painter: CulturalPatternPainter(
               color: isDark
-                  ? culturalTheme.accentColor.withOpacity(0.1)
-                  : culturalTheme.primaryColor.withOpacity(0.05),
+                  ? culturalTheme.accentColor.withValues(alpha: 0.1)
+                  : culturalTheme.primaryColor.withValues(alpha: 0.05),
               patternType: culturalTheme.patternType,
               scale: 1.5,
             ),
@@ -81,7 +81,7 @@ class _BrandBackgroundState extends ConsumerState<BrandBackground>
             return Stack(
               children: [
                 _buildOrb(
-                  color: culturalTheme.primaryColor.withOpacity(0.12),
+                  color: culturalTheme.primaryColor.withValues(alpha: 0.12),
                   size: 600,
                   offset: Offset(
                     math.sin(_controller.value * 2 * math.pi) * 100 + 50,
@@ -89,7 +89,7 @@ class _BrandBackgroundState extends ConsumerState<BrandBackground>
                   ),
                 ),
                 _buildOrb(
-                  color: culturalTheme.accentColor.withOpacity(0.08),
+                  color: culturalTheme.accentColor.withValues(alpha: 0.08),
                   size: 450,
                   offset: Offset(
                     math.cos(_controller.value * 2 * math.pi + math.pi) * 150 + 250,
@@ -135,7 +135,7 @@ class _BrandBackgroundState extends ConsumerState<BrandBackground>
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: RadialGradient(
-            colors: [color, color.withOpacity(0.0)],
+            colors: [color, color.withValues(alpha: 0.0)],
           ),
         ),
       ),
@@ -172,7 +172,7 @@ class AmbientEnvironmentPainter extends CustomPainter {
       final x = math.sin(t * 2 * math.pi) * 50 + (size.width * i / 3);
       final y = size.height * 0.7 + math.cos(t * math.pi) * 30;
       
-      paint.color = Colors.white.withOpacity(0.03 + (0.02 * math.sin(t * math.pi)));
+      paint.color = Colors.white.withValues(alpha: 0.03 + (0.02 * math.sin(t * math.pi)));
       
       canvas.drawOval(
         Rect.fromCenter(
@@ -191,8 +191,8 @@ class AmbientEnvironmentPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          primaryColor.withOpacity(0.08),
-          primaryColor.withOpacity(0.0),
+          primaryColor.withValues(alpha: 0.08),
+          primaryColor.withValues(alpha: 0.0),
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height * 0.5));
 

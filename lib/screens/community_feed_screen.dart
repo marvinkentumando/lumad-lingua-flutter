@@ -83,7 +83,7 @@ class CommunityFeedScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -157,9 +157,9 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: themeColor.withOpacity(0.1),
+                color: themeColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
-                border: Border.all(color: themeColor.withOpacity(0.3)),
+                border: Border.all(color: themeColor.withValues(alpha: 0.3)),
               ),
               child: Text(
                 widget.activity.emoji,
@@ -218,12 +218,12 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
                           ),
                           decoration: BoxDecoration(
                             color: isLiked
-                                ? AppColors.semanticRed.withOpacity(0.1)
-                                : Colors.white.withOpacity(0.03),
+                                ? AppColors.semanticRed.withValues(alpha: 0.1)
+                                : Colors.white.withValues(alpha: 0.03),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: isLiked
-                                  ? AppColors.semanticRed.withOpacity(0.2)
+                                  ? AppColors.semanticRed.withValues(alpha: 0.2)
                                   : Colors.white10,
                             ),
                           ),
@@ -269,7 +269,7 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.03),
+                            color: Colors.white.withValues(alpha: 0.03),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Colors.white10),
                           ),

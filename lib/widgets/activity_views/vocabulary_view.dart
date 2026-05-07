@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
@@ -70,12 +70,12 @@ class VocabularyView extends StatelessWidget {
                 color: AppColors.forestDarkCard,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                  color: AppColors.gold500.withOpacity(0.3),
+                  color: AppColors.gold500.withValues(alpha: 0.3),
                   width: 2,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha: 0.2),
                     blurRadius: 10,
                     offset: const Offset(0, 5),
                   ),

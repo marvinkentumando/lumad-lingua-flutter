@@ -413,18 +413,18 @@ class MemberProfileScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isEarned
-                    ? tierColor.withOpacity(0.1)
+                    ? tierColor.withValues(alpha: 0.1)
                     : Colors.black26,
                 border: Border.all(
                   color: isEarned
-                      ? tierColor.withOpacity(0.5)
+                      ? tierColor.withValues(alpha: 0.5)
                       : Colors.white10,
                   width: 2,
                 ),
                 boxShadow: isEarned
                     ? [
                         BoxShadow(
-                          color: tierColor.withOpacity(0.2),
+                          color: tierColor.withValues(alpha: 0.2),
                           blurRadius: 10,
                           spreadRadius: 2,
                         ),
@@ -464,7 +464,7 @@ class MemberProfileScreen extends ConsumerWidget {
                   minHeight: 4,
                   backgroundColor: Colors.white10,
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    tierColor.withOpacity(0.5),
+                    tierColor.withValues(alpha: 0.5),
                   ),
                 ),
               ),

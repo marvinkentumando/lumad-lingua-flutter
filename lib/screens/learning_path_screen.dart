@@ -119,8 +119,8 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.white.withOpacity(0.05)
-            : Colors.black.withOpacity(0.05),
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.black.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
@@ -194,7 +194,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
       decoration: BoxDecoration(
         color: isDark
             ? const Color(0xFF14241A)
-            : Colors.black.withOpacity(0.05),
+            : Colors.black.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -382,10 +382,10 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
           totalCount: unitLessons.length,
           icon: IconUtils.getIconData(unitLessons.first.icon),
           stars: totalStars,
-          children: showChildren ? lessonWidgets : const [],
           onTap: !showChildren
               ? () => context.push('/lesson_session?lessonId=${unitLessons.first.id}')
               : null,
+          children: showChildren ? lessonWidgets : const [],
         ),
       );
       children.add(const SizedBox(height: 40));
@@ -492,7 +492,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: primaryColor.withOpacity(0.1 + (0.3 * (1 - _pulseController.value)),
+                            color: primaryColor.withValues(alpha: 0.1 + (0.3 * (1 - _pulseController.value)),
                             ),
                             blurRadius: 40 + (20 * _pulseController.value),
                             spreadRadius: 5 + (15 * _pulseController.value),
@@ -510,19 +510,19 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                       ? primaryColor
                       : (isDark
                             ? const Color(0xFF1B1B1B)
-                            : Colors.black.withOpacity(0.05)),
+                            : Colors.black.withValues(alpha: 0.05)),
                   shape: isExam ? BoxShape.rectangle : BoxShape.circle,
                   borderRadius: isExam ? BorderRadius.circular(20) : null,
                   border: Border.all(
                     color: isActive || isExam
-                        ? Colors.white.withOpacity(0.3)
+                        ? Colors.white.withValues(alpha: 0.3)
                         : Colors.transparent,
                     width: 4,
                   ),
                   boxShadow: isActive || isExam
                       ? [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
+                            color: Colors.black.withValues(alpha: 0.2),
                             blurRadius: 10,
                             offset: const Offset(0, 5),
                           ),

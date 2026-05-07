@@ -48,7 +48,7 @@ class _UnitHeaderCardState extends State<UnitHeaderCard> {
           child: Container(
             width: 4,
             decoration: BoxDecoration(
-              color: AppColors.gold500.withOpacity(0.3),
+              color: AppColors.gold500.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -81,7 +81,7 @@ class _UnitHeaderCardState extends State<UnitHeaderCard> {
           child: Container(
             width: 26, // Connects from left: 34 to left: 60
             height: 4,
-            color: AppColors.gold500.withOpacity(0.3),
+            color: AppColors.gold500.withValues(alpha: 0.3),
           ),
         ),
 
@@ -94,7 +94,7 @@ class _UnitHeaderCardState extends State<UnitHeaderCard> {
               color: isDark ? const Color(0xFF242C26) : AppColors.creamBg,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
+                color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
                 width: 1.5,
               ),
               image: !isDark
@@ -106,7 +106,7 @@ class _UnitHeaderCardState extends State<UnitHeaderCard> {
                   : null,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -171,8 +171,8 @@ class _UnitHeaderCardState extends State<UnitHeaderCard> {
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
                                   color: isDark
-                                      ? Colors.white.withOpacity(0.05)
-                                      : Colors.black.withOpacity(0.05),
+                                      ? Colors.white.withValues(alpha: 0.05)
+                                      : Colors.black.withValues(alpha: 0.05),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Icon(widget.icon, color: AppColors.gold500, size: 28),
@@ -204,7 +204,7 @@ class _UnitHeaderCardState extends State<UnitHeaderCard> {
                                                               : 1))
                                                       .round()
                                               ? AppColors.gold500
-                                              : Colors.grey.withOpacity(0.3),
+                                              : Colors.grey.withValues(alpha: 0.3),
                                           size: 14,
                                         ),
                                       ),
@@ -256,7 +256,7 @@ class _UnitHeaderCardState extends State<UnitHeaderCard> {
                               minHeight: 4,
                               backgroundColor: isDark
                                   ? Colors.white10
-                                  : Colors.black.withOpacity(0.06),
+                                  : Colors.black.withValues(alpha: 0.06),
                               valueColor: const AlwaysStoppedAnimation<Color>(
                                 AppColors.gold500,
                               ),
@@ -278,10 +278,10 @@ class _UnitHeaderCardState extends State<UnitHeaderCard> {
                         : Container(
                             width: double.infinity,
                             decoration: BoxDecoration(
-                              color: isDark ? Colors.black.withOpacity(0.2) : Colors.white.withOpacity(0.4),
+                              color: isDark ? Colors.black.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.4),
                               border: Border(
                                 top: BorderSide(
-                                  color: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
+                                  color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
                                 ),
                               ),
                             ),
@@ -308,7 +308,7 @@ class _UnitHeaderCardState extends State<UnitHeaderCard> {
                       width: 40,
                       height: 3,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.3),
+                        color: Colors.white.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(5),
                       ),
                     ),

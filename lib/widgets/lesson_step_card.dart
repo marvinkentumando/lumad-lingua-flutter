@@ -41,7 +41,7 @@ class LessonStepCard extends StatelessWidget {
             bottom: -24,
             child: Container(
               width: 2,
-              color: AppColors.gold500.withOpacity(0.2),
+              color: AppColors.gold500.withValues(alpha: 0.2),
             ),
           ),
 
@@ -59,7 +59,7 @@ class LessonStepCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: status == LessonStepStatus.locked
                       ? (isDark ? Colors.grey.shade900 : Colors.grey.shade300)
-                      : (status == LessonStepStatus.active ? AppColors.gold500 : AppColors.gold500.withOpacity(0.2)),
+                      : (status == LessonStepStatus.active ? AppColors.gold500 : AppColors.gold500.withValues(alpha: 0.2)),
                   shape: BoxShape.circle,
                   border: status == LessonStepStatus.completed
                       ? Border.all(color: AppColors.gold500, width: 2)
@@ -67,7 +67,7 @@ class LessonStepCard extends StatelessWidget {
                   boxShadow: status == LessonStepStatus.active
                       ? [
                           BoxShadow(
-                            color: AppColors.gold500.withOpacity(0.3),
+                            color: AppColors.gold500.withValues(alpha: 0.3),
                             blurRadius: 10,
                             spreadRadius: 2,
                           ),
@@ -118,7 +118,7 @@ class LessonStepCard extends StatelessWidget {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.gold500.withOpacity(0.15),
+                                color: AppColors.gold500.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(

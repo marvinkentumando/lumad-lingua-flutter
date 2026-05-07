@@ -146,7 +146,7 @@ class ConfigurationEditor extends ConsumerWidget {
                     otherLessons.any((l) => l.id == prerequisiteId);
 
                 return DropdownButtonFormField<String?>(
-                  value: exists ? prerequisiteId : null,
+                  initialValue: exists ? prerequisiteId : null,
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: isDark ? AppColors.forestDarkCard : Colors.white,
@@ -348,7 +348,7 @@ class ConfigurationEditor extends ConsumerWidget {
                   '+ Add Tag',
                   style: TextStyle(color: AppColors.gold500, fontSize: 10),
                 ),
-                backgroundColor: AppColors.gold500.withOpacity(0.1),
+                backgroundColor: AppColors.gold500.withValues(alpha: 0.1),
                 onPressed: () => _showAddTagDialog(context, tags, isDark),
               ),
             ],

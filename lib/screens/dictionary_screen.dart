@@ -267,10 +267,10 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
         decoration: BoxDecoration(
           color: isDark
               ? AppColors.forestDarkCard
-              : Colors.black.withOpacity(0.05),
+              : Colors.black.withValues(alpha: 0.05),
           shape: BoxShape.circle,
           border: Border.all(
-            color: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
+            color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
           ),
         ),
         child: Icon(
@@ -373,12 +373,12 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                       ? (isDark ? AppColors.gold500 : AppColors.forest500)
                       : (isDark
                             ? AppColors.forestLightCard
-                            : Colors.black.withOpacity(0.05)),
+                            : Colors.black.withValues(alpha: 0.05)),
                   borderRadius: BorderRadius.circular(25),
                   border: Border.all(
                     color: isSelected
                         ? Colors.transparent
-                        : (isDark ? Colors.white : Colors.black).withOpacity(0.05),
+                        : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
                   ),
                 ),
                 child: Text(
@@ -472,8 +472,8 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard>
           borderRadius: BorderRadius.circular(32),
           border: Border.all(
             color: widget.isExpanded
-                ? (isDark ? AppColors.gold500 : AppColors.forest500).withOpacity(0.3)
-                : (isDark ? Colors.white : Colors.black).withOpacity(0.05),
+                ? (isDark ? AppColors.gold500 : AppColors.forest500).withValues(alpha: 0.3)
+                : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
           ),
         ),
         child: Column(
@@ -488,7 +488,7 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard>
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.forest50.withOpacity(isDark ? 0.1 : 0.8),
+                    color: AppColors.forest50.withValues(alpha: isDark ? 0.1 : 0.8),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: isDark ? Colors.white24 : AppColors.forest200,
@@ -614,7 +614,7 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard>
             if (widget.isExpanded) ...[
               const SizedBox(height: 24),
               Divider(
-                color: (isDark ? Colors.white : Colors.black).withOpacity(0.1),
+                color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
               ),
               const SizedBox(height: 20),
               Text(

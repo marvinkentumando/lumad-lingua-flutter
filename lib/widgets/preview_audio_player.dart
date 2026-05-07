@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../theme/app_colors.dart';
 
@@ -83,7 +83,7 @@ class _PreviewAudioPlayerState extends State<PreviewAudioPlayer> {
       child: Container(
         padding: EdgeInsets.all(widget.size * 0.4),
         decoration: BoxDecoration(
-          color: (widget.color ?? AppColors.gold500).withOpacity(0.1),
+          color: (widget.color ?? AppColors.gold500).withValues(alpha: 0.1),
           shape: BoxShape.circle,
         ),
         child: Icon(

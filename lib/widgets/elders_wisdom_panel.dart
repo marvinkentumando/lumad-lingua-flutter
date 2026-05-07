@@ -24,12 +24,12 @@ class EldersWisdomPanel extends StatelessWidget {
         color: isDark ? AppColors.forest800 : AppColors.creamBg,
         borderRadius: BorderRadius.circular(32),
         border: Border.all(
-          color: AppColors.gold500.withOpacity(0.3),
+          color: AppColors.gold500.withValues(alpha: 0.3),
           width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.gold500.withOpacity(0.1),
+            color: AppColors.gold500.withValues(alpha: 0.1),
             blurRadius: 40,
             spreadRadius: 5,
           ),
@@ -43,7 +43,7 @@ class EldersWisdomPanel extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.gold500.withOpacity(0.1),
+                  color: AppColors.gold500.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(

@@ -169,7 +169,7 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -188,7 +188,7 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -282,7 +282,7 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 24),
@@ -423,7 +423,7 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
           color: isDark ? AppColors.forest800 : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: AppColors.terracotta.withOpacity(0.5),
+            color: AppColors.terracotta.withValues(alpha: 0.5),
             width: 1.5,
           ),
         ),
@@ -432,7 +432,7 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
+                color: iconColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(itemIcon, color: iconColor, size: 24),
@@ -450,7 +450,7 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.terracotta.withOpacity(0.1),
+                          color: AppColors.terracotta.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(

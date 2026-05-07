@@ -70,7 +70,7 @@ class FeedbackPanel extends StatelessWidget {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.gold500.withOpacity(0.2),
+                                color: AppColors.gold500.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
                                   color: AppColors.gold500,
@@ -92,7 +92,7 @@ class FeedbackPanel extends StatelessWidget {
                       Text(
                         subtitle,
                         style: AppTypography.body.copyWith(
-                          color: Colors.white.withOpacity(0.7),
+                          color: Colors.white.withValues(alpha: 0.7),
                         ),
                       ),
                     ],

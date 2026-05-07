@@ -81,7 +81,7 @@ class MainLayout extends ConsumerWidget {
                 ? culturalTheme.accentColor
                 : culturalTheme.primaryColor,
             unselectedItemColor: (isDark ? Colors.white : Colors.black)
-                .withOpacity(0.3),
+                .withValues(alpha: 0.3),
             selectedLabelStyle: AppTypography.label.copyWith(
               fontSize: 8,
               fontWeight: FontWeight.w900,
@@ -203,7 +203,7 @@ class MainLayout extends ConsumerWidget {
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  color: Colors.white.withValues(alpha: 0.05),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -253,9 +253,9 @@ class MainLayout extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
+          color: Colors.white.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(25),
-          border: Border.all(color: AppColors.gold500.withOpacity(0.3)),
+          border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -97,7 +97,7 @@ class PronunciationAnalysisWidget extends StatelessWidget {
         const SizedBox(height: 8),
         _buildWaveform(
           score.nativeWaveform,
-          AppColors.gold500.withOpacity(0.5),
+          AppColors.gold500.withValues(alpha: 0.5),
         ),
         const SizedBox(height: 16),
         _buildWaveLabel('YOUR FINGERPRINT', AppColors.semanticBlue),

@@ -669,7 +669,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
+                color: Colors.white.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: const Row(
@@ -869,7 +869,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
         backgroundColor: AppColors.forest800,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: tierColor.withOpacity(0.5), width: 2),
+          side: BorderSide(color: tierColor.withValues(alpha: 0.5), width: 2),
         ),
         title: Column(
           children: [
@@ -887,10 +887,10 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.05),
+                color: Colors.white.withValues(alpha: 0.05),
                 boxShadow: [
                   BoxShadow(
-                    color: tierColor.withOpacity(0.2),
+                    color: tierColor.withValues(alpha: 0.2),
                     blurRadius: 30,
                     spreadRadius: 10,
                   ),
@@ -914,7 +914,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: tierColor.withOpacity(0.1),
+                color: tierColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -1150,12 +1150,12 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                         Container(
                               decoration: BoxDecoration(
                                 border: Border.all(
-                                  color: Colors.orange.withOpacity(0.4),
+                                  color: Colors.orange.withValues(alpha: 0.4),
                                   width: 8,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.orange.withOpacity(0.2),
+                                    color: Colors.orange.withValues(alpha: 0.2),
                                     blurRadius: 30,
                                     spreadRadius: 10,
                                   ),
@@ -1164,7 +1164,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                             )
                             .animate(onPlay: (c) => c.repeat(reverse: true))
                             .shimmer(
-                              color: Colors.red.withOpacity(0.1),
+                              color: Colors.red.withValues(alpha: 0.1),
                               duration: 2.seconds,
                             ),
                   ),
@@ -1194,7 +1194,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
+                            color: Colors.black.withValues(alpha: 0.2),
                             blurRadius: 10,
                           ),
                         ],
@@ -1225,7 +1225,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                         boxShadow: _combo >= 5
                             ? [
                                 BoxShadow(
-                                  color: Colors.orange.withOpacity(0.15),
+                                  color: Colors.orange.withValues(alpha: 0.15),
                                   blurRadius: 60,
                                   spreadRadius: -10,
                                 ),
@@ -1233,7 +1233,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                             : (_combo >= 3
                                   ? [
                                       BoxShadow(
-                                        color: AppColors.gold500.withOpacity(0.1),
+                                        color: AppColors.gold500.withValues(alpha: 0.1),
                                         blurRadius: 40,
                                         spreadRadius: -10,
                                       ),
@@ -1318,7 +1318,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withOpacity(0.2),
+                                          color: Colors.black.withValues(alpha: 0.2),
                                           blurRadius: 8,
                                           offset: const Offset(0, 2),
                                         ),
@@ -1349,7 +1349,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                                           padding: const EdgeInsets.all(16),
                                           decoration: BoxDecoration(
                                             color: AppColors.semanticRed
-                                                .withOpacity(0.1),
+                                                .withValues(alpha: 0.1),
                                             borderRadius: BorderRadius.circular(
                                               16,
                                             ),
@@ -1397,9 +1397,9 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                                               child: Container(
                                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                                 decoration: BoxDecoration(
-                                                  color: AppColors.gold500.withOpacity(0.1),
+                                                  color: AppColors.gold500.withValues(alpha: 0.1),
                                                   borderRadius: BorderRadius.circular(20),
-                                                  border: Border.all(color: AppColors.gold500.withOpacity(0.3)),
+                                                  border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
                                                 ),
                                                 child: Row(
                                                   mainAxisSize: MainAxisSize.min,
@@ -1448,7 +1448,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                       border: Border(
                         top: BorderSide(
                           color: isDark
-                              ? Colors.white.withOpacity(0.1)
+                              ? Colors.white.withValues(alpha: 0.1)
                               : AppColors.creamBorder,
                         ),
                       ),
@@ -1464,7 +1464,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                                   ? AppColors.gold500
                                   : (isDark
                                         ? Colors.white12
-                                        : Colors.black.withOpacity(0.05)),
+                                        : Colors.black.withValues(alpha: 0.05)),
                               borderRadius: BorderRadius.circular(16),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(16),
@@ -1530,7 +1530,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
 
               if (_isCelebrating)
                 Container(
-                  color: Colors.black.withOpacity(0.85),
+                  color: Colors.black.withValues(alpha: 0.85),
                   child: XPCelebration(
                     xpEarned: _calculatedSessionXp,
                     onComplete: () => _showSessionSummary(
@@ -1584,7 +1584,7 @@ class _SummaryStatRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -1592,7 +1592,7 @@ class _SummaryStatRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.15),
+              color: iconColor.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: iconColor, size: 20),

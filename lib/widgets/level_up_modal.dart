@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -25,7 +25,7 @@ class LevelUpModal extends StatelessWidget {
           borderRadius: BorderRadius.circular(40),
           boxShadow: [
             BoxShadow(
-              color: AppColors.gold500.withOpacity(0.3),
+              color: AppColors.gold500.withValues(alpha: 0.3),
               blurRadius: 60,
               spreadRadius: 10,
             ),
@@ -56,9 +56,9 @@ class LevelUpModal extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.gold500.withOpacity(0.1),
+                color: AppColors.gold500.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.gold500.withOpacity(0.5)),
+                border: Border.all(color: AppColors.gold500.withValues(alpha: 0.5)),
               ),
               child: Text(
                 newTitle.toUpperCase(),

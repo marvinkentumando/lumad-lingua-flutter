@@ -48,7 +48,7 @@ class RecordingCard extends StatelessWidget {
                   boxShadow: isPlaying
                       ? [
                           BoxShadow(
-                            color: AppColors.gold500.withOpacity(0.3),
+                            color: AppColors.gold500.withValues(alpha: 0.3),
                             blurRadius: 12,
                             spreadRadius: 2,
                           ),
@@ -104,7 +104,7 @@ class RecordingCard extends StatelessWidget {
                             (isPlaying
                                     ? AppColors.forest700
                                     : AppColors.gold500)
-                                .withOpacity(0.4),
+                                .withValues(alpha: 0.4),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),

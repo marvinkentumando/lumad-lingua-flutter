@@ -227,14 +227,14 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
                                               color: allSelected
                                                   ? AppColors.forest700
                                                   : AppColors.gold500
-                                                        .withOpacity(0.1),
+                                                        .withValues(alpha: 0.1),
                                               borderRadius:
                                                   BorderRadius.circular(20),
                                               border: Border.all(
                                                 color: allSelected
                                                     ? AppColors.forest600
                                                     : AppColors.gold500
-                                                          .withOpacity(0.3,
+                                                          .withValues(alpha: 0.3,
                                                           ),
                                               ),
                                             ),
@@ -278,12 +278,12 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
                                             ),
                                             decoration: BoxDecoration(
                                               color: AppColors.gold500
-                                                  .withOpacity(0.1),
+                                                  .withValues(alpha: 0.1),
                                               borderRadius:
                                                   BorderRadius.circular(20),
                                               border: Border.all(
                                                 color: AppColors.gold500
-                                                    .withOpacity(0.3),
+                                                    .withValues(alpha: 0.3),
                                               ),
                                             ),
                                             child: Text(
@@ -309,12 +309,12 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
                                             ),
                                             decoration: BoxDecoration(
                                               color: AppColors.semanticRed
-                                                  .withOpacity(0.1),
+                                                  .withValues(alpha: 0.1),
                                               borderRadius:
                                                   BorderRadius.circular(20),
                                               border: Border.all(
                                                 color: AppColors.semanticRed
-                                                    .withOpacity(0.3),
+                                                    .withValues(alpha: 0.3),
                                               ),
                                             ),
                                             child: Text(
@@ -578,7 +578,7 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.gold500.withOpacity(0.1)
+              ? AppColors.gold500.withValues(alpha: 0.1)
               : (isDark ? AppColors.forest800 : Colors.white),
           borderRadius: BorderRadius.circular(28),
           border: Border.all(
@@ -590,7 +590,7 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppColors.gold500.withOpacity(0.2),
+                    color: AppColors.gold500.withValues(alpha: 0.2),
                     blurRadius: 12,
                     spreadRadius: 2,
                   ),
@@ -610,7 +610,7 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
                         ? AppColors.gold500
                         : (isDark
                               ? Colors.white10
-                              : Colors.black.withOpacity(0.05)),
+                              : Colors.black.withValues(alpha: 0.05)),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -838,8 +838,8 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
                         ),
                         decoration: BoxDecoration(
                           color: isDark
-                              ? Colors.white.withOpacity(0.1)
-                              : Colors.black.withOpacity(0.05),
+                              ? Colors.white.withValues(alpha: 0.1)
+                              : Colors.black.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -1018,7 +1018,7 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.terracotta.withOpacity(0.2),
+              color: AppColors.terracotta.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: AppColors.terracotta),
             ),
@@ -1085,7 +1085,7 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
                   filled: true,
                   fillColor: isDark
                       ? AppColors.forest900
-                      : Colors.black.withOpacity(0.05),
+                      : Colors.black.withValues(alpha: 0.05),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide.none,
@@ -1113,10 +1113,10 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
                             fontSize: 10,
                           ),
                         ),
-                        backgroundColor: AppColors.gold500.withOpacity(0.1,
+                        backgroundColor: AppColors.gold500.withValues(alpha: 0.1,
                         ),
                         side: BorderSide(
-                          color: AppColors.gold500.withOpacity(0.3),
+                          color: AppColors.gold500.withValues(alpha: 0.3),
                         ),
                         onPressed: () {
                           final currentText = feedbackController.text;
@@ -1192,5 +1192,6 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
     );
   }
 }
+
 
 

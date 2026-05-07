@@ -182,7 +182,7 @@ class _EducatorUnitManagementScreenState
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isDark
-              ? Colors.white.withOpacity(0.05)
+              ? Colors.white.withValues(alpha: 0.05)
               : AppColors.creamBorder,
         ),
       ),
@@ -192,7 +192,7 @@ class _EducatorUnitManagementScreenState
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: AppColors.gold500.withOpacity(0.1),
+            color: AppColors.gold500.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Center(

@@ -359,9 +359,9 @@ class _LinguaDuelScreenState extends State<LinguaDuelScreen> {
           width: 200,
           height: 200,
           decoration: BoxDecoration(
-            color: AppColors.gold500.withOpacity(0.05),
+            color: AppColors.gold500.withValues(alpha: 0.05),
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.gold500.withOpacity(0.1), width: 2),
+            border: Border.all(color: AppColors.gold500.withValues(alpha: 0.1), width: 2),
           ),
         ).animate(onPlay: (c) => c.repeat()).scale(duration: 2.seconds, begin: const Offset(1, 1), end: const Offset(1.1, 1.1), curve: Curves.easeInOut),
         const Icon(Icons.flash_on_rounded, size: 80, color: AppColors.gold500),
@@ -376,7 +376,7 @@ class _LinguaDuelScreenState extends State<LinguaDuelScreen> {
         onTap: onTap,
         leading: Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: AppColors.gold500.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(color: AppColors.gold500.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
           child: Icon(icon, color: AppColors.gold500),
         ),
         title: Text(title, style: AppTypography.h3.copyWith(color: Colors.white)),

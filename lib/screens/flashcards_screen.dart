@@ -491,10 +491,10 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.gold500.withOpacity(0.1),
+                color: AppColors.gold500.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: AppColors.gold500.withOpacity(0.3),
+                  color: AppColors.gold500.withValues(alpha: 0.3),
                 ),
               ),
               child: Text(
@@ -611,10 +611,10 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
         decoration: BoxDecoration(
           color: onTap != null
               ? AppColors.forest700
-              : AppColors.forest700.withOpacity(0.3),
+              : AppColors.forest700.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: Colors.white.withOpacity(onTap != null ? 0.08 : 0.03),
+            color: Colors.white.withValues(alpha: onTap != null ? 0.08 : 0.03),
           ),
         ),
         child: Column(
@@ -647,7 +647,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
     }
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.7),
+      barrierColor: Colors.black.withValues(alpha: 0.7),
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
         child: BrandCard(

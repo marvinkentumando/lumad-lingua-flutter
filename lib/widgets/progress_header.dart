@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
@@ -49,7 +49,7 @@ class ProgressHeader extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: AppColors.gold500.withOpacity(0.1),
+                  color: AppColors.gold500.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -66,8 +66,8 @@ class ProgressHeader extends StatelessWidget {
               height: 12,
               decoration: BoxDecoration(
                 color: isDark
-                    ? Colors.white.withOpacity(0.09)
-                    : Colors.black.withOpacity(0.05),
+                    ? Colors.white.withValues(alpha: 0.09)
+                    : Colors.black.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: TweenAnimationBuilder<double>(
@@ -86,7 +86,7 @@ class ProgressHeader extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.gold500.withOpacity(0.3),
+                            color: AppColors.gold500.withValues(alpha: 0.3),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
@@ -100,7 +100,7 @@ class ProgressHeader extends StatelessWidget {
                           bottom: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.3),
+                          color: Colors.white.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),

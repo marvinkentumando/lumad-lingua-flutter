@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 class GlassBox extends StatelessWidget {
@@ -34,13 +34,13 @@ class GlassBox extends StatelessWidget {
             color:
                 color ??
                 (isDark
-                    ? Colors.white.withOpacity(opacity)
-                    : Colors.black.withOpacity(opacity)),
+                    ? Colors.white.withValues(alpha: opacity)
+                    : Colors.black.withValues(alpha: opacity)),
             borderRadius: BorderRadius.circular(borderRadius),
             border:
                 border ??
                 Border.all(
-                  color: (isDark ? Colors.white : Colors.black).withOpacity(0.1,
+                  color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1,
                   ),
                   width: 1.5,
                 ),
@@ -50,8 +50,8 @@ class GlassBox extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Colors.white.withOpacity(isDark ? 0.05 : 0.1),
-                    Colors.white.withOpacity(0.0),
+                    Colors.white.withValues(alpha: isDark ? 0.05 : 0.1),
+                    Colors.white.withValues(alpha: 0.0),
                   ],
                 ),
           ),
@@ -61,5 +61,6 @@ class GlassBox extends StatelessWidget {
     );
   }
 }
+
 
 

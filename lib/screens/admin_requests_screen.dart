@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../services/firebase_service.dart';
@@ -111,10 +111,10 @@ class AdminRequestsScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: AppColors.forest900.withOpacity(0.8),
+        color: AppColors.forest900.withValues(alpha: 0.8),
         border: Border(
           bottom: BorderSide(
-            color: Colors.white.withOpacity(0.05),
+            color: Colors.white.withValues(alpha: 0.05),
             width: 1,
           ),
         ),
@@ -145,7 +145,7 @@ class AdminRequestsScreen extends ConsumerWidget {
                 Text(
                   'Review and approve new guardians of culture',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                     fontSize: 11,
                   ),
                 ),
@@ -184,7 +184,7 @@ class AdminRequestsScreen extends ConsumerWidget {
                   Row(
                     children: [
                       CircleAvatar(
-                        backgroundColor: AppColors.gold500.withOpacity(0.1,
+                        backgroundColor: AppColors.gold500.withValues(alpha: 0.1,
                         ),
                         child: Text(
                           request.username[0],
@@ -231,7 +231,7 @@ class AdminRequestsScreen extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.2),
+                        color: Colors.black.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -289,7 +289,7 @@ class AdminRequestsScreen extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.forest700.withOpacity(0.2),
+        color: AppColors.forest700.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -396,5 +396,6 @@ class AdminRequestsScreen extends ConsumerWidget {
     }
   }
 }
+
 
 

@@ -156,13 +156,13 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
           end: Alignment.bottomRight,
           colors: [
             AppColors.forest800,
-            AppColors.forest900.withOpacity(0.5),
+            AppColors.forest900.withValues(alpha: 0.5),
           ],
         ),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -198,10 +198,10 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: rankColor.withOpacity(0.1),
+                            color: rankColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: rankColor.withOpacity(0.2),
+                              color: rankColor.withValues(alpha: 0.2),
                             ),
                           ),
                           child: Row(
@@ -250,7 +250,7 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: AppColors.gold500.withOpacity(0.3),
+                        color: AppColors.gold500.withValues(alpha: 0.3),
                         width: 3,
                       ),
                       image: DecorationImage(
@@ -333,13 +333,13 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
             padding: const EdgeInsets.symmetric(vertical: 24),
             decoration: BoxDecoration(
               color: isSelected
-                  ? color.withOpacity(0.15)
+                  ? color.withValues(alpha: 0.15)
                   : AppColors.forest800,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
                 color: isSelected
                     ? color
-                    : Colors.white.withOpacity(0.05),
+                    : Colors.white.withValues(alpha: 0.05),
                 width: isSelected ? 2 : 1,
               ),
             ),
@@ -748,7 +748,7 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
                               color: AppColors.forest900,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: AppColors.gold500.withOpacity(0.3),
+                                color: AppColors.gold500.withValues(alpha: 0.3),
                               ),
                             ),
                             child: Row(
@@ -994,7 +994,7 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
                       decoration: BoxDecoration(
                         color: AppColors.forest800,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: color.withOpacity(0.3)),
+                        border: Border.all(color: color.withValues(alpha: 0.3)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1126,7 +1126,7 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
           decoration: BoxDecoration(
             color: AppColors.forest800,
             borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: AppColors.gold500.withOpacity(0.3)),
+            border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1381,7 +1381,7 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
   }
 
   Future<void> _pickAudio(Function(VoidCallback) setModalState) async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.audio,
       allowMultiple: false,
     );
@@ -1784,11 +1784,11 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
                               child: Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: AppColors.gold500.withOpacity(0.1,
+                                  color: AppColors.gold500.withValues(alpha: 0.1,
                                   ),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: AppColors.gold500.withOpacity(0.3,
+                                    color: AppColors.gold500.withValues(alpha: 0.3,
                                     ),
                                   ),
                                 ),
@@ -1912,8 +1912,8 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: _rememberLocation
-                                  ? AppColors.gold500.withOpacity(0.1)
-                                  : AppColors.forest900.withOpacity(0.5),
+                                  ? AppColors.gold500.withValues(alpha: 0.1)
+                                  : AppColors.forest900.withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: _rememberLocation
@@ -1965,7 +1965,7 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
                                       _rememberLocation = val;
                                     });
                                   },
-                                  activeColor: AppColors.gold500,
+                                  activeThumbColor: AppColors.gold500,
                                 ),
                               ],
                             ),
@@ -1981,7 +1981,7 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
                               color: AppColors.forest900,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: AppColors.gold500.withOpacity(0.3),
+                                color: AppColors.gold500.withValues(alpha: 0.3),
                               ),
                             ),
                             child: Row(
@@ -2158,7 +2158,7 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.forest900.withOpacity(0.5),
+                  color: AppColors.forest900.withValues(alpha: 0.5),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -2214,9 +2214,9 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
               padding: const EdgeInsets.all(12),
               width: double.infinity,
               decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
+                color: statusColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: statusColor.withOpacity(0.2)),
+                border: Border.all(color: statusColor.withValues(alpha: 0.2)),
               ),
               child: Row(
                 children: [
@@ -2268,7 +2268,7 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
                   ),
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
-                    backgroundColor: AppColors.gold500.withOpacity(0.1),
+                    backgroundColor: AppColors.gold500.withValues(alpha: 0.1),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -2438,5 +2438,6 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
     );
   }
 }
+
 
 

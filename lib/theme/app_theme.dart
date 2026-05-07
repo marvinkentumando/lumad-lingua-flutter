@@ -38,14 +38,14 @@ class AppTheme {
           borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
         ),
       ),
-      cardTheme: const CardTheme(
+      cardTheme: const CardThemeData(
         color: Colors.white,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(24)),
         ),
       ),
-      dialogTheme: const DialogTheme(
+      dialogTheme: const DialogThemeData(
         backgroundColor: AppColors.creamBg,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(24)),
@@ -55,7 +55,7 @@ class AppTheme {
       textTheme: _buildTextTheme(Brightness.light),
       inputDecorationTheme: _buildInputTheme(Brightness.light),
       dividerTheme: DividerThemeData(
-        color: AppColors.creamBorder.withOpacity(0.5),
+        color: AppColors.creamBorder.withValues(alpha: 0.5),
       ),
     );
   }
@@ -95,14 +95,14 @@ class AppTheme {
           borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
         ),
       ),
-      cardTheme: const CardTheme(
+      cardTheme: const CardThemeData(
         color: AppColors.forestDarkCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(24)),
         ),
       ),
-      dialogTheme: const DialogTheme(
+      dialogTheme: const DialogThemeData(
         backgroundColor: AppColors.forest900,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(24)),
@@ -112,7 +112,7 @@ class AppTheme {
       textTheme: _buildTextTheme(Brightness.dark),
       inputDecorationTheme: _buildInputTheme(Brightness.dark),
       dividerTheme: DividerThemeData(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
       ),
     );
   }
@@ -139,14 +139,14 @@ class AppTheme {
   static InputDecorationTheme _buildInputTheme(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
     final fillColor = isDark
-        ? Colors.white.withOpacity(0.08)
-        : Colors.black.withOpacity(0.05);
+        ? Colors.white.withValues(alpha: 0.08)
+        : Colors.black.withValues(alpha: 0.05);
     final hintColor = isDark
-        ? Colors.white.withOpacity(0.3)
-        : Colors.black.withOpacity(0.3);
+        ? Colors.white.withValues(alpha: 0.3)
+        : Colors.black.withValues(alpha: 0.3);
     final borderColor = isDark
-        ? Colors.white.withOpacity(0.15)
-        : Colors.black.withOpacity(0.1);
+        ? Colors.white.withValues(alpha: 0.15)
+        : Colors.black.withValues(alpha: 0.1);
     final focusedColor = isDark ? AppColors.gold500 : AppColors.forest500;
 
     return InputDecorationTheme(

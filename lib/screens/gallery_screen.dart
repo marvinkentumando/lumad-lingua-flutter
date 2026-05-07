@@ -216,12 +216,12 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                                 decoration: BoxDecoration(
                                   color: _getTierColor(
                                     artifact.tier,
-                                  ).withOpacity(0.2),
+                                  ).withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(
                                     color: _getTierColor(
                                       artifact.tier,
-                                    ).withOpacity(0.5),
+                                    ).withValues(alpha: 0.5),
                                   ),
                                 ),
                                 child: Text(
@@ -348,7 +348,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                   height: 70,
                   decoration: BoxDecoration(
                     color: badge.isEarned
-                        ? badgeColor.withOpacity(0.2)
+                        ? badgeColor.withValues(alpha: 0.2)
                         : Colors.white10,
                     shape: BoxShape.circle,
                     border: Border.all(
@@ -358,7 +358,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                     boxShadow: badge.isEarned
                         ? [
                             BoxShadow(
-                              color: badgeColor.withOpacity(0.3),
+                              color: badgeColor.withValues(alpha: 0.3),
                               blurRadius: 10,
                               spreadRadius: 2,
                             ),

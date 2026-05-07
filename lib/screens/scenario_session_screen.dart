@@ -164,10 +164,10 @@ class _ScenarioSessionScreenState extends State<ScenarioSessionScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: AppColors.gold500.withOpacity(0.1),
+              color: AppColors.gold500.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: AppColors.gold500.withOpacity(0.3),
+                color: AppColors.gold500.withValues(alpha: 0.3),
               ),
             ),
             child: Row(
@@ -196,14 +196,14 @@ class _ScenarioSessionScreenState extends State<ScenarioSessionScreen> {
       decoration: BoxDecoration(
         color: Colors.white10,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(32),
         child: Icon(
           Icons.auto_stories,
           size: 80,
-          color: AppColors.gold500.withOpacity(0.2),
+          color: AppColors.gold500.withValues(alpha: 0.2),
         ),
         // In a real app: Image.asset(path, fit: BoxFit.cover),
       ),

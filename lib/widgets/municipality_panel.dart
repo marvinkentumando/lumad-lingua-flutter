@@ -57,7 +57,7 @@ class MunicipalityPanel extends ConsumerWidget {
             width: 50,
             height: 4,
             decoration: BoxDecoration(
-              color: (isDark ? Colors.white : Colors.black).withOpacity(0.1,
+              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1,
               ),
               borderRadius: BorderRadius.circular(10),
             ),
@@ -111,9 +111,9 @@ class MunicipalityPanel extends ConsumerWidget {
                       child: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
+                          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
                           border: Border.all(
-                            color: (isDark ? Colors.white : Colors.black).withOpacity(0.1),
+                            color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
                           ),
                           shape: BoxShape.circle,
                         ),
@@ -230,5 +230,6 @@ class MunicipalityPanel extends ConsumerWidget {
     );
   }
 }
+
 
 

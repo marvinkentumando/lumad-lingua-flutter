@@ -21,7 +21,7 @@ class TopoBackground extends StatelessWidget {
               (Theme.of(context).brightness == Brightness.dark
                       ? Colors.white
                       : Colors.black)
-                  .withOpacity(opacity),
+                  .withValues(alpha: opacity),
         ),
       ),
     );

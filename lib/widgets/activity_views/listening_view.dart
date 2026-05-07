@@ -62,7 +62,7 @@ class _ListeningViewState extends State<ListeningView> {
         Container(
           padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.04),
+            color: Colors.white.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white12),
           ),

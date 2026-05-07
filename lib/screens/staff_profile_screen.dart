@@ -140,7 +140,7 @@ class StaffProfileScreen extends ConsumerWidget {
                 width: 140,
                 height: 140,
                 decoration: BoxDecoration(
-                  color: (isDark ? Colors.white : Colors.black).withOpacity(0.02),
+                  color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.02),
                 ),
               ),
             ),
@@ -295,7 +295,7 @@ class StaffProfileScreen extends ConsumerWidget {
                 ),
                 decoration: BoxDecoration(
                   border: Border.all(
-                    color: AppColors.gold500.withOpacity(0.3),
+                    color: AppColors.gold500.withValues(alpha: 0.3),
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -368,18 +368,18 @@ class StaffProfileScreen extends ConsumerWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: isEarned
-                      ? tierColor.withOpacity(0.1)
+                      ? tierColor.withValues(alpha: 0.1)
                       : Colors.black26,
                   border: Border.all(
                     color: isEarned
-                        ? tierColor.withOpacity(0.5)
+                        ? tierColor.withValues(alpha: 0.5)
                         : Colors.white10,
                     width: 2,
                   ),
                   boxShadow: isEarned
                       ? [
                           BoxShadow(
-                            color: tierColor.withOpacity(0.2),
+                            color: tierColor.withValues(alpha: 0.2),
                             blurRadius: 10,
                             spreadRadius: 2,
                           ),
@@ -424,7 +424,7 @@ class StaffProfileScreen extends ConsumerWidget {
                     minHeight: 4,
                     backgroundColor: Colors.white10,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      tierColor.withOpacity(0.5),
+                      tierColor.withValues(alpha: 0.5),
                     ),
                   ),
                 ),
@@ -618,9 +618,9 @@ class StaffProfileScreen extends ConsumerWidget {
         builder: (ctx) => Container(
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            color: AppColors.forest900.withOpacity(0.95),
+            color: AppColors.forest900.withValues(alpha: 0.95),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            border: Border.all(color: AppColors.gold500.withOpacity(0.2)),
+            border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -711,9 +711,9 @@ class StaffProfileScreen extends ConsumerWidget {
       builder: (ctx) => Container(
         padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
-          color: AppColors.forest900.withOpacity(0.95),
+          color: AppColors.forest900.withValues(alpha: 0.95),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          border: Border.all(color: AppColors.semanticRed.withOpacity(0.3)),
+          border: Border.all(color: AppColors.semanticRed.withValues(alpha: 0.3)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -874,7 +874,7 @@ class StaffProfileScreen extends ConsumerWidget {
 
     if (action != 'upload') return;
 
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.image,
       allowMultiple: false,
     );
@@ -987,7 +987,7 @@ class StaffProfileScreen extends ConsumerWidget {
                     },
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
+                        color: Colors.white.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: Colors.white10),
                       ),
@@ -1035,9 +1035,9 @@ class StaffProfileScreen extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            color: AppColors.forest900.withOpacity(0.95),
+            color: AppColors.forest900.withValues(alpha: 0.95),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            border: Border.all(color: AppColors.gold500.withOpacity(0.2)),
+            border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
           ),
           child: SingleChildScrollView(
             child: Column(
@@ -1135,7 +1135,7 @@ class StaffProfileScreen extends ConsumerWidget {
             hintText: hint,
             hintStyle: const TextStyle(color: Colors.white24),
             filled: true,
-            fillColor: Colors.black.withOpacity(0.2),
+            fillColor: Colors.black.withValues(alpha: 0.2),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,

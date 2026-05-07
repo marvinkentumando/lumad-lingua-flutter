@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -72,20 +72,20 @@ class _BrandTextFieldState extends State<BrandTextField> {
       decoration: BoxDecoration(
         color: _isFocused
             ? AppColors.creamBg
-            : AppColors.creamBg.withOpacity(0.8),
+            : AppColors.creamBg.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: widget.isValid
-              ? AppColors.semanticGreen.withOpacity(0.5)
+              ? AppColors.semanticGreen.withValues(alpha: 0.5)
               : (_isFocused
                     ? AppColors.gold500
-                    : Colors.black.withOpacity(0.1)),
+                    : Colors.black.withValues(alpha: 0.1)),
           width: _isFocused || widget.isValid ? 2 : 1.5,
         ),
         boxShadow: widget.isValid
             ? [
                 BoxShadow(
-                  color: AppColors.semanticGreen.withOpacity(0.1),
+                  color: AppColors.semanticGreen.withValues(alpha: 0.1),
                   blurRadius: 10,
                   spreadRadius: 2,
                 ),
@@ -93,7 +93,7 @@ class _BrandTextFieldState extends State<BrandTextField> {
             : (_isFocused
                   ? [
                       BoxShadow(
-                        color: AppColors.gold500.withOpacity(0.2),
+                        color: AppColors.gold500.withValues(alpha: 0.2),
                         blurRadius: 12,
                         spreadRadius: 2,
                       ),
@@ -115,14 +115,14 @@ class _BrandTextFieldState extends State<BrandTextField> {
           labelStyle: AppTypography.body.copyWith(
             color: _isFocused
                 ? AppColors.forest700
-                : AppColors.forest900.withOpacity(0.6),
+                : AppColors.forest900.withValues(alpha: 0.6),
             fontWeight: FontWeight.bold,
           ),
           prefixIcon: Icon(
             widget.prefixIcon,
             color: _isFocused
                 ? AppColors.gold600
-                : AppColors.forest500.withOpacity(0.6),
+                : AppColors.forest500.withValues(alpha: 0.6),
           ),
           suffixIcon: widget.showValidation && widget.isValid
               ? const Icon(Icons.check_circle, color: AppColors.semanticGreen)
@@ -132,7 +132,7 @@ class _BrandTextFieldState extends State<BrandTextField> {
                           _obscureText
                               ? Icons.visibility_off_outlined
                               : Icons.visibility_outlined,
-                          color: AppColors.forest500.withOpacity(0.6),
+                          color: AppColors.forest500.withValues(alpha: 0.6),
                         ),
                         onPressed: _togglePasswordVisibility,
                       )

@@ -193,8 +193,8 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
           ColorFiltered(
             colorFilter: ColorFilter.mode(
               isDark
-                  ? AppColors.forest900.withOpacity(0.5)
-                  : const Color(0xFFD4B886).withOpacity(0.2),
+                  ? AppColors.forest900.withValues(alpha: 0.5)
+                  : const Color(0xFFD4B886).withValues(alpha: 0.2),
               BlendMode.darken,
             ),
             child: TileLayer(
@@ -244,7 +244,7 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
                                   height: 40,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: AppColors.gold500.withOpacity(0.4),
+                                    color: AppColors.gold500.withValues(alpha: 0.4),
                                   ),
                                 )
                                 .animate(onPlay: (c) => c.repeat())
@@ -271,8 +271,8 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
                               boxShadow: [
                                 BoxShadow(
                                   color: isSelected
-                                      ? AppColors.gold500.withOpacity(0.6)
-                                      : Colors.black.withOpacity(0.5),
+                                      ? AppColors.gold500.withValues(alpha: 0.6)
+                                      : Colors.black.withValues(alpha: 0.5),
                                   blurRadius: isSelected ? 15 : 5,
                                   spreadRadius: isSelected ? 2 : 0,
                                 ),
@@ -295,7 +295,7 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.8),
+                          color: Colors.black.withValues(alpha: 0.8),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -321,7 +321,7 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
                   border: Border.all(color: Colors.white, width: 2),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.gold500.withOpacity(0.3),
+                      color: AppColors.gold500.withValues(alpha: 0.3),
                       blurRadius: 10,
                     ),
                   ],
@@ -375,7 +375,7 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
           ),
           child: Icon(icon, color: AppColors.gold500, size: 22),
         ),
@@ -594,7 +594,7 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
 
   Widget _buildLoadingOverlay() {
     return Container(
-      color: Colors.black.withOpacity(0.3),
+      color: Colors.black.withValues(alpha: 0.3),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,

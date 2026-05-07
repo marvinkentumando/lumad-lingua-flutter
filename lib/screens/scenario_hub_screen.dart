@@ -119,10 +119,10 @@ class ScenarioHubScreen extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.gold500.withOpacity(0.1),
+                      color: AppColors.gold500.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: AppColors.gold500.withOpacity(0.3),
+                        color: AppColors.gold500.withValues(alpha: 0.3),
                       ),
                     ),
                     child: Text(
