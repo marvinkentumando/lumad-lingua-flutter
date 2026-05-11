@@ -28,6 +28,7 @@ class _ValidatorLessonsScreenState
     extends ConsumerState<ValidatorLessonsScreen> {
   bool get isDark => Theme.of(context).brightness == Brightness.dark;
   bool _isSelectionMode = false;
+  bool _showHistory = false;
   final Set<String> _selectedIds = {};
   String _searchQuery = "";
   String _selectedDialect = "All";
@@ -42,13 +43,16 @@ class _ValidatorLessonsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final lessonsStream = ref.watch(pendingLessonsProvider);
     final userAsync = ref.watch(userProfileProvider);
     final userId =
         userAsync.value?['uid'] ??
         userAsync.value?['id'] ??
         'unknown_validator';
     final userRole = userAsync.value?['role'] ?? 'VALIDATOR';
+
+    final lessonsStream = _showHistory
+        ? ref.watch(validatorLessonHistoryProvider(ValidatorQuery(userId, 50)))
+        : ref.watch(pendingLessonsProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -162,7 +166,7 @@ class _ValidatorLessonsScreenState
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                _isSelectionMode ? 'Selection Mode' : 'Curriculum',
+                _isSelectionMode ? 'Selection Mode' : (_showHistory ? 'Lesson History' : 'Curriculum'),
                 style: AppTypography.displayBold.copyWith(
                   fontSize: _isSelectionMode ? 24 : 32,
                   color: AppColors.gold500,
@@ -196,9 +200,33 @@ class _ValidatorLessonsScreenState
                   ),
                 )
               else
-                const Icon(
-                  Icons.notifications_none_rounded,
-                  color: AppColors.gold500,
+                GestureDetector(
+                  onTap: () => setState(() => _showHistory = !_showHistory),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: _showHistory
+                          ? AppColors.gold500
+                          : (isDark
+                                ? Colors.white10
+                                : Colors.black.withValues(alpha: 0.05)),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: _showHistory
+                            ? AppColors.gold500
+                            : (isDark ? Colors.white24 : AppColors.creamBorder),
+                      ),
+                    ),
+                    child: Icon(
+                      _showHistory
+                          ? Icons.pending_actions_rounded
+                          : Icons.history_rounded,
+                      color: _showHistory
+                          ? AppColors.forest900
+                          : AppColors.gold500,
+                      size: 20,
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -286,26 +314,45 @@ class _ValidatorLessonsScreenState
   }
 
   Widget _buildEmptyState() {
+    final bool isSearching = _searchQuery.isNotEmpty;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.verified_rounded,
+          Icon(
+            _showHistory
+                ? Icons.history_edu_rounded
+                : (isSearching
+                    ? Icons.search_off_rounded
+                    : Icons.verified_rounded),
             color: AppColors.forest700,
             size: 64,
           ),
           const SizedBox(height: 16),
           Text(
-            "All caught up!",
-            style: AppTypography.h3.copyWith(color: AppColors.forest700),
+            _showHistory
+                ? "History is Empty"
+                : (isSearching ? "No results found" : "All caught up!"),
+            style: AppTypography.h3.copyWith(
+              color: AppColors.gold500,
+              fontWeight: FontWeight.w900,
+            ),
           ),
-          Text(
-            "No lessons pending review.",
-            style: AppTypography.body.copyWith(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white38
-                  : AppColors.creamText2,
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              _showHistory
+                  ? "You haven't archived any lessons yet. Your educational reviews will appear here!"
+                  : (isSearching
+                      ? "Try adjusting your search or filters to find what you're looking for."
+                      : "No lessons pending review. Great job!"),
+              textAlign: TextAlign.center,
+              style: AppTypography.body.copyWith(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white38
+                    : AppColors.creamText2,
+              ),
             ),
           ),
         ],
@@ -541,6 +588,13 @@ class _ValidatorLessonsScreenState
 final pendingLessonsProvider = StreamProvider<List<Lesson>>((ref) {
   return ref.watch(firebaseServiceProvider).getPendingLessons();
 });
+
+final validatorLessonHistoryProvider =
+    StreamProvider.family<List<Lesson>, ValidatorQuery>((ref, query) {
+      return ref
+          .watch(firebaseServiceProvider)
+          .getValidatorLessonHistory(query.id, limit: query.limit);
+    });
 
 class _LessonPreviewSheet extends StatefulWidget {
   final Lesson lesson;

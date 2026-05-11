@@ -1432,9 +1432,10 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
       }
 
       // Upload to Storage
+      final fileName = 'voice_${user.uid}_${DateTime.now().millisecondsSinceEpoch}.m4a';
       final audioUrl = await ref
           .read(firebaseServiceProvider)
-          .uploadVoiceFragment(user.uid, path);
+          .uploadAudio(path, fileName);
 
       // Save Metadata to Firestore
       final municipalityId =

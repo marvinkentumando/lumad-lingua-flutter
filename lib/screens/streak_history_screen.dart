@@ -35,7 +35,7 @@ class StreakHistoryScreen extends ConsumerWidget {
                   const SizedBox(height: 32),
                   _buildShieldStats(context, student),
                   const SizedBox(height: 32),
-                  _buildMonthlyCalendar(context),
+                  _buildMonthlyCalendar(context, student),
                   const SizedBox(height: 32),
                   _buildStreakMilestones(context, student),
                 ],
@@ -185,7 +185,7 @@ class StreakHistoryScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMonthlyCalendar(BuildContext context) {
+  Widget _buildMonthlyCalendar(BuildContext context, StudentState student) {
     final now = DateTime.now();
     final firstDayOfMonth = DateTime(now.year, now.month, 1);
     final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
@@ -237,8 +237,9 @@ class StreakHistoryScreen extends ConsumerWidget {
                   }
                   final day = index - (startWeekday - 2);
                   final isToday = day == now.day;
-                  // For now, simulate active days (e.g., even days)
-                  final isActive = day % 2 == 0; 
+
+                  final dateKey = "${now.year}-${now.month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}";
+                  final isActive = student.activityMap[dateKey] ?? false;
 
                   return Container(
                     decoration: BoxDecoration(

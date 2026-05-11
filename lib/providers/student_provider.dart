@@ -12,6 +12,7 @@ class StudentState {
   final int streakShields;
   final Map<String, dynamic> lessonProgress;
   final DateTime? lastActive;
+  final Map<String, bool> activityMap;
 
   StudentState({
     required this.mistCrystals,
@@ -21,6 +22,7 @@ class StudentState {
     required this.streakShields,
     required this.lessonProgress,
     this.lastActive,
+    this.activityMap = const {},
   });
 
   StudentState copyWith({
@@ -31,6 +33,7 @@ class StudentState {
     int? streakShields,
     Map<String, dynamic>? lessonProgress,
     DateTime? lastActive,
+    Map<String, bool>? activityMap,
   }) {
     return StudentState(
       mistCrystals: mistCrystals ?? this.mistCrystals,
@@ -40,6 +43,7 @@ class StudentState {
       streakShields: streakShields ?? this.streakShields,
       lessonProgress: lessonProgress ?? this.lessonProgress,
       lastActive: lastActive ?? this.lastActive,
+      activityMap: activityMap ?? this.activityMap,
     );
   }
 
@@ -75,8 +79,13 @@ class StudentState {
           DateTime(lastActive!.year, lastActive!.month, lastActive!.day),
         )
         .inDays;
-    // If more than 1 day has passed, the streak is effectively broken in the UI
-    if (difference > 1) return 0;
+
+    // If more than 1 day has passed, the streak is potentially broken
+    if (difference > 1) {
+      // If we have shields, the streak is visually preserved until an activity is completed
+      if (streakShields > 0) return dailyStreak;
+      return 0;
+    }
     return dailyStreak;
   }
 }
@@ -114,6 +123,7 @@ class StudentNotifier extends Notifier<StudentState> {
       streakShields: profile?['streakShields'] ?? 0,
       lessonProgress: progress,
       lastActive: (profile?['lastActive'] as Timestamp?)?.toDate(),
+      activityMap: Map<String, bool>.from(profile?['activityMap'] ?? {}),
     );
   }
 
@@ -145,6 +155,7 @@ class StudentNotifier extends Notifier<StudentState> {
 
   void incrementStreak() {
     final now = DateTime.now();
+    final dateKey = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
     final lastActive = state.lastActive;
     
     bool shouldIncrementLocally = false;
@@ -160,10 +171,19 @@ class StudentNotifier extends Notifier<StudentState> {
     }
 
     if (shouldIncrementLocally) {
+      final newActivityMap = Map<String, bool>.from(state.activityMap);
+      newActivityMap[dateKey] = true;
+
       state = state.copyWith(
         dailyStreak: state.dailyStreak + 1,
         lastActive: now,
+        activityMap: newActivityMap,
       );
+    } else if (!state.activityMap.containsKey(dateKey)) {
+      // Just mark as active today if not already marked, even if streak doesn't increment
+      final newActivityMap = Map<String, bool>.from(state.activityMap);
+      newActivityMap[dateKey] = true;
+      state = state.copyWith(activityMap: newActivityMap);
     }
     
     final user = ref.read(authStateProvider).value;

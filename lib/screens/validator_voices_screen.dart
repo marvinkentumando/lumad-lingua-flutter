@@ -26,6 +26,7 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
   bool get isDark => Theme.of(context).brightness == Brightness.dark;
   bool _isSelectionMode = false;
   bool _isProcessing = false;
+  bool _showHistory = false;
   final Set<String> _selectedIds = {};
   String _searchQuery = "";
   String _selectedDialect = "All";
@@ -113,6 +114,13 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(authStateProvider).value;
+    final userId = user?.uid ?? "";
+
+    final submissionsAsync = _showHistory
+        ? ref.watch(voiceValidatorHistoryProvider(ValidatorQuery(userId, 50)))
+        : ref.watch(pendingVoiceSubmissionsProvider(50));
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       floatingActionButton:
@@ -189,16 +197,14 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
                           Text(
                             _isSelectionMode
                                 ? 'Selection Mode'
-                                : 'Audio Voices',
+                                : (_showHistory ? 'Voice History' : 'Audio Voices'),
                             style: AppTypography.displayBold.copyWith(
                               fontSize: _isSelectionMode ? 24 : 32,
                               color: AppColors.gold500,
                             ),
                           ),
                           if (_isSelectionMode)
-                            ref
-                                .watch(pendingVoiceSubmissionsProvider(50))
-                                .when(
+                            submissionsAsync.when(
                                   data: (voices) {
                                     final allSelected =
                                         _selectedIds.length == voices.length &&
@@ -338,9 +344,33 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
                                   error: (_, __) => const SizedBox(),
                                 )
                           else
-                            const Icon(
-                              Icons.notifications_none_rounded,
-                              color: AppColors.gold500,
+                            GestureDetector(
+                              onTap: () => setState(() => _showHistory = !_showHistory),
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: _showHistory
+                                      ? AppColors.gold500
+                                      : (isDark
+                                            ? Colors.white10
+                                            : Colors.black.withValues(alpha: 0.05)),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: _showHistory
+                                        ? AppColors.gold500
+                                        : (isDark ? Colors.white24 : AppColors.creamBorder),
+                                  ),
+                                ),
+                                child: Icon(
+                                  _showHistory
+                                      ? Icons.pending_actions_rounded
+                                      : Icons.history_rounded,
+                                  color: _showHistory
+                                      ? AppColors.forest900
+                                      : AppColors.gold500,
+                                  size: 20,
+                                ),
+                              ),
                             ),
                         ],
                       ),
@@ -429,9 +459,7 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
                   ),
                 ),
                 Expanded(
-                  child: ref
-                      .watch(pendingVoiceSubmissionsProvider(50))
-                      .when(
+                  child: submissionsAsync.when(
                         data: (voices) {
                           var filteredList = voices;
 
@@ -456,24 +484,49 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
                           }
 
                           if (filteredList.isEmpty) {
+                            final bool isSearching = _searchQuery.isNotEmpty;
                             return Center(
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 60,
+                                  horizontal: 40,
                                 ),
                                 child: Column(
                                   children: [
-                                    const Icon(
-                                      Icons.search_off_rounded,
+                                    Icon(
+                                      _showHistory
+                                          ? Icons.history_edu_rounded
+                                          : (isSearching
+                                              ? Icons.search_off_rounded
+                                              : Icons.check_circle_outline_rounded),
                                       color: AppColors.forest700,
                                       size: 64,
                                     ),
                                     const SizedBox(height: 16),
                                     Text(
-                                      "No results found",
+                                      _showHistory
+                                          ? "History is Empty"
+                                          : (isSearching
+                                              ? "No results found"
+                                              : "All Caught Up!"),
                                       style: AppTypography.h3.copyWith(
-                                        color: AppColors.forest700,
+                                        color: AppColors.gold500,
+                                        fontWeight: FontWeight.w900,
                                       ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      _showHistory
+                                          ? "You haven't archived any voices yet. Your cultural contributions will appear here!"
+                                          : (isSearching
+                                              ? "Try adjusting your search or filters to find what you're looking for."
+                                              : "There are no pending voices to validate at the moment. Great job!"),
+                                      style: AppTypography.body.copyWith(
+                                        color: AppColors.creamText3,
+                                        fontSize: 14,
+                                      ),
+                                      textAlign: TextAlign.center,
                                     ),
                                   ],
                                 ),

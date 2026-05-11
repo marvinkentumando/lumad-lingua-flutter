@@ -40,33 +40,108 @@ class FirebaseService {
         fileName ?? DateTime.now().millisecondsSinceEpoch.toString();
     final ref = _storage.ref().child('$path/$name');
 
-    if (fileData is File) {
-      await ref.putFile(fileData);
-    } else if (fileData is List<int>) {
-      await ref.putData(Uint8List.fromList(fileData));
-    } else {
-      throw Exception('Unsupported file data type');
-    }
+    try {
+      if (fileData is File) {
+        await ref.putFile(fileData);
+      } else if (fileData is List<int>) {
+        await ref.putData(Uint8List.fromList(fileData));
+      } else {
+        throw Exception('Unsupported file data type');
+      }
 
-    return await ref.getDownloadURL();
+      // Retry mechanism for fetching Download URL
+      String? url;
+      int retries = 0;
+      while (url == null && retries < 5) {
+        try {
+          url = await ref.getDownloadURL();
+        } catch (e) {
+          retries++;
+          debugPrint("Storage: getDownloadURL retry $retries for $path/$name...");
+          await Future.delayed(Duration(seconds: 1 * retries));
+        }
+      }
+
+      if (url == null) throw Exception("Failed to fetch download URL after retries.");
+      return url;
+    } on FirebaseException catch (e) {
+      debugPrint("Storage: Upload failed (${e.code}): ${e.message}");
+      rethrow;
+    }
   }
 
   // Audio Upload
   Future<String> uploadAudio(String filePath, String fileName) async {
     final file = File(filePath);
+    if (!await file.exists()) {
+      throw Exception('Local audio file not found at $filePath');
+    }
+
+    final int fileSize = await file.length();
+    if (fileSize == 0) {
+      throw Exception('Recorded audio file is empty.');
+    }
+
     final ref = _storage.ref().child('audio/$fileName');
-    final uploadTask = ref.putFile(file);
-    final snapshot = await uploadTask;
-    return await snapshot.ref.getDownloadURL();
+    try {
+      debugPrint("Storage: Uploading $fileName ($fileSize bytes) to ${ref.fullPath}");
+
+      // Use putFile for efficiency and reliability
+      final uploadTask = await ref.putFile(file);
+
+      // Verification Loop
+      String? url;
+      int retries = 0;
+      while (url == null && retries < 6) {
+        try {
+          url = await ref.getDownloadURL();
+          debugPrint("Storage: Download URL obtained on attempt ${retries + 1}");
+        } catch (e) {
+          retries++;
+          debugPrint("Storage: URL fetch attempt $retries failed: $e. Waiting...");
+          await Future.delayed(Duration(milliseconds: 1000 * retries));
+        }
+      }
+
+      if (url == null) throw Exception("Cloud storage object was uploaded but could not be located after retries.");
+
+      debugPrint("Storage: Upload success.");
+      return url;
+    } on FirebaseException catch (e) {
+      debugPrint("Storage: Upload critical failure (${e.code}): ${e.message}");
+      rethrow;
+    }
   }
 
   Future<String> uploadProfilePicture(String userId, File file) async {
-    final ref = _storage.ref().child(
-      'users/$userId/profile_${DateTime.now().millisecondsSinceEpoch}.jpg',
-    );
-    final uploadTask = ref.putFile(file);
-    final snapshot = await uploadTask;
-    return await snapshot.ref.getDownloadURL();
+    final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final ref = _storage.ref().child('users/$userId/$fileName');
+
+    try {
+      debugPrint("Storage: Uploading profile picture to ${ref.fullPath}");
+      final uploadTask = await ref.putFile(file);
+
+      // Verification Loop
+      String? url;
+      int retries = 0;
+      while (url == null && retries < 6) {
+        try {
+          url = await ref.getDownloadURL();
+        } catch (e) {
+          retries++;
+          debugPrint("Storage: Profile URL fetch attempt $retries failed: $e. Waiting...");
+          await Future.delayed(Duration(milliseconds: 1000 * retries));
+        }
+      }
+
+      if (url == null) throw Exception("Profile picture was uploaded but its URL could not be retrieved.");
+
+      debugPrint("Storage: Profile upload success.");
+      return url;
+    } on FirebaseException catch (e) {
+      debugPrint("Storage: Profile upload failure (${e.code}): ${e.message}");
+      rethrow;
+    }
   }
 
   Future<void> updateUserProfile(
@@ -517,17 +592,44 @@ class FirebaseService {
 
   // Audio Upload Operations
   Future<String> uploadVoiceFragment(String userId, String filePath) async {
-    final file = File(filePath);
-    final fileName = '${DateTime.now().millisecondsSinceEpoch}.m4a';
-    final ref = FirebaseStorage.instance
-        .ref()
-        .child('voice_fragments')
-        .child(userId)
-        .child(fileName);
+    // Sanitize path in case it's a URI
+    final String cleanPath = filePath.startsWith('file://')
+        ? Uri.parse(filePath).toFilePath()
+        : filePath;
 
-    final uploadTask = ref.putFile(file);
-    final snapshot = await uploadTask;
-    return await snapshot.ref.getDownloadURL();
+    final file = File(cleanPath);
+    if (!await file.exists()) {
+      debugPrint("Upload Error: File not found at $cleanPath");
+      throw Exception('Local recording file not found.');
+    }
+
+    final fileName = 'voice_${userId}_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    final ref = _storage.ref().child('audio/$fileName');
+
+    try {
+      debugPrint("Storage: Uploading voice fragment to ${ref.fullPath}");
+      final uploadTask = await ref.putFile(file);
+
+      // Verification Loop
+      String? url;
+      int retries = 0;
+      while (url == null && retries < 6) {
+        try {
+          url = await ref.getDownloadURL();
+          debugPrint("Storage: Voice Download URL obtained on attempt ${retries + 1}");
+        } catch (e) {
+          retries++;
+          debugPrint("Storage: Voice URL fetch attempt $retries failed: $e. Waiting...");
+          await Future.delayed(Duration(milliseconds: 1000 * retries));
+        }
+      }
+
+      if (url == null) throw Exception("Voice fragment was uploaded but could not be verified on the server.");
+      return url;
+    } on FirebaseException catch (e) {
+      debugPrint("Storage: Voice upload critical failure (${e.code}): ${e.message}");
+      rethrow;
+    }
   }
 
   // User Management
@@ -781,6 +883,23 @@ class FirebaseService {
     return _db
         .collection('lessons')
         .where('status', isEqualTo: 'PENDING_REVIEW')
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs
+              .map((doc) => Lesson.fromFirestore(doc.data(), doc.id))
+              .toList();
+        });
+  }
+
+  Stream<List<Lesson>> getValidatorLessonHistory(
+    String validatorId, {
+    int limit = 50,
+  }) {
+    return _db
+        .collection('lessons')
+        .where('validatorId', isEqualTo: validatorId)
+        .orderBy('validatedAt', descending: true)
+        .limit(limit)
         .snapshots()
         .map((snapshot) {
           return snapshot.docs
@@ -1364,54 +1483,60 @@ class FirebaseService {
   }
 
   Future<void> incrementStreak(String userId) async {
-    return _db.runTransaction((transaction) async {
-      final userRef = _db.collection('users').doc(userId);
-      final userDoc = await transaction.get(userRef);
+    try {
+      return await _db.runTransaction((transaction) async {
+        final userRef = _db.collection('users').doc(userId);
+        final userDoc = await transaction.get(userRef);
 
-      if (!userDoc.exists) return;
-
-      final data = userDoc.data()!;
-      final lastActive = data['lastActive'] as Timestamp?;
-      final now = DateTime.now();
-      final int currentShields = data['streakShields'] ?? 0;
-
-      if (lastActive == null) {
-        transaction.update(userRef, {
-          'streak': 1,
-          'lastActive': FieldValue.serverTimestamp(),
-        });
-        return;
-      }
-
-      final lastDate = lastActive.toDate();
-      final difference = DateTime(now.year, now.month, now.day)
-          .difference(DateTime(lastDate.year, lastDate.month, lastDate.day))
-          .inDays;
-
-      if (difference == 0) {
-        // Already active today
-        return;
-      } else if (difference == 1) {
-        // Continued streak
-        transaction.update(userRef, {
-          'streak': FieldValue.increment(1),
-          'lastActive': FieldValue.serverTimestamp(),
-        });
-      } else {
-        // Streak broken? Check shields
-        if (currentShields > 0) {
-          transaction.update(userRef, {
-            'streakShields': FieldValue.increment(-1),
-            'lastActive': FieldValue.serverTimestamp(),
-          });
-        } else {
-          transaction.update(userRef, {
-            'streak': 1,
-            'lastActive': FieldValue.serverTimestamp(),
-          });
+        if (!userDoc.exists) {
+          debugPrint("Streak Error: User $userId does not exist.");
+          return;
         }
-      }
-    });
+
+        final data = userDoc.data()!;
+        final lastActive = data['lastActive'] as Timestamp?;
+        final now = DateTime.now();
+        final dateKey = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+        final int currentShields = data['streakShields'] ?? 0;
+        final int currentStreak = data['streak'] ?? 0;
+
+        Map<String, dynamic> updates = {
+          'lastActive': FieldValue.serverTimestamp(),
+          'activityMap.$dateKey': true,
+        };
+
+        if (lastActive == null) {
+          debugPrint("Streak: First activity for user $userId. Setting streak to 1.");
+          updates['streak'] = 1;
+        } else {
+          final lastDate = lastActive.toDate();
+          final difference = DateTime(now.year, now.month, now.day)
+              .difference(DateTime(lastDate.year, lastDate.month, lastDate.day))
+              .inDays;
+
+          if (difference == 0) {
+            debugPrint("Streak: Activity already recorded today for $userId.");
+          } else if (difference == 1) {
+            debugPrint("Streak: Continued streak for $userId. New streak: ${currentStreak + 1}.");
+            updates['streak'] = FieldValue.increment(1);
+          } else {
+            // Streak broken? Check shields
+            if (currentShields > 0) {
+              debugPrint("Streak: Saved by shield for $userId. Gaps: $difference days.");
+              updates['streakShields'] = FieldValue.increment(-1);
+              // Streak preserved
+            } else {
+              debugPrint("Streak: Broken for $userId. Resetting to 1. Gaps: $difference days.");
+              updates['streak'] = 1;
+            }
+          }
+        }
+
+        transaction.update(userRef, updates);
+      });
+    } catch (e) {
+      debugPrint("Streak Error for $userId: $e");
+    }
   }
 
   // Admin Stats
@@ -1469,7 +1594,7 @@ class FirebaseService {
       wordsStream,
       userDocStream,
       allUsersCountStream,
-      (wordsSnap, userSnap, allUsersSnap) {
+      (QuerySnapshot<Map<String, dynamic>> wordsSnap, DocumentSnapshot<Map<String, dynamic>> userSnap, QuerySnapshot<Map<String, dynamic>> allUsersSnap) {
         final docs = wordsSnap.docs;
         int approved = 0;
         int rejected = 0;
@@ -1625,7 +1750,7 @@ class FirebaseService {
         .limit(10)
         .snapshots();
 
-    return Rx.combineLatest2(wordsStream, voicesStream, (wordSnap, voiceSnap) {
+    return Rx.combineLatest2(wordsStream, voicesStream, (QuerySnapshot<Map<String, dynamic>> wordSnap, QuerySnapshot<Map<String, dynamic>> voiceSnap) {
       final List<ValidationItem> items = [];
 
       for (var doc in wordSnap.docs) {
@@ -1894,6 +2019,7 @@ class FirebaseService {
     });
   }
 }
+
 
 // Global Providers
 final firebaseServiceProvider = Provider((ref) {
