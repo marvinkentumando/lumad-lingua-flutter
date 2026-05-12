@@ -1,0 +1,298 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/dictionary_entry.dart';
+import '../models/voice_submission.dart';
+import '../services/firebase_service.dart';
+import '../services/auth_service.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_typography.dart';
+import '../widgets/ambient_topo_background.dart';
+import '../widgets/brand_card.dart';
+
+class LegacyTrackerDetailsScreen extends ConsumerWidget {
+  const LegacyTrackerDetailsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authStateProvider).value;
+    if (user == null) return const Scaffold(body: Center(child: Text('Please login')));
+
+    final wordsAsync = ref.watch(userContributionsStreamProvider(user.uid));
+    final voicesAsync = ref.watch(userVoiceSubmissionsStreamProvider(user.uid));
+
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: AppColors.forest900,
+        body: AmbientTopoBackground(
+          child: SafeArea(
+            child: Column(
+              children: [
+                _buildHeader(context),
+                _buildTabBar(),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _buildWordsTab(wordsAsync),
+                      _buildVoicesTab(voicesAsync),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Legacy Details',
+            style: AppTypography.h2ExtraBold.copyWith(color: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabBar() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      decoration: BoxDecoration(
+        color: AppColors.forest800,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: TabBar(
+        indicator: BoxDecoration(
+          color: AppColors.gold500,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent,
+        labelColor: AppColors.forest900,
+        unselectedLabelColor: Colors.white60,
+        labelStyle: AppTypography.label.copyWith(fontWeight: FontWeight.bold),
+        tabs: const [
+          Tab(text: 'WORDS'),
+          Tab(text: 'AUDIOS'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWordsTab(AsyncValue<List<DictionaryEntry>> wordsAsync) {
+    return wordsAsync.when(
+      data: (words) {
+        if (words.isEmpty) return _buildEmptyState('No words found');
+        
+        // Group by dialect
+        final grouped = <String, List<DictionaryEntry>>{};
+        for (var word in words) {
+          grouped.putIfAbsent(word.language, () => []).add(word);
+        }
+
+        return ListView(
+          padding: const EdgeInsets.all(24),
+          children: grouped.entries.map((e) => _buildDialectGroup(e.key, e.value)).toList(),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
+      error: (err, _) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+    );
+  }
+
+  Widget _buildVoicesTab(AsyncValue<List<VoiceSubmission>> voicesAsync) {
+    return voicesAsync.when(
+      data: (voices) {
+        if (voices.isEmpty) return _buildEmptyState('No audio recordings found');
+
+        // Group by dialect
+        final grouped = <String, List<VoiceSubmission>>{};
+        for (var voice in voices) {
+          grouped.putIfAbsent(voice.dialect, () => []).add(voice);
+        }
+
+        return ListView(
+          padding: const EdgeInsets.all(24),
+          children: grouped.entries.map((e) => _buildVoiceDialectGroup(e.key, e.value)).toList(),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
+      error: (err, _) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+    );
+  }
+
+  Widget _buildDialectGroup(String dialect, List<DictionaryEntry> entries) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Row(
+            children: [
+              const Icon(Icons.language_rounded, color: AppColors.gold500, size: 16),
+              const SizedBox(width: 8),
+              Text(
+                dialect.toUpperCase(),
+                style: AppTypography.label.copyWith(
+                  color: AppColors.gold500,
+                  letterSpacing: 2,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(child: Divider(color: AppColors.gold500.withOpacity(0.2))),
+            ],
+          ),
+        ),
+        ...entries.map((entry) => _buildEntryCard(entry)),
+      ],
+    );
+  }
+
+  Widget _buildVoiceDialectGroup(String dialect, List<VoiceSubmission> entries) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Row(
+            children: [
+              const Icon(Icons.mic_rounded, color: AppColors.semanticBlue, size: 16),
+              const SizedBox(width: 8),
+              Text(
+                dialect.toUpperCase(),
+                style: AppTypography.label.copyWith(
+                  color: AppColors.semanticBlue,
+                  letterSpacing: 2,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(child: Divider(color: AppColors.semanticBlue.withOpacity(0.2))),
+            ],
+          ),
+        ),
+        ...entries.map((entry) => _buildVoiceCard(entry)),
+      ],
+    );
+  }
+
+  Widget _buildEntryCard(DictionaryEntry entry) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: BrandCard(
+        theme: BrandCardTheme.vibrant,
+        padding: const EdgeInsets.all(16),
+        borderRadius: 20,
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    entry.indigenousWord,
+                    style: AppTypography.h3.copyWith(color: Colors.white, fontSize: 16),
+                  ),
+                  Text(
+                    entry.translation,
+                    style: AppTypography.body.copyWith(color: Colors.white60, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            _buildStatusBadge(entry.status.name),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVoiceCard(VoiceSubmission voice) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: BrandCard(
+        theme: BrandCardTheme.vibrant,
+        padding: const EdgeInsets.all(16),
+        borderRadius: 20,
+        child: Row(
+          children: [
+            const Icon(Icons.play_circle_fill_rounded, color: AppColors.gold500, size: 32),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    voice.title,
+                    style: AppTypography.h3.copyWith(color: Colors.white, fontSize: 16),
+                  ),
+                  Text(
+                    voice.speakerRole,
+                    style: AppTypography.body.copyWith(color: Colors.white60, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            _buildStatusBadge(voice.status.name),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    Color color;
+    switch (status.toLowerCase()) {
+      case 'approved':
+        color = AppColors.semanticGreen;
+        break;
+      case 'pending':
+        color = AppColors.gold500;
+        break;
+      case 'rejected':
+      case 'flagged':
+        color = AppColors.semanticRed;
+        break;
+      default:
+        color = Colors.white24;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: AppTypography.label.copyWith(color: color, fontSize: 8, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.history_edu_rounded, color: Colors.white10, size: 64),
+          const SizedBox(height: 16),
+          Text(message, style: AppTypography.body.copyWith(color: Colors.white24)),
+        ],
+      ),
+    );
+  }
+}
