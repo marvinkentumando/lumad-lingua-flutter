@@ -86,18 +86,18 @@ void main() async {
   }
 
   try {
-    await Supabase.initialize(
-      url: 'https://ovdwgowtnlujnbcyldkk.supabase.co',
-      anonKey: 'sb_publishable_rMQ9kc8SVsba4_p-aPrOPg_3XDgAbR8',
-    );
-  } catch (e) {
-    debugPrint("Supabase Initialization Error: $e");
-  }
-
-  try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
     debugPrint("Dotenv Load Error: $e");
+  }
+
+  try {
+    await Supabase.initialize(
+      url: dotenv.env['SUPABASE_URL'] ?? '',
+      anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
+    );
+  } catch (e) {
+    debugPrint("Supabase Initialization Error: $e");
   }
 
   try {

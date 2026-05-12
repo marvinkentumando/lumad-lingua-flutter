@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:file_picker/file_picker.dart';
-import '../../services/firebase_service.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:record/record.dart';
@@ -314,11 +314,16 @@ class EditorUtils {
           ),
         );
 
-        final String downloadUrl = await FirebaseService().uploadFile(
-          path,
+        final String bucket = path.contains('audio') ? 'audio' : 'images';
+        final String fileName = '${DateTime.now().millisecondsSinceEpoch}_${result.files.single.name}';
+        
+        await Supabase.instance.client.storage.from(bucket).upload(
+          fileName,
           File(result.files.single.path!),
-          fileName: result.files.single.name,
+          fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
         );
+
+        final String downloadUrl = Supabase.instance.client.storage.from(bucket).getPublicUrl(fileName);
 
         onComplete(downloadUrl);
 
@@ -491,11 +496,15 @@ class _AudioRecorderDialogState extends State<AudioRecorderDialog> {
         context,
       ).showSnackBar(const SnackBar(content: Text('Uploading recording...')));
 
-      final url = await FirebaseService().uploadFile(
-        'lesson_assets/audio',
+      final String fileName = p.basename(path);
+      
+      await Supabase.instance.client.storage.from('audio').upload(
+        fileName,
         File(path),
-        fileName: p.basename(path),
+        fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
       );
+
+      final url = Supabase.instance.client.storage.from('audio').getPublicUrl(fileName);
 
       widget.onComplete(url);
       if (mounted) Navigator.pop(context);

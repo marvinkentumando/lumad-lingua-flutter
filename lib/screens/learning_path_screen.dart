@@ -55,7 +55,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
     Future.delayed(const Duration(milliseconds: 500), () {
       if (!mounted) return;
       final keyContext = _activeNodeKey.currentContext;
-      if (keyContext != null) {
+      if (keyContext != null && mounted) {
         Scrollable.ensureVisible(
           keyContext,
           duration: const Duration(milliseconds: 800),

@@ -17,6 +17,7 @@ import '../models/artifact.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/impact_card.dart';
 import '../services/impact_service.dart';
+import '../services/supabase_storage_service.dart';
 import '../widgets/daily_check_in_board.dart';
 import '../widgets/level_up_modal.dart';
 import '../widgets/skeleton.dart';
@@ -892,8 +893,8 @@ class LearnerProfileScreen extends ConsumerWidget {
         }
 
         final url = await ref
-            .read(firebaseServiceProvider)
-            .uploadProfilePicture(userId, file);
+            .read(supabaseStorageServiceProvider)
+            .uploadImage(file, 'profile_${userId}_${DateTime.now().millisecondsSinceEpoch}.jpg');
         await ref.read(firebaseServiceProvider).updateUserProfile(userId, {
           'photoURL': url,
         });

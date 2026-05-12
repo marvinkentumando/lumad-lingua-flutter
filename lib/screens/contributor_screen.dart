@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:io';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
@@ -22,6 +23,7 @@ import '../widgets/brand_button.dart';
 import '../widgets/wotd_widget.dart';
 import '../widgets/impact_card.dart';
 import '../services/impact_service.dart';
+import '../services/supabase_storage_service.dart';
 
 class ContributorScreen extends ConsumerStatefulWidget {
   const ContributorScreen({super.key});
@@ -854,9 +856,9 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
                                   final fileName =
                                       'word_${DateTime.now().millisecondsSinceEpoch}.m4a';
                                   audioUrl = await ref
-                                      .read(firebaseServiceProvider)
+                                      .read(supabaseStorageServiceProvider)
                                       .uploadAudio(
-                                        _recordedAudioPath!,
+                                        File(_recordedAudioPath!),
                                         fileName,
                                       );
                                 } catch (e) {
@@ -1434,8 +1436,8 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
       // Upload to Storage
       final fileName = 'voice_${user.uid}_${DateTime.now().millisecondsSinceEpoch}.m4a';
       final audioUrl = await ref
-          .read(firebaseServiceProvider)
-          .uploadAudio(path, fileName);
+          .read(supabaseStorageServiceProvider)
+          .uploadAudio(File(path), fileName);
 
       // Save Metadata to Firestore
       final municipalityId =

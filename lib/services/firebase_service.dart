@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'dart:io';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:math' as math;
 import '../models/dictionary_entry.dart';
 import '../models/geo_recording.dart';
@@ -30,128 +30,7 @@ class FirebaseService {
 
   FirebaseFirestore get db => _db;
 
-  // Generic File Upload
-  Future<String> uploadFile(
-    String path,
-    dynamic fileData, {
-    String? fileName,
-  }) async {
-    final String name =
-        fileName ?? DateTime.now().millisecondsSinceEpoch.toString();
-    final ref = _storage.ref().child('$path/$name');
-
-    try {
-      if (fileData is File) {
-        await ref.putFile(fileData);
-      } else if (fileData is List<int>) {
-        await ref.putData(Uint8List.fromList(fileData));
-      } else {
-        throw Exception('Unsupported file data type');
-      }
-
-      // Retry mechanism for fetching Download URL
-      String? url;
-      int retries = 0;
-      while (url == null && retries < 5) {
-        try {
-          url = await ref.getDownloadURL();
-        } catch (e) {
-          retries++;
-          debugPrint("Storage: getDownloadURL retry $retries for $path/$name...");
-          await Future.delayed(Duration(seconds: 1 * retries));
-        }
-      }
-
-      if (url == null) throw Exception("Failed to fetch download URL after retries.");
-      return url;
-    } on FirebaseException catch (e) {
-      debugPrint("Storage: Upload failed (${e.code}): ${e.message}");
-      rethrow;
-    }
-  }
-
-  // Audio Upload
-  Future<String> uploadAudio(String filePath, String fileName) async {
-    // Sanitize path in case it's a URI
-    final String cleanPath = filePath.startsWith('file://')
-        ? Uri.parse(filePath).toFilePath()
-        : filePath;
-
-    final file = File(cleanPath);
-    if (!await file.exists()) {
-      throw Exception('Local audio file not found at $cleanPath');
-    }
-
-    final int fileSize = await file.length();
-    if (fileSize == 0) {
-      throw Exception('Recorded audio file is empty.');
-    }
-
-    final ref = _storage.ref().child('audio/$fileName');
-    try {
-      debugPrint("Storage: Uploading $fileName ($fileSize bytes) to ${ref.fullPath}");
-
-      // Explicitly set content type
-      final metadata = SettableMetadata(contentType: 'audio/m4a');
-
-      // Use putFile with metadata
-      final uploadTask = await ref.putFile(file, metadata);
-
-      // Verification Loop
-      String? url;
-      int retries = 0;
-      while (url == null && retries < 6) {
-        try {
-          url = await ref.getDownloadURL();
-          debugPrint("Storage: Download URL obtained on attempt ${retries + 1}");
-        } catch (e) {
-          retries++;
-          debugPrint("Storage: URL fetch attempt $retries failed: $e. Waiting...");
-          await Future.delayed(Duration(milliseconds: 1000 * retries));
-        }
-      }
-
-      if (url == null) throw Exception("Cloud storage object was uploaded but could not be located after retries.");
-
-      debugPrint("Storage: Upload success.");
-      return url;
-    } on FirebaseException catch (e) {
-      debugPrint("Storage: Upload critical failure (${e.code}): ${e.message}");
-      rethrow;
-    }
-  }
-
-  Future<String> uploadProfilePicture(String userId, File file) async {
-    final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    final ref = _storage.ref().child('users/$userId/$fileName');
-
-    try {
-      debugPrint("Storage: Uploading profile picture to ${ref.fullPath}");
-      final uploadTask = await ref.putFile(file);
-
-      // Verification Loop
-      String? url;
-      int retries = 0;
-      while (url == null && retries < 6) {
-        try {
-          url = await ref.getDownloadURL();
-        } catch (e) {
-          retries++;
-          debugPrint("Storage: Profile URL fetch attempt $retries failed: $e. Waiting...");
-          await Future.delayed(Duration(milliseconds: 1000 * retries));
-        }
-      }
-
-      if (url == null) throw Exception("Profile picture was uploaded but its URL could not be retrieved.");
-
-      debugPrint("Storage: Profile upload success.");
-      return url;
-    } on FirebaseException catch (e) {
-      debugPrint("Storage: Profile upload failure (${e.code}): ${e.message}");
-      rethrow;
-    }
-  }
-
+  // User Profile Operations
   Future<void> updateUserProfile(
     String userId,
     Map<String, dynamic> data,
@@ -598,47 +477,7 @@ class FirebaseService {
         });
   }
 
-  // Audio Upload Operations
-  Future<String> uploadVoiceFragment(String userId, String filePath) async {
-    // Sanitize path in case it's a URI
-    final String cleanPath = filePath.startsWith('file://')
-        ? Uri.parse(filePath).toFilePath()
-        : filePath;
-
-    final file = File(cleanPath);
-    if (!await file.exists()) {
-      debugPrint("Upload Error: File not found at $cleanPath");
-      throw Exception('Local recording file not found.');
-    }
-
-    final fileName = 'voice_${userId}_${DateTime.now().millisecondsSinceEpoch}.m4a';
-    final ref = _storage.ref().child('audio/$fileName');
-
-    try {
-      debugPrint("Storage: Uploading voice fragment to ${ref.fullPath}");
-      final uploadTask = await ref.putFile(file);
-
-      // Verification Loop
-      String? url;
-      int retries = 0;
-      while (url == null && retries < 6) {
-        try {
-          url = await ref.getDownloadURL();
-          debugPrint("Storage: Voice Download URL obtained on attempt ${retries + 1}");
-        } catch (e) {
-          retries++;
-          debugPrint("Storage: Voice URL fetch attempt $retries failed: $e. Waiting...");
-          await Future.delayed(Duration(milliseconds: 1000 * retries));
-        }
-      }
-
-      if (url == null) throw Exception("Voice fragment was uploaded but could not be verified on the server.");
-      return url;
-    } on FirebaseException catch (e) {
-      debugPrint("Storage: Voice upload critical failure (${e.code}): ${e.message}");
-      rethrow;
-    }
-  }
+  // User Management
 
   // User Management
   Stream<List<AdminUser>> getAllUsers() {
@@ -1018,11 +857,26 @@ class FirebaseService {
 
   Future<void> deleteFileByUrl(String url) async {
     try {
-      final ref = _storage.refFromURL(url);
-      await ref.delete();
+      if (url.contains('supabase.co')) {
+        // Supabase URL
+        // Format: https://[PROJECT].supabase.co/storage/v1/object/public/[BUCKET]/[PATH]
+        final uri = Uri.parse(url);
+        final pathSegments = uri.pathSegments;
+        if (pathSegments.length >= 5) {
+          final bucket = pathSegments[4];
+          final path = pathSegments.sublist(5).join('/');
+          // Using direct Supabase client since we are in a singleton/service context
+          await Supabase.instance.client.storage.from(bucket).remove([path]);
+          debugPrint('Successfully deleted Supabase file: $path from $bucket');
+        }
+      } else {
+        // Firebase URL
+        final ref = _storage.refFromURL(url);
+        await ref.delete();
+        debugPrint('Successfully deleted Firebase file: $url');
+      }
     } catch (e) {
       debugPrint('Error deleting file: $e');
-      // If file doesn't exist, we can ignore
     }
   }
 
