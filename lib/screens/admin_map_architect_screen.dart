@@ -8,7 +8,6 @@ import '../services/firebase_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/glass_box.dart';
-import '../widgets/brand_button.dart';
 import '../widgets/cached_tile_provider.dart';
 import 'package:flutter/services.dart';
 
@@ -22,13 +21,11 @@ class AdminMapArchitectScreen extends ConsumerStatefulWidget {
 class _AdminMapArchitectScreenState extends ConsumerState<AdminMapArchitectScreen> {
   final MapController _mapController = MapController();
   LatLng? _selectedLocation;
-  GeoRecording? _editingMunicipality;
   bool _isSatellite = true;
 
   void _handleMapTap(TapPosition tapPosition, LatLng latLng) {
     setState(() {
       _selectedLocation = latLng;
-      _editingMunicipality = null;
     });
     _showEditDialog(latLng);
   }
@@ -66,7 +63,7 @@ class _AdminMapArchitectScreenState extends ConsumerState<AdminMapArchitectScree
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<RecordingLanguage>(
-                  value: selectedLang,
+                  initialValue: selectedLang,
                   dropdownColor: AppColors.forest800,
                   style: const TextStyle(color: Colors.white),
                   decoration: _inputDecoration('Primary Dialect'),

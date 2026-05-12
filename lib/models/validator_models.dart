@@ -30,6 +30,7 @@ class ValidationItem {
   final String contributor;
   final DateTime submittedAt;
   final String priority; // 'normal', 'high'
+  final String? audioUrl;
 
   const ValidationItem({
     required this.id,
@@ -40,6 +41,7 @@ class ValidationItem {
     required this.contributor,
     required this.submittedAt,
     this.priority = 'normal',
+    this.audioUrl,
   });
 }
 

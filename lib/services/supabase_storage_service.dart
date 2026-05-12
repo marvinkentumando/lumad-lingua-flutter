@@ -68,6 +68,16 @@ class SupabaseStorageService {
     }
   }
 
+  /// Lists all files in a specified bucket.
+  Future<List<FileObject>> listFiles(String bucket, {String? path}) async {
+    try {
+      return await _client.storage.from(bucket).list(path: path);
+    } catch (e) {
+      debugPrint('Error listing files in Supabase: $e');
+      return [];
+    }
+  }
+
   /// Uploads a file to a specified bucket.
   /// Returns the public URL of the uploaded file.
   Future<String?> uploadFile({
@@ -94,6 +104,23 @@ class SupabaseStorageService {
       debugPrint('Error uploading file to $bucket: $e');
       return null;
     }
+  }
+  /// Gets the public URL for an audio file.
+  /// If the input is already a full URL, returns it as is.
+  /// If it's a path, returns the public URL from the 'audio' bucket.
+  String getAudioUrl(String pathOrUrl) {
+    if (pathOrUrl.isEmpty) return '';
+    if (pathOrUrl.startsWith('http')) return pathOrUrl;
+    return _client.storage.from('audio').getPublicUrl(pathOrUrl);
+  }
+
+  /// Gets the public URL for an image file.
+  /// If the input is already a full URL, returns it as is.
+  /// If it's a path, returns the public URL from the 'images' bucket.
+  String getImageUrl(String pathOrUrl) {
+    if (pathOrUrl.isEmpty) return '';
+    if (pathOrUrl.startsWith('http')) return pathOrUrl;
+    return _client.storage.from('images').getPublicUrl(pathOrUrl);
   }
 }
 

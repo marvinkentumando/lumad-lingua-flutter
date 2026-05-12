@@ -8,6 +8,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/ambient_topo_background.dart';
 import '../widgets/brand_card.dart';
+import '../widgets/preview_audio_player.dart';
 
 class LegacyTrackerDetailsScreen extends ConsumerWidget {
   const LegacyTrackerDetailsScreen({super.key});
@@ -151,7 +152,7 @@ class LegacyTrackerDetailsScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Expanded(child: Divider(color: AppColors.gold500.withOpacity(0.2))),
+              Expanded(child: Divider(color: AppColors.gold500.withValues(alpha: 0.2))),
             ],
           ),
         ),
@@ -179,7 +180,7 @@ class LegacyTrackerDetailsScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Expanded(child: Divider(color: AppColors.semanticBlue.withOpacity(0.2))),
+              Expanded(child: Divider(color: AppColors.semanticBlue.withValues(alpha: 0.2))),
             ],
           ),
         ),
@@ -197,6 +198,10 @@ class LegacyTrackerDetailsScreen extends ConsumerWidget {
         borderRadius: 20,
         child: Row(
           children: [
+            if (entry.audioUrl != null && entry.audioUrl!.isNotEmpty) ...[
+              PreviewAudioPlayer(audioUrl: entry.audioUrl!, size: 32),
+              const SizedBox(width: 12),
+            ],
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -228,7 +233,10 @@ class LegacyTrackerDetailsScreen extends ConsumerWidget {
         borderRadius: 20,
         child: Row(
           children: [
-            const Icon(Icons.play_circle_fill_rounded, color: AppColors.gold500, size: 32),
+            if (voice.audioUrl.isNotEmpty)
+              PreviewAudioPlayer(audioUrl: voice.audioUrl, size: 32)
+            else
+              const Icon(Icons.play_circle_fill_rounded, color: Colors.white24, size: 32),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -272,9 +280,9 @@ class LegacyTrackerDetailsScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         status.toUpperCase(),

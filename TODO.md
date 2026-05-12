@@ -52,8 +52,16 @@ This roadmap marks the transition from our established foundations to a **Premiu
 - [x] **SM-2 SRS Algorithm**: Dynamic spaced repetition for long-term retention.
 - [x] **Lesson Weaver**: Modular editor with 8+ activity types and real-time validation.
 - [x] **Real-time Analytics**: Firestore-driven impact tracking and profile metrics.
+- [x] **Advanced Pedagogical Analytics**: Heatmaps, dialect distribution, and SRS health monitoring.
 
 ### 🏛️ Stability & Infrastructure
 - [x] **Offline Resilience**: Local caching via Hive and upload queuing.
 - [x] **Global Error Handling**: Centralized error boundaries and initialization logic.
 - [x] **Zero-Lint State**: Compliance with modern Flutter best practices.
+
+### 👑 Admin & Governance (New)
+- [x] **Ancestral Map Architect**: Visual editor for cultural sites and municipality hotspots.
+- [x] **Warrior Circle Ops**: Season management, shop pricing, and duel moderation.
+- [ ] **Remote Reward Matrix**: Dynamic XP configuration via Firestore.
+- [ ] **Role Request Dashboard**: Full processing flow for Contributor/Educator roles.
+- [ ] **Elders' Signal Moderator**: Community-driven reporting and flag resolution.

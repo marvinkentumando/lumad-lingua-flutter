@@ -20,7 +20,9 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/ambient_topo_background.dart';
 import '../widgets/brand_button.dart';
-import '../widgets/wotd_widget.dart';
+import 'legacy_tracker_details_screen.dart';
+import '../models/voice_submission.dart';
+
 import '../widgets/impact_card.dart';
 import '../services/impact_service.dart';
 import '../services/supabase_storage_service.dart';
@@ -430,6 +432,10 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
     final filtered = _filterStatus == 'all'
         ? contributions
         : contributions.where((c) {
+            if (_filterStatus == 'flagged') {
+              return c.status == ValidationStatus.flagged ||
+                  c.status == ValidationStatus.rejected;
+            }
             return c.status.name == _filterStatus;
           }).toList();
 
@@ -446,17 +452,41 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
                 fontSize: 18,
               ),
             ),
-            if (_filterStatus != 'all')
-              GestureDetector(
-                onTap: () => setState(() => _filterStatus = 'all'),
-                child: Text(
-                  'Clear Filter',
-                  style: AppTypography.label.copyWith(
-                    color: AppColors.gold500,
-                    fontSize: 10,
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LegacyTrackerDetailsScreen(),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    'View All',
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.gold500,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ),
+                if (_filterStatus != 'all') ...[
+                  const SizedBox(width: 16),
+                  GestureDetector(
+                    onTap: () => setState(() => _filterStatus = 'all'),
+                    child: Text(
+                      'Clear Filter',
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.gold500,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ],
         ),
         const SizedBox(height: 20),
@@ -1074,8 +1104,6 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
                 ),
                 error: (_, __) => const SizedBox.shrink(),
               ),
-              const SizedBox(height: 24),
-              const WotdWidget(),
               const SizedBox(height: 32),
               contributionsAsync.when(
                 data: (contributions) {
@@ -1432,6 +1460,9 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
       if (_selectedProvince == null || _selectedMunicipality == null) {
         throw Exception("Please complete the location information.");
       }
+      if (_selectedLanguage == null) {
+        throw Exception("Please select a language/dialect.");
+      }
 
       // Upload to Storage
       final fileName = 'voice_${user.uid}_${DateTime.now().millisecondsSinceEpoch}.m4a';
@@ -1439,11 +1470,16 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
           .read(supabaseStorageServiceProvider)
           .uploadAudio(File(path), fileName);
 
+      if (audioUrl == null) {
+        throw Exception("Failed to upload audio.");
+      }
+
       // Save Metadata to Firestore
       final municipalityId =
           _selectedMunicipality?.toLowerCase().replaceAll(' ', '_') ??
           'unknown';
-      await ref.read(firebaseServiceProvider).addRecording(municipalityId, {
+      
+      final recordingData = {
         'title': 'New Pronunciation',
         'speakerName': user.displayName ?? 'Tribe Member',
         'speakerRole': _selectedSpeaker,
@@ -1454,7 +1490,25 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
         'audioUrl': audioUrl,
         'timestamp': DateTime.now().toIso8601String(),
         'contributorId': user.uid,
-      });
+      };
+
+      await ref.read(firebaseServiceProvider).addRecording(municipalityId, recordingData);
+
+      // Also add to voice_submissions for validation and tracking
+      await ref.read(firebaseServiceProvider).addVoiceSubmission(
+        VoiceSubmission(
+          id: '', // Firestore will generate
+          title: 'New Pronunciation - $_selectedMunicipality',
+          dialect: _selectedLanguage ?? 'Lumad',
+          contributorId: user.uid,
+          contributorName: user.displayName ?? 'Tribe Member',
+          audioUrl: audioUrl,
+          speakerRole: _selectedSpeaker,
+          province: _selectedProvince,
+          municipality: _selectedMunicipality,
+          status: VoiceStatus.pending,
+        ),
+      );
 
       if (context.mounted) {
         Navigator.pop(context);
@@ -1654,6 +1708,70 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
                                   );
                                 }).toList(),
                           ),
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // Language/Dialect Selector
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'LANGUAGE / DIALECT',
+                            style: AppTypography.label.copyWith(
+                              color: AppColors.creamText3,
+                              fontSize: 10,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Consumer(
+                          builder: (context, ref, child) {
+                            final dialectsAsync = ref.watch(dialectsInNeedProvider);
+                            final existingDialects = dialectsAsync.value?.keys.toList() ?? [];
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              decoration: BoxDecoration(
+                                color: AppColors.forest900,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: existingDialects.contains(_selectedLanguage) ? _selectedLanguage : null,
+                                  hint: const Text(
+                                    "Select Dialect",
+                                    style: TextStyle(
+                                      color: Colors.white24,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  dropdownColor: AppColors.forest900,
+                                  isExpanded: true,
+                                  icon: const Icon(
+                                    Icons.keyboard_arrow_down_rounded,
+                                    color: AppColors.gold500,
+                                  ),
+                                  items: existingDialects.map((String dialect) {
+                                    return DropdownMenuItem<String>(
+                                      value: dialect,
+                                      child: Text(
+                                        dialect,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (String? newValue) {
+                                    setModalState(() {
+                                      _selectedLanguage = newValue;
+                                    });
+                                  },
+                                ),
+                              ),
+                            );
+                          },
                         ),
 
                         const SizedBox(height: 32),

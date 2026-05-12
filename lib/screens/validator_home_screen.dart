@@ -10,6 +10,7 @@ import '../services/auth_service.dart';
 import '../widgets/wotd_widget.dart';
 import '../services/firebase_service.dart';
 import '../widgets/ambient_topo_background.dart';
+import '../widgets/preview_audio_player.dart';
 
 class ValidatorHomeScreen extends ConsumerStatefulWidget {
   const ValidatorHomeScreen({super.key});
@@ -495,6 +496,16 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
                 ],
               ),
             ),
+            if (item.audioUrl != null && item.audioUrl!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: PreviewAudioPlayer(
+                  audioUrl: item.audioUrl!,
+                  size: 32,
+                  color: AppColors.gold500,
+                ),
+              ),
+            const SizedBox(width: 8),
             const Icon(Icons.chevron_right_rounded, color: Colors.white24),
           ],
         ),

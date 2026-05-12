@@ -5,12 +5,12 @@ import '../theme/app_typography.dart';
 import '../models/dictionary_entry.dart';
 import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
-import '../services/audio_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/ambient_topo_background.dart';
 import '../widgets/glass_box.dart';
+import '../widgets/preview_audio_player.dart';
 import 'package:flutter/services.dart';
 import 'package:confetti/confetti.dart';
 import 'dart:math';
@@ -33,7 +33,6 @@ class _ValidatorEntriesScreenState
   bool _isFetchingMore = false;
   String _searchQuery = "";
   String _selectedDialect = "All";
-  String? _playingEntryId;
 
   int _documentLimit = 50;
   final ScrollController _scrollController = ScrollController();
@@ -877,69 +876,11 @@ class _ValidatorEntriesScreenState
                           ),
                         ),
                         const Spacer(),
-                        if (!_isSelectionMode)
-                          GestureDetector(
-                            onTap: () async {
-                              if (entry.audioUrl == null ||
-                                  entry.audioUrl!.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'No audio recorded for this entry.',
-                                    ),
-                                  ),
-                                );
-                                return;
-                              }
-
-                              setState(() => _playingEntryId = entry.id);
-                              try {
-                                await ref
-                                    .read(audioServiceProvider)
-                                    .playFromUrl(entry.audioUrl!);
-                              } catch (e) {
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Failed to play audio.'),
-                                      backgroundColor: AppColors.semanticRed,
-                                    ),
-                                  );
-                                }
-                              } finally {
-                                if (mounted) {
-                                  setState(() => _playingEntryId = null);
-                                }
-                              }
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: _playingEntryId == entry.id
-                                    ? AppColors.gold500
-                                    : const Color(0xFFE4581C),
-                                shape: BoxShape.circle,
-                                boxShadow: _playingEntryId == entry.id
-                                    ? [
-                                        BoxShadow(
-                                          color: AppColors.gold500.withValues(alpha: 0.3,
-                                          ),
-                                          spreadRadius: 4,
-                                          blurRadius: 10,
-                                        ),
-                                      ]
-                                    : [],
-                              ),
-                              child: Icon(
-                                _playingEntryId == entry.id
-                                    ? Icons.pause_rounded
-                                    : Icons.play_arrow_rounded,
-                                color: _playingEntryId == entry.id
-                                    ? AppColors.forest900
-                                    : Colors.white,
-                                size: 24,
-                              ),
-                            ),
+                        if (!_isSelectionMode && entry.audioUrl != null && entry.audioUrl!.isNotEmpty)
+                          PreviewAudioPlayer(
+                            audioUrl: entry.audioUrl!,
+                            size: 32,
+                            color: AppColors.gold500,
                           ),
                       ],
                     ),
@@ -1544,12 +1485,23 @@ class _ValidatorEntriesScreenState
                 ],
               ),
               const SizedBox(height: 16),
-              Text(
-                entry.indigenousWord,
-                style: AppTypography.displayBold.copyWith(
-                  color: AppColors.gold500,
-                  fontSize: 40,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    entry.indigenousWord,
+                    style: AppTypography.displayBold.copyWith(
+                      color: AppColors.gold500,
+                      fontSize: 40,
+                    ),
+                  ),
+                  if (entry.audioUrl != null && entry.audioUrl!.isNotEmpty)
+                    PreviewAudioPlayer(
+                      audioUrl: entry.audioUrl!,
+                      size: 48,
+                      color: AppColors.gold500,
+                    ),
+                ],
               ),
               Text(
                 '${entry.phonetic ?? ''} • ${entry.partOfSpeechLabel}',

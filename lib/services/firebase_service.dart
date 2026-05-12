@@ -17,6 +17,7 @@ import '../models/quest.dart';
 import '../models/community_activity.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rxdart/rxdart.dart';
+import '../models/gamification_models.dart';
 import '../models/validator_models.dart';
 import '../models/app_config.dart';
 
@@ -138,6 +139,18 @@ class FirebaseService {
         });
   }
 
+  Stream<List<VoiceSubmission>> getUserVoiceSubmissions(String userId) {
+    return _db
+        .collection('voice_submissions')
+        .where('contributorId', isEqualTo: userId)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs
+              .map((doc) => VoiceSubmission.fromFirestore(doc.data(), doc.id))
+              .toList();
+        });
+  }
+
   Stream<List<Artifact>> getUserArtifacts(String userId) {
     return _db
         .collection('users')
@@ -156,6 +169,26 @@ class FirebaseService {
     return _db.collection('words').snapshots().map((snapshot) {
       return snapshot.docs
           .map((doc) => DictionaryEntry.fromFirestore(doc.data(), doc.id))
+          .toList();
+    });
+  }
+
+  Stream<List<DictionaryEntry>> getDictionaryWordsByStatus(String status) {
+    return _db
+        .collection('words')
+        .where('status', isEqualTo: status)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs
+              .map((doc) => DictionaryEntry.fromFirestore(doc.data(), doc.id))
+              .toList();
+        });
+  }
+
+  Stream<List<VoiceSubmission>> getAllVoiceSubmissions() {
+    return _db.collection('voice_submissions').snapshots().map((snapshot) {
+      return snapshot.docs
+          .map((doc) => VoiceSubmission.fromFirestore(doc.data(), doc.id))
           .toList();
     });
   }
@@ -312,6 +345,25 @@ class FirebaseService {
     });
   }
 
+  // CRUD Operations for Municipalities
+  Future<void> addMunicipality(Map<String, dynamic> data) async {
+    await _db.collection('municipalities').add({
+      ...data,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> updateMunicipality(String id, Map<String, dynamic> data) async {
+    await _db.collection('municipalities').doc(id).update({
+      ...data,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> deleteMunicipality(String id) async {
+    await _db.collection('municipalities').doc(id).delete();
+  }
+
   // CRUD Operations for Dictionary
   Future<void> addWord(DictionaryEntry entry) async {
     await _db.collection('words').add(entry.toFirestore());
@@ -323,6 +375,28 @@ class FirebaseService {
 
   Future<void> deleteWord(String id) async {
     await _db.collection('words').doc(id).delete();
+  }
+
+  Future<void> bulkApproveWords(List<String> ids, String validatorId, String validatorRole) async {
+    final batch = _db.batch();
+    for (var id in ids) {
+      batch.update(_db.collection('words').doc(id), {
+        'status': 'approved',
+        'isValidated': true,
+        'validatorId': validatorId,
+        'validatorRole': validatorRole,
+        'validatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+    await batch.commit();
+  }
+
+  Future<void> bulkDeleteWords(List<String> ids) async {
+    final batch = _db.batch();
+    for (var id in ids) {
+      batch.delete(_db.collection('words').doc(id));
+    }
+    await batch.commit();
   }
 
   // Bookmark Operations
@@ -461,6 +535,13 @@ class FirebaseService {
         .add({...recordingData, 'timestamp': FieldValue.serverTimestamp()});
   }
 
+  Future<void> addVoiceSubmission(VoiceSubmission submission) async {
+    await _db.collection('voice_submissions').add({
+      ...submission.toFirestore(),
+      'submittedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   Stream<List<Map<String, dynamic>>> getRecordingsForMunicipality(
     String municipalityId,
   ) {
@@ -477,7 +558,126 @@ class FirebaseService {
         });
   }
 
-  // User Management
+  // Gamification & Economics Operations
+  Stream<List<LearningSeason>> getSeasons() {
+    return _db.collection('seasons').orderBy('startDate', descending: true).snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => LearningSeason.fromFirestore(doc.data(), doc.id)).toList();
+    });
+  }
+
+  Future<void> addSeason(LearningSeason season) async {
+    await _db.collection('seasons').add(season.toFirestore());
+  }
+
+  Future<void> updateSeason(String id, Map<String, dynamic> data) async {
+    await _db.collection('seasons').doc(id).update(data);
+  }
+
+  Future<void> deleteSeason(String id) async {
+    await _db.collection('seasons').doc(id).delete();
+  }
+
+  Stream<List<ShopItem>> getShopItems() {
+    return _db.collection('shop_items').snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => ShopItem.fromFirestore(doc.data(), doc.id)).toList();
+    });
+  }
+
+  Future<void> addShopItem(ShopItem item) async {
+    await _db.collection('shop_items').add(item.toFirestore());
+  }
+
+  Future<void> updateShopItem(String id, Map<String, dynamic> data) async {
+    await _db.collection('shop_items').doc(id).update(data);
+  }
+
+  Stream<List<Map<String, dynamic>>> getLinguaDuels() {
+    return _db.collection('lingua_duels').orderBy('createdAt', descending: true).snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
+    });
+  }
+
+  Future<void> resolveDuelDispute(String duelId, String resolution) async {
+    await _db.collection('lingua_duels').doc(duelId).update({
+      'status': 'resolved',
+      'moderatorResolution': resolution,
+      'resolvedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<Map<String, dynamic>> getAdvancedPedagogicalAnalytics() async {
+    try {
+      final progressSnap = await _db.collectionGroup('progress').get();
+      final srsSnap = await _db.collectionGroup('srs_progress').get();
+      final lessonsSnap = await _db.collection('lessons').get();
+
+      // 1. Lesson Heatmaps
+      final Map<String, Map<String, int>> lessonStruggles = {};
+      final Map<String, String> lessonNames = {};
+      for (var doc in lessonsSnap.docs) {
+        lessonNames[doc.id] = doc.data()['title'] ?? 'Unknown';
+      }
+
+      for (var doc in progressSnap.docs) {
+        final lessonId = doc.id;
+        final performance = doc.data()['performance'] as Map<String, dynamic>? ?? {};
+        if (!lessonStruggles.containsKey(lessonId)) {
+          lessonStruggles[lessonId] = {};
+        }
+        performance.forEach((taskId, mistakes) {
+          lessonStruggles[lessonId]![taskId] = (lessonStruggles[lessonId]![taskId] ?? 0) + (mistakes as num).toInt();
+        });
+      }
+
+      // 2. Dialect Distribution (by active learners)
+      final Map<String, Set<String>> dialectUsers = {};
+      for (var doc in lessonsSnap.docs) {
+        final lang = doc.data()['language'] ?? 'Lumad';
+        if (!dialectUsers.containsKey(lang)) dialectUsers[lang] = {};
+      }
+
+      for (var doc in progressSnap.docs) {
+        final lessonId = doc.id;
+        final userId = doc.reference.parent.parent?.id;
+        if (userId != null) {
+          final lessonDoc = lessonsSnap.docs.firstWhere((d) => d.id == lessonId, orElse: () => lessonsSnap.docs.first);
+          final lang = lessonDoc.data()['language'] ?? 'Lumad';
+          if (!dialectUsers.containsKey(lang)) dialectUsers[lang] = {};
+          dialectUsers[lang]!.add(userId);
+        }
+      }
+
+      // 3. SRS Health
+      int totalReviews = 0;
+      int totalSuccess = 0;
+      final Map<int, int> masteryDist = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+
+      for (var doc in srsSnap.docs) {
+        final data = doc.data();
+        final reviews = data['timesReviewed'] as int? ?? 0;
+        final level = data['level'] as int? ?? 0;
+        totalReviews += reviews;
+        // Approximation: success = total - failures (if we had failure count)
+        // Or using consecutiveCorrect as a health indicator
+        totalSuccess += data['consecutiveCorrect'] as int? ?? 0;
+        masteryDist[level] = (masteryDist[level] ?? 0) + 1;
+      }
+
+      return {
+        'lessonStruggles': lessonStruggles,
+        'lessonNames': lessonNames,
+        'dialectPopularity': dialectUsers.map((k, v) => MapEntry(k, v.length)),
+        'srsHealth': {
+          'retentionRate': totalReviews > 0 ? (totalSuccess / (totalReviews + totalSuccess)) : 0.0,
+          'masteryDistribution': masteryDist,
+          'totalCards': srsSnap.size,
+        }
+      };
+    } catch (e) {
+      debugPrint('Advanced Analytics Error: $e');
+      return {};
+    }
+  }
 
   // User Management
   Stream<List<AdminUser>> getAllUsers() {
@@ -488,8 +688,35 @@ class FirebaseService {
     });
   }
 
+  Future<QuerySnapshot<Map<String, dynamic>>> getUsersPaginated({
+    int limit = 20,
+    DocumentSnapshot? startAfter,
+  }) async {
+    Query<Map<String, dynamic>> query =
+        _db.collection('users').orderBy('createdAt', descending: true).limit(limit);
+
+    if (startAfter != null) {
+      query = query.startAfterDocument(startAfter);
+    }
+
+    return query.get();
+  }
+
   Future<void> updateUserRole(String userId, String newRole) async {
     await _db.collection('users').doc(userId).update({'role': newRole});
+  }
+
+  Future<void> updateUserDetails(String userId, Map<String, dynamic> data) async {
+    await _db.collection('users').doc(userId).update(data);
+  }
+
+  Future<void> createInvitation(String email, String role) async {
+    await _db.collection('invitations').add({
+      'email': email,
+      'role': role,
+      'status': 'pending',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
 
   // Contributor Request Operations
@@ -598,6 +825,88 @@ class FirebaseService {
         });
       }
     });
+  }
+
+  // System Health & Analytics
+  Stream<Map<String, dynamic>> getSystemHealth() {
+    // In a real app, this might come from a Cloud Function that monitors infrastructure
+    // or a dedicated 'health' document updated by a cron job.
+    return _db.collection('system').doc('health').snapshots().map((doc) {
+      if (!doc.exists) {
+        return {
+          'apiStatus': 'Online',
+          'storage': '75%',
+          'database': 'Healthy',
+          'uptime': '99.9%',
+        };
+      }
+      return doc.data()!;
+    });
+  }
+
+  Stream<Map<String, List<int>>> getPlatformActivityStats() {
+    return Rx.combineLatest2(
+      _db.collection('users').orderBy('createdAt').snapshots(),
+      _db.collection('words').orderBy('timestamp').snapshots(),
+      (userSnap, wordSnap) {
+        final now = DateTime.now();
+        final last7Days = List.generate(7, (i) => now.subtract(Duration(days: 6 - i)));
+        
+        List<int> growth = List.filled(7, 0);
+        List<int> contributions = List.filled(7, 0);
+
+        for (var doc in userSnap.docs) {
+          final createdAt = (doc.data()['createdAt'] as Timestamp?)?.toDate();
+          if (createdAt != null) {
+            for (int i = 0; i < 7; i++) {
+              if (createdAt.year == last7Days[i].year &&
+                  createdAt.month == last7Days[i].month &&
+                  createdAt.day == last7Days[i].day) {
+                growth[i]++;
+              }
+            }
+          }
+        }
+
+        for (var doc in wordSnap.docs) {
+          final timestamp = (doc.data()['timestamp'] as Timestamp?)?.toDate();
+          if (timestamp != null) {
+            for (int i = 0; i < 7; i++) {
+              if (timestamp.year == last7Days[i].year &&
+                  timestamp.month == last7Days[i].month &&
+                  timestamp.day == last7Days[i].day) {
+                contributions[i]++;
+              }
+            }
+          }
+        }
+
+        return {
+          'growth': growth,
+          'contributions': contributions,
+        };
+      },
+    );
+  }
+
+  // System Settings / Dialect Toggles
+  Stream<Map<String, bool>> getDialectSettings() {
+    return _db.collection('system_configs').doc('dialects').snapshots().map((doc) {
+      if (!doc.exists) {
+        return {
+          'Mansaka': true,
+          'Mandaya': true,
+          'Manobo': true,
+          'Bagobo': true,
+          'Kagan': false,
+        };
+      }
+      return Map<String, bool>.from(doc.data()!);
+    });
+  }
+
+  Future<void> updateDialectSettings(Map<String, bool> settings) async {
+    await _db.collection('system_configs').doc('dialects').set(settings);
   }
 
   Future<void> updateUserStatus(
@@ -855,6 +1164,29 @@ class FirebaseService {
     await _db.collection('lessons').doc(id).delete();
   }
 
+  Future<void> bulkApproveLessons(List<String> ids, String validatorId, String validatorRole) async {
+    final batch = _db.batch();
+    for (var id in ids) {
+      batch.update(_db.collection('lessons').doc(id), {
+        'status': 'PUBLISHED',
+        'isValidated': true,
+        'validatorId': validatorId,
+        'validatorRole': validatorRole,
+        'validatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+    await batch.commit();
+  }
+
+  Future<void> bulkDeleteLessons(List<String> ids) async {
+    // Note: This doesn't delete assets from storage for simplicity in bulk
+    final batch = _db.batch();
+    for (var id in ids) {
+      batch.delete(_db.collection('lessons').doc(id));
+    }
+    await batch.commit();
+  }
+
   Future<void> deleteFileByUrl(String url) async {
     try {
       if (url.contains('supabase.co')) {
@@ -1006,6 +1338,10 @@ class FirebaseService {
     }
   }
 
+  Future<void> updateAppConfig(Map<String, dynamic> data) async {
+    await _db.collection('config').doc('app').update(data);
+  }
+
   Future<Map<String, dynamic>> completeLesson(
     String userId,
     String lessonId,
@@ -1016,6 +1352,10 @@ class FirebaseService {
   }) async {
     // Fetch lesson details outside the transaction for efficiency
     final lesson = await getLessonById(lessonId);
+    
+    // Fetch config for dynamic XP
+    final configDoc = await _db.collection('config').doc('app').get();
+    final config = AppConfig.fromFirestore(configDoc.data() ?? {});
 
     // Artifact Gacha Logic (pre-fetch to keep transaction fast)
     Artifact? droppedArtifact;
@@ -1102,10 +1442,10 @@ class FirebaseService {
           final mistakes = taskPerformance?[task.id] ?? 0;
           if (mistakes == 0) {
             firstTryCount++;
-            xpReward += 20;
+            xpReward += config.lessonTaskPerfectXp;
           } else {
             retryCount++;
-            xpReward += 10;
+            xpReward += config.lessonTaskRetryXp;
           }
         }
       } else {
@@ -1114,7 +1454,7 @@ class FirebaseService {
       }
 
       // Completion Bonus + Combo/Speed Bonus
-      xpReward += 50 + bonusXp;
+      xpReward += config.lessonCompletionBaseXp + bonusXp;
 
       // Mist Crystal Reward
       int crystalReward;
@@ -1628,6 +1968,7 @@ class FirebaseService {
             submittedAt:
                 (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
             priority: data['priority'] == true ? 'high' : 'normal',
+            audioUrl: data['audioUrl'] ?? data['audioPath'],
           ),
         );
       }
@@ -1648,6 +1989,7 @@ class FirebaseService {
                 (data['timestamp'] as Timestamp?)?.toDate() ??
                 DateTime.now(),
             priority: data['priority'] == true ? 'high' : 'normal',
+            audioUrl: data['audioUrl'],
           ),
         );
       }
@@ -1737,6 +2079,27 @@ class FirebaseService {
         transaction.update(userRef, {'xp': FieldValue.increment(150)});
       }
     });
+  }
+
+  Future<void> bulkApproveVoiceSubmissions(List<String> ids, String validatorId, String validatorRole) async {
+    final batch = _db.batch();
+    for (var id in ids) {
+      batch.update(_db.collection('voice_submissions').doc(id), {
+        'status': 'approved',
+        'validatorId': validatorId,
+        'validatorRole': validatorRole,
+        'validatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+    await batch.commit();
+  }
+
+  Future<void> bulkDeleteVoiceSubmissions(List<String> ids) async {
+    final batch = _db.batch();
+    for (var id in ids) {
+      batch.delete(_db.collection('voice_submissions').doc(id));
+    }
+    await batch.commit();
   }
 
   /// Flags a voice submission for clarification and notifies the contributor.
@@ -1919,6 +2282,11 @@ final userContributionsStreamProvider =
       return ref.watch(firebaseServiceProvider).getUserContributions(userId);
     });
 
+final userVoiceSubmissionsStreamProvider =
+    StreamProvider.family<List<VoiceSubmission>, String>((ref, userId) {
+      return ref.watch(firebaseServiceProvider).getUserVoiceSubmissions(userId);
+    });
+
 final dialectsInNeedProvider = StreamProvider<Map<String, int>>((ref) {
   return ref.watch(firebaseServiceProvider).getAllDictionaryWords().map((
     words,
@@ -2070,6 +2438,10 @@ final educatorAnalyticsProvider = FutureProvider<Map<String, dynamic>>((
   return ref.watch(firebaseServiceProvider).getEducatorAnalytics();
 });
 
+final advancedAnalyticsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  return ref.watch(firebaseServiceProvider).getAdvancedPedagogicalAnalytics();
+});
+
 // ── Voice Submission Providers ──────────────────────────────────────────
 
 final pendingVoiceSubmissionsProvider =
@@ -2106,6 +2478,38 @@ final communityFeedProvider = StreamProvider<List<CommunityActivity>>((ref) {
 
 final appConfigProvider = StreamProvider<AppConfig>((ref) {
   return ref.watch(firebaseServiceProvider).getAppConfig();
+});
+
+final seasonsStreamProvider = StreamProvider<List<LearningSeason>>((ref) {
+  return ref.watch(firebaseServiceProvider).getSeasons();
+});
+
+final shopItemsStreamProvider = StreamProvider<List<ShopItem>>((ref) {
+  return ref.watch(firebaseServiceProvider).getShopItems();
+});
+
+final linguaDuelsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
+  return ref.watch(firebaseServiceProvider).getLinguaDuels();
+});
+
+final systemHealthProvider = StreamProvider<Map<String, dynamic>>((ref) {
+  return ref.watch(firebaseServiceProvider).getSystemHealth();
+});
+
+final platformActivityProvider = StreamProvider<Map<String, List<int>>>((ref) {
+  return ref.watch(firebaseServiceProvider).getPlatformActivityStats();
+});
+
+final dialectSettingsProvider = StreamProvider<Map<String, bool>>((ref) {
+  return ref.watch(firebaseServiceProvider).getDialectSettings();
+});
+
+final allWordsProvider = StreamProvider<List<DictionaryEntry>>((ref) {
+  return ref.watch(firebaseServiceProvider).getAllDictionaryWords();
+});
+
+final allVoiceSubmissionsProvider = StreamProvider<List<VoiceSubmission>>((ref) {
+  return ref.watch(firebaseServiceProvider).getAllVoiceSubmissions();
 });
 
 

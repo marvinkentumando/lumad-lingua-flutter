@@ -29,14 +29,83 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   // Step 1: Roots
   final _usernameController = TextEditingController();
-  final _locationController = TextEditingController();
-  final _tribeController = TextEditingController();
+  String? _selectedProvince;
+  String? _selectedMunicipality;
+
+  final Map<String, List<String>> _regionData = {
+    'Davao del Sur': [
+      'Davao City',
+      'Digos City',
+      'Santa Cruz',
+      'Bansalan',
+      'Hagonoy',
+      'Magsaysay',
+      'Matanao',
+      'Padada',
+      'Santa Maria',
+      'Sulop',
+    ],
+    'Davao del Norte': [
+      'Tagum City',
+      'Panabo City',
+      'Island Garden City of Samal',
+      'Carmen',
+      'Kapalong',
+      'New Corella',
+      'Santo Tomas',
+      'Talaingod',
+    ],
+    'Davao de Oro': [
+      'Nabunturan',
+      'Compostela',
+      'Laak',
+      'Mabini',
+      'Maco',
+      'Maragusan',
+      'Mawab',
+      'Monkayo',
+      'Montevista',
+      'Pantukan',
+    ],
+    'Davao Oriental': [
+      'Mati City',
+      'Baganga',
+      'Banaybanay',
+      'Boston',
+      'Caraga',
+      'Cateel',
+      'Lupon',
+      'Manay',
+      'San Isidro',
+      'Tarragona',
+    ],
+    'Davao Occidental': [
+      'Malita',
+      'Don Marcelino',
+      'Jose Abad Santos',
+      'Sarangani',
+      'Santa Maria',
+    ],
+  };
 
   // Step 2: Path
-  final _nativeLanguageController = TextEditingController();
-  String _selectedAvatar = "🦅";
+  String? _selectedNativeLanguage;
+  final List<String> _nativeLanguages = [
+    'Mandaya',
+    'Mansaka',
+    'Tagakaulo',
+    'B\'laan',
+    'Bagobo',
+    'Kalagan',
+    'Matigsalug',
+    'Ata',
+    'Dibabawon',
+    'Mangguangan',
+    'Tagabawa',
+    'Other'
+  ];
+
   String _learningGoal = "Culture";
-  final List<String> _totems = ["🦅", "🏆", "🐢", "🛶", "🌿", "⛰️", "🏹", "🔥"];
   final List<String> _goals = [
     "Culture",
     "Travel",
@@ -54,9 +123,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _locationController.dispose();
-    _tribeController.dispose();
-    _nativeLanguageController.dispose();
     super.dispose();
   }
 
@@ -71,10 +137,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           _passwordController.text == _confirmPasswordController.text;
     } else if (_currentStep == 1) {
       return _usernameController.text.length >= 3 &&
-          _locationController.text.isNotEmpty &&
-          _tribeController.text.isNotEmpty;
+          _selectedProvince != null &&
+          _selectedMunicipality != null;
     } else if (_currentStep == 2) {
-      return _nativeLanguageController.text.isNotEmpty;
+      return _selectedNativeLanguage != null;
     }
     return true;
   }
@@ -112,10 +178,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             _emailController.text.trim(),
             _passwordController.text.trim(),
             _usernameController.text.trim(),
-            location: _locationController.text.trim(),
-            tribe: _tribeController.text.trim(),
-            avatar: _selectedAvatar,
-            nativeLanguage: _nativeLanguageController.text.trim(),
+            location: "$_selectedMunicipality, $_selectedProvince",
+            tribe: "Learner", // Defaulting since tribe interest was removed
+            avatar: "👤", // Defaulting since totem was removed
+            nativeLanguage: _selectedNativeLanguage ?? "Unknown",
             learningGoal: _learningGoal,
           );
       if (mounted) {
@@ -378,7 +444,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   Widget _buildRootsStep() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         BrandTextField(
           controller: _usernameController,
@@ -389,25 +457,96 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 16),
-        BrandTextField(
-          controller: _locationController,
-          labelText: "Location",
-          prefixIcon: Icons.location_on_outlined,
-          showValidation: true,
-          isValid: _locationController.text.isNotEmpty,
-          onChanged: (_) => setState(() {}),
+        Text(
+          "Province",
+          style: AppTypography.label.copyWith(
+            color: isDark ? Colors.white70 : AppColors.forest700,
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildDropdown(
+          value: _selectedProvince,
+          hint: "Select Province",
+          items: _regionData.keys.toList(),
+          onChanged: (val) {
+            setState(() {
+              _selectedProvince = val;
+              _selectedMunicipality = null;
+            });
+          },
         ),
         const SizedBox(height: 16),
-        BrandTextField(
-          controller: _tribeController,
-          labelText: "Tribe Interest",
-          prefixIcon: Icons.people_outline,
-          showValidation: true,
-          isValid: _tribeController.text.isNotEmpty,
-          onChanged: (_) => setState(() {}),
+        Text(
+          "Municipality",
+          style: AppTypography.label.copyWith(
+            color: isDark ? Colors.white70 : AppColors.forest700,
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildDropdown(
+          value: _selectedMunicipality,
+          hint: "Select Municipality",
+          items: _selectedProvince != null ? _regionData[_selectedProvince]! : [],
+          onChanged: (val) {
+            setState(() {
+              _selectedMunicipality = val;
+            });
+          },
         ),
       ],
     ).animate().fadeIn();
+  }
+
+  Widget _buildDropdown({
+    required String? value,
+    required String hint,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.forest800 : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? Colors.white10 : AppColors.creamBorder,
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          hint: Text(
+            hint,
+            style: TextStyle(
+              color: isDark ? Colors.white24 : Colors.black26,
+              fontSize: 14,
+            ),
+          ),
+          dropdownColor: isDark ? AppColors.forest800 : Colors.white,
+          isExpanded: true,
+          icon: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: AppColors.gold500,
+          ),
+          items: items.map((String item) {
+            return DropdownMenuItem<String>(
+              value: item,
+              child: Text(
+                item,
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
+                  fontSize: 14,
+                ),
+              ),
+            );
+          }).toList(),
+          onChanged: onChanged,
+        ),
+      ),
+    );
   }
 
   Widget _buildPathStep() {
@@ -415,13 +554,23 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        BrandTextField(
-          controller: _nativeLanguageController,
-          labelText: "Native Language",
-          prefixIcon: Icons.translate,
-          showValidation: true,
-          isValid: _nativeLanguageController.text.isNotEmpty,
-          onChanged: (_) => setState(() {}),
+        Text(
+          "Native Language",
+          style: AppTypography.label.copyWith(
+            color: isDark ? Colors.white70 : AppColors.forest700,
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildDropdown(
+          value: _selectedNativeLanguage,
+          hint: "Select Native Language",
+          items: _nativeLanguages,
+          onChanged: (val) {
+            setState(() {
+              _selectedNativeLanguage = val;
+            });
+          },
         ),
         const SizedBox(height: 24),
         Text(
@@ -450,61 +599,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             );
           }).toList(),
         ),
-        const SizedBox(height: 24),
-        Text(
-          "Tribal Totem",
-          style: AppTypography.label.copyWith(
-            color: isDark ? Colors.white : AppColors.forest700,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildTotemGrid(),
       ],
     ).animate().fadeIn();
-  }
-
-  Widget _buildTotemGrid() {
-    return SizedBox(
-      height: 60,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: _totems.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (ctx, index) {
-          final totem = _totems[index];
-          final isSelected = _selectedAvatar == totem;
-          return GestureDetector(
-            onTap: () => setState(() => _selectedAvatar = totem),
-            child: AnimatedContainer(
-              duration: 200.ms,
-              width: 60,
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.gold500
-                    : Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isSelected ? AppColors.gold600 : Colors.transparent,
-                  width: 2,
-                ),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: AppColors.gold500.withValues(alpha: 0.3),
-                          blurRadius: 10,
-                        ),
-                      ]
-                    : [],
-              ),
-              child: Center(
-                child: Text(totem, style: const TextStyle(fontSize: 28)),
-              ),
-            ),
-          );
-        },
-      ),
-    );
   }
 
   Widget _buildNavigationButtons() {
@@ -560,7 +656,3 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     ).animate().fadeIn(delay: 600.ms);
   }
 }
-
-
-
-

@@ -13,6 +13,7 @@ import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/glass_box.dart';
 import '../widgets/ambient_topo_background.dart';
+import '../services/supabase_storage_service.dart';
 
 class ValidatorVoicesScreen extends ConsumerStatefulWidget {
   const ValidatorVoicesScreen({super.key});
@@ -78,18 +79,32 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
   }
 
   Future<void> _togglePlayback(String id, String audioUrl) async {
-    if (_playingId == id) {
-      await _audioPlayer.pause();
-      setState(() => _playingId = null);
-    } else {
-      if (_playingId != null) await _audioPlayer.stop();
-      setState(() {
-        _playingId = id;
-        _currentPosition = Duration.zero;
-        _totalDuration = Duration.zero;
-      });
-      await _audioPlayer.setPlaybackRate(_playbackSpeed);
-      await _audioPlayer.play(UrlSource(audioUrl));
+    try {
+      if (_playingId == id) {
+        await _audioPlayer.pause();
+        setState(() => _playingId = null);
+      } else {
+        if (_playingId != null) await _audioPlayer.stop();
+        setState(() {
+          _playingId = id;
+          _currentPosition = Duration.zero;
+          _totalDuration = Duration.zero;
+        });
+        await _audioPlayer.setPlaybackRate(_playbackSpeed);
+        final resolvedUrl = ref.read(supabaseStorageServiceProvider).getAudioUrl(audioUrl);
+        await _audioPlayer.play(UrlSource(resolvedUrl));
+      }
+    } catch (e) {
+      debugPrint('Error playing audio in validator screen: $e');
+      if (mounted) {
+        setState(() => _playingId = null);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to load audio fragment.'),
+            backgroundColor: AppColors.semanticRed,
+          ),
+        );
+      }
     }
   }
 
