@@ -72,9 +72,14 @@ class FirebaseService {
 
   // Audio Upload
   Future<String> uploadAudio(String filePath, String fileName) async {
-    final file = File(filePath);
+    // Sanitize path in case it's a URI
+    final String cleanPath = filePath.startsWith('file://')
+        ? Uri.parse(filePath).toFilePath()
+        : filePath;
+
+    final file = File(cleanPath);
     if (!await file.exists()) {
-      throw Exception('Local audio file not found at $filePath');
+      throw Exception('Local audio file not found at $cleanPath');
     }
 
     final int fileSize = await file.length();
@@ -86,8 +91,11 @@ class FirebaseService {
     try {
       debugPrint("Storage: Uploading $fileName ($fileSize bytes) to ${ref.fullPath}");
 
-      // Use putFile for efficiency and reliability
-      final uploadTask = await ref.putFile(file);
+      // Explicitly set content type
+      final metadata = SettableMetadata(contentType: 'audio/m4a');
+
+      // Use putFile with metadata
+      final uploadTask = await ref.putFile(file, metadata);
 
       // Verification Loop
       String? url;

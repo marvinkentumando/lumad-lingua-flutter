@@ -24,7 +24,6 @@ List<NavItem> getNavItemsForRole(UserRole role) {
         home,
         map,
         words,
-        learn,
         const NavItem(Icons.add_circle_rounded, 'ADD', '/contribute'),
         profile,
       ];

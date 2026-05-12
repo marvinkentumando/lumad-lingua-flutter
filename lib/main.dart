@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/theme_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
@@ -82,6 +83,15 @@ void main() async {
     );
   } catch (e) {
     debugPrint("Firebase Initialization Error: $e");
+  }
+
+  try {
+    await Supabase.initialize(
+      url: 'https://ovdwgowtnlujnbcyldkk.supabase.co',
+      anonKey: 'sb_publishable_rMQ9kc8SVsba4_p-aPrOPg_3XDgAbR8',
+    );
+  } catch (e) {
+    debugPrint("Supabase Initialization Error: $e");
   }
 
   try {

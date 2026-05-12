@@ -46,7 +46,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '941151806887',
     projectId: 'lumadlingua',
     authDomain: 'lumadlingua.firebaseapp.com',
-    storageBucket: 'lumadlingua.firebasestorage.app',
+    storageBucket: 'lumadlingua.appspot.com',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
@@ -54,7 +54,7 @@ class DefaultFirebaseOptions {
     appId: '1:941151806887:android:6c4a37937ae32e76fb8282',
     messagingSenderId: '941151806887',
     projectId: 'lumadlingua',
-    storageBucket: 'lumadlingua.firebasestorage.app',
+    storageBucket: 'lumadlingua.appspot.com',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
@@ -62,7 +62,7 @@ class DefaultFirebaseOptions {
     appId: '1:941151806887:ios:1d749c9a2fb11b30fb8282',
     messagingSenderId: '941151806887',
     projectId: 'lumadlingua',
-    storageBucket: 'lumadlingua.firebasestorage.app',
+    storageBucket: 'lumadlingua.appspot.com',
     iosBundleId: 'com.example.lumadLingua',
   );
 
@@ -71,7 +71,7 @@ class DefaultFirebaseOptions {
     appId: '1:941151806887:ios:1d749c9a2fb11b30fb8282',
     messagingSenderId: '941151806887',
     projectId: 'lumadlingua',
-    storageBucket: 'lumadlingua.firebasestorage.app',
+    storageBucket: 'lumadlingua.appspot.com',
     iosBundleId: 'com.example.lumadLingua',
   );
 
@@ -81,7 +81,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '941151806887',
     projectId: 'lumadlingua',
     authDomain: 'lumadlingua.firebaseapp.com',
-    storageBucket: 'lumadlingua.firebasestorage.app',
+    storageBucket: 'lumadlingua.appspot.com',
   );
 }
 
