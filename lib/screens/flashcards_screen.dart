@@ -9,6 +9,8 @@ import '../widgets/brand_button.dart';
 
 import '../models/dictionary_entry.dart';
 import '../models/srs_models.dart';
+import '../models/app_config.dart';
+
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/firebase_service.dart';
@@ -124,6 +126,8 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
     DateTime now = DateTime.now();
     DateTime? lastFailure = currentSrs.lastFailure;
 
+    final config = ref.read(appConfigProvider).value ?? AppConfig.fromFirestore({});
+
     if (wasCorrect) {
       newLevel = min(currentSrs.level + 1, 5);
       consecutiveCorrect++;
@@ -146,7 +150,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
         intervalDays = ((prevInterval + (overdueDays / 2)) * newEaseFactor).round();
       }
       
-      ref.read(firebaseServiceProvider).addXp(user.uid, 15); // Slightly more XP for smarter learning
+      ref.read(firebaseServiceProvider).addXp(user.uid, config.cardReviewXp); 
     } else {
       newLevel = 0; 
       consecutiveCorrect = 0;
@@ -178,6 +182,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
     _next();
 
     if (wasCorrect) {
+      final config = ref.read(appConfigProvider).value ?? AppConfig.fromFirestore({});
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -185,7 +190,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
               const Icon(Icons.check_circle, color: Colors.white, size: 16),
               const SizedBox(width: 8),
               Text(
-                'Mastery Level Up! +10 XP',
+                'Mastery Level Up! +${config.cardReviewXp} XP',
                 style: AppTypography.label.copyWith(color: Colors.white),
               ),
             ],
@@ -668,10 +673,12 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
 
   void _showCompletionModal() {
     HapticService.celebration();
+    final config = ref.read(appConfigProvider).value ?? AppConfig.fromFirestore({});
+    final bonusXp = _deck!.length * config.cardCompletionBonusXp;
 
     final uid = ref.read(authStateProvider).value?.uid;
     if (uid != null) {
-      ref.read(firebaseServiceProvider).addXp(uid, _deck!.length * 10);
+      ref.read(firebaseServiceProvider).addXp(uid, bonusXp.toInt());
     }
     showDialog(
       context: context,
@@ -707,7 +714,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '+${_deck!.length * 10} XP EARNED',
+                  '+$bonusXp XP EARNED',
                   style: AppTypography.mono.copyWith(
                     color: AppColors.gold700,
                     fontWeight: FontWeight.bold,

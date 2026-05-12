@@ -44,15 +44,20 @@ class _ValidatorLessonsScreenState
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(userProfileProvider);
-    final userId =
-        userAsync.value?['uid'] ??
+    final userId = userAsync.value?['uid'] ??
         userAsync.value?['id'] ??
         'unknown_validator';
-    final userRole = userAsync.value?['role'] ?? 'VALIDATOR';
+    final profile = userAsync.value;
+    final userRole = profile?['role'] ?? 'VALIDATOR';
+    final userDialect = profile?['indigenousGroup'] ?? 'Mansaka';
 
     final lessonsStream = _showHistory
-        ? ref.watch(validatorLessonHistoryProvider(ValidatorQuery(userId, 50)))
-        : ref.watch(pendingLessonsProvider);
+        ? ref.watch(
+            validatorLessonHistoryProvider(
+              ValidatorQuery(userId, 50, dialect: userDialect),
+            ),
+          )
+        : ref.watch(pendingLessonsProvider(userDialect));
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -77,7 +82,7 @@ class _ValidatorLessonsScreenState
         child: SafeArea(
         child: Column(
           children: [
-            _buildHeader(),
+            _buildHeader(userDialect),
             Expanded(
               child: lessonsStream.when(
                 data: (lessons) {
@@ -156,7 +161,7 @@ class _ValidatorLessonsScreenState
     }
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(String? userDialect) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -260,8 +265,6 @@ class _ValidatorLessonsScreenState
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          _buildDialectFilter(),
         ],
       ),
     );
@@ -460,38 +463,69 @@ class _ValidatorLessonsScreenState
             ),
             if (!_isSelectionMode) ...[
               const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => ref
-                          .read(firebaseServiceProvider)
-                          .approveLesson(lesson.id, userId, userRole),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.gold500,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+              if (lesson.status == 'PUBLISHED')
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.semanticGreen.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.semanticGreen.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        color: AppColors.semanticGreen,
+                        size: 16,
                       ),
-                      child: Text(
-                        'APPROVE',
+                      const SizedBox(width: 8),
+                      Text(
+                        "APPROVED",
                         style: AppTypography.label.copyWith(
-                          color: AppColors.forest900,
+                          color: AppColors.semanticGreen,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => ref
+                            .read(firebaseServiceProvider)
+                            .approveLesson(lesson.id, userId, userRole),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.gold500,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'APPROVE',
+                          style: AppTypography.label.copyWith(
+                            color: AppColors.forest900,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.flag_outlined,
-                      color: AppColors.terracotta,
+                    const SizedBox(width: 12),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.flag_outlined,
+                        color: AppColors.terracotta,
+                      ),
+                      onPressed: () =>
+                          _showFlagActionSheet(lesson, userId, userRole),
                     ),
-                    onPressed: () =>
-                        _showFlagActionSheet(lesson, userId, userRole),
-                  ),
-                ],
-              ),
+                  ],
+                ),
             ],
           ],
         ),
@@ -585,8 +619,9 @@ class _ValidatorLessonsScreenState
   }
 }
 
-final pendingLessonsProvider = StreamProvider<List<Lesson>>((ref) {
-  return ref.watch(firebaseServiceProvider).getPendingLessons();
+final pendingLessonsProvider =
+    StreamProvider.family<List<Lesson>, String?>((ref, dialect) {
+  return ref.watch(firebaseServiceProvider).getPendingLessons(dialect: dialect);
 });
 
 final validatorLessonHistoryProvider =

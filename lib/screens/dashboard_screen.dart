@@ -26,6 +26,7 @@ import '../services/haptic_service.dart';
 
 
 import '../providers/learning_provider.dart';
+import '../models/app_config.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -1010,6 +1011,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget _buildClimbersList(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final topLearnersAsync = ref.watch(topLearnersProvider);
+    final config = ref.watch(appConfigProvider).value;
 
     return Container(
       padding: const EdgeInsets.all(8),
@@ -1030,7 +1032,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           final top3 = users.take(3).toList();
           return Column(
             children: top3.asMap().entries.map((entry) {
-              return _buildClimberRow(context, entry.value, entry.key + 1);
+              return _buildClimberRow(context, entry.value, entry.key + 1, config);
             }).toList(),
           );
         },
@@ -1105,25 +1107,38 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  String _getLevelTitle(int xp) {
-    final level = (math.sqrt(xp / 50)).floor() + 1;
-    if (level < 5) return "Novice Shaman";
-    if (level < 10) return "Spiritual Seeker";
-    if (level < 20) return "Tribal Guardian";
-    if (level < 40) return "Ancestral Sage";
-    return "Elder Guardian";
+  String _getLevelTitle(int xp, AppConfig? config) {
+    if (config == null) {
+      final level = (math.sqrt(xp / 50)).floor() + 1;
+      if (level < 5) return "Novice Shaman";
+      if (level < 10) return "Spiritual Seeker";
+      if (level < 20) return "Tribal Guardian";
+      if (level < 40) return "Ancestral Sage";
+      return "Elder Guardian";
+    }
+
+    final sortedThresholds = config.spiritThresholds.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    for (var entry in sortedThresholds) {
+      if (xp >= entry.value) {
+        return entry.key;
+      }
+    }
+    return "Seeker";
   }
 
   Widget _buildClimberRow(
     BuildContext context,
     Map<String, dynamic> user,
     int rank,
+    AppConfig? config,
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final name = user['username'] ?? user['name'] ?? 'Anonymous';
     final xp = user['xp'] ?? 0;
     final avatarUrl = user['photoURL'] ?? user['avatarUrl'];
-    final title = _getLevelTitle(xp);
+    final title = _getLevelTitle(xp, config);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),

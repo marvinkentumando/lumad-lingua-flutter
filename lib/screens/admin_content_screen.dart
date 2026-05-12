@@ -6,10 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_button.dart';
+import '../widgets/preview_audio_player.dart';
+import '../services/firebase_service.dart';
+import '../widgets/brand_card.dart';
 import '../widgets/badges.dart';
-import '../models/admin_models.dart';
 import '../models/voice_submission.dart';
 import '../models/lesson.dart';
+import '../models/dictionary_entry.dart';
 import '../services/haptic_service.dart';
 import '../services/auth_service.dart';
 
@@ -26,89 +29,25 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
   final TextEditingController _searchCtrl = TextEditingController();
   final TextEditingController _passwordCtrl = TextEditingController();
 
+  final Set<String> _selectedIds = {};
+  bool _isSelectionMode = false;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
   }
 
-  final Map<String, bool> _dialectToggles = {
-    'Mansaka': true,
-    'Mandaya': true,
-    'Manobo': true,
-    'Bagobo': true,
-    'Kagan': false,
-  };
-
-  final List<ContentEntry> _content = [
-    ContentEntry(
-      id: 'c1',
-      term: 'Maayong Buntag',
-      dialect: 'Mansaka',
-      partOfSpeech: 'phrase',
-      status: 'validated',
-      contributorName: 'Elder V.',
-      submittedAt: DateTime.now().subtract(const Duration(days: 7)),
-    ),
-    ContentEntry(
-      id: 'c2',
-      term: 'Kagawasan',
-      dialect: 'Manobo',
-      partOfSpeech: 'noun',
-      status: 'validated',
-      contributorName: 'Teacher J.',
-      submittedAt: DateTime.now().subtract(const Duration(days: 5)),
-    ),
-    ContentEntry(
-      id: 'c3',
-      term: 'Buntag',
-      dialect: 'Mandaya',
-      partOfSpeech: 'noun',
-      status: 'pending',
-      contributorName: 'Maria M.',
-      submittedAt: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-    ContentEntry(
-      id: 'c4',
-      term: 'Lipad',
-      dialect: 'Mansaka',
-      partOfSpeech: 'verb',
-      status: 'validated',
-      contributorName: 'Datu M.',
-      submittedAt: DateTime.now().subtract(const Duration(days: 10)),
-    ),
-    ContentEntry(
-      id: 'c5',
-      term: 'Buklod',
-      dialect: 'Bagobo',
-      partOfSpeech: 'noun',
-      status: 'pending',
-      contributorName: 'Agila M.',
-      submittedAt: DateTime.now().subtract(const Duration(hours: 6)),
-    ),
-    ContentEntry(
-      id: 'c6',
-      term: 'Kalayo',
-      dialect: 'Kagan',
-      partOfSpeech: 'noun',
-      status: 'rejected',
-      contributorName: 'Juan D.',
-      rejectionReason: 'Duplicate entry',
-      submittedAt: DateTime.now().subtract(const Duration(days: 3)),
-    ),
-  ];
-
-  List<ContentEntry> get _filtered {
-    if (_searchQuery.isEmpty) return _content;
-    return _content
-        .where(
-          (c) =>
-              c.term.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              c.contributorName.toLowerCase().contains(
-                _searchQuery.toLowerCase(),
-              ),
-        )
-        .toList();
+  void _toggleSelection(String id) {
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+        if (_selectedIds.isEmpty) _isSelectionMode = false;
+      } else {
+        _selectedIds.add(id);
+        _isSelectionMode = true;
+      }
+    });
   }
 
   @override
@@ -153,9 +92,93 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
               ],
             ),
           ),
+          if (_isSelectionMode)
+            Positioned(
+              bottom: 20,
+              left: 20,
+              right: 20,
+              child: _buildBulkActionsBar(),
+            ),
         ],
       ),
     );
+  }
+
+  Widget _buildBulkActionsBar() {
+    return BrandCard(
+      theme: BrandCardTheme.gold,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Row(
+        children: [
+          Text(
+            '${_selectedIds.length} SELECTED',
+            style: AppTypography.mono.copyWith(
+              color: AppColors.forest900,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.check_circle_outline_rounded, color: AppColors.forest900),
+            onPressed: _handleBulkApprove,
+            tooltip: 'Bulk Approve',
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded, color: AppColors.semanticRed),
+            onPressed: _handleBulkDelete,
+            tooltip: 'Bulk Delete',
+          ),
+          IconButton(
+            icon: const Icon(Icons.close_rounded, color: AppColors.forest900),
+            onPressed: () => setState(() {
+              _selectedIds.clear();
+              _isSelectionMode = false;
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleBulkApprove() async {
+    final validatorId = ref.read(authServiceProvider).currentUser?.uid ?? 'admin';
+    final validatorRole = 'Administrator';
+    
+    if (_tabController.index == 0) {
+      await ref.read(firebaseServiceProvider).bulkApproveWords(_selectedIds.toList(), validatorId, validatorRole);
+    } else if (_tabController.index == 1) {
+      await ref.read(firebaseServiceProvider).bulkApproveVoiceSubmissions(_selectedIds.toList(), validatorId, validatorRole);
+    } else if (_tabController.index == 2) {
+      await ref.read(firebaseServiceProvider).bulkApproveLessons(_selectedIds.toList(), validatorId, validatorRole);
+    }
+    
+    setState(() {
+      _selectedIds.clear();
+      _isSelectionMode = false;
+    });
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Bulk approval successful'), backgroundColor: AppColors.semanticGreen),
+      );
+    }
+  }
+
+  void _handleBulkDelete() {
+    _showDeletePasswordDialog('Selected Items', () async {
+      if (_tabController.index == 0) {
+        await ref.read(firebaseServiceProvider).bulkDeleteWords(_selectedIds.toList());
+      } else if (_tabController.index == 1) {
+        await ref.read(firebaseServiceProvider).bulkDeleteVoiceSubmissions(_selectedIds.toList());
+      } else if (_tabController.index == 2) {
+        await ref.read(firebaseServiceProvider).bulkDeleteLessons(_selectedIds.toList());
+      }
+      
+      setState(() {
+        _selectedIds.clear();
+        _isSelectionMode = false;
+      });
+    });
   }
 
   Widget _buildHeader(BuildContext context) {
@@ -313,89 +336,71 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
   }
 
   Widget _buildDictionaryTab() {
-    final filtered = _filtered;
-    if (filtered.isEmpty) return _buildEmptyState();
+    final wordsAsync = ref.watch(allWordsProvider);
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-      itemCount: filtered.length,
-      itemBuilder: (context, index) => _dictionaryCard(filtered[index], index),
+    return wordsAsync.when(
+      data: (words) {
+        final filtered = words.where((w) => 
+          w.indigenousWord.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          (w.contributorName?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false)
+        ).toList();
+
+        if (filtered.isEmpty) return _buildEmptyState();
+
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+          itemCount: filtered.length,
+          itemBuilder: (context, index) => _dictionaryCard(filtered[index], index),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error: $e')),
     );
   }
 
   Widget _buildRecordingsTab() {
-    final mockRecordings = [
-      VoiceSubmission(
-        id: 'v1',
-        title: 'Traditional Greeting',
-        dialect: 'Mansaka',
-        contributorId: 'u1',
-        contributorName: 'Datu M.',
-        audioUrl: '',
-        transcript: 'Maayong buntag sa inyong tanan.',
-        submittedAt: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-      VoiceSubmission(
-        id: 'v2',
-        title: 'Story of the Moon',
-        dialect: 'Manobo',
-        contributorId: 'u2',
-        contributorName: 'Lola B.',
-        audioUrl: '',
-        transcript: 'Kaniadto, ang bulan...',
-        submittedAt: DateTime.now().subtract(const Duration(days: 4)),
-      ),
-    ];
+    final recordingsAsync = ref.watch(allVoiceSubmissionsProvider);
 
-    final filtered = mockRecordings.where((v) => 
-      v.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-      v.contributorName.toLowerCase().contains(_searchQuery.toLowerCase())
-    ).toList();
+    return recordingsAsync.when(
+      data: (recordings) {
+        final filtered = recordings.where((v) => 
+          v.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          v.contributorName.toLowerCase().contains(_searchQuery.toLowerCase())
+        ).toList();
 
-    if (filtered.isEmpty) return _buildEmptyState();
+        if (filtered.isEmpty) return _buildEmptyState();
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-      itemCount: filtered.length,
-      itemBuilder: (context, index) => _recordingCard(filtered[index], index),
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+          itemCount: filtered.length,
+          itemBuilder: (context, index) => _recordingCard(filtered[index], index),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error: $e')),
     );
   }
 
   Widget _buildLessonsTab() {
-    final mockLessons = [
-      Lesson(
-        id: 'l1',
-        title: 'Basic Greetings',
-        description: 'Learn how to greet others in Mansaka.',
-        category: 'Foundations',
-        language: 'Mansaka',
-        level: 1,
-        unitNumber: 1,
-        tasks: [],
-      ),
-      Lesson(
-        id: 'l2',
-        title: 'Numbers and Counting',
-        description: 'Master the numbering system of Mandaya.',
-        category: 'Mathematics',
-        language: 'Mandaya',
-        level: 1,
-        unitNumber: 2,
-        tasks: [],
-      ),
-    ];
+    final lessonsAsync = ref.watch(allLessonsStreamProvider);
 
-    final filtered = mockLessons.where((l) => 
-      l.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-      l.category.toLowerCase().contains(_searchQuery.toLowerCase())
-    ).toList();
+    return lessonsAsync.when(
+      data: (lessons) {
+        final filtered = lessons.where((l) => 
+          l.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          l.category.toLowerCase().contains(_searchQuery.toLowerCase())
+        ).toList();
 
-    if (filtered.isEmpty) return _buildEmptyState();
+        if (filtered.isEmpty) return _buildEmptyState();
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-      itemCount: filtered.length,
-      itemBuilder: (context, index) => _lessonCard(filtered[index], index),
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+          itemCount: filtered.length,
+          itemBuilder: (context, index) => _lessonCard(filtered[index], index),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error: $e')),
     );
   }
 
@@ -421,23 +426,26 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
     );
   }
 
-  Widget _dictionaryCard(ContentEntry data, int index) {
+  Widget _dictionaryCard(DictionaryEntry data, int index) {
     return _baseContentCard(
+      id: data.id,
       index: index,
       icon: Icons.menu_book_rounded,
       iconColor: AppColors.gold500,
-      title: data.term,
-      subtitle: '${data.dialect} · ${data.partOfSpeech}',
-      author: 'by ${data.contributorName}',
-      status: data.status,
-      onDelete: () => _showDeletePasswordDialog(data.term, () {
-        setState(() => _content.removeWhere((c) => c.id == data.id));
+      title: data.indigenousWord,
+      subtitle: '${data.language} · ${data.partOfSpeechLabel}',
+      author: 'by ${data.contributorName ?? 'Unknown'}',
+      status: data.status.name,
+      onEdit: () => _showEditDictionaryDialog(data),
+      onDelete: () => _showDeletePasswordDialog(data.indigenousWord, () {
+        ref.read(firebaseServiceProvider).deleteWord(data.id);
       }),
     );
   }
 
   Widget _recordingCard(VoiceSubmission data, int index) {
     return _baseContentCard(
+      id: data.id,
       index: index,
       icon: Icons.mic_rounded,
       iconColor: AppColors.semanticBlue,
@@ -445,8 +453,9 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
       subtitle: '${data.dialect} · Audio Recording',
       author: 'by ${data.contributorName}',
       status: data.status.name,
+      audioUrl: data.audioUrl,
       onDelete: () => _showDeletePasswordDialog(data.title, () {
-        ScaffoldMessenger.of(context).showSnackBar(
+         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Recording deletion requested'))
         );
       }),
@@ -455,22 +464,23 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
 
   Widget _lessonCard(Lesson data, int index) {
     return _baseContentCard(
+      id: data.id,
       index: index,
       icon: Icons.school_rounded,
       iconColor: AppColors.semanticGreen,
       title: data.title,
       subtitle: '${data.language} · ${data.category}',
       author: 'Level ${data.level} · Unit ${data.unitNumber}',
-      status: 'published',
+      status: data.status.toString().split('.').last.toLowerCase(),
+      onEdit: () => _showEditLessonDialog(data),
       onDelete: () => _showDeletePasswordDialog(data.title, () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Lesson deletion requested'))
-        );
+        ref.read(firebaseServiceProvider).deleteLesson(data.id);
       }),
     );
   }
 
   Widget _baseContentCard({
+    required String id,
     required int index,
     required IconData icon,
     required Color iconColor,
@@ -479,7 +489,10 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
     required String author,
     required String status,
     required VoidCallback onDelete,
+    VoidCallback? onEdit,
+    String? audioUrl,
   }) {
+    final isSelected = _selectedIds.contains(id);
     final statusStyle = status == 'validated' || status == 'published' || status == 'approved'
         ? BrandBadgeStyle.green
         : status == 'rejected'
@@ -488,82 +501,273 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.forest700.withValues(alpha: 0.3) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.creamBorder,
-          ),
-          boxShadow: isDark ? [] : [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+      child: GestureDetector(
+        onLongPress: () => _toggleSelection(id),
+        onTap: _isSelectionMode ? () => _toggleSelection(id) : null,
+        child: Container(
+          decoration: BoxDecoration(
+            color: isSelected 
+                ? AppColors.gold500.withValues(alpha: 0.1)
+                : (isDark ? AppColors.forest700.withValues(alpha: 0.3) : Colors.white),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isSelected 
+                  ? AppColors.gold500 
+                  : (isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.creamBorder),
+              width: isSelected ? 2 : 1,
             ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(icon, color: iconColor, size: 24),
+            boxShadow: isDark ? [] : [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                if (_isSelectionMode)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: Icon(
+                      isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                      color: AppColors.gold500,
+                    ),
+                  ),
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(icon, color: iconColor, size: 24),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: AppTypography.h3.copyWith(
+                          color: isDark ? Colors.white : AppColors.forest500,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: AppTypography.label.copyWith(
+                          color: isDark ? Colors.white38 : AppColors.creamText3,
+                          fontSize: 11,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        author,
+                        style: AppTypography.mono.copyWith(
+                          color: AppColors.gold500.withValues(alpha: 0.6),
+                          fontSize: 10,
+                        ),
+                      ),
+                      if (audioUrl != null && audioUrl.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: PreviewAudioPlayer(audioUrl: audioUrl, size: 24),
+                        ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(
-                      title,
-                      style: AppTypography.h3.copyWith(
-                        color: isDark ? Colors.white : AppColors.forest500,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: AppTypography.label.copyWith(
-                        color: isDark ? Colors.white38 : AppColors.creamText3,
-                        fontSize: 11,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      author,
-                      style: AppTypography.mono.copyWith(
-                        color: AppColors.gold500.withValues(alpha: 0.6),
-                        fontSize: 10,
-                      ),
+                    BrandBadge(text: status.toUpperCase(), style: statusStyle),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        if (onEdit != null)
+                          _actionIcon(
+                            Icons.edit_outlined,
+                            onEdit,
+                            color: AppColors.gold500,
+                          ),
+                        if (onEdit != null) const SizedBox(width: 8),
+                        _actionIcon(
+                          Icons.delete_outline_rounded,
+                          onDelete,
+                          color: AppColors.semanticRed,
+                        ),
+                      ],
                     ),
                   ],
                 ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ).animate().fadeIn(delay: Duration(milliseconds: index * 50)).slideY(begin: 0.1, curve: Curves.easeOutCubic);
+  }
+
+  void _showEditDictionaryDialog(DictionaryEntry data) {
+    final wordCtrl = TextEditingController(text: data.indigenousWord);
+    final translationCtrl = TextEditingController(text: data.translation);
+    final translationFilipinoCtrl = TextEditingController(text: data.translationFilipino);
+    final phoneticCtrl = TextEditingController(text: data.phonetic ?? '');
+    final contextCtrl = TextEditingController(text: data.usageContext);
+    PartOfSpeech selectedPOS = data.partOfSpeech;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: isDark ? AppColors.forest800 : Colors.white,
+          title: Text('Edit Dictionary Entry', style: AppTypography.h3.copyWith(color: AppColors.gold500)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: wordCtrl,
+                  decoration: const InputDecoration(labelText: 'Indigenous Word'),
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                ),
+                TextField(
+                  controller: phoneticCtrl,
+                  decoration: const InputDecoration(labelText: 'Phonetic (Optional)'),
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                ),
+                TextField(
+                  controller: translationCtrl,
+                  decoration: const InputDecoration(labelText: 'English Translation'),
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                ),
+                TextField(
+                  controller: translationFilipinoCtrl,
+                  decoration: const InputDecoration(labelText: 'Filipino Translation'),
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<PartOfSpeech>(
+                  initialValue: selectedPOS,
+                  items: PartOfSpeech.values.map((pos) => DropdownMenuItem(
+                    value: pos,
+                    child: Text(pos.name.toUpperCase()),
+                  )).toList(),
+                  onChanged: (val) => setDialogState(() => selectedPOS = val!),
+                  decoration: const InputDecoration(labelText: 'Part of Speech'),
+                  dropdownColor: isDark ? AppColors.forest800 : Colors.white,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: contextCtrl,
+                  decoration: const InputDecoration(labelText: 'Usage Context / Definition'),
+                  maxLines: 2,
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            BrandButton(
+              text: 'Save',
+              type: BrandButtonType.primary,
+              onTap: () async {
+                final updatedEntry = DictionaryEntry(
+                  id: data.id,
+                  indigenousWord: wordCtrl.text,
+                  phonetic: phoneticCtrl.text.isEmpty ? null : phoneticCtrl.text,
+                  translation: translationCtrl.text,
+                  translationFilipino: translationFilipinoCtrl.text,
+                  partOfSpeech: selectedPOS,
+                  language: data.language,
+                  usageContext: contextCtrl.text,
+                  usageExampleNative: data.usageExampleNative,
+                  usageExampleTranslation: data.usageExampleTranslation,
+                  audioUrl: data.audioUrl,
+                  status: data.status,
+                  contributorId: data.contributorId,
+                  contributorName: data.contributorName,
+                  validatorId: data.validatorId,
+                  validatorRole: data.validatorRole,
+                  validatedAt: data.validatedAt,
+                  validatorFeedback: data.validatorFeedback,
+                );
+                await ref.read(firebaseServiceProvider).updateWord(data.id, updatedEntry.toFirestore());
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditLessonDialog(Lesson data) {
+    final titleCtrl = TextEditingController(text: data.title);
+    final descCtrl = TextEditingController(text: data.description);
+    final categoryCtrl = TextEditingController(text: data.category);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? AppColors.forest800 : Colors.white,
+        title: Text('Edit Lesson', style: AppTypography.h3.copyWith(color: AppColors.gold500)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleCtrl,
+                decoration: const InputDecoration(labelText: 'Title'),
+                style: TextStyle(color: isDark ? Colors.white : Colors.black),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  BrandBadge(text: status.toUpperCase(), style: statusStyle),
-                  const SizedBox(height: 8),
-                  _actionIcon(
-                    Icons.delete_outline_rounded,
-                    onDelete,
-                    color: AppColors.semanticRed,
-                  ),
-                ],
+              TextField(
+                controller: descCtrl,
+                decoration: const InputDecoration(labelText: 'Description'),
+                maxLines: 2,
+                style: TextStyle(color: isDark ? Colors.white : Colors.black),
+              ),
+              TextField(
+                controller: categoryCtrl,
+                decoration: const InputDecoration(labelText: 'Category'),
+                style: TextStyle(color: isDark ? Colors.white : Colors.black),
               ),
             ],
           ),
         ),
-      ).animate().fadeIn(delay: Duration(milliseconds: index * 50)).slideY(begin: 0.1, curve: Curves.easeOutCubic),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          BrandButton(
+            text: 'Save',
+            type: BrandButtonType.primary,
+            onTap: () async {
+              final newLesson = Lesson(
+                id: data.id,
+                title: titleCtrl.text,
+                description: descCtrl.text,
+                category: categoryCtrl.text,
+                language: data.language,
+                level: data.level,
+                unitNumber: data.unitNumber,
+                tasks: data.tasks,
+                isPremium: data.isPremium,
+                icon: data.icon,
+                status: data.status,
+                prerequisiteId: data.prerequisiteId,
+                isMistUnit: data.isMistUnit,
+              );
+              await ref.read(firebaseServiceProvider).saveLesson(newLesson);
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -772,10 +976,20 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                 _showConfirmAction(
                   'Reset Platform',
                   'This will permanently delete ALL pending submissions.',
-                  () {
-                    setState(
-                      () => _content.removeWhere((c) => c.status == 'pending'),
-                    );
+                  () async {
+                    final words = await ref.read(allWordsProvider.future);
+                    final pendingWords = words.where((w) => w.status == ValidationStatus.pending).map((w) => w.id).toList();
+                    if (pendingWords.isNotEmpty) {
+                      await ref.read(firebaseServiceProvider).bulkDeleteWords(pendingWords);
+                    }
+                    
+                    final recordings = await ref.read(allVoiceSubmissionsProvider.future);
+                    final pendingRecs = recordings.where((r) => r.status == VoiceStatus.pending).map((r) => r.id).toList();
+                    if (pendingRecs.isNotEmpty) {
+                      await ref.read(firebaseServiceProvider).bulkDeleteVoiceSubmissions(pendingRecs);
+                    }
+
+                    if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Pending submissions cleared'),
@@ -795,57 +1009,57 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
   void _showDialectSettings() {
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: isDark ? AppColors.forest700 : Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Text(
-            'Dialect Settings',
-            style: AppTypography.h3.copyWith(color: AppColors.gold500),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: _dialectToggles.entries
-                .map(
-                  (e) => SwitchListTile(
-                    title: Text(
-                      e.key,
-                      style: TextStyle(
-                        color: isDark ? Colors.white : AppColors.forest900,
-                        fontWeight: e.value
-                            ? FontWeight.bold
-                            : FontWeight.normal,
+      builder: (ctx) => Consumer(
+        builder: (ctx, ref, child) {
+          final settingsAsync = ref.watch(dialectSettingsProvider);
+          return settingsAsync.when(
+            data: (settings) => AlertDialog(
+              backgroundColor: isDark ? AppColors.forest700 : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: Text(
+                'Dialect Settings',
+                style: AppTypography.h3.copyWith(color: AppColors.gold500),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: settings.entries
+                    .map(
+                      (e) => SwitchListTile(
+                        title: Text(
+                          e.key,
+                          style: TextStyle(
+                            color: isDark ? Colors.white : AppColors.forest900,
+                            fontWeight: e.value
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                        value: e.value,
+                        activeThumbColor: AppColors.gold500,
+                        onChanged: (v) {
+                          HapticService.light();
+                          final newSettings = Map<String, bool>.from(settings);
+                          newSettings[e.key] = v;
+                          ref.read(firebaseServiceProvider).updateDialectSettings(newSettings);
+                        },
                       ),
-                    ),
-                    value: e.value,
-                    activeThumbColor: AppColors.gold500,
-                    onChanged: (v) {
-                      HapticService.light();
-                      setDialogState(() => _dialectToggles[e.key] = v);
-                    },
-                  ),
-                )
-                .toList(),
-          ),
-          actions: [
-            BrandButton(
-              text: 'Save',
-              type: BrandButtonType.primary,
-              onTap: () {
-                Navigator.pop(ctx);
-                setState(() {});
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Dialect settings saved'),
-                    backgroundColor: AppColors.semanticGreen,
-                  ),
-                );
-              },
+                    )
+                    .toList(),
+              ),
+              actions: [
+                BrandButton(
+                  text: 'Close',
+                  type: BrandButtonType.primary,
+                  onTap: () => Navigator.pop(ctx),
+                ),
+              ],
             ),
-          ],
-        ),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Text('Error: $e'),
+          );
+        },
       ),
     );
   }
@@ -924,40 +1138,64 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
     );
   }
 
-  void _exportData(String format) {
-    final data = _content
-        .map(
-          (e) => {
-            'term': e.term,
-            'dialect': e.dialect,
-            'pos': e.partOfSpeech,
-            'status': e.status,
-          },
-        )
-        .toList();
+  void _exportData(String format) async {
+    List<Map<String, dynamic>> data = [];
+    
+    if (_tabController.index == 0) {
+      final words = await ref.read(allWordsProvider.future);
+      data = words.map((e) => {
+        'term': e.indigenousWord,
+        'dialect': e.language,
+        'pos': e.partOfSpeechLabel,
+        'status': e.status.name,
+      }).toList();
+    } else if (_tabController.index == 1) {
+      final recordings = await ref.read(allVoiceSubmissionsProvider.future);
+       data = recordings.map((e) => {
+        'title': e.title,
+        'dialect': e.dialect,
+        'contributor': e.contributorName,
+        'status': e.status.name,
+      }).toList();
+    } else {
+      final lessons = await ref.read(allLessonsStreamProvider.future);
+      data = lessons.map((e) => {
+        'title': e.title,
+        'dialect': e.language,
+        'category': e.category,
+        'status': e.status.toString(),
+      }).toList();
+    }
+
+    if (data.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No data to export'))
+        );
+      }
+      return;
+    }
+
     String output;
     if (format == 'json') {
       output = const JsonEncoder.withIndent('  ').convert(data);
     } else {
-      final rows =
-          ['term,dialect,pos,status'] +
-          data
-              .map(
-                (e) =>
-                    '${e['term']},${e['dialect']},${e['pos']},${e['status']}',
-              )
-              .toList();
+      final headers = data.first.keys.join(',');
+      final rows = [headers] +
+          data.map((e) => e.values.join(',')).toList();
       output = rows.join('\n');
     }
     Clipboard.setData(ClipboardData(text: output));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${format.toUpperCase()} copied to clipboard (${data.length} entries)',
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${format.toUpperCase()} copied to clipboard (${data.length} entries)',
+          ),
+          backgroundColor: AppColors.semanticGreen,
         ),
-        backgroundColor: AppColors.semanticGreen,
-      ),
-    );
+      );
+    }
   }
 }
 

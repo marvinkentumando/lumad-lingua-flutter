@@ -20,7 +20,9 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/ambient_topo_background.dart';
 import '../widgets/brand_button.dart';
-import '../widgets/wotd_widget.dart';
+import 'legacy_tracker_details_screen.dart';
+import '../models/voice_submission.dart';
+
 import '../widgets/impact_card.dart';
 import '../services/impact_service.dart';
 import '../services/supabase_storage_service.dart';
@@ -426,13 +428,10 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
     );
   }
 
-  Widget _buildLegacySection(List<DictionaryEntry> contributions) {
-    final filtered = _filterStatus == 'all'
-        ? contributions
-        : contributions.where((c) {
-            return c.status.name == _filterStatus;
-          }).toList();
-
+  Widget _buildCombinedLegacySection(
+    AsyncValue<List<DictionaryEntry>> contributionsAsync,
+    AsyncValue<List<VoiceSubmission>> voicesAsync,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -446,49 +445,149 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
                 fontSize: 18,
               ),
             ),
-            if (_filterStatus != 'all')
-              GestureDetector(
-                onTap: () => setState(() => _filterStatus = 'all'),
-                child: Text(
-                  'Clear Filter',
-                  style: AppTypography.label.copyWith(
-                    color: AppColors.gold500,
-                    fontSize: 10,
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const LegacyTrackerDetailsScreen(),
                   ),
+                );
+              },
+              child: Text(
+                'View All',
+                style: AppTypography.label.copyWith(
+                  color: AppColors.gold500,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
+            ),
           ],
         ),
         const SizedBox(height: 20),
-        if (filtered.isEmpty)
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 40),
-              child: Column(
-                children: [
-                  const Icon(
-                    Icons.history_edu_rounded,
-                    color: Colors.white10,
-                    size: 48,
+        contributionsAsync.when(
+          data: (contributions) => voicesAsync.when(
+            data: (voices) {
+              final List<dynamic> combined = [
+                ...contributions.map((e) => {'type': 'word', 'data': e, 'time': e.validatedAt ?? DateTime.fromMillisecondsSinceEpoch(0)}),
+                ...voices.map((e) => {'type': 'voice', 'data': e, 'time': e.submittedAt ?? DateTime.fromMillisecondsSinceEpoch(0)}),
+              ];
+
+              // Sort by time descending
+              combined.sort((a, b) => b['time'].compareTo(a['time']));
+
+              final displayItems = combined.take(5).toList();
+
+              if (displayItems.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    child: Text(
+                      'No recent legacy found.',
+                      style: AppTypography.body.copyWith(color: Colors.white24),
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No contributions found.',
-                    style: AppTypography.body.copyWith(color: Colors.white24),
-                  ),
-                ],
-              ),
-            ),
-          )
-        else
-          ...filtered.map(
-            (c) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _buildTrackerCard(entry: c),
-            ),
+                );
+              }
+
+              return Column(
+                children: displayItems.map((item) {
+                  if (item['type'] == 'word') {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _buildTrackerCard(entry: item['data']),
+                    );
+                  } else {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _buildVoiceTrackerCard(voice: item['data']),
+                    );
+                  }
+                }).toList(),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, _) => Text('Error: $err'),
           ),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => Text('Error: $err'),
+        ),
       ],
     );
+  }
+
+  Widget _buildVoiceTrackerCard({required VoiceSubmission voice}) {
+    return BrandCard(
+      theme: BrandCardTheme.vibrant,
+      padding: const EdgeInsets.all(16),
+      borderRadius: 20,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.semanticBlue.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.mic_rounded, color: AppColors.semanticBlue, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  voice.title,
+                  style: AppTypography.h3.copyWith(color: Colors.white, fontSize: 16),
+                ),
+                Text(
+                  voice.dialect,
+                  style: AppTypography.body.copyWith(color: Colors.white38, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          _buildLegacyStatusBadge(voice.status.name),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegacyStatusBadge(String status) {
+    Color color;
+    switch (status.toLowerCase()) {
+      case 'approved':
+        color = AppColors.semanticGreen;
+        break;
+      case 'pending':
+        color = AppColors.gold500;
+        break;
+      case 'rejected':
+      case 'flagged':
+        color = AppColors.semanticRed;
+        break;
+      default:
+        color = Colors.white24;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: AppTypography.label.copyWith(color: color, fontSize: 8, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildLegacySection(List<DictionaryEntry> contributions) {
+    // This is now replaced by _buildCombinedLegacySection
+    return const SizedBox.shrink();
   }
 
   // Dialects in need are now dynamic
@@ -512,8 +611,28 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
       builder: (sheetContext) {
         return Consumer(
           builder: (context, ref, child) {
-            final dialectsAsync = ref.watch(dialectsInNeedProvider);
-            final existingDialects = dialectsAsync.value?.keys.toList() ?? [];
+            final dialectsAsync = ref.watch(dialectsProvider);
+            final List<String> defaultDialects = [
+              'Mandaya',
+              'Mansaka',
+              'Tagakaulo',
+              'B\'laan',
+              'Bagobo',
+              'Kalagan',
+              'Matigsalug',
+              'Ata',
+              'Dibabawon',
+              'Mangguangan',
+              'Tagabawa',
+            ];
+            final List<String> existingDialects = dialectsAsync.value
+                    ?.where((d) => d != "All")
+                    .toList() ??
+                List.from(defaultDialects);
+
+            if (existingDialects.isEmpty) {
+              existingDialects.addAll(defaultDialects);
+            }
             final profile = ref.watch(userProfileProvider).value;
             final user = ref.watch(authStateProvider).value;
 
@@ -584,7 +703,7 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
                                 Icons.keyboard_arrow_down_rounded,
                                 color: AppColors.gold500,
                               ),
-                              items: existingDialects.map((String dialect) {
+                              items: existingDialects.toSet().map((String dialect) {
                                 return DropdownMenuItem<String>(
                                   value: dialect,
                                   child: Text(
@@ -1043,6 +1162,10 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
     final contributionsAsync = user != null
         ? ref.watch(userContributionsStreamProvider(user.uid))
         : const AsyncValue<List<DictionaryEntry>>.loading();
+
+    final voicesAsync = user != null
+        ? ref.watch(userVoiceSubmissionsStreamProvider(user.uid))
+        : const AsyncValue<List<VoiceSubmission>>.loading();
     final dialectsAsync = ref.watch(dialectsInNeedProvider);
     final impactAsync = ref.watch(contributionImpactProvider);
 
@@ -1074,8 +1197,6 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
                 ),
                 error: (_, __) => const SizedBox.shrink(),
               ),
-              const SizedBox(height: 24),
-              const WotdWidget(),
               const SizedBox(height: 32),
               contributionsAsync.when(
                 data: (contributions) {
@@ -1106,11 +1227,7 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
               const SizedBox(height: 32),
               _buildActionButtons(),
               const SizedBox(height: 40),
-              contributionsAsync.when(
-                data: (contributions) => _buildLegacySection(contributions),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, __) => Text('Error: $err'),
-              ),
+              _buildCombinedLegacySection(contributionsAsync, voicesAsync),
               const SizedBox(height: 100),
             ],
           ),
@@ -1137,10 +1254,15 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               Lottie.network(
-                'https://assets10.lottiefiles.com/packages/lf20_s2lryxtd.json',
+                'https://lottie.host/80131f4a-8740-4965-9856-78810298a83a/lUun9v445q.json',
                 width: 150,
                 height: 150,
                 repeat: false,
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                  Icons.verified_rounded,
+                  size: 100,
+                  color: AppColors.gold500,
+                ),
               ),
               Text(
                 'Entry Submitted!',
@@ -1432,6 +1554,9 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
       if (_selectedProvince == null || _selectedMunicipality == null) {
         throw Exception("Please complete the location information.");
       }
+      if (_selectedLanguage == null) {
+        throw Exception("Please select a language/dialect.");
+      }
 
       // Upload to Storage
       final fileName = 'voice_${user.uid}_${DateTime.now().millisecondsSinceEpoch}.m4a';
@@ -1439,11 +1564,16 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
           .read(supabaseStorageServiceProvider)
           .uploadAudio(File(path), fileName);
 
+      if (audioUrl == null) {
+        throw Exception("Failed to upload audio.");
+      }
+
       // Save Metadata to Firestore
       final municipalityId =
           _selectedMunicipality?.toLowerCase().replaceAll(' ', '_') ??
           'unknown';
-      await ref.read(firebaseServiceProvider).addRecording(municipalityId, {
+      
+      final recordingData = {
         'title': 'New Pronunciation',
         'speakerName': user.displayName ?? 'Tribe Member',
         'speakerRole': _selectedSpeaker,
@@ -1454,7 +1584,25 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
         'audioUrl': audioUrl,
         'timestamp': DateTime.now().toIso8601String(),
         'contributorId': user.uid,
-      });
+      };
+
+      await ref.read(firebaseServiceProvider).addRecording(municipalityId, recordingData);
+
+      // Also add to voice_submissions for validation and tracking
+      await ref.read(firebaseServiceProvider).addVoiceSubmission(
+        VoiceSubmission(
+          id: '', // Firestore will generate
+          title: 'New Pronunciation - $_selectedMunicipality',
+          dialect: _selectedLanguage ?? 'Lumad',
+          contributorId: user.uid,
+          contributorName: user.displayName ?? 'Tribe Member',
+          audioUrl: audioUrl,
+          speakerRole: _selectedSpeaker,
+          province: _selectedProvince,
+          municipality: _selectedMunicipality,
+          status: VoiceStatus.pending,
+        ),
+      );
 
       if (context.mounted) {
         Navigator.pop(context);
@@ -1654,6 +1802,91 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
                                   );
                                 }).toList(),
                           ),
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // Language/Dialect Selector
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'LANGUAGE / DIALECT',
+                            style: AppTypography.label.copyWith(
+                              color: AppColors.creamText3,
+                              fontSize: 10,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Consumer(
+                          builder: (context, ref, child) {
+                            final dialectsAsync = ref.watch(dialectsProvider);
+                            final List<String> defaultDialects = [
+                              'Mandaya',
+                              'Mansaka',
+                              'Tagakaulo',
+                              'B\'laan',
+                              'Bagobo',
+                              'Kalagan',
+                              'Matigsalug',
+                              'Ata',
+                              'Dibabawon',
+                              'Mangguangan',
+                              'Tagabawa',
+                            ];
+                            final existingDialects = dialectsAsync.value
+                                    ?.where((d) => d != "All")
+                                    .toList() ??
+                                defaultDialects;
+
+                            if (existingDialects.isEmpty) {
+                              existingDialects.addAll(defaultDialects);
+                            }
+
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              decoration: BoxDecoration(
+                                color: AppColors.forest900,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: existingDialects.contains(_selectedLanguage) ? _selectedLanguage : null,
+                                  hint: const Text(
+                                    "Select Dialect",
+                                    style: TextStyle(
+                                      color: Colors.white24,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  dropdownColor: AppColors.forest900,
+                                  isExpanded: true,
+                                  icon: const Icon(
+                                    Icons.keyboard_arrow_down_rounded,
+                                    color: AppColors.gold500,
+                                  ),
+                                  items: existingDialects.toSet().map((String dialect) {
+                                    return DropdownMenuItem<String>(
+                                      value: dialect,
+                                      child: Text(
+                                        dialect,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (String? newValue) {
+                                    setModalState(() {
+                                      _selectedLanguage = newValue;
+                                    });
+                                  },
+                                ),
+                              ),
+                            );
+                          },
                         ),
 
                         const SizedBox(height: 32),

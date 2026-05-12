@@ -55,7 +55,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
     Future.delayed(const Duration(milliseconds: 500), () {
       if (!mounted) return;
       final keyContext = _activeNodeKey.currentContext;
-      if (keyContext != null && mounted) {
+      if (keyContext != null && keyContext.mounted) {
         Scrollable.ensureVisible(
           keyContext,
           duration: const Duration(milliseconds: 800),
@@ -373,16 +373,12 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
     StudentState studentState,
   ) {
     final List<Widget> children = [];
-    final sortedUnits = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+    final sortedUnits = grouped.keys.toList()..sort(); // Unit 1, 2, 3...
     bool activeNodeKeyAssigned = false;
-
-    // We add the Summit at the very top
-    children.add(_buildSummitVisual());
-    children.add(const SizedBox(height: 60));
 
     for (var unitNum in sortedUnits) {
       final unitLessons = grouped[unitNum]!;
-      final reversedLessons = unitLessons.reversed.toList();
+      final lessons = unitLessons; // Lesson 1, 2, 3...
 
       final completedCount = unitLessons
           .where((l) => studentState.lessonProgress[l.id]?['completed'] == true)
@@ -395,8 +391,8 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
 
       final List<Widget> lessonWidgets = [];
 
-      for (var i = 0; i < reversedLessons.length; i++) {
-        final lesson = reversedLessons[i];
+      for (var i = 0; i < lessons.length; i++) {
+        final lesson = lessons[i];
         final progressData = studentState.lessonProgress[lesson.id];
         final isCompleted = progressData?['completed'] == true;
         final bestScore = (progressData?['bestScore'] as num?)?.toInt();
@@ -422,7 +418,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
           activeNodeKeyAssigned = true;
         }
 
-        final isLast = i == reversedLessons.length - 1;
+        final isLast = i == lessons.length - 1;
 
         lessonWidgets.add(
           GestureDetector(
@@ -467,6 +463,10 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
       );
       children.add(const SizedBox(height: 40));
     }
+
+    // Add Summit at the bottom for top-to-bottom classic path
+    children.add(const SizedBox(height: 20));
+    children.add(_buildSummitVisual());
 
     return SliverList(delegate: SliverChildListDelegate(children));
   }

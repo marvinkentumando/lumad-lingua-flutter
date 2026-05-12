@@ -89,7 +89,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
                     return Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(intensity),
+                        color: Colors.red.withValues(alpha: intensity),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.white10),
                       ),
@@ -137,7 +137,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
                   const SizedBox(height: 6),
                   Stack(
                     children: [
-                      Container(height: 6, decoration: BoxDecoration(color: AppColors.forest900.withOpacity(0.05), borderRadius: BorderRadius.circular(3))),
+                      Container(height: 6, decoration: BoxDecoration(color: AppColors.forest900.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(3))),
                       AnimatedContainer(
                         duration: 1.seconds,
                         height: 6,

@@ -21,16 +21,16 @@ class LottieFeedbackAvatar extends StatelessWidget {
 
     if (isCelebrating) {
       lottieUrl =
-          'https://assets10.lottiefiles.com/packages/lf20_tou969lj.json'; // Party/Celebration
+          'https://lottie.host/791c8907-5503-4674-8740-109437298642/hZ4y9Y8j7T.json'; // Party/Celebration
     } else if (isHappy) {
       lottieUrl =
-          'https://assets2.lottiefiles.com/packages/lf20_7mshrhz1.json'; // Happy success
+          'https://lottie.host/80131f4a-8740-4965-9856-78810298a83a/lUun9v445q.json'; // Happy success
     } else if (isSad) {
       lottieUrl =
-          'https://assets5.lottiefiles.com/packages/lf20_mmsvpx7y.json'; // Sad/Think
+          'https://lottie.host/83017a00-1c7b-406c-820d-730c4f82873c/YtHj4ZqHqS.json'; // Sad/Think
     } else {
       lottieUrl =
-          'https://assets4.lottiefiles.com/packages/lf20_6p8oeyio.json'; // Idle/Thinking
+          'https://lottie.host/80164c01-70e6-4914-8742-df2a16d55283/jOn7mB2J9T.json'; // Idle/Thinking
     }
 
     return SizedBox(
@@ -55,6 +55,3 @@ class LottieFeedbackAvatar extends StatelessWidget {
     );
   }
 }
-
-
-

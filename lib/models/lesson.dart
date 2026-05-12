@@ -1,4 +1,5 @@
 import 'package:hive/hive.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'lesson_task.dart';
 
 part 'lesson.g.dart';
@@ -32,6 +33,11 @@ class Lesson {
   @HiveField(12)
   final bool isMistUnit;
 
+  @HiveField(13)
+  final DateTime? validatedAt;
+  @HiveField(14)
+  final String? validatorId;
+
   Lesson({
     required this.id,
     required this.title,
@@ -46,6 +52,8 @@ class Lesson {
     this.status = 'PUBLISHED',
     this.prerequisiteId,
     this.isMistUnit = false,
+    this.validatedAt,
+    this.validatorId,
   });
 
   factory Lesson.fromFirestore(Map<String, dynamic> data, String id) {
@@ -55,6 +63,15 @@ class Lesson {
         // Here we'd need a fromMap in LessonTask
         return _taskFromMap(t as Map<String, dynamic>);
       }).toList();
+    }
+
+    DateTime? validatedAt;
+    if (data['validatedAt'] != null) {
+      if (data['validatedAt'] is Timestamp) {
+        validatedAt = (data['validatedAt'] as Timestamp).toDate();
+      } else if (data['validatedAt'] is String) {
+        validatedAt = DateTime.tryParse(data['validatedAt']);
+      }
     }
 
     return Lesson(
@@ -72,6 +89,8 @@ class Lesson {
       prerequisiteId: data['prerequisiteId'],
       isMistUnit:
           data['isMistUnit'] ?? (data['category'] == 'Cultural Stories'),
+      validatedAt: validatedAt,
+      validatorId: data['validatorId'],
     );
   }
 

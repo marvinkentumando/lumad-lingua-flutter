@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import '../../services/supabase_storage_service.dart';
 import '../preview_audio_player.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // Fix #15: VocabularyView now renders the actual network image instead of a placeholder icon.
-class VocabularyView extends StatelessWidget {
+class VocabularyView extends ConsumerWidget {
   final String nativeWord;
   final String translation;
   final String definition;
@@ -28,7 +30,10 @@ class VocabularyView extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final resolvedImageUrl = imageUrl != null && imageUrl!.isNotEmpty
+        ? ref.read(supabaseStorageServiceProvider).getImageUrl(imageUrl!)
+        : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -113,7 +118,7 @@ class VocabularyView extends StatelessWidget {
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
                                 child: Image.network(
-                                  imageUrl!,
+                                  resolvedImageUrl!,
                                   fit: BoxFit.cover,
                                   width: double.infinity,
                                   errorBuilder: (_, __, ___) => const Icon(

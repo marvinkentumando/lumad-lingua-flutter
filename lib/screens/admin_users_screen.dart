@@ -7,6 +7,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/ambient_topo_background.dart';
+import '../providers/admin_users_provider.dart';
 
 class AdminUsersScreen extends ConsumerStatefulWidget {
   const AdminUsersScreen({super.key});
@@ -18,6 +19,20 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   String _userSearch = '';
   String _roleFilter = 'All';
   final TextEditingController _searchCtrl = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      ref.read(adminUsersProvider.notifier).loadUsers();
+    }
+  }
 
   List<AdminUser> _getFiltered(List<AdminUser> users) {
     return users.where((u) {
@@ -34,194 +49,192 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final usersAsync = ref.watch(allUsersProvider);
+    final usersState = ref.watch(adminUsersProvider);
+    final filtered = _getFiltered(usersState.users);
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: AmbientTopoBackground(
         child: Stack(
-        children: [
-          SafeArea(
-            child: Column(
-              children: [
-                _buildHeader(context),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                  child: TextField(
-                    controller: _searchCtrl,
-                    onChanged: (v) => setState(() => _userSearch = v),
-                    decoration: InputDecoration(
-                      hintText: 'Search by name or email...',
-                      hintStyle: const TextStyle(
-                        color: Colors.white24,
-                        fontSize: 13,
+          children: [
+            SafeArea(
+              child: Column(
+                children: [
+                  _buildHeader(context),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                    child: TextField(
+                      controller: _searchCtrl,
+                      onChanged: (v) => setState(() => _userSearch = v),
+                      decoration: InputDecoration(
+                        hintText: 'Search by name or email...',
+                        hintStyle: const TextStyle(
+                          color: Colors.white24,
+                          fontSize: 13,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.search_rounded,
+                          color: AppColors.gold500,
+                          size: 20,
+                        ),
+                        suffixIcon: _userSearch.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(
+                                  Icons.close_rounded,
+                                  color: Colors.white38,
+                                  size: 18,
+                                ),
+                                onPressed: () {
+                                  _searchCtrl.clear();
+                                  setState(() => _userSearch = '');
+                                },
+                              )
+                            : null,
+                        filled: true,
+                        fillColor: AppColors.forest800.withValues(alpha: 0.5),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.05),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.05),
+                          ),
+                        ),
                       ),
-                      prefixIcon: const Icon(
-                        Icons.search_rounded,
-                        color: AppColors.gold500,
-                        size: 20,
-                      ),
-                      suffixIcon: _userSearch.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(
-                                Icons.close_rounded,
-                                color: Colors.white38,
-                                size: 18,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildRoleTabs(),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 8,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${filtered.length} user${filtered.length == 1 ? '' : 's'}',
+                                style: AppTypography.label.copyWith(
+                                  color: Colors.white24,
+                                  fontSize: 10,
+                                ),
                               ),
-                              onPressed: () {
-                                _searchCtrl.clear();
-                                setState(() => _userSearch = '');
-                              },
-                            )
-                          : null,
-                      filled: true,
-                      fillColor: AppColors.forest800.withValues(alpha: 0.5),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(
-                          color: Colors.white.withValues(alpha: 0.05),
-                        ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(
-                          color: Colors.white.withValues(alpha: 0.05),
-                        ),
-                      ),
-                    ),
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _buildRoleTabs(),
-                usersAsync.when(
-                  data: (users) {
-                    final filtered = _getFiltered(users);
-                    return Expanded(
-                      child: Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 8,
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  '${filtered.length} user${filtered.length == 1 ? '' : 's'}',
-                                  style: AppTypography.label.copyWith(
-                                    color: Colors.white24,
-                                    fontSize: 10,
+                              GestureDetector(
+                                onTap: _showInviteDialog,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
                                   ),
-                                ),
-                                GestureDetector(
-                                  onTap: _showInviteDialog,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.gold500.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(
-                                          Icons.person_add_rounded,
+                                  decoration: BoxDecoration(
+                                    color:
+                                        AppColors.gold500.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.person_add_rounded,
+                                        color: AppColors.gold500,
+                                        size: 14,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'INVITE',
+                                        style: AppTypography.label.copyWith(
                                           color: AppColors.gold500,
-                                          size: 14,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w900,
                                         ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          'INVITE',
-                                          style: AppTypography.label.copyWith(
-                                            color: AppColors.gold500,
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w900,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                          Expanded(
-                            child: filtered.isEmpty
-                                ? Center(
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(
-                                          Icons.person_search_rounded,
-                                          color: Colors.white10,
-                                          size: 64,
+                        ),
+                        Expanded(
+                          child: filtered.isEmpty && !usersState.isLoading
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        Icons.person_search_rounded,
+                                        color: Colors.white10,
+                                        size: 64,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'No users found.',
+                                        style: AppTypography.h3.copyWith(
+                                          color: Colors.white24,
                                         ),
-                                        const SizedBox(height: 16),
-                                        Text(
-                                          'No users found.',
-                                          style: AppTypography.h3.copyWith(
-                                            color: Colors.white24,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                : ListView.separated(
-                                    padding: const EdgeInsets.fromLTRB(
-                                      20,
-                                      0,
-                                      20,
-                                      100,
-                                    ),
-                                    itemCount: filtered.length,
-                                    separatorBuilder: (_, __) =>
-                                        const SizedBox(height: 12),
-                                    itemBuilder: (context, i) =>
-                                        _userRow(filtered[i], i)
-                                            .animate()
-                                            .fadeIn(
-                                              delay: Duration(
-                                                milliseconds: i * 50,
-                                              ),
-                                            )
-                                            .slideX(begin: 0.05),
+                                      ),
+                                    ],
                                   ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                  loading: () => const Expanded(
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                  error: (err, _) => Expanded(
-                    child: Center(
-                      child: Text(
-                        'Error: $err',
-                        style: const TextStyle(color: Colors.white),
-                      ),
+                                )
+                              : ListView.separated(
+                                  controller: _scrollController,
+                                  padding: const EdgeInsets.fromLTRB(
+                                    20,
+                                    0,
+                                    20,
+                                    100,
+                                  ),
+                                  itemCount:
+                                      filtered.length + (usersState.hasMore ? 1 : 0),
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(height: 12),
+                                  itemBuilder: (context, i) {
+                                    if (i == filtered.length) {
+                                      return const Center(
+                                        child: Padding(
+                                          padding: EdgeInsets.all(16.0),
+                                          child: CircularProgressIndicator(),
+                                        ),
+                                      );
+                                    }
+                                    return _userRow(filtered[i], i)
+                                        .animate()
+                                        .fadeIn(
+                                          delay: Duration(
+                                            milliseconds: i * 50,
+                                          ),
+                                        )
+                                        .slideX(begin: 0.05);
+                                  },
+                                ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildRoleTabs() {
     final roles = [
@@ -759,14 +772,33 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
             BrandButton(
               text: 'Send Invite',
               type: BrandButtonType.primary,
-              onTap: () {
+              onTap: () async {
+                final email = emailCtrl.text.trim();
+                if (email.isEmpty) return;
+
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Invitation sent to ${emailCtrl.text}'),
-                    backgroundColor: AppColors.semanticGreen,
-                  ),
-                );
+                try {
+                  await ref
+                      .read(firebaseServiceProvider)
+                      .createInvitation(email, selectedRole);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Invitation sent to $email'),
+                        backgroundColor: AppColors.semanticGreen,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to send invite: $e'),
+                        backgroundColor: AppColors.semanticRed,
+                      ),
+                    );
+                  }
+                }
               },
             ),
           ],
@@ -834,14 +866,110 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
       case 'suspend':
         _toggleUserStatus(user);
       case 'edit':
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Edit profile for "${user.name}"')),
-        );
+        _showEditUserDialog(user);
       default:
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Action "$action" triggered.')));
     }
+  }
+
+  void _showEditUserDialog(AdminUser user) {
+    final nameCtrl = TextEditingController(text: user.name);
+    final xpCtrl = TextEditingController(text: user.xp.toString());
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.forest700,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Text(
+          'Edit User Details',
+          style: AppTypography.h3.copyWith(color: AppColors.gold500),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Username',
+                labelStyle: const TextStyle(color: Colors.white54),
+                filled: true,
+                fillColor: AppColors.forest800,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: xpCtrl,
+              style: const TextStyle(color: Colors.white),
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'XP',
+                labelStyle: const TextStyle(color: Colors.white54),
+                filled: true,
+                fillColor: AppColors.forest800,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white54),
+            ),
+          ),
+          BrandButton(
+            text: 'Save Changes',
+            type: BrandButtonType.primary,
+            onTap: () async {
+              final newName = nameCtrl.text.trim();
+              final newXp = int.tryParse(xpCtrl.text) ?? user.xp;
+
+              if (newName.isEmpty) return;
+
+              Navigator.pop(ctx);
+              try {
+                await ref.read(firebaseServiceProvider).updateUserDetails(
+                  user.id,
+                  {'username': newName, 'xp': newXp},
+                );
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('User details updated successfully'),
+                      backgroundColor: AppColors.semanticGreen,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to update user: $e'),
+                      backgroundColor: AppColors.semanticRed,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   void _toggleUserStatus(AdminUser user) {
@@ -1016,7 +1144,18 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     return ListTile(
       onTap: () async {
         Navigator.pop(context);
-        await ref.read(firebaseServiceProvider).updateUserRole(user.id, roleId);
+
+        String? selectedDialect;
+        if (roleId == 'validator') {
+          selectedDialect = await _showDialectPickerDialog(context);
+          if (selectedDialect == null) return; // Cancelled
+        }
+
+        await ref.read(firebaseServiceProvider).updateUserRole(
+              user.id,
+              roleId,
+              indigenousGroup: selectedDialect,
+            );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Role updated to ${label.toUpperCase()}')),
@@ -1086,6 +1225,52 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
             },
           ),
         ],
+      ),
+    );
+  }
+
+  Future<String?> _showDialectPickerDialog(BuildContext context) async {
+    return showDialog<String>(
+      context: context,
+      builder: (context) => Consumer(
+        builder: (context, ref, _) {
+          final dialectsAsync = ref.watch(dialectsProvider);
+          return AlertDialog(
+            backgroundColor: AppColors.forest900,
+            title: const Text(
+              'Select Indigenous Group',
+              style: TextStyle(color: Colors.white),
+            ),
+            content: dialectsAsync.when(
+              data: (dialects) {
+                final filtered = dialects.where((d) => d != 'All').toList();
+                return SizedBox(
+                  width: double.maxFinite,
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        title: Text(
+                          filtered[index],
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                        onTap: () => Navigator.pop(context, filtered[index]),
+                      );
+                    },
+                  ),
+                );
+              },
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: AppColors.gold500),
+              ),
+              error: (err, _) => Text(
+                'Error: $err',
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

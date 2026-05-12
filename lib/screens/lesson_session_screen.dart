@@ -10,6 +10,7 @@ import '../services/audio_service.dart';
 import '../widgets/xp_celebration.dart';
 import '../models/lesson_task.dart';
 import '../models/artifact.dart';
+import '../models/app_config.dart';
 import '../providers/learning_provider.dart'; 
 import 'package:lumad_lingua/widgets/progress_header.dart';
 import '../widgets/feedback_panel.dart';
@@ -418,11 +419,14 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           stars = 2;
         }
 
+        final config = ref.read(appConfigProvider).value ?? AppConfig.fromFirestore({});
         final totalTasks = state.totalTasks;
         final distinctMistakeTasks = _taskMistakes.keys.length;
         final accurateCount = totalTasks - distinctMistakeTasks;
         final sessionXp =
-            (accurateCount * 20) + (distinctMistakeTasks * 10) + 50 + _bonusXp;
+            (accurateCount * config.lessonTaskPerfectXp) + 
+            (distinctMistakeTasks * config.lessonTaskRetryXp) + 
+            config.lessonCompletionBaseXp + _bonusXp;
 
         setState(() {
           _showFeedback = false;

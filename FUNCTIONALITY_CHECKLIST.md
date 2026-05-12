@@ -1,0 +1,216 @@
+# 🛠️ Lumad Lingua - Functionality Checklist
+
+This document tracks UI elements, buttons, and display areas that are currently implemented but lack backend integration or intended functionality.
+
+---
+
+## 🏛️ Validator Home Screen
+- [ ] **Profile/Shield Header Interaction**: The header area showing the validator's name and rank is currently non-interactive. It should ideally link to a **Profile Settings** or **Rank Progression** detail screen.
+- [ ] **Daily Goal Customization**: The "Daily Impact" tracker uses a hardcoded goal (default: 20). There is no UI to allow validators to set their own daily verification targets.
+- [ ] **Daily Impact Stats Detail**: Tapping the Daily Impact card does nothing. It could show a breakdown of today's work (approved vs rejected).
+- [ ] **Urgent Queue Management**:
+    - [ ] **Skip/Snooze Function**: Urgent items cannot be dismissed or snoozed if a validator is unable to process them immediately.
+    - [ ] **Empty State Action**: The "All caught up!" state is static. It could include a "Check History" or "Browse All" button.
+- [ ] **Hardcoded Dialect Assignment**: Assignment of validators to specific dialects (e.g., Mansaka, Mandaya) is partially hardcoded based on email in the build logic. This should be moved to a proper User Management system.
+
+## 📱 Global Layout (Validator)
+- [ ] **Top Bar "Validations" Stat Interaction**: The pill showing the number of validations in the top bar is non-interactive. It could link to a detailed **Validator Activity Log** or **History** page.
+
+## 📖 Validator Entries Screen
+- [ ] **Dialect Filter Controls**: Although filtering logic exists in the code, there is no UI (dropdown/chips) to allow validators to switch between dialects.
+- [ ] **Search History Management**: No way to clear or delete specific items from the search history list.
+- [ ] **Infinite Scroll Indicator**: Missing a loading spinner at the bottom of the list when fetching more entries.
+- [ ] **Bulk Action Variety**: Bulk selection only supports "Approve". No bulk "Reject" or "Flag" options are available.
+- [ ] **Audio Tip Recording**: The "Record" button in the Flagging sheet is a placeholder (only shows a SnackBar) and lacks actual recording/upload functionality.
+- [ ] **Contributor Reputation Accuracy**: Stats like "98% APPROVAL" on entry cards appear to be UI placeholders rather than live data synced with contributor profiles.
+- [ ] **Search Existing Logic**: The "Search Existing" button in the term detail view only filters the current local list; it doesn't query the full dictionary database for duplicates.
+- [ ] **Feedback Display Persistence**: In the History view, the feedback is shown with an "info" icon, but there's no way to edit or add more comments after a decision is made.
+
+## 🎙️ Validator Voices Screen
+- [ ] **Audio Speed Persistence**: Playback speed (0.5x, 1.0x) resets to 1.0x when switching between items or closing the screen.
+- [ ] **Waveform Interactivity**: The audio waveform is a visualization only; users cannot tap on the waveform to seek to a specific part of the audio.
+- [ ] **Dialect Filter UI**: Similar to the entries screen, there is a `_selectedDialect` variable and a list of `_dialects`, but no UI (chips/dropdown) to allow the validator to change the filter.
+- [ ] **Bulk Rejection/Flagging**: Bulk selection mode only supports "Approve". There is no way to bulk reject or bulk flag multiple audio submissions.
+- [ ] **Submission ID Truncation**: The "Submission ID" display uses a simple substring of the Firestore ID; it doesn't link to a detailed log or audit trail of that specific submission.
+- [ ] **Contributor Approval Rate**: The "96% APPROVAL" shown on contributor profiles is a UI placeholder and not based on actual historical data.
+- [ ] **Transcript Editing**: Validators can view the transcript but cannot suggest a correction or edit it if there's a minor typo. They must either Approve, Flag, or Reject.
+
+## 🎓 Validator Lessons Screen
+- [ ] **Dialect Filter UI**: The `_buildDialectFilter` method exists in the code but is never called in the UI, making it impossible for validators to switch dialects.
+- [ ] **Missing "Reject" Option**: The lesson cards only offer "Approve" or "Flag" (Request Changes). There is no "Reject" button for lessons that should be completely discarded.
+- [ ] **Bulk Action Variety**: Bulk selection mode only supports "Approve". No bulk "Flag" or "Reject" options are available.
+- [ ] **History Metrics**: Unlike the Entries and Voices screens, the Lesson History view lacks a summary of "Approved", "Flagged", and "Rejected" stats at the top.
+- [ ] **Search History**: No search history chips or management functionality for the lesson search bar.
+- [ ] **Preview Interaction Clarity**: In the lesson preview sheet, validators can interact with tasks (select MCQ options, etc.), but there's no visual indication that these interactions are for preview purposes only and not "grading" the lesson.
+
+## 👤 Contributor Profile Screen (Staff Profile)
+- [ ] **Hardcoded Profile Stats**: The "RATING" (4.9) and "RANK" (ELITE) displayed in the stats row are currently hardcoded UI placeholders. They should be linked to actual contributor performance metrics or rank data.
+- [ ] **Contribution Count Completeness**: The "CONTRIBUTIONS" metric in the stats row only counts words; it should also include voice fragment submissions.
+- [ ] **Impact Card Personalization**: The "Students Helped" and "Total Reach" metrics are global platform aggregates. They should be filtered to reflect the specific contributor's personal impact.
+- [ ] **Artifacts Section for Staff**: Contributors who transition from being learners lose visibility of their "Earned Artifacts". There should be a way for them to view their collection or a staff-equivalent achievement system.
+- [ ] **Role Transition UI**: No UI for a contributor to "Request Validator" or "Transition to Educator" if they wish to increase their responsibilities.
+- [ ] **Location Edit Restriction**: Location is locked for contributors with a "Location is locked" hint. It should be editable or linked to their primary cultural region.
+- [ ] **Legacy Tracker Access**: The profile screen lacks a direct link to the contributor's full activity history (Legacy Tracker), requiring them to navigate back to the home screen to find it.
+
+## 👤 Validator Profile Screen (Staff Profile)
+- [ ] **Hardcoded Profile Stats**: The "RATING" (4.9) and "RANK" (ELITE) displayed in the stats row are currently hardcoded UI placeholders. They should be linked to actual validator performance metrics or rank data.
+- [ ] **Impact Card Accuracy**: The "Students Helped" and "Total Reach" metrics in the Impact Card might be using generic contributor formulas; they should be verified to accurately reflect a validator's specific impact (e.g., number of learners using words they validated).
+- [ ] **Artifacts Section for Staff**: Non-learner roles like validators don't see the "Earned Artifacts" section. There is no equivalent staff-specific collection or achievement display.
+- [ ] **Role Transition Logic**: The "Become a Contributor" button logic in `Journey Management` technically excludes validators but is redundant since they already have higher privileges; however, there's no UI for a validator to "Request Admin" or "Transition Role" if needed.
+
+## 🏹 Contributor Home Screen
+- [ ] **Guardian Header Interaction**: The header area showing the contributor's name and rank is currently non-interactive. It should ideally link to a **Profile Settings** or **Rank Progression** detail screen.
+- [ ] **Impact Card Accuracy**: Stats like "Students Helped" and "Total Reach" are global aggregates. These should be filtered to reflect the specific contributor's impact (e.g., how many learners have seen or learned words they contributed).
+- [ ] **Bulk Upload Utility**: The UI for bulk uploading CSV/JSON files is a placeholder. It lacks file picking logic, template validation, and actual backend processing.
+- [ ] **Batch Recording Mode**: The sequencer for recording multiple voice fragments uses mock data ("Word 1", "Word 2"). It should pull real dictionary entries that currently lack audio recordings.
+- [ ] **Legacy Tracker Card Interaction**: Contribution cards in the "Legacy Tracker" section (on the Home screen and in the detailed view) are non-interactive. They should navigate to an **Entry Detail** view showing full metadata and any validator feedback.
+- [ ] **Recent Activity Search**: No search bar or filtering by date/keyword within the Legacy Tracker section to find specific past contributions.
+- [ ] **Success Dialog XP Hardcoding**: The success message after an entry is submitted mentions "You earned 100 XP!", which appears to be a static text regardless of the actual XP reward logic.
+- [ ] **Revised Entry State Management**: The "Revise Entry" button pre-fills the form but creates a new entry instead of updating the existing flagged one, leading to potential duplicates in the validation queue.
+- [ ] **Add Entry: Real-time Duplicate Check**: No background check is performed while typing a new indigenous word to warn the contributor if the word already exists in the database (pending or approved).
+- [ ] **Add Entry: Draft Preservation**: Lack of a "Save as Draft" feature for cultural entries; progress is lost if the submission sheet is closed prematurely.
+- [ ] **Record Fragment: Missing Metadata Fields**: The recording sheet lacks fields for "Title" and "Transcription", resulting in generic "New Pronunciation" labels in the database.
+- [ ] **Record Fragment: Audio Quality Indicator**: No visual feedback on recording quality (e.g., silence detection or background noise warning) before submission.
+
+## 🏹 Learner Home Screen
+- [ ] **Village Echoes (Social Feed) Live Sync**: The feed is currently hardcoded with static names ("Datu Matu", "Guardian Tala"). It lacks integration with a live activity or notification system.
+- [ ] **Artifact Spotlight Randomization**: The spotlighted artifact ("Mansaka Binallog") is hardcoded. It should ideally display a random or recently discovered artifact from the database.
+- [ ] **Village Echoes Avatar Interaction**: Tapping avatars in the Village Echoes feed does nothing. They should link to the corresponding **Member Profile**.
+- [ ] **Top Climbers Detail Link**: In the Top Climbers preview list, tapping an individual user does nothing. It should navigate to that user's **Member Profile**.
+- [ ] **Sync Indicator Interaction**: The "Syncing offline changes..." indicator is non-interactive. It could show a progress detail or allow manual retry if a sync hangs.
+- [ ] **Live Reset Timer**: The "RESET IN..." timer for Tribal Challenges is calculated only once per build/state change and doesn't tick down in real-time.
+
+## 🗺️ Archive Map Screen (Learner & Contributor Map)
+- [ ] **Dynamic "New Locales" Indicator**: The "3 NEW LOCALES" badge on the Home Screen's map card is hardcoded and doesn't reflect actual new data in Firestore.
+- [ ] **Search History & Suggestions**: The map search bar lacks a history of previous searches or auto-complete suggestions for municipalities and dialects.
+- [ ] **Active Filter Visibility**: When filters (e.g., specific dialects) are applied, there is no persistent UI indicator on the map screen showing which filters are active without reopening the filter sheet.
+- [ ] **Filter Logic Implementation**: The Dialect Filter UI updates state, but the marker rendering logic currently ignores the selected dialects, filtering only by search text.
+- [ ] **Map Bounds & Region Lock**: The map currently allows infinite scrolling across the globe. It should be constrained to the Mindanao/Davao region to keep users focused on relevant areas.
+- [ ] **User Location "Follow Me" Mode**: The "My Location" button centers the map once but doesn't offer a persistent "Follow Me" mode or indicate if the user is outside the covered regions.
+- [ ] **Municipality Detail Depth**: The information in the `MunicipalityPanel` (description and metadata) is largely template-based and doesn't yet include live stats like "Active Contributors" or "Last Updated".
+- [ ] **Contribution CTA in Empty Areas**: Tapping on areas with no markers doesn't offer any interaction. It could suggest "Request a recording for this area" or "Contribute as a speaker".
+- [ ] **Audio Recording Actions**: There is no way to "Save" (offline) or "Share" specific recordings found on the map.
+- [ ] **Contributor: Add Recording from Map**: No way to add a site or recording directly via the map interface for contributor users.
+- [ ] **Contributor: Areas in Need Overlay**: No visual indicator (e.g., heatmaps or markers) showing which regions lack sufficient recordings.
+- [ ] **Contributor: My Contributions Filter**: Lacks a filter to show only recordings or markers contributed by the current user.
+- [ ] **Contributor: Validation Status Markers**: Map markers do not visually distinguish between pending, approved, or flagged recordings for contributors.
+- [ ] **Contributor: Quick Recording from Panel**: When viewing a municipality, there's no button for a contributor to quickly start a recording for that specific locale.
+
+## 🏔️ Learning Path Screen (The Ascent)
+- [ ] **Summit Interaction**: Reaching "The Peak of Wisdom" (the sun icon) is purely visual. It should trigger a celebration, certificate, or unlock a final "Grand Challenge".
+- [ ] **Unit Milestone Rewards**: Completing all lessons in a unit shows a completed state, but there is no UI for claiming rewards (e.g., crystals or badges) specifically for unit mastery.
+- [ ] **Path Background Interactivity**: The topographic background is static. It could be enhanced with subtle animations or parallax effects that respond to scrolling or device tilt.
+- [ ] **Offline Lesson Access**: Although there's a sync indicator on the dashboard, the Learning Path doesn't clearly show which lessons are cached and available for offline use.
+- [ ] **Visual Progress Continuity**: In "Mountain" mode, the lines between nodes only turn gold when a lesson is completed. There's no "in-progress" state for a path segment that a user is currently working on.
+- [ ] **View Preference Persistence**: The toggle between "CLASSIC" and "MOUNTAIN" views is not saved; it resets to the default each time the screen is opened.
+
+## 📓 Words & Dictionary Screen (Learner)
+- [ ] **Hardcoded Dialect Categories**: The category tabs (Mansaka, Mandaya, etc.) are hardcoded. These should sync with the available dialects in the database to avoid empty tabs.
+- [ ] **Search History Integration**: Although search history is recorded, it's not displayed as chips or a list for quick re-entry on the dictionary screen.
+- [ ] **Audio Availability Feedback**: The play button is always active; it doesn't visually distinguish between words that have audio recordings and those that don't until tapped.
+- [ ] **Shadowing Mode**: Learners cannot record their own voice to compare with the native speaker's audio for pronunciation practice.
+- [ ] **Mastery Legend/Detail**: The star icons indicating mastery (SRS levels) are non-interactive. They should link to an explanation of what each level means.
+- [ ] **Share Functionality**: The "SHARE" button in the word detail expansion is a placeholder SnackBar and doesn't trigger a native share sheet.
+- [ ] **Flashcard Granularity**: In the Daily Review (Flashcards), there are only two difficulty options (Hard/Easy). It lacks the "Good" or "Again" options typical of Spaced Repetition Systems.
+- [ ] **Study Session Filtering**: Learners cannot filter their flashcard deck by a specific dialect; the app automatically mixes all bookmarked words.
+
+## 📓 Words & Dictionary Screen (Contributor)
+- [ ] **Add Entry Integration**: No floating action button or header button to quickly trigger the "Add Cultural Entry" form from the dictionary screen.
+- [ ] **Missing Audio Recording Action**: For words without audio, there is no "Contribute Recording" button for contributor-role users to quickly fill the gap.
+- [ ] **My Contributions Toggle**: No filter to allow contributors to see their own pending, flagged, or rejected entries alongside the public validated words.
+- [ ] **Direct Entry Revision**: No "Edit" or "Revise" button on word cards for contributors to update their own past submissions directly from the dictionary.
+- [ ] **Validation Status Visibility**: Status badges (Pending/Approved/Flagged) are missing from the dictionary cards, which are essential for contributors tracking their work.
+- [ ] **Full Database Duplicate Check**: The search bar only filters the local list of approved words; it doesn't query the full Firestore collection (including pending entries) to prevent duplicate submissions.
+- [ ] **Contributor Attribution**: The word cards do not display the contributor's name or profile, which is important for community recognition among contributors.
+
+## 🎓 Learning Screen (Hub)
+- [ ] **Mist Crystal Store Placeholders**: Items like "Mountain Guide Map" and "Sacred Chant" in the store are functional for spending crystals but don't yet link to actual content unlocks (hidden map locales or specific gallery items).
+- [ ] **XP Leveling Logic Visibility**: The "Ancestral XP" card is non-interactive. It lacks a detailed view showing the user's progress toward the next level or a breakdown of how XP was earned.
+- [ ] **Dynamic Language Color Mapping**: The `_getLanguageColor` and `_getCategoryColor` methods are partially hardcoded and may default to a generic color for newer dialects or categories added via the admin panel.
+- [ ] **Learning Hub "Continue Journey" Logic**: The hub calculates the "current" lesson by finding the first one with less than 100% score. It doesn't allow a user to manually pick an earlier lesson from the hub; they must go into the Path view for that.
+- [ ] **Lesson Lock Explanation**: Tapping a locked lesson card shows a static text hint. It could be improved by explicitly naming which prerequisite lesson needs to be completed.
+
+## 👤 Learner Profile Screen ("You" Screen)
+- [ ] **Profile Stats Accuracy**: The "Words" count in the stats row needs verification to ensure it reflects unique mastered words and not just total entries saved.
+- [ ] **Artifact Spotlight Consistency**: The profile view only shows 3 artifacts. There is no indication of which ones are "featured" or if it just takes the first three.
+- [ ] **Role Transition Feedback**: When a learner requests to become a contributor, there's a "Request Pending" state, but no detailed view showing the status or date of application.
+- [ ] **Avatar Customization Options**: The "Ancestral Totem" picker is functional but limited to static assets. It could include unlocks based on achievements or levels.
+- [ ] **Impact Card for Staff**: Non-learner roles see an "Impact Card" that appears to use a generic template; it should be verified if it pulls live analytics for contributors and educators.
+- [ ] **Location "Locked" Logic**: In the edit profile dialog, the location field is hardcoded to be disabled with the hint "Location is locked". It should ideally be editable or linked to GPS/Map locales.
+
+---
+
+## 🏛️ Educator Dashboard
+- [ ] **Broadcast History**: The "Village Broadcast" allows sending announcements, but there is no UI to view, edit, or delete previous broadcasts.
+- [ ] **Struggling Student Heuristics**: The "Attention Needed" alert uses a simple hardcoded XP threshold (< 50) to identify struggling students. This should be replaced with a more dynamic analytics service that considers recent performance trends.
+- [ ] **Dynamic Cultural Milestones**: Milestone targets are hardcoded to the next 100-word increment. Educators cannot set their own community goals or classroom targets.
+- [ ] **Task Management Depth**: The "Pending Tasks" section automatically lists all draft lessons. There's no way to manually add specific tasks (e.g., "Review X's request") or set actual due dates.
+- [ ] **Activity Feed Variety**: The recent activity only shows new student joins. It lacks critical updates such as lesson completions, high-score achievements, or pending contributor submissions.
+- [ ] **Quick Action Summaries**: Actions like "Manage Units" and "Analytics" are simple navigation buttons. They could be enhanced with "at-a-glance" stats (e.g., "3 Units need review").
+- [ ] **Unread Notification Indicator Sync**: Tapping the notification bell in the hero banner navigates to the notification screen, but the "unread" dot might not immediately sync with the global state until the next build.
+
+## 👥 Educator Student Hub
+- [ ] **Hardcoded Student Data**: The student list and their detailed profiles (XP, Progress, Lessons Completed) are currently using hardcoded mock data. This needs to be synced with the actual learner accounts in Firestore.
+- [ ] **Mock Lesson Breakdown**: The detailed "Lesson Breakdown" for individual students is a UI placeholder and does not reflect real-time progress from the database.
+- [ ] **Attendance Heatmap Realism**: The 30-day activity heatmap is a visual simulation using random opacity and does not pull from the students' actual login or activity history.
+- [ ] **Messaging & Guardian Contact**: The "Message Student" and "Contact Guardian" buttons are placeholders (only show SnackBars) and lack integration with a notification or messaging service.
+- [ ] **Static Village Filters**: Filtering by "Village" or "Youth Group" uses hardcoded categories that may not reflect the actual organizational structure of the student database.
+- [ ] **Performance Tracking Accuracy**: The "Struggling" status and accuracy metrics are simulated in the UI and need to be backed by live analytics and performance heuristics.
+
+## 📈 Educator Analytics Screen
+- [ ] **Live Quiz Performance**: The "Quiz Performance" section uses hardcoded percentages. This needs to be synced with actual student quiz results from Firestore.
+- [ ] **Dynamic "Common Hurdles"**: Topics like "Verb Conjugation" and their failure rates are hardcoded. These should be automatically identified using an error-tracking service that flags common mistakes.
+- [ ] **Growth Graph Accuracy**: The student growth visualization uses static points. It should reflect actual historical registration and activity data.
+- [ ] **Export Functionality**: The "Export CSV/PDF" buttons are placeholders (only show SnackBars) and do not generate actual reports.
+- [ ] **Monthly Activity Data**: The monthly view in the activity chart uses mocked weekly buckets instead of querying real monthly engagement stats.
+- [ ] **Retention Heuristics**: Retention is calculated using a simple "XP > 0" proxy. It should be replaced with more accurate metrics like Daily Active Users (DAU) or 7-day retention rates.
+- [ ] **Feedback Management**: The unread feedback bell in the header is purely visual and doesn't link to a system for reading or responding to student messages.
+
+## 👤 Educator Profile Screen (Staff Profile)
+- [ ] **Hardcoded Profile Stats**: The "RATING" (4.9) and "RANK" (ELITE) displayed in the stats row are currently hardcoded UI placeholders. They should be linked to actual educator performance metrics or rank data.
+- [ ] **Impact Card Accuracy**: The "Students Helped" and "Total Reach" metrics in the Impact Card might be using generic formulas; they should be verified to accurately reflect an educator's specific impact (e.g., number of students enrolled in their lessons).
+- [ ] **Artifacts Section for Staff**: Non-learner roles like educators don't see the "Earned Artifacts" section. There is no equivalent staff-specific collection or achievement display.
+- [ ] **Role Transition Logic**: The "Become a Contributor" button logic technically excludes validators but is redundant since they already have higher privileges; however, there's no UI for an educator to "Request Admin" or "Transition Role" if needed.
+
+## 👤 Admin Profile Screen (Staff Profile)
+- [ ] **Admin-Specific Metrics**: The stats row lacks metrics relevant to administrators, such as "Total Moderated Items" or "System Actions." It currently only shows hardcoded rating/rank placeholders.
+- [ ] **Impact Card Focus**: The Impact Card shows global stats; it could be tailored for admins to show system health, user growth trends, or moderation throughput.
+- [ ] **Artifacts Section for Staff**: Non-learner roles like admins don't see the "Earned Artifacts" section. There is no equivalent staff-specific collection or achievement display.
+- [ ] **Simulation Mode Toggle**: No UI for an admin to "View as Learner" or "Test Role" directly from their profile to verify UX changes without permanent role switches.
+- [ ] **Quick Config Access**: The profile lacks a "System Settings" shortcut for global platform toggles (e.g., maintenance mode, registration lock) that may be needed urgently.
+
+## 🎓 Educator Lessons Screen
+- [ ] **Hardcoded Category Tabs**: The category filters (Vocabulary, Rituals, etc.) are hardcoded in the UI and may not reflect the actual categories present in the lesson database.
+- [ ] **Missing Bulk Management**: No way to perform bulk actions like "Bulk Publish", "Bulk Move to Drafts", or "Bulk Delete" for multiple lessons.
+- [ ] **Student Completion Detail**: The lesson cards show student counts, but there's no way to see a list of specific students who have completed or started a particular lesson.
+- [ ] **Version Control UI**: The UI displays a version number, but there are no educator-facing tools for managing versions, viewing history, or rolling back changes.
+- [ ] **Search Persistence**: The search query and active tab filter are lost when navigating away from the screen and returning.
+- [ ] **Advanced Filtering**: Lacks the ability to filter lessons by difficulty level (Novice, Intermediate, etc.) despite it being a data field in the `Lesson` model.
+
+---
+
+## 👑 Admin Overview Screen
+- [ ] **System Health Placeholders**: The System Health grid uses hardcoded "default" values if the Firestore document is missing, which might mislead an admin into thinking the system is fine when it's actually just showing a template.
+- [ ] **Inefficient Data Aggregation**: The "User Growth" and "Contributions" charts are calculated by fetching all users and all words from Firestore and processing them in the UI. This should be replaced with aggregated metrics from a `stats` collection for performance.
+- [ ] **Static System Metrics**: Uptime, API Status, and Storage are currently static strings or mocked values in the database; they are not integrated with real-world infrastructure monitoring.
+- [ ] **Database Seeder Safety**: The "SEED DATABASE" button lacks a confirmation dialog or "Production Lock" to prevent accidental data overwrites in a live environment.
+- [ ] **Live WOTD Selection**: The Word of the Day widget displays the current selection but lacks an admin tool to manually pick or schedule future "Words of the Day".
+- [ ] **Platform Activity Refresh Logic**: The manual refresh button invalidates providers but doesn't trigger a server-side re-calculation of stats, which remains client-side and potentially out of sync.
+
+## 👥 Admin User Management Screen
+- [ ] **Bulk User Actions**: No UI support for performing actions (suspension, role changes) on multiple users simultaneously.
+- [ ] **Invitation Management**: The "Invite" feature lacks a history view to track, re-send, or cancel pending invitations.
+- [ ] **Administrative Audit Logs**: No visible history of administrative actions taken on a user (e.g., who changed their role or suspended them and why).
+- [ ] **Advanced Filtering & Sorting**: Lacks granular filters for "Last Active" date ranges, "XP" thresholds, or registration date ranges.
+- [ ] **Verification Status Visibility**: User list doesn't clearly distinguish between accounts with verified vs. unverified email addresses.
+- [ ] **Admin Impersonation (View As)**: No functionality for admins to "View As" a specific user for troubleshooting or support purposes.
+- [ ] **User Data Export**: Missing functionality to export the user list or specific filtered segments to CSV or JSON formats.
+
+## 👑 Admin Content Moderation Screen
+- [ ] **Bulk Action Variety**: Bulk actions are limited to "Approve" and "Delete". There is no bulk "Flag" or "Move to Draft" option for large sets of content.
+- [ ] **Advanced Filtering**: No way to filter content by specific "Contributor Reputation", "Date Range", or "Flag Reason" across the three tabs.
+- [ ] **Audio Recording Metadata Edit**: Admins can preview recordings but cannot edit their metadata (Title, Transcript, Dialect) directly if they spot a minor error.
+- [ ] **Lesson Task Preview**: The content moderation list for lessons doesn't allow admins to quickly preview the individual tasks within a lesson without opening the full editor.
+- [ ] **Export Logic Limitation**: The current CSV/JSON export only copies data to the clipboard for the *current tab*; it doesn't allow a full database export or file-system saving.
+- [ ] **Platform Reset Safety**: The "Reset Platform" action lacks a multi-step confirmation or "Re-type Admin Password" gate, making it potentially dangerous for a one-tap mistake.
+- [ ] **Dialect Config Sync**: Dialect settings (Enable/Disable) updated in the modal might not immediately reflect in the "Add Entry" forms across the app without a full restart/refresh.

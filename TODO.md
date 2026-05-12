@@ -29,7 +29,7 @@ This roadmap marks the transition from our established foundations to a **Premiu
 *Ensuring a robust experience regardless of connectivity or data state.*
 - [ ] **Ethereal Offline Banner**: Create a non-intrusive, floating indicator for offline mode that doesn't obstruct the main UI.
 - [ ] **The "Elders' Signal" Reporting**: Implement a community-driven flagging system for correcting dictionary typos or audio issues.
-- [ ] **Remote Reward Matrix**: Migrate all hardcoded XP rewards (Level ups, card reviews) to a dynamic Firestore configuration.
+- [x] **Remote Reward Matrix**: Migrate all hardcoded XP rewards (Level ups, card reviews) to a dynamic Firestore configuration.
 - [ ] **Fallback Perfection**: Finalize robust UI fallbacks for missing profile images, location data, or network timeouts.
 
 ## 🌍 Phase 5: Universal Accessibility & Scale
@@ -52,8 +52,16 @@ This roadmap marks the transition from our established foundations to a **Premiu
 - [x] **SM-2 SRS Algorithm**: Dynamic spaced repetition for long-term retention.
 - [x] **Lesson Weaver**: Modular editor with 8+ activity types and real-time validation.
 - [x] **Real-time Analytics**: Firestore-driven impact tracking and profile metrics.
+- [x] **Advanced Pedagogical Analytics**: Heatmaps, dialect distribution, and SRS health monitoring.
 
 ### 🏛️ Stability & Infrastructure
 - [x] **Offline Resilience**: Local caching via Hive and upload queuing.
 - [x] **Global Error Handling**: Centralized error boundaries and initialization logic.
 - [x] **Zero-Lint State**: Compliance with modern Flutter best practices.
+
+### 👑 Admin & Governance (New)
+- [x] **Ancestral Map Architect**: Visual editor for cultural sites and municipality hotspots.
+- [x] **Warrior Circle Ops**: Season management, shop pricing, and duel moderation.
+- [x] **Remote Reward Matrix**: Dynamic XP configuration via Firestore.
+- [ ] **Role Request Dashboard**: Full processing flow for Contributor/Educator roles.
+- [ ] **Elders' Signal Moderator**: Community-driven reporting and flag resolution.

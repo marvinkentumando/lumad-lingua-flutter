@@ -8,42 +8,152 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/ambient_topo_background.dart';
 import '../widgets/brand_card.dart';
+import '../widgets/preview_audio_player.dart';
 
-class LegacyTrackerDetailsScreen extends ConsumerWidget {
+class LegacyTrackerDetailsScreen extends ConsumerStatefulWidget {
   const LegacyTrackerDetailsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LegacyTrackerDetailsScreen> createState() => _LegacyTrackerDetailsScreenState();
+}
+
+class _LegacyTrackerDetailsScreenState extends ConsumerState<LegacyTrackerDetailsScreen> with SingleTickerProviderStateMixin {
+  String _selectedDialect = 'All';
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) {
+        setState(() {
+          _selectedDialect = 'All'; // Reset filter when switching tabs
+        });
+      } else {
+        // Trigger a rebuild when the tab is fully changed to update the filter chips
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).value;
     if (user == null) return const Scaffold(body: Center(child: Text('Please login')));
 
     final wordsAsync = ref.watch(userContributionsStreamProvider(user.uid));
     final voicesAsync = ref.watch(userVoiceSubmissionsStreamProvider(user.uid));
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: AppColors.forest900,
-        body: AmbientTopoBackground(
-          child: SafeArea(
-            child: Column(
-              children: [
-                _buildHeader(context),
-                _buildTabBar(),
-                Expanded(
-                  child: TabBarView(
-                    children: [
-                      _buildWordsTab(wordsAsync),
-                      _buildVoicesTab(voicesAsync),
-                    ],
-                  ),
+    return Scaffold(
+      backgroundColor: AppColors.forest900,
+      body: AmbientTopoBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(context),
+              _buildTabBar(),
+              const SizedBox(height: 16),
+              _buildFilterChips(wordsAsync, voicesAsync),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildWordsTab(wordsAsync),
+                    _buildVoicesTab(voicesAsync),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildFilterChips(
+    AsyncValue<List<DictionaryEntry>> wordsAsync,
+    AsyncValue<List<VoiceSubmission>> voicesAsync,
+  ) {
+    final Set<String> dialects = {'All'};
+
+    // Populate chips based on the active tab
+    if (_tabController.index == 0) {
+      wordsAsync.whenData((words) {
+        for (var word in words) {
+          dialects.add(_capitalize(word.language.trim()));
+        }
+      });
+    } else {
+      voicesAsync.whenData((voices) {
+        for (var voice in voices) {
+          dialects.add(_capitalize(voice.dialect.trim()));
+        }
+      });
+    }
+
+    final sortedDialects = dialects.toList()..sort((a, b) {
+      if (a == 'All') return -1;
+      if (b == 'All') return 1;
+      return a.compareTo(b);
+    });
+
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        scrollDirection: Axis.horizontal,
+        itemCount: sortedDialects.length,
+        separatorBuilder: (context, index) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final dialect = sortedDialects[index];
+          final isSelected = _selectedDialect == dialect;
+          return GestureDetector(
+            onTap: () => setState(() => _selectedDialect = dialect),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.gold500 : AppColors.forest800,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isSelected ? AppColors.gold500 : Colors.white10,
+                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: AppColors.gold500.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        )
+                      ]
+                    : null,
+              ),
+              child: Text(
+                dialect.toUpperCase(),
+                style: AppTypography.label.copyWith(
+                  color: isSelected ? AppColors.forest900 : Colors.white60,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                  letterSpacing: 1,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String _capitalize(String s) {
+    if (s.isEmpty) return s;
+    return s[0].toUpperCase() + s.substring(1).toLowerCase();
   }
 
   Widget _buildHeader(BuildContext context) {
@@ -73,6 +183,7 @@ class LegacyTrackerDetailsScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: TabBar(
+        controller: _tabController,
         indicator: BoxDecoration(
           color: AppColors.gold500,
           borderRadius: BorderRadius.circular(12),
@@ -95,10 +206,16 @@ class LegacyTrackerDetailsScreen extends ConsumerWidget {
       data: (words) {
         if (words.isEmpty) return _buildEmptyState('No words found');
         
-        // Group by dialect
+        final filteredWords = _selectedDialect == 'All'
+            ? words
+            : words.where((w) => w.language.trim().toLowerCase() == _selectedDialect.toLowerCase()).toList();
+
+        if (filteredWords.isEmpty) return _buildEmptyState('No words for $_selectedDialect');
+
         final grouped = <String, List<DictionaryEntry>>{};
-        for (var word in words) {
-          grouped.putIfAbsent(word.language, () => []).add(word);
+        for (var word in filteredWords) {
+          final normalizedDialect = _capitalize(word.language.trim());
+          grouped.putIfAbsent(normalizedDialect, () => []).add(word);
         }
 
         return ListView(
@@ -116,10 +233,16 @@ class LegacyTrackerDetailsScreen extends ConsumerWidget {
       data: (voices) {
         if (voices.isEmpty) return _buildEmptyState('No audio recordings found');
 
-        // Group by dialect
+        final filteredVoices = _selectedDialect == 'All'
+            ? voices
+            : voices.where((v) => v.dialect.trim().toLowerCase() == _selectedDialect.toLowerCase()).toList();
+
+        if (filteredVoices.isEmpty) return _buildEmptyState('No recordings for $_selectedDialect');
+
         final grouped = <String, List<VoiceSubmission>>{};
-        for (var voice in voices) {
-          grouped.putIfAbsent(voice.dialect, () => []).add(voice);
+        for (var voice in filteredVoices) {
+          final normalizedDialect = _capitalize(voice.dialect.trim());
+          grouped.putIfAbsent(normalizedDialect, () => []).add(voice);
         }
 
         return ListView(
@@ -197,6 +320,10 @@ class LegacyTrackerDetailsScreen extends ConsumerWidget {
         borderRadius: 20,
         child: Row(
           children: [
+            if (entry.audioUrl != null && entry.audioUrl!.isNotEmpty) ...[
+              PreviewAudioPlayer(audioUrl: entry.audioUrl!, size: 32),
+              const SizedBox(width: 12),
+            ],
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -228,7 +355,10 @@ class LegacyTrackerDetailsScreen extends ConsumerWidget {
         borderRadius: 20,
         child: Row(
           children: [
-            const Icon(Icons.play_circle_fill_rounded, color: AppColors.gold500, size: 32),
+            if (voice.audioUrl.isNotEmpty)
+              PreviewAudioPlayer(audioUrl: voice.audioUrl, size: 32)
+            else
+              const Icon(Icons.play_circle_fill_rounded, color: Colors.white24, size: 32),
             const SizedBox(width: 16),
             Expanded(
               child: Column(

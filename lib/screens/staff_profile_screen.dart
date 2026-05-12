@@ -24,6 +24,7 @@ import '../widgets/skeleton.dart';
 import '../widgets/graceful_image.dart';
 import '../widgets/branded_empty_state.dart';
 import '../widgets/profile_avatar.dart';
+import '../models/app_config.dart';
 
 
 class StaffProfileScreen extends ConsumerWidget {
@@ -1027,6 +1028,9 @@ class StaffProfileScreen extends ConsumerWidget {
     );
     final bioController = TextEditingController(text: profile?['bio'] ?? '');
 
+    final role = ref.read(roleProvider);
+    final isLocationLocked = role == UserRole.contributor || role == UserRole.validator;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1054,8 +1058,10 @@ class StaffProfileScreen extends ConsumerWidget {
                 _buildEditField('Tribe Name', nameController),
                 const SizedBox(height: 16),
                 _buildEditField(
-                  'Location (e.g. Pantukan, DDO)',
+                  isLocationLocked ? 'Location' : 'Location (e.g. Pantukan, DDO)',
                   locationController,
+                  enabled: !isLocationLocked,
+                  hint: isLocationLocked ? 'Location is locked' : null,
                 ),
                 const SizedBox(height: 16),
                 _buildEditField(
@@ -1078,11 +1084,15 @@ class StaffProfileScreen extends ConsumerWidget {
                         style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500),
                         onPressed: () async {
                           try {
-                            await ref.read(firebaseServiceProvider).updateUserProfile(userId, {
+                            final updates = {
                               'username': nameController.text,
-                              'location': locationController.text,
                               'bio': bioController.text,
-                            });
+                            };
+                            if (!isLocationLocked) {
+                              updates['location'] = locationController.text;
+                            }
+
+                            await ref.read(firebaseServiceProvider).updateUserProfile(userId, updates);
                             if (context.mounted) Navigator.pop(context);
                           } catch (e) {
                             if (context.mounted) {
@@ -1116,6 +1126,7 @@ class StaffProfileScreen extends ConsumerWidget {
     TextEditingController controller, {
     int maxLines = 1,
     String? hint,
+    bool enabled = true,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1123,7 +1134,7 @@ class StaffProfileScreen extends ConsumerWidget {
         Text(
           label.toUpperCase(),
           style: AppTypography.label.copyWith(
-            color: AppColors.gold500,
+            color: enabled ? AppColors.gold500 : Colors.white24,
             fontSize: 10,
           ),
         ),
@@ -1131,12 +1142,13 @@ class StaffProfileScreen extends ConsumerWidget {
         TextField(
           controller: controller,
           maxLines: maxLines,
-          style: const TextStyle(color: Colors.white),
+          enabled: enabled,
+          style: TextStyle(color: enabled ? Colors.white : Colors.white38),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: const TextStyle(color: Colors.white24),
             filled: true,
-            fillColor: Colors.black.withValues(alpha: 0.2),
+            fillColor: Colors.black.withValues(alpha: enabled ? 0.2 : 0.1),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -1170,8 +1182,6 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow>
   late final Animation<double> _xpAnim;
   late final Animation<double> _streakAnim;
   late final Animation<double> _wordsAnim;
-
-  static const int _xpLevelMax = 2000; // XP to next level
 
   @override
   void initState() {
@@ -1222,15 +1232,29 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow>
 
   @override
   Widget build(BuildContext context) {
+    final config = ref.watch(appConfigProvider).value;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         GestureDetector(
           onTap: () {
-            final level = (widget.xp / _xpLevelMax).floor() + 1;
-            final rankTitle = level >= 5 ? 'Elder' : (level >= 3 ? 'Warrior' : 'Pathfinder');
-            showLevelUpModal(context, ref, level, rankTitle);
+            if (config == null) return;
+            final level = (widget.xp / config.xpPerLevel).floor() + 1;
 
+            // Determine rank title based on thresholds
+            String rankTitle = 'Novice';
+            final sortedThresholds = config.spiritThresholds.entries.toList()
+              ..sort((a, b) => b.value.compareTo(a.value));
+
+            for (var entry in sortedThresholds) {
+              if (widget.xp >= entry.value) {
+                rankTitle = entry.key;
+                break;
+              }
+            }
+
+            showLevelUpModal(context, ref, level, rankTitle);
           },
           child: _buildXpCircle(context),
         ),

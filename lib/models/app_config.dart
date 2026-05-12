@@ -1,6 +1,13 @@
 class AppConfig {
   final int wordApprovalXp;
   final int lessonApprovalXp;
+  final int voiceApprovalXp;
+  final int lessonCompletionBaseXp;
+  final int lessonTaskPerfectXp;
+  final int lessonTaskRetryXp;
+  final int cardReviewXp;
+  final int cardCompletionBonusXp;
+  final int xpPerLevel;
   final Map<String, String> notifications;
   final String artifactUnlockSfx;
   final int artifactUnlockParticleCount;
@@ -14,6 +21,13 @@ class AppConfig {
   AppConfig({
     required this.wordApprovalXp,
     required this.lessonApprovalXp,
+    required this.voiceApprovalXp,
+    required this.lessonCompletionBaseXp,
+    required this.lessonTaskPerfectXp,
+    required this.lessonTaskRetryXp,
+    required this.cardReviewXp,
+    required this.cardCompletionBonusXp,
+    required this.xpPerLevel,
     required this.notifications,
     required this.artifactUnlockSfx,
     required this.artifactUnlockParticleCount,
@@ -28,11 +42,20 @@ class AppConfig {
     return AppConfig(
       wordApprovalXp: data['wordApprovalXp'] ?? 100,
       lessonApprovalXp: data['lessonApprovalXp'] ?? 500,
+      voiceApprovalXp: data['voiceApprovalXp'] ?? 150,
+      lessonCompletionBaseXp: data['lessonCompletionBaseXp'] ?? 50,
+      lessonTaskPerfectXp: data['lessonTaskPerfectXp'] ?? 20,
+      lessonTaskRetryXp: data['lessonTaskRetryXp'] ?? 10,
+      cardReviewXp: data['cardReviewXp'] ?? 15,
+      cardCompletionBonusXp: data['cardCompletionBonusXp'] ?? 10,
+      xpPerLevel: data['xpPerLevel'] ?? 2000,
       notifications: Map<String, String>.from(data['notifications'] ?? {
         'word_approved_title': 'Entry Approved! 🌟',
         'word_approved_body': 'Your contribution "{term}" has been validated by a {role} and is now live.',
         'lesson_approved_title': 'Curriculum Approved! 📚',
         'lesson_approved_body': 'Your lesson "{title}" is now live for all students.',
+        'voice_approved_title': 'Voice Recording Approved! 🎙️',
+        'voice_approved_body': 'Your recording "{title}" has been validated and is now part of the ancestral archive.',
       }),
       artifactUnlockSfx: data['artifactUnlockSfx'] ?? 'milestone',
       artifactUnlockParticleCount: data['artifactUnlockParticleCount'] ?? 50,
@@ -48,6 +71,28 @@ class AppConfig {
         'Novice': 0,
       }),
     );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'wordApprovalXp': wordApprovalXp,
+      'lessonApprovalXp': lessonApprovalXp,
+      'voiceApprovalXp': voiceApprovalXp,
+      'lessonCompletionBaseXp': lessonCompletionBaseXp,
+      'lessonTaskPerfectXp': lessonTaskPerfectXp,
+      'lessonTaskRetryXp': lessonTaskRetryXp,
+      'cardReviewXp': cardReviewXp,
+      'cardCompletionBonusXp': cardCompletionBonusXp,
+      'xpPerLevel': xpPerLevel,
+      'notifications': notifications,
+      'artifactUnlockSfx': artifactUnlockSfx,
+      'artifactUnlockParticleCount': artifactUnlockParticleCount,
+      'artifactUnlockDuration': artifactUnlockDuration,
+      'levelUpSfx': levelUpSfx,
+      'levelUpParticleDuration': levelUpParticleDuration,
+      'streakRewardCycle': streakRewardCycle,
+      'spiritThresholds': spiritThresholds,
+    };
   }
 
   /// Helper to format notification messages

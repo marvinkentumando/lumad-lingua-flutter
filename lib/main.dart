@@ -35,6 +35,9 @@ import 'screens/admin_overview_screen.dart';
 import 'screens/admin_users_screen.dart';
 import 'screens/admin_content_screen.dart';
 import 'screens/admin_requests_screen.dart';
+import 'screens/admin_map_architect_screen.dart';
+import 'screens/admin_gamification_screen.dart';
+import 'screens/admin_advanced_analytics_screen.dart';
 import 'screens/achievements_screen.dart';
 import 'screens/ancestral_vault_shop_screen.dart';
 import 'screens/artifact_detail_screen.dart';
@@ -251,6 +254,18 @@ final _router = GoRouter(
         GoRoute(
           path: '/admin/requests',
           builder: (context, state) => const AdminRequestsScreen(),
+        ),
+        GoRoute(
+          path: '/admin/map-architect',
+          builder: (context, state) => const AdminMapArchitectScreen(),
+        ),
+        GoRoute(
+          path: '/admin/gamification',
+          builder: (context, state) => const AdminGamificationScreen(),
+        ),
+        GoRoute(
+          path: '/admin/analytics',
+          builder: (context, state) => const AdminAdvancedAnalyticsScreen(),
         ),
         GoRoute(
           path: '/educator/dashboard',

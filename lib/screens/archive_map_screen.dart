@@ -16,6 +16,7 @@ import '../widgets/municipality_panel.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/cached_tile_provider.dart';
 import '../widgets/brand_search_bar.dart';
+import '../services/supabase_storage_service.dart';
 
 class ArchiveMapScreen extends ConsumerStatefulWidget {
   const ArchiveMapScreen({super.key});
@@ -404,7 +405,8 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
         await _audioPlayer.pause();
         setState(() => _playingAudioId = null);
       } else {
-        await _audioPlayer.play(UrlSource(audioUrl));
+        final resolvedUrl = ref.read(supabaseStorageServiceProvider).getAudioUrl(audioUrl);
+        await _audioPlayer.play(UrlSource(resolvedUrl));
         setState(() => _playingAudioId = audio['id']);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

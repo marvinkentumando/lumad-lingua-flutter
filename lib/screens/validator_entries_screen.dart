@@ -5,12 +5,12 @@ import '../theme/app_typography.dart';
 import '../models/dictionary_entry.dart';
 import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
-import '../services/audio_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/ambient_topo_background.dart';
 import '../widgets/glass_box.dart';
+import '../widgets/preview_audio_player.dart';
 import 'package:flutter/services.dart';
 import 'package:confetti/confetti.dart';
 import 'dart:math';
@@ -33,7 +33,6 @@ class _ValidatorEntriesScreenState
   bool _isFetchingMore = false;
   String _searchQuery = "";
   String _selectedDialect = "All";
-  String? _playingEntryId;
 
   int _documentLimit = 50;
   final ScrollController _scrollController = ScrollController();
@@ -113,16 +112,29 @@ class _ValidatorEntriesScreenState
     final userAsync = ref.watch(userProfileProvider);
     final userId = userAsync.value?['uid'] ?? userAsync.value?['id'] ?? '';
     final userRole = userAsync.value?['role'] ?? 'VALIDATOR';
+    final userDialect = userAsync.value?['indigenousGroup'] ?? 'Mansaka';
+
+    final metricsAsync = ref.watch(validatorMetricsProvider(userId));
 
     final entriesAsync = _showHistory
         ? ref.watch(
             validatorHistoryStreamProvider(
-              ValidatorQuery(userId, _documentLimit, search: _searchQuery),
+              ValidatorQuery(
+                userId,
+                _documentLimit,
+                search: _searchQuery,
+                dialect: userDialect,
+              ),
             ),
           )
         : ref.watch(
             pendingDictionaryStreamProvider(
-              ValidatorQuery('', _documentLimit, search: _searchQuery),
+              ValidatorQuery(
+                '',
+                _documentLimit,
+                search: _searchQuery,
+                dialect: userDialect,
+              ),
             ),
           );
 
@@ -238,7 +250,7 @@ class _ValidatorEntriesScreenState
 
                 return Column(
                   children: [
-                    _buildHeader(filteredList),
+                    _buildHeader(filteredList, userDialect, metricsAsync),
                     Expanded(
                       child: filteredList.isEmpty
                           ? _buildEmptyState()
@@ -348,7 +360,11 @@ class _ValidatorEntriesScreenState
   );
 }
 
-  Widget _buildHeader(List<DictionaryEntry> currentList) {
+  Widget _buildHeader(
+    List<DictionaryEntry> currentList,
+    String? validatorDialect,
+    AsyncValue<Map<String, dynamic>> metricsAsync,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bool allSelected =
         _isSelectionMode &&
@@ -585,86 +601,64 @@ class _ValidatorEntriesScreenState
           ],
           if (_showHistory) ...[
             const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildHistoryStatCard(
-                    "APPROVED",
-                    "1,240",
-                    AppColors.semanticGreen,
+            metricsAsync.when(
+              data: (metrics) => Row(
+                children: [
+                  Expanded(
+                    child: _buildHistoryStatCard(
+                      "APPROVED",
+                      metrics['approved'].toString(),
+                      AppColors.semanticGreen,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildHistoryStatCard(
-                    "FLAGGED",
-                    "312",
-                    AppColors.gold500,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildHistoryStatCard(
+                      "FLAGGED",
+                      metrics['flagged'].toString(),
+                      AppColors.gold500,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildHistoryStatCard(
-                    "REJECTED",
-                    "45",
-                    AppColors.semanticRed,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildHistoryStatCard(
+                      "REJECTED",
+                      metrics['rejected'].toString(),
+                      AppColors.semanticRed,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
+              loading: () => Row(
+                children: [
+                  Expanded(
+                    child: _buildHistoryStatCard(
+                      "APPROVED",
+                      "...",
+                      AppColors.semanticGreen,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildHistoryStatCard(
+                      "FLAGGED",
+                      "...",
+                      AppColors.gold500,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildHistoryStatCard(
+                      "REJECTED",
+                      "...",
+                      AppColors.semanticRed,
+                    ),
+                  ),
+                ],
+              ),
+              error: (_, __) => const SizedBox.shrink(),
             ),
           ],
-          const SizedBox(height: 16),
-          Builder(
-            builder: (context) {
-              final dialectsAsync = ref.watch(dialectsProvider);
-              final dialects =
-                  dialectsAsync.value ?? ["All", "Mansaka", "Mandaya"];
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: dialects.map((dialect) {
-                    final isSelected = _selectedDialect == dialect;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedDialect = dialect),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppColors.gold500
-                                : (isDark ? AppColors.forest800 : Colors.white),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isSelected
-                                  ? AppColors.gold500
-                                  : (isDark
-                                        ? AppColors.forest700
-                                        : AppColors.creamBorder),
-                            ),
-                          ),
-                          child: Text(
-                            dialect.toUpperCase(),
-                            style: AppTypography.label.copyWith(
-                              color: isSelected
-                                  ? AppColors.forest900
-                                  : AppColors.gold500,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 10,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              );
-            },
-          ),
         ],
       ),
     );
@@ -877,69 +871,11 @@ class _ValidatorEntriesScreenState
                           ),
                         ),
                         const Spacer(),
-                        if (!_isSelectionMode)
-                          GestureDetector(
-                            onTap: () async {
-                              if (entry.audioUrl == null ||
-                                  entry.audioUrl!.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'No audio recorded for this entry.',
-                                    ),
-                                  ),
-                                );
-                                return;
-                              }
-
-                              setState(() => _playingEntryId = entry.id);
-                              try {
-                                await ref
-                                    .read(audioServiceProvider)
-                                    .playFromUrl(entry.audioUrl!);
-                              } catch (e) {
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Failed to play audio.'),
-                                      backgroundColor: AppColors.semanticRed,
-                                    ),
-                                  );
-                                }
-                              } finally {
-                                if (mounted) {
-                                  setState(() => _playingEntryId = null);
-                                }
-                              }
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: _playingEntryId == entry.id
-                                    ? AppColors.gold500
-                                    : const Color(0xFFE4581C),
-                                shape: BoxShape.circle,
-                                boxShadow: _playingEntryId == entry.id
-                                    ? [
-                                        BoxShadow(
-                                          color: AppColors.gold500.withValues(alpha: 0.3,
-                                          ),
-                                          spreadRadius: 4,
-                                          blurRadius: 10,
-                                        ),
-                                      ]
-                                    : [],
-                              ),
-                              child: Icon(
-                                _playingEntryId == entry.id
-                                    ? Icons.pause_rounded
-                                    : Icons.play_arrow_rounded,
-                                color: _playingEntryId == entry.id
-                                    ? AppColors.forest900
-                                    : Colors.white,
-                                size: 24,
-                              ),
-                            ),
+                        if (!_isSelectionMode && entry.audioUrl != null && entry.audioUrl!.isNotEmpty)
+                          PreviewAudioPlayer(
+                            audioUrl: entry.audioUrl!,
+                            size: 32,
+                            color: AppColors.gold500,
                           ),
                       ],
                     ),
@@ -1096,121 +1032,158 @@ class _ValidatorEntriesScreenState
       );
     }
 
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFFDAB9),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.person_rounded,
-                  color: AppColors.forest900,
-                  size: 16,
-                ),
+        Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFDAB9),
+                shape: BoxShape.circle,
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      entry.contributorName ?? 'Unknown',
-                      style: AppTypography.body.copyWith(
-                        color: isDark ? AppColors.creamBg : AppColors.forest900,
-                        fontSize: 11,
-                        height: 1.1,
-                        fontWeight: FontWeight.w800,
-                      ),
-                      overflow: TextOverflow.ellipsis,
+              child: const Icon(
+                Icons.person_rounded,
+                color: AppColors.forest900,
+                size: 16,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    entry.contributorName ?? 'Unknown',
+                    style: AppTypography.body.copyWith(
+                      color: isDark ? AppColors.creamBg : AppColors.forest900,
+                      fontSize: 11,
+                      height: 1.1,
+                      fontWeight: FontWeight.w800,
                     ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Text(
-                          "98% APPROVAL",
-                          style: AppTypography.label.copyWith(
-                            color: AppColors.gold500,
-                            fontSize: 7,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.5,
-                          ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Text(
+                        "98% APPROVAL",
+                        style: AppTypography.label.copyWith(
+                          color: AppColors.gold500,
+                          fontSize: 7,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
                         ),
-                        const SizedBox(width: 4),
-                        Container(
-                          width: 2,
-                          height: 2,
-                          color: isDark ? Colors.white24 : Colors.black12,
+                      ),
+                      const SizedBox(width: 4),
+                      Container(
+                        width: 2,
+                        height: 2,
+                        color: isDark ? Colors.white24 : Colors.black12,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        "0 FLAGS",
+                        style: AppTypography.label.copyWith(
+                          color: AppColors.creamText3,
+                          fontSize: 7,
+                          fontWeight: FontWeight.w900,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          "0 FLAGS",
-                          style: AppTypography.label.copyWith(
-                            color: AppColors.creamText3,
-                            fontSize: 7,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            if (entry.status == ValidationStatus.approved)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.semanticGreen.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: AppColors.semanticGreen.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.check_circle_rounded,
+                      color: AppColors.semanticGreen,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      "APPROVED",
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.semanticGreen,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.0,
+                      ),
                     ),
                   ],
                 ),
+              )
+            else ...[
+              BrandButton(
+                text: "APPROVE",
+                icon: Icons.check_circle_outline,
+                type: BrandButtonType.primary,
+                onTap: () async {
+                  HapticFeedback.mediumImpact();
+                  try {
+                    await ref
+                        .read(firebaseServiceProvider)
+                        .approveWord(entry.id, userId, userRole);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Submission Approved!'),
+                          backgroundColor: AppColors.semanticGreen,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Approval failed: $e'),
+                          backgroundColor: AppColors.semanticRed,
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () => _showFlagActionSheet(entry),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.terracotta.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.terracotta),
+                  ),
+                  child: const Icon(
+                    Icons.flag_rounded,
+                    color: AppColors.terracotta,
+                    size: 18,
+                  ),
+                ),
               ),
             ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        BrandButton(
-          text: "APPROVE",
-          icon: Icons.check_circle_outline,
-          type: BrandButtonType.primary,
-          onTap: () async {
-            HapticFeedback.mediumImpact();
-            try {
-              await ref
-                  .read(firebaseServiceProvider)
-                  .approveWord(entry.id, userId, userRole);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Submission Approved!'),
-                    backgroundColor: AppColors.semanticGreen,
-                  ),
-                );
-              }
-            } catch (e) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Approval failed: $e'),
-                    backgroundColor: AppColors.semanticRed,
-                  ),
-                );
-              }
-            }
-          },
-        ),
-        const SizedBox(width: 8),
-        GestureDetector(
-          onTap: () => _showFlagActionSheet(entry),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.terracotta.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.terracotta),
-            ),
-            child: const Icon(
-              Icons.flag_rounded,
-              color: AppColors.terracotta,
-              size: 18,
-            ),
-          ),
+          ],
         ),
       ],
     );
@@ -1544,12 +1517,23 @@ class _ValidatorEntriesScreenState
                 ],
               ),
               const SizedBox(height: 16),
-              Text(
-                entry.indigenousWord,
-                style: AppTypography.displayBold.copyWith(
-                  color: AppColors.gold500,
-                  fontSize: 40,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    entry.indigenousWord,
+                    style: AppTypography.displayBold.copyWith(
+                      color: AppColors.gold500,
+                      fontSize: 40,
+                    ),
+                  ),
+                  if (entry.audioUrl != null && entry.audioUrl!.isNotEmpty)
+                    PreviewAudioPlayer(
+                      audioUrl: entry.audioUrl!,
+                      size: 48,
+                      color: AppColors.gold500,
+                    ),
+                ],
               ),
               Text(
                 '${entry.phonetic ?? ''} • ${entry.partOfSpeechLabel}',

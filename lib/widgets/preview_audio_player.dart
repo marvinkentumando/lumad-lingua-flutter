@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
+import '../services/supabase_storage_service.dart';
 
-class PreviewAudioPlayer extends StatefulWidget {
+class PreviewAudioPlayer extends ConsumerStatefulWidget {
   final String audioUrl;
   final double size;
   final Color? color;
@@ -18,10 +20,10 @@ class PreviewAudioPlayer extends StatefulWidget {
   });
 
   @override
-  State<PreviewAudioPlayer> createState() => _PreviewAudioPlayerState();
+  ConsumerState<PreviewAudioPlayer> createState() => _PreviewAudioPlayerState();
 }
 
-class _PreviewAudioPlayerState extends State<PreviewAudioPlayer> {
+class _PreviewAudioPlayerState extends ConsumerState<PreviewAudioPlayer> {
   late AudioPlayer _player;
   PlayerState _playerState = PlayerState.stopped;
   bool _hasError = false;
@@ -53,7 +55,9 @@ class _PreviewAudioPlayerState extends State<PreviewAudioPlayer> {
         await _player.pause();
       } else {
         setState(() => _hasError = false);
-        await _player.play(UrlSource(widget.audioUrl));
+        // Resolve URL from Supabase if it's just a path
+        final resolvedUrl = ref.read(supabaseStorageServiceProvider).getAudioUrl(widget.audioUrl);
+        await _player.play(UrlSource(resolvedUrl));
       }
     } catch (e) {
       debugPrint('Error playing audio: $e');
@@ -101,6 +105,3 @@ class _PreviewAudioPlayerState extends State<PreviewAudioPlayer> {
     );
   }
 }
-
-
-

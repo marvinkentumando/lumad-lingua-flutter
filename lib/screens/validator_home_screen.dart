@@ -10,6 +10,7 @@ import '../services/auth_service.dart';
 import '../widgets/wotd_widget.dart';
 import '../services/firebase_service.dart';
 import '../widgets/ambient_topo_background.dart';
+import '../widgets/preview_audio_player.dart';
 
 class ValidatorHomeScreen extends ConsumerStatefulWidget {
   const ValidatorHomeScreen({super.key});
@@ -28,12 +29,34 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
     final profile = profileAsync.value;
     final displayName = profile?['username'] ?? 'Elder Validator';
     final currentRank = profile?['rank'] ?? 'Guardian';
+    var userDialect = profile?['indigenousGroup'];
+
+    // Auto-assign current validator to Mansaka/Mandaya if not set
+    if (profile != null && userDialect == null) {
+      final email = profile['email'] ?? '';
+      final assignedDialect = email == 'validator2@gmail.com' ? 'Mandaya' : 'Mansaka';
+      userDialect = assignedDialect;
+      final uid = profile['uid'] ?? profile['id'];
+      if (uid != null) {
+        Future.microtask(() {
+          ref.read(firebaseServiceProvider).updateUserProfile(uid, {
+            'indigenousGroup': assignedDialect,
+            if (email == 'validator2@gmail.com') 'role': 'validator',
+          });
+        });
+      }
+    }
+
+    // Ensure providers use a non-null dialect for counts
+    final activeDialect = userDialect ?? 'Mansaka';
 
     // Live Metrics
-    final pendingEntries = ref.watch(pendingWordsCountProvider).value ?? 0;
+    final pendingEntries =
+        ref.watch(pendingWordsCountProvider(activeDialect)).value ?? 0;
     final pendingVoices =
-        ref.watch(pendingVoiceSubmissionsCountProvider).value ?? 0;
-    final pendingLessons = ref.watch(pendingLessonsCountProvider).value ?? 0;
+        ref.watch(pendingVoiceSubmissionsCountProvider(activeDialect)).value ?? 0;
+    final pendingLessons =
+        ref.watch(pendingLessonsCountProvider(activeDialect)).value ?? 0;
 
     // Stats for progress tracker
     final todayVerified = profile?['todayVerified'] ?? 0;
@@ -46,9 +69,9 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
         child: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
-            ref.invalidate(urgentQueueProvider);
-            ref.invalidate(pendingWordsCountProvider);
-            ref.invalidate(pendingVoiceSubmissionsCountProvider);
+            ref.invalidate(urgentQueueProvider(activeDialect));
+            ref.invalidate(pendingWordsCountProvider(activeDialect));
+            ref.invalidate(pendingVoiceSubmissionsCountProvider(activeDialect));
             ref.invalidate(pendingLessonsCountProvider);
           },
           color: AppColors.gold500,
@@ -84,7 +107,7 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
                 ),
                 const SizedBox(height: 16),
                 ref
-                    .watch(urgentQueueProvider)
+                    .watch(urgentQueueProvider(activeDialect))
                     .when(
                       data: (items) {
                         if (items.isEmpty) {
@@ -160,7 +183,7 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
                 Text(
                   'Maayong\nAdlaw,\n$name!',
                   style: AppTypography.displayBold.copyWith(
-                    color: isDark ? AppColors.gold500 : Colors.black,
+                    color: AppColors.forest900,
                     fontSize: 32,
                     height: 1.1,
                   ),
@@ -495,6 +518,16 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
                 ],
               ),
             ),
+            if (item.audioUrl != null && item.audioUrl!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: PreviewAudioPlayer(
+                  audioUrl: item.audioUrl!,
+                  size: 32,
+                  color: AppColors.gold500,
+                ),
+              ),
+            const SizedBox(width: 8),
             const Icon(Icons.chevron_right_rounded, color: Colors.white24),
           ],
         ),

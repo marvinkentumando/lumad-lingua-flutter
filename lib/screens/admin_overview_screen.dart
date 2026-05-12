@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
+import '../widgets/brand_button.dart';
 import '../services/database_seeder.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,7 +25,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
   int? _tappedGrowthBar;
   int? _tappedContribBar;
 
-  final List<Map<String, dynamic>> _systemHealth = [
+  final List<Map<String, dynamic>> _defaultHealth = [
     {
       'label': 'API Status',
       'value': 'Online',
@@ -53,6 +54,9 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final healthAsync = ref.watch(systemHealthProvider);
+    final activityAsync = ref.watch(platformActivityProvider);
+
     return Scaffold(
       backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
       body: Stack(
@@ -73,6 +77,8 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: () async {
+                      ref.invalidate(systemHealthProvider);
+                      ref.invalidate(platformActivityProvider);
                       await Future.delayed(const Duration(seconds: 1));
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -130,7 +136,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                                       ),
                                       _statCard(
                                         ref
-                                            .watch(pendingWordsCountProvider)
+                                            .watch(pendingWordsCountProvider(null))
                                             .when(
                                               data: (count) => count.toString(),
                                               loading: () => '...',
@@ -176,60 +182,57 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                                     .fadeIn(delay: 100.ms)
                                     .scale(begin: const Offset(0.92, 0.92)),
                           ),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: double.infinity,
+                            child: BrandButton(
+                              text: "ADVANCED PEDAGOGICAL ANALYTICS",
+                              type: BrandButtonType.secondary,
+                              onTap: () => context.push('/admin/analytics'),
+                            ),
+                          ).animate().fadeIn(delay: 200.ms),
                           const SizedBox(height: 32),
                           _sectionLabel('SYSTEM HEALTH'),
                           const SizedBox(height: 16),
-                          _buildSystemHealthGrid(),
+                          healthAsync.when(
+                            data: (health) => _buildSystemHealthGrid(health),
+                            loading: () => _buildSystemHealthGrid(null),
+                            error: (_, __) => _buildSystemHealthGrid(null),
+                          ),
                           const SizedBox(height: 32),
                           _sectionLabel('USER GROWTH (last 7 days)'),
                           const SizedBox(height: 16),
-                          BrandCard(
-                            theme: BrandCardTheme.vibrant,
-                            child: _buildInteractiveBarChart(
-                              values: [22, 35, 18, 47, 31, 58, 63],
-                              labels: [
-                                'Mon',
-                                'Tue',
-                                'Wed',
-                                'Thu',
-                                'Fri',
-                                'Sat',
-                                'Sun',
-                              ],
-                              color: AppColors.semanticBlue,
-                              tappedIndex: _tappedGrowthBar,
-                              onTap: (i) => setState(
-                                () => _tappedGrowthBar = _tappedGrowthBar == i
-                                    ? null
-                                    : i,
+                          activityAsync.when(
+                            data: (data) => BrandCard(
+                              theme: BrandCardTheme.vibrant,
+                              child: _buildInteractiveBarChart(
+                                values: data['growth'] ?? [0,0,0,0,0,0,0],
+                                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                                color: AppColors.semanticBlue,
+                                tappedIndex: _tappedGrowthBar,
+                                onTap: (i) => setState(() => _tappedGrowthBar = _tappedGrowthBar == i ? null : i),
                               ),
-                            ),
-                          ).animate().fadeIn(delay: 400.ms),
+                            ).animate().fadeIn(delay: 400.ms),
+                            loading: () => const Center(child: CircularProgressIndicator()),
+                            error: (_, __) => const Text('Error loading growth data'),
+                          ),
                           const SizedBox(height: 24),
                           _sectionLabel('CONTRIBUTIONS (last 7 days)'),
                           const SizedBox(height: 16),
-                          BrandCard(
-                            theme: BrandCardTheme.vibrant,
-                            child: _buildInteractiveBarChart(
-                              values: [8, 12, 5, 19, 14, 22, 17],
-                              labels: [
-                                'Mon',
-                                'Tue',
-                                'Wed',
-                                'Thu',
-                                'Fri',
-                                'Sat',
-                                'Sun',
-                              ],
-                              color: AppColors.semanticGreen,
-                              tappedIndex: _tappedContribBar,
-                              onTap: (i) => setState(
-                                () => _tappedContribBar = _tappedContribBar == i
-                                    ? null
-                                    : i,
+                          activityAsync.when(
+                            data: (data) => BrandCard(
+                              theme: BrandCardTheme.vibrant,
+                              child: _buildInteractiveBarChart(
+                                values: data['contributions'] ?? [0,0,0,0,0,0,0],
+                                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                                color: AppColors.semanticGreen,
+                                tappedIndex: _tappedContribBar,
+                                onTap: (i) => setState(() => _tappedContribBar = _tappedContribBar == i ? null : i),
                               ),
-                            ),
-                          ).animate().fadeIn(delay: 500.ms),
+                            ).animate().fadeIn(delay: 500.ms),
+                            loading: () => const Center(child: CircularProgressIndicator()),
+                            error: (_, __) => const Text('Error loading contribution data'),
+                          ),
                           const SizedBox(height: 24),
                           _sectionLabel('DIALECT DISTRIBUTION'),
                           const SizedBox(height: 16),
@@ -275,6 +278,148 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                                       Center(child: Text('Error: $err')),
                                 ),
                           ).animate().fadeIn(delay: 600.ms),
+                          const SizedBox(height: 32),
+                          _sectionLabel('SPATIAL ASSETS'),
+                          const SizedBox(height: 16),
+                          BrandCard(
+                            theme: BrandCardTheme.vibrant,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.map_rounded,
+                                        color: AppColors.gold500,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'ANCESTRAL MAP ARCHITECT',
+                                              style: AppTypography.h3.copyWith(
+                                                color: Colors.white,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            Text(
+                                              'Manage coordinates for cultural sites and municipalities.',
+                                              style: AppTypography.body
+                                                  .copyWith(
+                                                    color: Colors.white60,
+                                                    fontSize: 12,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton(
+                                      onPressed: () => context.push('/admin/map-architect'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.gold500,
+                                        foregroundColor: AppColors.forest900,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'OPEN MAP EDITOR',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 1.2,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                          _sectionLabel('GAMIFICATION & ECONOMICS'),
+                          const SizedBox(height: 16),
+                          BrandCard(
+                            theme: BrandCardTheme.gold,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.auto_awesome_rounded,
+                                        color: AppColors.forest900,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'WARRIOR CIRCLE OPS',
+                                              style: AppTypography.h3.copyWith(
+                                                color: AppColors.forest900,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            Text(
+                                              'Manage seasons, shop prices, and duel moderation.',
+                                              style: AppTypography.body
+                                                  .copyWith(
+                                                    color: AppColors.forest700,
+                                                    fontSize: 12,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton(
+                                      onPressed: () => context.push('/admin/gamification'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.forest900,
+                                        foregroundColor: AppColors.gold500,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'GO TO ECONOMICS HUB',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 1.2,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                           const SizedBox(height: 32),
                           _sectionLabel('DATABASE MAINTENANCE'),
                           const SizedBox(height: 16),
@@ -455,12 +600,25 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
     );
   }
 
-  Widget _buildSystemHealthGrid() {
+  Widget _buildSystemHealthGrid(Map<String, dynamic>? data) {
     return Row(
-      children: _systemHealth.map((h) {
+      children: _defaultHealth.map((h) {
+        String value = h['value'];
+        if (data != null) {
+          switch (h['label']) {
+            case 'API Status':
+              value = data['apiStatus'] ?? value;
+            case 'Storage':
+              value = data['storage'] ?? value;
+            case 'Database':
+              value = data['database'] ?? value;
+            case 'Uptime':
+              value = data['uptime'] ?? value;
+          }
+        }
         return Expanded(
           child: Container(
-            margin: EdgeInsets.only(right: h == _systemHealth.last ? 0 : 10),
+            margin: EdgeInsets.only(right: h == _defaultHealth.last ? 0 : 10),
             padding: const EdgeInsets.symmetric(vertical: 16),
             decoration: BoxDecoration(
               color: isDark ? AppColors.forestDarkCard : Colors.white,
@@ -480,7 +638,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  h['value'] as String,
+                  value,
                   style: AppTypography.h3.copyWith(
                     color: isDark ? Colors.white : AppColors.forest500,
                     fontSize: 13,
