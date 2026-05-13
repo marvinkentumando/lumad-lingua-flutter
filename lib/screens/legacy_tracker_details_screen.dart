@@ -274,7 +274,7 @@ class _LegacyTrackerDetailsScreenState extends ConsumerState<LegacyTrackerDetail
                 ),
               ),
               const SizedBox(width: 8),
-              Expanded(child: Divider(color: AppColors.gold500.withOpacity(0.2))),
+              Expanded(child: Divider(color: AppColors.gold500.withValues(alpha: 0.2))),
             ],
           ),
         ),
@@ -302,7 +302,7 @@ class _LegacyTrackerDetailsScreenState extends ConsumerState<LegacyTrackerDetail
                 ),
               ),
               const SizedBox(width: 8),
-              Expanded(child: Divider(color: AppColors.semanticBlue.withOpacity(0.2))),
+              Expanded(child: Divider(color: AppColors.semanticBlue.withValues(alpha: 0.2))),
             ],
           ),
         ),
@@ -402,9 +402,9 @@ class _LegacyTrackerDetailsScreenState extends ConsumerState<LegacyTrackerDetail
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         status.toUpperCase(),
