@@ -59,7 +59,9 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
         ref.watch(pendingLessonsCountProvider(activeDialect)).value ?? 0;
 
     // Stats for progress tracker
-    final todayVerified = profile?['todayVerified'] ?? 0;
+    final uid = profile?['uid'] ?? profile?['id'] ?? '';
+    final impactAsync = ref.watch(validatorDailyImpactProvider(uid));
+    final todayVerified = impactAsync.value?.total ?? profile?['todayVerified'] ?? 0;
     final dailyGoal = profile?['dailyGoal'] ?? 20;
     final progress = (todayVerified / dailyGoal).clamp(0.0, 1.0);
 
@@ -169,61 +171,169 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
   );
 }
 
-  Widget _buildHeader(String name, String rank) {
-    return BrandCard(
-      theme: BrandCardTheme.gold,
-      padding: const EdgeInsets.all(24),
-      borderRadius: 32,
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Maayong\nAdlaw,\n$name!',
-                  style: AppTypography.displayBold.copyWith(
-                    color: AppColors.forest900,
-                    fontSize: 32,
-                    height: 1.1,
-                  ),
+  void _showGoalDialog(int currentGoal) {
+    final controller = TextEditingController(text: currentGoal.toString());
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? AppColors.forest800 : Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: Row(
+          children: [
+            const Icon(Icons.track_changes_rounded, color: AppColors.gold500),
+            const SizedBox(width: 12),
+            Text(
+              'Set Daily Goal',
+              style: AppTypography.h3.copyWith(
+                color: isDark ? Colors.white : AppColors.forest900,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'How many items do you aim to verify every day?',
+              style: AppTypography.body.copyWith(
+                color: isDark ? Colors.white70 : AppColors.forest700,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              style: TextStyle(
+                color: isDark ? Colors.white : AppColors.forest900,
+                fontWeight: FontWeight.bold,
+              ),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+                hintText: 'e.g. 25',
+                hintStyle: TextStyle(color: isDark ? Colors.white24 : Colors.black26),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
                 ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    'ELDER VALIDATOR  •  RANK $rank',
-                    style: AppTypography.label.copyWith(
-                      color: isDark ? Colors.white70 : Colors.black87,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 10,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ),
-              ],
+                prefixIcon: const Icon(Icons.bolt_rounded, color: AppColors.gold500),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'CANCEL',
+              style: AppTypography.label.copyWith(
+                color: AppColors.creamText3,
+                letterSpacing: 1,
+              ),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.05),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.shield_rounded,
-              color: AppColors.forest900,
-              size: 40,
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: ElevatedButton(
+              onPressed: () async {
+                final newGoal = int.tryParse(controller.text);
+                if (newGoal != null && newGoal > 0) {
+                  final profile = ref.read(userProfileProvider).value;
+                  final uid = profile?['uid'] ?? profile?['id'];
+                  if (uid != null) {
+                    await ref.read(firebaseServiceProvider).updateUserProfile(uid, {
+                      'dailyGoal': newGoal,
+                    });
+                    if (context.mounted) Navigator.pop(context);
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.gold500,
+                foregroundColor: AppColors.forest900,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: Text(
+                'SAVE GOAL',
+                style: AppTypography.label.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(String name, String rank) {
+    return GestureDetector(
+      onTap: () => context.push('/profile'),
+      child: BrandCard(
+        theme: BrandCardTheme.gold,
+        padding: const EdgeInsets.all(24),
+        borderRadius: 32,
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Maayong\nAdlaw,\n$name!',
+                    style: AppTypography.displayBold.copyWith(
+                      color: AppColors.forest900,
+                      fontSize: 32,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'ELDER VALIDATOR  •  RANK $rank',
+                      style: AppTypography.label.copyWith(
+                        color: isDark ? Colors.white70 : Colors.black87,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 10,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.05),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.shield_rounded,
+                color: AppColors.forest900,
+                size: 40,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -344,77 +454,225 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
     required double progress,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return BrandCard(
-      theme: BrandCardTheme.vibrant,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'DAILY IMPACT',
-                      style: AppTypography.label.copyWith(
-                        color: AppColors.gold500,
-                        letterSpacing: 2,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Keep it up! You are ${dailyGoal - todayVerified} items away from your daily goal.',
-                      style: AppTypography.body.copyWith(
-                        color: AppColors.creamText3,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 24),
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  SizedBox(
-                    width: 80,
-                    height: 80,
-                    child: CircularProgressIndicator(
-                      value: progress,
-                      strokeWidth: 8,
-                      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        AppColors.gold500,
-                      ),
-                    ),
-                  ),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
+    final profile = ref.read(userProfileProvider).value;
+    final uid = profile?['uid'] ?? profile?['id'] ?? '';
+    final impact = ref.watch(validatorDailyImpactProvider(uid)).value ?? ValidatorDailyImpact();
+
+    return GestureDetector(
+      onTap: () => _showImpactDetailDialog(impact),
+      child: BrandCard(
+        theme: BrandCardTheme.vibrant,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '$todayVerified',
-                        style: AppTypography.h2ExtraBold.copyWith(
-                          color: isDark ? Colors.white : AppColors.forest500,
-                          fontSize: 18,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            'DAILY IMPACT',
+                            style: AppTypography.label.copyWith(
+                              color: AppColors.gold500,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () => _showGoalDialog(dailyGoal),
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: AppColors.gold500.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.edit_rounded,
+                                size: 12,
+                                color: AppColors.gold500,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+                      const SizedBox(height: 8),
                       Text(
-                        '/$dailyGoal',
-                        style: AppTypography.label.copyWith(
+                        'Keep it up! You are ${dailyGoal - todayVerified > 0 ? dailyGoal - todayVerified : 0} items away from your daily goal.',
+                        style: AppTypography.body.copyWith(
                           color: AppColors.creamText3,
-                          fontSize: 10,
+                          fontSize: 13,
                         ),
                       ),
                     ],
                   ),
-                ],
+                ),
+                const SizedBox(width: 24),
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: 80,
+                      height: 80,
+                      child: CircularProgressIndicator(
+                        value: progress,
+                        strokeWidth: 8,
+                        backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          AppColors.gold500,
+                        ),
+                      ),
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '$todayVerified',
+                          style: AppTypography.h2ExtraBold.copyWith(
+                            color: isDark ? Colors.white : AppColors.forest500,
+                            fontSize: 18,
+                          ),
+                        ),
+                        Text(
+                          '/$dailyGoal',
+                          style: AppTypography.label.copyWith(
+                            color: AppColors.creamText3,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05),
+    );
+  }
+
+  void _showImpactDetailDialog(ValidatorDailyImpact impact) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? AppColors.forest800 : Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.gold500.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
               ),
-            ],
+              child: const Icon(Icons.analytics_rounded, color: AppColors.gold500, size: 32),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "Today's Progress",
+              style: AppTypography.h2ExtraBold.copyWith(
+                color: isDark ? Colors.white : AppColors.forest900,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildImpactDetailRow(
+              "Approved", 
+              impact.approved, 
+              AppColors.semanticGreen,
+              Icons.check_circle_rounded,
+            ),
+            const SizedBox(height: 12),
+            _buildImpactDetailRow(
+              "Rejected", 
+              impact.rejected, 
+              AppColors.semanticRed,
+              Icons.cancel_rounded,
+            ),
+            const SizedBox(height: 12),
+            _buildImpactDetailRow(
+              "Flagged", 
+              impact.flagged, 
+              AppColors.gold500,
+              Icons.flag_rounded,
+            ),
+            const Divider(height: 32, color: Colors.white10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Total Processed",
+                  style: AppTypography.body.copyWith(
+                    color: isDark ? Colors.white70 : AppColors.forest700,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  "${impact.total}",
+                  style: AppTypography.h3.copyWith(
+                    color: isDark ? Colors.white : AppColors.forest900,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              "CLOSE",
+              style: AppTypography.label.copyWith(
+                color: AppColors.gold500,
+                letterSpacing: 1,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
         ],
       ),
-    ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05);
+    );
+  }
+
+  Widget _buildImpactDetailRow(String label, int count, Color color, IconData icon) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.1)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: AppTypography.body.copyWith(
+              color: isDark ? Colors.white : AppColors.forest900,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            "$count",
+            style: AppTypography.h3.copyWith(
+              color: color,
+              fontSize: 18,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildUrgentCard(ValidationItem item) {

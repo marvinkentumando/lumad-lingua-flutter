@@ -24,7 +24,6 @@ import '../widgets/skeleton.dart';
 import '../widgets/graceful_image.dart';
 import '../widgets/branded_empty_state.dart';
 import '../widgets/profile_avatar.dart';
-import '../models/app_config.dart';
 
 
 class StaffProfileScreen extends ConsumerWidget {

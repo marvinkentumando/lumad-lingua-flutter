@@ -25,7 +25,6 @@ import '../widgets/graceful_image.dart';
 import '../widgets/branded_empty_state.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/ambient_topo_background.dart';
-import '../models/app_config.dart';
 
 
 class LearnerProfileScreen extends ConsumerWidget {

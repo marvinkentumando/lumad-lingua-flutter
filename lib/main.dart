@@ -55,6 +55,7 @@ import 'screens/lingua_duel_screen.dart';
 import 'screens/mastery_dashboard_screen.dart';
 import 'screens/warriors_circle_screen.dart';
 import 'screens/streak_history_screen.dart';
+import 'screens/saka_game_screen.dart';
 
 import 'providers/role_provider.dart';
 
@@ -339,6 +340,10 @@ final _router = GoRouter(
         GoRoute(
           path: '/streak',
           builder: (context, state) => const StreakHistoryScreen(),
+        ),
+        GoRoute(
+          path: '/saka-game',
+          builder: (context, state) => const SakaGameScreen(),
         ),
       ],
     ),

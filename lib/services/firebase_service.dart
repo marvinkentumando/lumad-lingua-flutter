@@ -31,6 +31,66 @@ class FirebaseService {
 
   FirebaseFirestore get db => _db;
 
+  Stream<ValidatorDailyImpact> getValidatorDailyImpact(String userId) {
+    final now = DateTime.now();
+    final startOfToday = DateTime(now.year, now.month, now.day);
+    final startOfTodayTimestamp = Timestamp.fromDate(startOfToday);
+
+    final wordsStream = _db
+        .collection('words')
+        .where('validatorId', isEqualTo: userId)
+        .where('validatedAt', isGreaterThanOrEqualTo: startOfTodayTimestamp)
+        .snapshots();
+
+    final voicesStream = _db
+        .collection('voice_submissions')
+        .where('validatorId', isEqualTo: userId)
+        .where('validatedAt', isGreaterThanOrEqualTo: startOfTodayTimestamp)
+        .snapshots();
+
+    final lessonsStream = _db
+        .collection('lessons')
+        .where('validatorId', isEqualTo: userId)
+        .where('validatedAt', isGreaterThanOrEqualTo: startOfTodayTimestamp)
+        .snapshots();
+
+    return Rx.combineLatest3(
+      wordsStream,
+      voicesStream,
+      lessonsStream,
+      (wordsSnap, voicesSnap, lessonsSnap) {
+        int approved = 0;
+        int rejected = 0;
+        int flagged = 0;
+
+        void processSnap(QuerySnapshot snap) {
+          for (var doc in snap.docs) {
+            final data = doc.data() as Map<String, dynamic>;
+            final status = (data['status'] as String).toUpperCase();
+            if (status == 'APPROVED' || status == 'PUBLISHED') {
+              approved++;
+            } else if (status == 'REJECTED') {
+              rejected++;
+            } else if (status == 'FLAGGED') {
+              flagged++;
+            }
+          }
+        }
+
+        processSnap(wordsSnap);
+        processSnap(voicesSnap);
+        processSnap(lessonsSnap);
+
+        return ValidatorDailyImpact(
+          approved: approved,
+          rejected: rejected,
+          flagged: flagged,
+          total: approved + rejected + flagged,
+        );
+      },
+    );
+  }
+
   // User Profile Operations
   Future<void> updateUserProfile(
     String userId,
@@ -302,6 +362,7 @@ class FirebaseService {
         'validatorRole': validatorRole,
         'validatorFeedback': feedback,
         'flaggedAt': FieldValue.serverTimestamp(),
+        'validatedAt': FieldValue.serverTimestamp(),
       });
 
       final contributorId = data['contributorId'];
@@ -344,6 +405,7 @@ class FirebaseService {
         'validatorRole': validatorRole,
         'validatorFeedback': feedback,
         'rejectedAt': FieldValue.serverTimestamp(),
+        'validatedAt': FieldValue.serverTimestamp(),
       });
 
       final contributorId = data['contributorId'];
@@ -1063,6 +1125,7 @@ class FirebaseService {
       'validatorRole': validatorRole,
       'validatorFeedback': feedback,
       'flaggedAt': FieldValue.serverTimestamp(),
+      'validatedAt': FieldValue.serverTimestamp(),
     });
 
     final contributorId = data['contributorId'];
@@ -1519,17 +1582,13 @@ class FirebaseService {
 
       // 3. Calculate rewards
       int xpReward = 0;
-      int firstTryCount = 0;
-      int retryCount = 0;
 
       if (lesson != null) {
         for (var task in lesson.tasks) {
           final mistakes = taskPerformance?[task.id] ?? 0;
           if (mistakes == 0) {
-            firstTryCount++;
             xpReward += config.lessonTaskPerfectXp;
           } else {
-            retryCount++;
             xpReward += config.lessonTaskRetryXp;
           }
         }
@@ -2204,7 +2263,6 @@ class FirebaseService {
       });
 
       final contributorId = data['contributorId'];
-      final title = data['title'] ?? 'your voice recording';
 
       if (contributorId != null) {
         final notifRef = _db
@@ -2689,6 +2747,11 @@ final pendingLessonsCountProvider =
 final communityFeedProvider = StreamProvider<List<CommunityActivity>>((ref) {
   return ref.watch(firebaseServiceProvider).getCommunityFeed();
 });
+
+final validatorDailyImpactProvider =
+    StreamProvider.family<ValidatorDailyImpact, String>((ref, userId) {
+      return ref.watch(firebaseServiceProvider).getValidatorDailyImpact(userId);
+    });
 
 final appConfigProvider = StreamProvider<AppConfig>((ref) {
   return ref.watch(firebaseServiceProvider).getAppConfig();

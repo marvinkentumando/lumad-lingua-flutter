@@ -128,7 +128,7 @@ class _LegacyTrackerDetailsScreenState extends ConsumerState<LegacyTrackerDetail
                 boxShadow: isSelected
                     ? [
                         BoxShadow(
-                          color: AppColors.gold500.withOpacity(0.3),
+                          color: AppColors.gold500.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         )

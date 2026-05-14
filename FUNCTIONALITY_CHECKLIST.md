@@ -4,10 +4,32 @@ This document tracks UI elements, buttons, and display areas that are currently 
 
 ---
 
+## 📖 How to Use This Checklist
+
+This document serves as a living roadmap for developers and contributors to identify "functional gaps"—UI components that look finished but don't yet "work" as intended. 
+
+### 🟢 Status Key
+- [ ] **Pending**: Not yet started. Needs logic implementation.
+- [w] **In Progress**: Currently being worked on.
+- [x] **Completed**: Logic is fully integrated and tested with the backend.
+
+### 🛠️ Developer Workflow
+1. **Identify**: Find a UI element in the app that feels like a placeholder (e.g., a button that only shows a SnackBar).
+2. **Verify**: Check this list to see if it's already documented.
+3. **Claim**: If you start working on an item, mark it as `[w]` (Working) to avoid duplicate efforts.
+4. **Implement**: Connect the UI to the appropriate Riverpod provider or Firebase service.
+5. **Close**: Once verified, change the marker to `[x]`.
+
+### 📝 Reporting New Gaps
+When adding a new item, please use the following format:
+`- [ ] **Feature Name**: Brief description of the missing functionality and the expected behavior.`
+
+---
+
 ## 🏛️ Validator Home Screen
-- [ ] **Profile/Shield Header Interaction**: The header area showing the validator's name and rank is currently non-interactive. It should ideally link to a **Profile Settings** or **Rank Progression** detail screen.
-- [ ] **Daily Goal Customization**: The "Daily Impact" tracker uses a hardcoded goal (default: 20). There is no UI to allow validators to set their own daily verification targets.
-- [ ] **Daily Impact Stats Detail**: Tapping the Daily Impact card does nothing. It could show a breakdown of today's work (approved vs rejected).
+- [x] **Daily Goal Customization (Validator)**: Added a dialog to allow validators to set their own daily verification targets from the Home Screen.
+- [x] **Profile/Shield Header Interaction (Validator)**: Linked the header area in Validator Home to the Profile screen.
+- [x] **Daily Impact Stats Detail**: Tapping the Daily Impact card shows a breakdown of today's work (approved vs rejected vs flagged) with live data.
 - [ ] **Urgent Queue Management**:
     - [ ] **Skip/Snooze Function**: Urgent items cannot be dismissed or snoozed if a validator is unable to process them immediately.
     - [ ] **Empty State Action**: The "All caught up!" state is static. It could include a "Check History" or "Browse All" button.
@@ -17,7 +39,6 @@ This document tracks UI elements, buttons, and display areas that are currently 
 - [ ] **Top Bar "Validations" Stat Interaction**: The pill showing the number of validations in the top bar is non-interactive. It could link to a detailed **Validator Activity Log** or **History** page.
 
 ## 📖 Validator Entries Screen
-- [ ] **Dialect Filter Controls**: Although filtering logic exists in the code, there is no UI (dropdown/chips) to allow validators to switch between dialects.
 - [ ] **Search History Management**: No way to clear or delete specific items from the search history list.
 - [ ] **Infinite Scroll Indicator**: Missing a loading spinner at the bottom of the list when fetching more entries.
 - [ ] **Bulk Action Variety**: Bulk selection only supports "Approve". No bulk "Reject" or "Flag" options are available.

@@ -585,10 +585,6 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
     );
   }
 
-  Widget _buildLegacySection(List<DictionaryEntry> contributions) {
-    // This is now replaced by _buildCombinedLegacySection
-    return const SizedBox.shrink();
-  }
 
   // Dialects in need are now dynamic
 

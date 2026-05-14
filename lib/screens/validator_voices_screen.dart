@@ -30,7 +30,7 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
   bool _showHistory = false;
   final Set<String> _selectedIds = {};
   String _searchQuery = "";
-  String _selectedDialect = "All";
+  final String _selectedDialect = "All";
   String? _playingId;
   double _playbackSpeed = 1.0;
 
@@ -42,13 +42,6 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
   StreamSubscription<Duration>? _durationSub;
   StreamSubscription<PlayerState>? _stateSub;
 
-  final List<String> _dialects = [
-    "All",
-    "Mansaka",
-    "Tboli",
-    "Hanunuo",
-    "Mandaya",
-  ];
 
   @override
   void initState() {

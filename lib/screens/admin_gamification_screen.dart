@@ -6,7 +6,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/glass_box.dart';
 import '../widgets/brand_card.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart'; 
 
 class AdminGamificationScreen extends ConsumerStatefulWidget {
   const AdminGamificationScreen({super.key});

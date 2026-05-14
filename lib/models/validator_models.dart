@@ -21,6 +21,20 @@ class ValidatorStats {
   double get goalProgress => (todayVerified / dailyGoal).clamp(0.0, 1.0);
 }
 
+class ValidatorDailyImpact {
+  final int approved;
+  final int rejected;
+  final int flagged;
+  final int total;
+
+  ValidatorDailyImpact({
+    this.approved = 0,
+    this.rejected = 0,
+    this.flagged = 0,
+    this.total = 0,
+  });
+}
+
 class ValidationItem {
   final String id;
   final String type; // 'entry', 'voice', 'lesson'

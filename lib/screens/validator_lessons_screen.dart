@@ -31,15 +31,8 @@ class _ValidatorLessonsScreenState
   bool _showHistory = false;
   final Set<String> _selectedIds = {};
   String _searchQuery = "";
-  String _selectedDialect = "All";
+  final String _selectedDialect = "All";
 
-  final List<String> _dialects = [
-    "All",
-    "Mansaka",
-    "Tboli",
-    "Hanunuo",
-    "Mandaya",
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -270,51 +263,6 @@ class _ValidatorLessonsScreenState
     );
   }
 
-  Widget _buildDialectFilter() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: _dialects.map((dialect) {
-          final isSelected = _selectedDialect == dialect;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: GestureDetector(
-              onTap: () => setState(() => _selectedDialect = dialect),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppColors.gold500
-                      : (isDark ? AppColors.forest800 : Colors.white),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isSelected
-                        ? AppColors.gold500
-                        : (isDark
-                              ? AppColors.forest700
-                              : AppColors.creamBorder),
-                  ),
-                ),
-                child: Text(
-                  dialect.toUpperCase(),
-                  style: AppTypography.label.copyWith(
-                    color: isSelected ? AppColors.forest900 : AppColors.gold500,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 10,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
 
   Widget _buildEmptyState() {
     final bool isSearching = _searchQuery.isNotEmpty;

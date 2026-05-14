@@ -32,7 +32,7 @@ class _ValidatorEntriesScreenState
   bool _isProcessing = false;
   bool _isFetchingMore = false;
   String _searchQuery = "";
-  String _selectedDialect = "All";
+  final String _selectedDialect = "All";
 
   int _documentLimit = 50;
   final ScrollController _scrollController = ScrollController();
