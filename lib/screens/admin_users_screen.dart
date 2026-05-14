@@ -7,6 +7,8 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/ambient_topo_background.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import '../providers/admin_users_provider.dart';
 
 class AdminUsersScreen extends ConsumerStatefulWidget {
@@ -18,6 +20,7 @@ class AdminUsersScreen extends ConsumerStatefulWidget {
 class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   String _userSearch = '';
   String _roleFilter = 'All';
+  String _selectedDialectFilter = 'All';
   final TextEditingController _searchCtrl = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -38,11 +41,17 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     return users.where((u) {
       final matchesRole =
           _roleFilter == 'All' || u.role == _roleFilter.toLowerCase();
+
+      bool matchesDialect = true;
+      if (_roleFilter == 'Validator' && _selectedDialectFilter != 'All') {
+        matchesDialect = u.indigenousGroup == _selectedDialectFilter;
+      }
+
       final matchesSearch =
           _userSearch.isEmpty ||
           u.name.toLowerCase().contains(_userSearch.toLowerCase()) ||
           u.email.toLowerCase().contains(_userSearch.toLowerCase());
-      return matchesRole && matchesSearch;
+      return matchesRole && matchesDialect && matchesSearch;
     }).toList();
   }
 
@@ -117,6 +126,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   ),
                   const SizedBox(height: 12),
                   _buildRoleTabs(),
+                  if (_roleFilter == 'Validator') _buildDialectTabs(),
                   Expanded(
                     child: Column(
                       children: [
@@ -254,7 +264,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: GestureDetector(
-              onTap: () => setState(() => _roleFilter = r),
+              onTap: () => setState(() {
+                _roleFilter = r;
+                _selectedDialectFilter = 'All';
+              }),
               child: Chip(
                 label: Text(r),
                 backgroundColor: isSelected
@@ -271,6 +284,62 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
           );
         }).toList(),
       ),
+    );
+  }
+
+  Widget _buildDialectTabs() {
+    final dialectsAsync = ref.watch(dialectsProvider);
+    return dialectsAsync.when(
+      data: (dialects) => Container(
+        margin: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              Text(
+                'FILTER BY TRIBE:',
+                style: AppTypography.label.copyWith(
+                  color: Colors.white12,
+                  fontSize: 8,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(width: 12),
+              ...dialects.map((d) {
+                final isSelected = _selectedDialectFilter == d;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: ChoiceChip(
+                    label: Text(d),
+                    selected: isSelected,
+                    onSelected: (val) => setState(() => _selectedDialectFilter = d),
+                    selectedColor: AppColors.gold500.withValues(alpha: 0.15),
+                    backgroundColor: Colors.transparent,
+                    labelStyle: TextStyle(
+                      color: isSelected ? AppColors.gold500 : Colors.white24,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontSize: 11,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    side: isSelected
+                        ? const BorderSide(color: AppColors.gold500, width: 1)
+                        : BorderSide.none,
+                    showCheckmark: false,
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 
@@ -447,7 +516,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                             ),
                             const SizedBox(width: 8),
                             const Text(
-                              'Â·',
+                              '·',
                               style: TextStyle(color: Colors.white24),
                             ),
                             const SizedBox(width: 8),
@@ -705,6 +774,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   void _showInviteDialog() {
     final emailCtrl = TextEditingController();
     String selectedRole = 'contributor';
+    String? selectedDialect;
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -736,7 +807,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                initialValue: selectedRole,
+                value: selectedRole,
                 dropdownColor: AppColors.forest800,
                 decoration: InputDecoration(
                   labelText: 'Role',
@@ -757,8 +828,52 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                       ),
                     )
                     .toList(),
-                onChanged: (v) => setDialogState(() => selectedRole = v!),
+                onChanged: (v) => setDialogState(() {
+                  selectedRole = v!;
+                  if (selectedRole != 'validator') selectedDialect = null;
+                }),
               ),
+              if (selectedRole == 'validator') ...[
+                const SizedBox(height: 12),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final dialectsAsync = ref.watch(dialectsProvider);
+                    return dialectsAsync.when(
+                      data: (dialects) {
+                        final list =
+                            dialects.where((d) => d != 'All').toList();
+                        return DropdownButtonFormField<String>(
+                          value: selectedDialect,
+                          dropdownColor: AppColors.forest800,
+                          decoration: InputDecoration(
+                            labelText: 'Assign Indigenous Group',
+                            labelStyle: const TextStyle(color: Colors.white54),
+                            filled: true,
+                            fillColor: AppColors.forest800,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          style: const TextStyle(color: Colors.white),
+                          items: list
+                              .map(
+                                (d) => DropdownMenuItem(
+                                  value: d,
+                                  child: Text(d),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) =>
+                              setDialogState(() => selectedDialect = v),
+                        );
+                      },
+                      loading: () => const CircularProgressIndicator(),
+                      error: (_, __) => const Text('Error loading dialects'),
+                    );
+                  },
+                ),
+              ],
             ],
           ),
           actions: [
@@ -775,17 +890,49 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               onTap: () async {
                 final email = emailCtrl.text.trim();
                 if (email.isEmpty) return;
+                if (selectedRole == 'validator' && selectedDialect == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please select a dialect for the validator'),
+                      backgroundColor: AppColors.semanticRed,
+                    ),
+                  );
+                  return;
+                }
 
                 Navigator.pop(ctx);
                 try {
-                  await ref
-                      .read(firebaseServiceProvider)
-                      .createInvitation(email, selectedRole);
+                  await ref.read(firebaseServiceProvider).createInvitation(
+                        email,
+                        selectedRole,
+                        indigenousGroup: selectedDialect,
+                      );
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Invitation sent to $email'),
-                        backgroundColor: AppColors.semanticGreen,
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        backgroundColor: AppColors.forest800,
+                        title: const Text('Invitation Sent! 🌿', style: TextStyle(color: AppColors.gold500)),
+                        content: Text(
+                          'The invitation for $email is ready.\n\nSince automated emails are pending, please tell the user to:\n\n1. Go to the Sign Up screen.\n2. Use $email specifically.\n3. Their $selectedRole role will activate automatically.',
+                          style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('LATER', style: TextStyle(color: Colors.white38)),
+                          ),
+                          BrandButton(
+                            text: 'SHARE INVITE',
+                            icon: Icons.share_rounded,
+                            type: BrandButtonType.primary,
+                            onTap: () {
+                              final text = 'Maayong Adlaw!\n\nYou have been invited to join Lumad Lingua as a ${selectedRole.toUpperCase()}${selectedDialect != null ? " for $selectedDialect" : ""}.\n\nPlease sign up at [App Link] using your email: $email\n\nYour staff privileges will activate automatically upon registration.\n\nSee you in the highlands!';
+                              Share.share(text, subject: 'Lumad Lingua Staff Invitation');
+                              Navigator.pop(context);
+                            },
+                          ),
+                        ],
                       ),
                     );
                   }

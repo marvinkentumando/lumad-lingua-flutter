@@ -71,31 +71,29 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
             ),
           ),
           SafeArea(
-            child: Column(
-              children: [
-                _buildHeroBanner(context),
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: () async {
-                      ref.invalidate(systemHealthProvider);
-                      ref.invalidate(platformActivityProvider);
-                      await Future.delayed(const Duration(seconds: 1));
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Platform stats refreshed.'),
-                        ),
-                      );
-                    },
-                    color: AppColors.gold500,
-                    backgroundColor: isDark ? AppColors.forest800 : Colors.white,
-                    child: SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _sectionLabel('VILLAGE PULSE'),
+            child: RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(systemHealthProvider);
+                ref.invalidate(platformActivityProvider);
+                await Future.delayed(const Duration(seconds: 1));
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Platform stats refreshed.'),
+                  ),
+                );
+              },
+              color: AppColors.gold500,
+              backgroundColor: isDark ? AppColors.forest800 : Colors.white,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeroBanner(context),
+                    const SizedBox(height: 24),
+                    _sectionLabel('VILLAGE PULSE'),
                           const SizedBox(height: 16),
                           const WotdWidget(),
                           const SizedBox(height: 32),
@@ -187,7 +185,8 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                             width: double.infinity,
                             child: BrandButton(
                               text: "ADVANCED PEDAGOGICAL ANALYTICS",
-                              type: BrandButtonType.secondary,
+                              type: BrandButtonType.primary,
+                              icon: Icons.analytics_rounded,
                               onTap: () => context.push('/admin/analytics'),
                             ),
                           ).animate().fadeIn(delay: 200.ms),
@@ -525,9 +524,6 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -554,7 +550,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                   Text(
                     'Maayong\nAdlaw,\n$name!',
                     style: AppTypography.displayBold.copyWith(
-                      color: isDark ? AppColors.gold500 : Colors.black,
+                      color: Colors.black,
                       fontSize: 32,
                       height: 1.1,
                     ),
@@ -572,7 +568,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                     child: Text(
                       'SYSTEM OVERSEER  •  COMMANDER',
                       style: AppTypography.label.copyWith(
-                        color: isDark ? Colors.white70 : Colors.black87,
+                        color: Colors.black87,
                         fontWeight: FontWeight.w900,
                         fontSize: 9,
                         letterSpacing: 1,

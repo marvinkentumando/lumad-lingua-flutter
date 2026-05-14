@@ -18,6 +18,8 @@ class VoiceSubmission {
   final String? duration;
   final bool priority;
   final VoiceStatus status;
+  final String? municipalityId; // Reference to municipality sub-collection
+  final String? recordingId; // Reference to the actual recording doc
   final String? validatorId;
   final String? validatorRole;
   final String? validatorFeedback;
@@ -38,6 +40,8 @@ class VoiceSubmission {
     this.duration,
     this.priority = false,
     this.status = VoiceStatus.pending,
+    this.municipalityId,
+    this.recordingId,
     this.validatorId,
     this.validatorRole,
     this.validatorFeedback,
@@ -61,6 +65,8 @@ class VoiceSubmission {
       duration: data['duration'],
       priority: data['priority'] == true,
       status: _parseStatus(data['status']),
+      municipalityId: data['municipalityId'],
+      recordingId: data['recordingId'],
       validatorId: data['validatorId'],
       validatorRole: data['validatorRole'],
       validatorFeedback: data['validatorFeedback'],
@@ -83,6 +89,8 @@ class VoiceSubmission {
       'duration': duration,
       'priority': priority,
       'status': status.name,
+      'municipalityId': municipalityId,
+      'recordingId': recordingId,
     };
   }
 

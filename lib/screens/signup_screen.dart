@@ -114,17 +114,58 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     "Research",
   ];
 
+  bool _acceptedTerms = false;
   bool _isLoading = false;
   String? _errorMessage;
+  Map<String, dynamic>? _detectedInvite;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(_checkForInvitation);
+  }
 
   @override
   void dispose() {
+    _emailController.removeListener(_checkForInvitation);
     _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
+
+  Future<void> _checkForInvitation() async {
+    final email = _emailController.text.trim().toLowerCase();
+    if (email.isEmpty || !email.contains('@')) {
+      if (_detectedInvite != null) setState(() => _detectedInvite = null);
+      return;
+    }
+
+    try {
+      final snap = await ref
+          .read(authServiceProvider)
+          .firestore
+          .collection('invitations')
+          .where('email', isEqualTo: email)
+          .where('status', isEqualTo: 'pending')
+          .limit(1)
+          .get();
+
+      if (snap.docs.isNotEmpty) {
+        final data = snap.docs.first.data();
+        if (_detectedInvite == null || _detectedInvite!['role'] != data['role']) {
+          setState(() => _detectedInvite = data);
+        }
+      } else {
+        if (_detectedInvite != null) setState(() => _detectedInvite = null);
+      }
+    } catch (e) {
+      // Silent fail for background check
+    }
+  }
+
+  bool get _isValidatorInvite => _detectedInvite?['role'] == 'validator';
 
   bool _validateStep() {
     if (_formKey.currentState == null || !_formKey.currentState!.validate()) {
@@ -136,11 +177,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           _passwordController.text.length >= 6 &&
           _passwordController.text == _confirmPasswordController.text;
     } else if (_currentStep == 1) {
-      return _usernameController.text.length >= 3 &&
+      final baseValid = _usernameController.text.length >= 3 &&
           _selectedProvince != null &&
           _selectedMunicipality != null;
+      if (_isValidatorInvite) {
+        return baseValid && _acceptedTerms;
+      }
+      return baseValid;
     } else if (_currentStep == 2) {
-      return _selectedNativeLanguage != null;
+      return _selectedNativeLanguage != null && _acceptedTerms;
     }
     return true;
   }
@@ -164,7 +209,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   Future<void> _handleSignup() async {
-    if (!_validateStep()) return;
+    if (!_validateStep()) {
+      setState(() => _errorMessage = "Please complete all fields and accept the Terms");
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -360,9 +408,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   Widget _buildStepIndicator() {
+    final totalSteps = _isValidatorInvite ? 2 : 3;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(3, (index) {
+      children: List.generate(totalSteps, (index) {
         final isActive = index <= _currentStep;
         return AnimatedContainer(
           duration: 300.ms,
@@ -422,6 +471,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           isValid: _emailController.text.contains('@'),
           onChanged: (_) => setState(() {}),
         ),
+        if (_detectedInvite != null) _buildInviteBanner(),
         const SizedBox(height: 16),
         BrandTextField(
           controller: _passwordController,
@@ -446,6 +496,49 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         ),
       ],
     ).animate().fadeIn();
+  }
+
+  Widget _buildInviteBanner() {
+    final role = _detectedInvite!['role']?.toString().toUpperCase() ?? 'STAFF';
+    final group = _detectedInvite!['indigenousGroup'];
+
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.semanticBlue.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.semanticBlue.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.stars_rounded, color: AppColors.semanticBlue, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Welcome, Honored Guest!",
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.semanticBlue,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 10,
+                  ),
+                ),
+                Text(
+                  "You've been invited as a $role${group != null ? ' for $group' : ''}.",
+                  style: AppTypography.body.copyWith(
+                    color: Colors.white70,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn().slideY(begin: -0.1);
   }
 
   Widget _buildRootsStep() {
@@ -500,6 +593,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             });
           },
         ),
+        if (_isValidatorInvite) ...[
+          const SizedBox(height: 24),
+          _buildTermsCheckbox(),
+        ],
       ],
     ).animate().fadeIn();
   }
@@ -604,11 +701,112 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             );
           }).toList(),
         ),
+        const SizedBox(height: 24),
+        _buildTermsCheckbox(),
       ],
     ).animate().fadeIn();
   }
 
+  Widget _buildTermsCheckbox() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Row(
+      children: [
+        SizedBox(
+          height: 24,
+          width: 24,
+          child: Checkbox(
+            value: _acceptedTerms,
+            onChanged: (val) => setState(() => _acceptedTerms = val ?? false),
+            activeColor: AppColors.gold500,
+            checkColor: AppColors.forest900,
+            side: BorderSide(
+              color: isDark ? Colors.white30 : AppColors.forest200,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text.rich(
+            TextSpan(
+              text: "I agree to the ",
+              style: AppTypography.body.copyWith(
+                fontSize: 12,
+                color: isDark ? Colors.white70 : AppColors.forest700,
+              ),
+              children: [
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: GestureDetector(
+                    onTap: () => _showLegalDialog(
+                      "Terms & Conditions",
+                      "By using Lumad Lingua, you agree to respect the cultural heritage of the Mansaka and other Lumad tribes. Users are prohibited from misusing, misrepresenting, or commercializing traditional knowledge without proper tribal consent...",
+                    ),
+                    child: const Text(
+                      "Terms",
+                      style: TextStyle(
+                        color: AppColors.gold500,
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ),
+                const TextSpan(text: " and "),
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: GestureDetector(
+                    onTap: () => _showLegalDialog(
+                      "Privacy Policy",
+                      "We value your privacy. Your data (name, email, and location) is used solely to enhance your learning experience and track your progress. We do not sell your personal information to third parties...",
+                    ),
+                    child: const Text(
+                      "Privacy Policy",
+                      style: TextStyle(
+                        color: AppColors.gold500,
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showLegalDialog(String title, String content) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.forest900,
+        title: Text(
+          title,
+          style: AppTypography.display.copyWith(color: AppColors.gold500, fontSize: 20),
+        ),
+        content: SingleChildScrollView(
+          child: Text(
+            content,
+            style: AppTypography.body.copyWith(color: Colors.white70),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              "CLOSE",
+              style: TextStyle(color: AppColors.gold500),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildNavigationButtons() {
+    final isLastStep = _isValidatorInvite ? _currentStep == 1 : _currentStep == 2;
     return Row(
       children: [
         if (_currentStep > 0)
@@ -624,11 +822,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           ),
         Expanded(
           child: BrandButton(
-            text: _currentStep < 2
+            text: !isLastStep
                 ? "Continue"
                 : (_isLoading ? "Creating..." : "Finish"),
             type: BrandButtonType.primary,
-            onTap: _currentStep < 2
+            onTap: !isLastStep
                 ? _nextStep
                 : (_isLoading ? null : _handleSignup),
           ),

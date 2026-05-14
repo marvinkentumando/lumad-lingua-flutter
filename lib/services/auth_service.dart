@@ -53,6 +53,25 @@ class AuthService {
     String? learningGoal,
   }) async {
     try {
+      // 1. Check for invitation - simplify to email only query to avoid composite index
+      String assignedRole = 'learner';
+      String? assignedDialect;
+
+      final inviteSnap = await firestore
+          .collection('invitations')
+          .where('email', isEqualTo: email.trim().toLowerCase())
+          .get();
+
+      final pendingInvites = inviteSnap.docs.where((d) => d.data()['status'] == 'pending');
+
+      if (pendingInvites.isNotEmpty) {
+        final inviteData = pendingInvites.first.data();
+        assignedRole = inviteData['role'] ?? 'learner';
+        assignedDialect = inviteData['indigenousGroup'];
+
+        // Mark invitation as consumed (optional, or just leave as 'pending' until success)
+      }
+
       final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -73,8 +92,8 @@ class AuthService {
                 'avatar': avatar ?? '👤',
                 'nativeLanguage': nativeLanguage ?? 'English',
                 'learningGoal': learningGoal ?? 'Culture',
-                'role': email == 'validator2@gmail.com' ? 'validator' : 'learner',
-                'indigenousGroup': email == 'validator2@gmail.com' ? 'Mandaya' : null,
+                'role': assignedRole,
+                'indigenousGroup': assignedDialect,
                 'xp': 0,
                 'mistCrystals': 0,
                 'streak': 0,
@@ -82,6 +101,15 @@ class AuthService {
                 'createdAt': FieldValue.serverTimestamp(),
                 'lastLogin': FieldValue.serverTimestamp(),
               }, SetOptions(merge: true));
+
+          // 2. Mark invite as successful
+          if (pendingInvites.isNotEmpty) {
+            await pendingInvites.first.reference.update({
+              'status': 'consumed',
+              'consumedAt': FieldValue.serverTimestamp(),
+              'userId': userCredential.user!.uid,
+            });
+          }
         } catch (e) {
           // Atomic Cleanup: If Firestore profile fails, delete the Auth user
           // so the user isn't stuck in a "registered but broken" state.

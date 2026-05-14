@@ -173,25 +173,38 @@ class MainLayout extends ConsumerWidget {
               _buildStreakStat(context, ref),
               const SizedBox(width: 8),
             ],
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: culturalTheme.accentColor,
-                borderRadius: BorderRadius.circular(25),
-              ),
-              child: Row(
-                children: [
-                  Icon(icon, size: 16, color: Colors.black),
-                  const SizedBox(width: 4),
-                  Text(
-                    label,
-                    style: AppTypography.mono.copyWith(
-                      color: Colors.black,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 14,
+            GestureDetector(
+              onTap: () {
+                HapticService.selection();
+                if (role == UserRole.validator) {
+                  context.push('/validator/entries?history=true');
+                } else if (role == UserRole.contributor) {
+                  // Link to contributor profile or history if available
+                  context.push('/profile');
+                } else if (role == UserRole.learner) {
+                  context.push('/mastery-dashboard');
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: culturalTheme.accentColor,
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: Row(
+                  children: [
+                    Icon(icon, size: 16, color: Colors.black),
+                    const SizedBox(width: 4),
+                    Text(
+                      label,
+                      style: AppTypography.mono.copyWith(
+                        color: Colors.black,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -266,7 +279,7 @@ class MainLayout extends ConsumerWidget {
             ),
             const SizedBox(width: 4),
             Text(
-              '${student.dailyStreak}',
+              '${student.displayedStreak}',
               style: AppTypography.mono.copyWith(
                 color: AppColors.gold500,
                 fontSize: 12,

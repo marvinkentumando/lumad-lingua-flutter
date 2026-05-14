@@ -34,24 +34,22 @@ class FirebaseService {
   Stream<ValidatorDailyImpact> getValidatorDailyImpact(String userId) {
     final now = DateTime.now();
     final startOfToday = DateTime(now.year, now.month, now.day);
-    final startOfTodayTimestamp = Timestamp.fromDate(startOfToday);
 
+    // Fetch all validated items for this validator and filter date client-side
+    // to avoid Equality + Range composite index requirement
     final wordsStream = _db
         .collection('words')
         .where('validatorId', isEqualTo: userId)
-        .where('validatedAt', isGreaterThanOrEqualTo: startOfTodayTimestamp)
         .snapshots();
 
     final voicesStream = _db
         .collection('voice_submissions')
         .where('validatorId', isEqualTo: userId)
-        .where('validatedAt', isGreaterThanOrEqualTo: startOfTodayTimestamp)
         .snapshots();
 
     final lessonsStream = _db
         .collection('lessons')
         .where('validatorId', isEqualTo: userId)
-        .where('validatedAt', isGreaterThanOrEqualTo: startOfTodayTimestamp)
         .snapshots();
 
     return Rx.combineLatest3(
@@ -66,6 +64,11 @@ class FirebaseService {
         void processSnap(QuerySnapshot snap) {
           for (var doc in snap.docs) {
             final data = doc.data() as Map<String, dynamic>;
+
+            // Filter by date client-side
+            final validatedAt = (data['validatedAt'] as Timestamp?)?.toDate();
+            if (validatedAt == null || validatedAt.isBefore(startOfToday)) continue;
+
             final status = (data['status'] as String).toUpperCase();
             if (status == 'APPROVED' || status == 'PUBLISHED') {
               approved++;
@@ -153,10 +156,44 @@ class FirebaseService {
     String? search,
     String? dialect,
   }) {
-    Query query = _db
+    // Only filter by status on server to avoid composite index requirement
+    return _db
         .collection('words')
         .where('status', isEqualTo: 'pending')
-        .orderBy('createdAt', descending: true);
+        .snapshots()
+        .map((snapshot) {
+      var docs = snapshot.docs
+          .map((doc) => DictionaryEntry.fromFirestore(
+              doc.data() as Map<String, dynamic>, doc.id))
+          .toList();
+
+      // Filter by dialect client-side
+      if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
+        docs = docs.where((d) => d.language == dialect).toList();
+      }
+
+      // Filter by search client-side
+      if (search != null && search.isNotEmpty) {
+        final query = search.toLowerCase();
+        docs = docs.where((d) {
+          return d.indigenousWord.toLowerCase().contains(query) ||
+              d.translation.toLowerCase().contains(query);
+        }).toList();
+      }
+
+      // Sort client-side
+      docs.sort((a, b) => b.id.compareTo(a.id));
+
+      return docs.take(limit).toList();
+    });
+  }
+
+  Stream<List<DictionaryEntry>> getGlobalDictionaryWords({
+    int limit = 50,
+    String? search,
+    String? dialect,
+  }) {
+    Query query = _db.collection('words');
 
     if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
       query = query.where('dialect', isEqualTo: dialect);
@@ -187,31 +224,35 @@ class FirebaseService {
     String? search,
     String? dialect,
   }) {
-    Query query = _db
+    // Single server filter
+    return _db
         .collection('words')
         .where('validatorId', isEqualTo: validatorId)
-        .orderBy('validatedAt', descending: true);
-
-    if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
-      query = query.where('dialect', isEqualTo: dialect);
-    }
-
-    if (search != null && search.isNotEmpty) {
-      final queryTerm = search.toLowerCase();
-      query = query
-          .where('term_lowercase', isGreaterThanOrEqualTo: queryTerm)
-          .where('term_lowercase', isLessThanOrEqualTo: '$queryTerm\uf8ff');
-    }
-
-    return query.limit(limit).snapshots().map((snapshot) {
-      return snapshot.docs
-          .map(
-            (doc) => DictionaryEntry.fromFirestore(
-              doc.data() as Map<String, dynamic>,
-              doc.id,
-            ),
-          )
+        .snapshots()
+        .map((snapshot) {
+      var docs = snapshot.docs
+          .map((doc) => DictionaryEntry.fromFirestore(
+              doc.data() as Map<String, dynamic>, doc.id))
           .toList();
+
+      // Client filter
+      if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
+        docs = docs.where((d) => d.language == dialect).toList();
+      }
+
+      if (search != null && search.isNotEmpty) {
+        final q = search.toLowerCase();
+        docs = docs.where((d) => d.indigenousWord.toLowerCase().contains(q)).toList();
+      }
+
+      // Sort client-side
+      docs.sort((a, b) {
+        if (a.validatedAt == null) return 1;
+        if (b.validatedAt == null) return -1;
+        return b.validatedAt!.compareTo(a.validatedAt!);
+      });
+
+      return docs.take(limit).toList();
     });
   }
 
@@ -219,12 +260,23 @@ class FirebaseService {
     return _db
         .collection('words')
         .where('contributorId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs
+          final docs = snapshot.docs
               .map((doc) => DictionaryEntry.fromFirestore(doc.data(), doc.id))
               .toList();
+
+          // Sort client-side to avoid the need for a composite index
+          docs.sort((a, b) {
+            final t1 = a.validatedAt;
+            // Note: Since DictionaryEntry might not have createdAt, we use validatedAt or a fallback
+            if (t1 == null) return 1;
+            final t2 = b.validatedAt;
+            if (t2 == null) return -1;
+            return t2.compareTo(t1);
+          });
+
+          return docs;
         });
   }
 
@@ -232,13 +284,23 @@ class FirebaseService {
     return _db
         .collection('voice_submissions')
         .where('contributorId', isEqualTo: userId)
-        .orderBy('submittedAt', descending: true)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs
+          final docs = snapshot.docs
               .map((doc) => VoiceSubmission.fromFirestore(doc.data(), doc.id))
               .toList();
-        });
+
+          // Sort client-side to avoid the need for a composite index
+          docs.sort((a, b) {
+            final t1 = a.submittedAt;
+            final t2 = b.submittedAt;
+            if (t1 == null) return 1;
+            if (t2 == null) return -1;
+            return t2.compareTo(t1);
+          });
+
+          return docs;
+    });
   }
 
   Stream<List<Artifact>> getUserArtifacts(String userId) {
@@ -619,11 +681,11 @@ class FirebaseService {
   }
 
   // Community Recording Operations
-  Future<void> addRecording(
+  Future<DocumentReference> addRecording(
     String municipalityId,
     Map<String, dynamic> recordingData,
   ) async {
-    await _db
+    return await _db
         .collection('municipalities')
         .doc(municipalityId)
         .collection('recordings')
@@ -644,12 +706,31 @@ class FirebaseService {
         .collection('municipalities')
         .doc(municipalityId)
         .collection('recordings')
-        .orderBy('timestamp', descending: true)
+        .where('status', isEqualTo: 'approved')
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs
+          final docs = snapshot.docs
               .map((doc) => {'id': doc.id, ...doc.data()})
               .toList();
+
+          // Sort client-side to avoid the need for a composite index
+          docs.sort((a, b) {
+            DateTime? parseTime(dynamic t) {
+              if (t is Timestamp) return t.toDate();
+              if (t is String) return DateTime.tryParse(t);
+              return null;
+            }
+
+            final t1 = parseTime(a['timestamp']);
+            final t2 = parseTime(b['timestamp']);
+
+            if (t1 == null && t2 == null) return 0;
+            if (t1 == null) return 1;
+            if (t2 == null) return -1;
+            return t2.compareTo(t1);
+          });
+
+          return docs;
         });
   }
 
@@ -813,10 +894,11 @@ class FirebaseService {
     await _db.collection('users').doc(userId).update(data);
   }
 
-  Future<void> createInvitation(String email, String role) async {
+  Future<void> createInvitation(String email, String role, {String? indigenousGroup}) async {
     await _db.collection('invitations').add({
       'email': email,
       'role': role,
+      'indigenousGroup': indigenousGroup,
       'status': 'pending',
       'createdAt': FieldValue.serverTimestamp(),
     });
@@ -950,7 +1032,7 @@ class FirebaseService {
   Stream<Map<String, List<int>>> getPlatformActivityStats() {
     return Rx.combineLatest2(
       _db.collection('users').orderBy('createdAt').snapshots(),
-      _db.collection('words').orderBy('timestamp').snapshots(),
+      _db.collection('words').orderBy('createdAt').snapshots(),
       (userSnap, wordSnap) {
         final now = DateTime.now();
         final last7Days = List.generate(7, (i) => now.subtract(Duration(days: 6 - i)));
@@ -972,12 +1054,12 @@ class FirebaseService {
         }
 
         for (var doc in wordSnap.docs) {
-          final timestamp = (doc.data()['timestamp'] as Timestamp?)?.toDate();
-          if (timestamp != null) {
+          final createdAt = (doc.data()['createdAt'] as Timestamp?)?.toDate();
+          if (createdAt != null) {
             for (int i = 0; i < 7; i++) {
-              if (timestamp.year == last7Days[i].year &&
-                  timestamp.month == last7Days[i].month &&
-                  timestamp.day == last7Days[i].day) {
+              if (createdAt.year == last7Days[i].year &&
+                  createdAt.month == last7Days[i].month &&
+                  createdAt.day == last7Days[i].day) {
                 contributions[i]++;
               }
             }
@@ -1025,29 +1107,36 @@ class FirebaseService {
 
   // Leaderboard Operations
   Stream<List<Map<String, dynamic>>> getLeaderboardLearners() {
+    // Fetch all or high-XP users and sort/filter client-side
     return _db
         .collection('users')
-        .where('role', isEqualTo: 'learner')
-        .orderBy('xp', descending: true)
-        .limit(20)
+        .limit(100)
         .snapshots()
-        .map(
-          (snap) =>
-              snap.docs.map((doc) => {'uid': doc.id, ...doc.data()}).toList(),
-        );
+        .map((snap) {
+      final list = snap.docs
+          .map((doc) => {'uid': doc.id, ...doc.data()})
+          .where((u) => u['role'] == 'learner')
+          .toList();
+
+      list.sort((a, b) => (b['xp'] ?? 0).compareTo(a['xp'] ?? 0));
+      return list.take(20).toList();
+    });
   }
 
   Stream<List<Map<String, dynamic>>> getLeaderboardContributors() {
     return _db
         .collection('users')
-        .where('role', isEqualTo: 'contributor')
-        .orderBy('wordCount', descending: true)
-        .limit(20)
+        .limit(100)
         .snapshots()
-        .map(
-          (snap) =>
-              snap.docs.map((doc) => {'uid': doc.id, ...doc.data()}).toList(),
-        );
+        .map((snap) {
+      final list = snap.docs
+          .map((doc) => {'uid': doc.id, ...doc.data()})
+          .where((u) => u['role'] == 'contributor')
+          .toList();
+
+      list.sort((a, b) => (b['wordCount'] ?? 0).compareTo(a['wordCount'] ?? 0));
+      return list.take(20).toList();
+    });
   }
 
   // Learning Hub Operations
@@ -1140,21 +1229,20 @@ class FirebaseService {
   }
 
   Stream<List<Lesson>> getPendingLessons({String? dialect}) {
-    Query query = _db
+    return _db
         .collection('lessons')
-        .where('status', isEqualTo: 'PENDING_REVIEW');
-    if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
-      query = query.where('language', isEqualTo: dialect);
-    }
-    return query.snapshots().map((snapshot) {
-      return snapshot.docs
-          .map(
-            (doc) => Lesson.fromFirestore(
-              doc.data() as Map<String, dynamic>,
-              doc.id,
-            ),
-          )
+        .where('status', isEqualTo: 'PENDING_REVIEW')
+        .snapshots()
+        .map((snapshot) {
+      var list = snapshot.docs
+          .map((doc) =>
+              Lesson.fromFirestore(doc.data() as Map<String, dynamic>, doc.id))
           .toList();
+
+      if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
+        list = list.where((l) => l.language == dialect).toList();
+      }
+      return list;
     });
   }
 
@@ -1457,6 +1545,27 @@ class FirebaseService {
 
   Future<void> updateAppConfig(Map<String, dynamic> data) async {
     await _db.collection('config').doc('app').update(data);
+  }
+
+  Future<void> completeScenario(String userId, String scenarioId, int xpReward) async {
+    final userRef = _db.collection('users').doc(userId);
+    final progressRef = _db
+        .collection('users')
+        .doc(userId)
+        .collection('progress')
+        .doc(scenarioId);
+
+    await _db.runTransaction((transaction) async {
+      transaction.set(progressRef, {
+        'completed': true,
+        'lastCompleted': FieldValue.serverTimestamp(),
+        'bestScore': 100, // Scenarios are pass/fail for now
+      }, SetOptions(merge: true));
+
+      transaction.update(userRef, {
+        'xp': FieldValue.increment(xpReward),
+      });
+    });
   }
 
   Future<Map<String, dynamic>> completeLesson(
@@ -1842,7 +1951,8 @@ class FirebaseService {
             if (currentShields > 0) {
               debugPrint("Streak: Saved by shield for $userId. Gaps: $difference days.");
               updates['streakShields'] = FieldValue.increment(-1);
-              // Streak preserved
+              updates['streak'] = FieldValue.increment(1);
+              // Streak preserved and incremented
             } else {
               debugPrint("Streak: Broken for $userId. Resetting to 1. Gaps: $difference days.");
               updates['streak'] = 1;
@@ -1867,11 +1977,16 @@ class FirebaseService {
   }
 
   Stream<int> getPendingWordsCount({String? dialect}) {
-    Query query = _db.collection('words').where('status', isEqualTo: 'pending');
-    if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
-      query = query.where('dialect', isEqualTo: dialect);
-    }
-    return query.snapshots().map((snap) => snap.size);
+    return _db
+        .collection('words')
+        .where('status', isEqualTo: 'pending')
+        .snapshots()
+        .map((snap) {
+      if (dialect == null || dialect == 'All' || dialect.isEmpty) {
+        return snap.size;
+      }
+      return snap.docs.where((doc) => doc.data()['dialect'] == dialect).length;
+    });
   }
 
   Stream<int> getTotalAudioClipsCount() {
@@ -2108,23 +2223,17 @@ class FirebaseService {
 
   /// Fetches items that require urgent attention (older than 48 hours or priority).
   Stream<List<ValidationItem>> getUrgentQueueItems({String? dialect}) {
-    Query wordsQuery =
-        _db.collection('words').where('status', isEqualTo: 'pending');
-    Query voicesQuery = _db
-        .collection('voice_submissions')
-        .where('status', isEqualTo: 'pending');
-
-    if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
-      wordsQuery = wordsQuery.where('dialect', isEqualTo: dialect);
-      voicesQuery = voicesQuery.where('dialect', isEqualTo: dialect);
-    }
-
-    final wordsStream = wordsQuery
-        .limit(10)
+    // Only equality on status - handles simple indexing
+    final wordsStream = _db
+        .collection('words')
+        .where('status', isEqualTo: 'pending')
+        .limit(20)
         .snapshots();
 
-    final voicesStream = voicesQuery
-        .limit(10)
+    final voicesStream = _db
+        .collection('voice_submissions')
+        .where('status', isEqualTo: 'pending')
+        .limit(20)
         .snapshots();
 
     return Rx.combineLatest2(wordsStream, voicesStream, (wordSnap, voiceSnap) {
@@ -2132,6 +2241,11 @@ class FirebaseService {
 
       for (var doc in wordSnap.docs) {
         final data = doc.data() as Map<String, dynamic>;
+        // Filter dialect client-side
+        if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
+          if (data['dialect'] != dialect) continue;
+        }
+
         items.add(
           ValidationItem(
             id: doc.id,
@@ -2150,6 +2264,11 @@ class FirebaseService {
 
       for (var doc in voiceSnap.docs) {
         final data = doc.data() as Map<String, dynamic>;
+        // Filter dialect client-side
+        if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
+          if (data['dialect'] != dialect) continue;
+        }
+
         items.add(
           ValidationItem(
             id: doc.id,
@@ -2185,33 +2304,27 @@ class FirebaseService {
     int limit = 50,
     String? dialect,
   }) {
-    Query query = _db
+    // Status only filter
+    return _db
         .collection('voice_submissions')
-        .where('status', isEqualTo: 'pending');
-
-    if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
-      query = query.where('dialect', isEqualTo: dialect);
-    }
-
-    return query
-        .limit(limit)
+        .where('status', isEqualTo: 'pending')
         .snapshots()
         .map((snapshot) {
-      final list = snapshot.docs
-          .map(
-            (doc) => VoiceSubmission.fromFirestore(
-              doc.data() as Map<String, dynamic>,
-              doc.id,
-            ),
-          )
+      var list = snapshot.docs
+          .map((doc) => VoiceSubmission.fromFirestore(
+              doc.data() as Map<String, dynamic>, doc.id))
           .toList();
-      // Client-side sort to avoid index requirements
+
+      if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
+        list = list.where((v) => v.dialect == dialect).toList();
+      }
+
       list.sort((a, b) {
         final aTime = a.submittedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
         final bTime = b.submittedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
         return bTime.compareTo(aTime);
       });
-      return list;
+      return list.take(limit).toList();
     });
   }
 
@@ -2261,6 +2374,35 @@ class FirebaseService {
         'validatorRole': validatorRole,
         'validatedAt': FieldValue.serverTimestamp(),
       });
+
+      // Update the actual recording in the municipality sub-collection
+      String? municipalityId = data['municipalityId'];
+      String? recordingId = data['recordingId'];
+
+      // Fallback: If IDs are missing (legacy data), try to find by municipality name
+      if (municipalityId == null && data['municipality'] != null) {
+        municipalityId = data['municipality'].toString().toLowerCase().replaceAll(' ', '_');
+      }
+
+      if (municipalityId != null) {
+        final recordingsRef = _db
+            .collection('municipalities')
+            .doc(municipalityId)
+            .collection('recordings');
+
+        if (recordingId != null) {
+          transaction.update(recordingsRef.doc(recordingId), {'status': 'approved'});
+        } else {
+          // Extreme fallback: if we don't have recordingId, find the one matching this audioUrl
+          final audioUrl = data['audioUrl'];
+          if (audioUrl != null) {
+             final snapshot = await recordingsRef.where('audioUrl', isEqualTo: audioUrl).get();
+             for (var doc in snapshot.docs) {
+               transaction.update(doc.reference, {'status': 'approved'});
+             }
+          }
+        }
+      }
 
       final contributorId = data['contributorId'];
 
@@ -2378,23 +2520,30 @@ class FirebaseService {
 
   /// Count of pending voice submissions.
   Stream<int> getPendingVoiceSubmissionsCount({String? dialect}) {
-    Query query = _db
+    return _db
         .collection('voice_submissions')
-        .where('status', isEqualTo: 'pending');
-    if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
-      query = query.where('dialect', isEqualTo: dialect);
-    }
-    return query.snapshots().map((snap) => snap.size);
+        .where('status', isEqualTo: 'pending')
+        .snapshots()
+        .map((snap) {
+      if (dialect == null || dialect == 'All' || dialect.isEmpty) {
+        return snap.size;
+      }
+      return snap.docs.where((doc) => doc.data()['dialect'] == dialect).length;
+    });
   }
 
   /// Count of pending lessons.
   Stream<int> getPendingLessonsCount({String? dialect}) {
-    Query query =
-        _db.collection('lessons').where('status', isEqualTo: 'PENDING_REVIEW');
-    if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
-      query = query.where('language', isEqualTo: dialect);
-    }
-    return query.snapshots().map((snap) => snap.size);
+    return _db
+        .collection('lessons')
+        .where('status', isEqualTo: 'PENDING_REVIEW')
+        .snapshots()
+        .map((snap) {
+      if (dialect == null || dialect == 'All' || dialect.isEmpty) {
+        return snap.size;
+      }
+      return snap.docs.where((doc) => doc.data()['language'] == dialect).length;
+    });
   }
 
   // ── Community Feed Operations ──────────────────────────────────────────
@@ -2473,6 +2622,15 @@ final dictionaryStreamProvider = StreamProvider<List<DictionaryEntry>>((ref) {
 final pendingDictionaryStreamProvider =
     StreamProvider.family<List<DictionaryEntry>, ValidatorQuery>((ref, query) {
       return ref.watch(firebaseServiceProvider).getPendingDictionaryWords(
+            limit: query.limit,
+            search: query.search,
+            dialect: query.dialect,
+          );
+    });
+
+final globalDictionaryStreamProvider =
+    StreamProvider.family<List<DictionaryEntry>, ValidatorQuery>((ref, query) {
+      return ref.watch(firebaseServiceProvider).getGlobalDictionaryWords(
             limit: query.limit,
             search: query.search,
             dialect: query.dialect,

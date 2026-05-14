@@ -3,6 +3,7 @@ class AdminUser {
   String name;
   String email;
   String role; // 'admin', 'educator', 'validator', 'contributor', 'learner'
+  String? indigenousGroup;
   int xp;
   String status; // 'active', 'suspended'
   String? suspensionReason;
@@ -15,6 +16,7 @@ class AdminUser {
     required this.name,
     required this.email,
     required this.role,
+    this.indigenousGroup,
     this.xp = 0,
     this.status = 'active',
     this.suspensionReason,
@@ -30,6 +32,7 @@ class AdminUser {
       name: data['username'] ?? data['name'] ?? 'Unknown',
       email: data['email'] ?? '',
       role: data['role'] ?? 'learner',
+      indigenousGroup: data['indigenousGroup'],
       xp: data['xp'] ?? 0,
       status: data['status'] ?? 'active',
       suspensionReason: data['suspensionReason'],

@@ -33,90 +33,96 @@ class _AdminMapArchitectScreenState extends ConsumerState<AdminMapArchitectScree
   void _showEditDialog([LatLng? location, GeoRecording? existing]) {
     final nameController = TextEditingController(text: existing?.title ?? '');
     final provinceController = TextEditingController(text: existing?.province ?? 'Davao Region');
-    RecordingLanguage selectedLang = existing?.language ?? RecordingLanguage.mansaka;
+    String selectedDialect = existing?.dialect ?? 'Lumad';
     final lat = location?.latitude ?? existing?.location.latitude ?? 0.0;
     final lng = location?.longitude ?? existing?.location.longitude ?? 0.0;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: AppColors.forest900,
-          title: Text(
-            existing == null ? 'Add Cultural Site' : 'Edit Cultural Site',
-            style: AppTypography.h3.copyWith(color: AppColors.gold500),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: _inputDecoration('Site/Municipality Name'),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: provinceController,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: _inputDecoration('Province'),
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<RecordingLanguage>(
-                  initialValue: selectedLang,
-                  dropdownColor: AppColors.forest800,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: _inputDecoration('Primary Dialect'),
-                  items: RecordingLanguage.values.map((lang) {
-                    return DropdownMenuItem(
-                      value: lang,
-                      child: Text(lang.name.toUpperCase()),
-                    );
-                  }).toList(),
-                  onChanged: (val) => setDialogState(() => selectedLang = val!),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  "Coordinates: ${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}",
-                  style: AppTypography.label.copyWith(color: Colors.white70),
-                ),
-              ],
+        builder: (context, setDialogState) {
+          final dialectsAsync = ref.watch(dialectsProvider);
+          final dialects = dialectsAsync.value?.where((d) => d != "All").toList() ??
+                           ['Mandaya', 'Mansaka', 'Lumad', 'Manobo'];
+
+          return AlertDialog(
+            backgroundColor: AppColors.forest900,
+            title: Text(
+              existing == null ? 'Add Cultural Site' : 'Edit Cultural Site',
+              style: AppTypography.h3.copyWith(color: AppColors.gold500),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('CANCEL', style: TextStyle(color: Colors.white60)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _inputDecoration('Site/Municipality Name'),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: provinceController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _inputDecoration('Province'),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: dialects.contains(selectedDialect) ? selectedDialect : dialects.first,
+                    dropdownColor: AppColors.forest800,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _inputDecoration('Primary Dialect'),
+                    items: dialects.toSet().map((lang) {
+                      return DropdownMenuItem(
+                        value: lang,
+                        child: Text(lang.toUpperCase()),
+                      );
+                    }).toList(),
+                    onChanged: (val) => setDialogState(() => selectedDialect = val!),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Coordinates: ${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}",
+                    style: AppTypography.label.copyWith(color: Colors.white70),
+                  ),
+                ],
+              ),
             ),
-            if (existing != null)
+            actions: [
               TextButton(
-                onPressed: () => _deleteMunicipality(existing.id),
-                child: const Text('DELETE', style: TextStyle(color: Colors.redAccent)),
+                onPressed: () => Navigator.pop(context),
+                child: const Text('CANCEL', style: TextStyle(color: Colors.white60)),
               ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500),
-              onPressed: () {
-                final data = {
-                  'name': nameController.text,
-                  'province': provinceController.text,
-                  'dialect': selectedLang.name,
-                  'coords': GeoPoint(lat, lng),
-                  'status': 'validated',
-                };
-                if (existing == null) {
-                  _addMunicipality(data);
-                } else {
-                  _updateMunicipality(existing.id, data);
-                }
-                Navigator.pop(context);
-              },
-              child: Text(
-                existing == null ? 'CREATE' : 'SAVE',
-                style: const TextStyle(color: AppColors.forest900, fontWeight: FontWeight.bold),
+              if (existing != null)
+                TextButton(
+                  onPressed: () => _deleteMunicipality(existing.id),
+                  child: const Text('DELETE', style: TextStyle(color: Colors.redAccent)),
+                ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500),
+                onPressed: () {
+                  final data = {
+                    'name': nameController.text,
+                    'province': provinceController.text,
+                    'dialect': selectedDialect,
+                    'coords': GeoPoint(lat, lng),
+                    'status': 'validated',
+                  };
+                  if (existing == null) {
+                    _addMunicipality(data);
+                  } else {
+                    _updateMunicipality(existing.id, data);
+                  }
+                  Navigator.pop(context);
+                },
+                child: Text(
+                  existing == null ? 'CREATE' : 'SAVE',
+                  style: const TextStyle(color: AppColors.forest900, fontWeight: FontWeight.bold),
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          );
+        },
       ),
     );
   }

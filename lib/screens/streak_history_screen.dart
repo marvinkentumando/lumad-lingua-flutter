@@ -9,6 +9,7 @@ import '../providers/student_provider.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/topo_background.dart';
+import '../widgets/mist_crystal_store.dart';
 
 class StreakHistoryScreen extends ConsumerWidget {
   const StreakHistoryScreen({super.key});
@@ -33,7 +34,7 @@ class StreakHistoryScreen extends ConsumerWidget {
                   const SizedBox(height: 32),
                   _buildStreakHero(context, student),
                   const SizedBox(height: 32),
-                  _buildShieldStats(context, student),
+                  _buildShieldStats(context, ref, student),
                   const SizedBox(height: 32),
                   _buildMonthlyCalendar(context, student),
                   const SizedBox(height: 32),
@@ -143,7 +144,7 @@ class StreakHistoryScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildShieldStats(BuildContext context, StudentState student) {
+  Widget _buildShieldStats(BuildContext context, WidgetRef ref, StudentState student) {
     return BrandCard(
       theme: BrandCardTheme.vibrant,
       padding: const EdgeInsets.all(20),
@@ -175,9 +176,7 @@ class StreakHistoryScreen extends ConsumerWidget {
           ),
           BrandButton(
             text: 'GET MORE',
-            onTap: () {
-              // Navigate to shop
-            },
+            onTap: () => showMistCrystalStore(context, ref),
             type: BrandButtonType.small,
           ),
         ],

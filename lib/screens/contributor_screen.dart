@@ -66,6 +66,18 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
   ];
 
   final Map<String, List<String>> _regionData = {
+    'Davao de Oro': [
+      'Nabunturan',
+      'Compostela',
+      'Laak',
+      'Mabini',
+      'Maco',
+      'Maragusan',
+      'Mawab',
+      'Monkayo',
+      'Montevista',
+      'Pantukan',
+    ],
     'Davao del Sur': [
       'Davao City',
       'Digos City',
@@ -87,18 +99,6 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
       'New Corella',
       'Santo Tomas',
       'Talaingod',
-    ],
-    'Davao de Oro': [
-      'Nabunturan',
-      'Compostela',
-      'Laak',
-      'Mabini',
-      'Maco',
-      'Maragusan',
-      'Mawab',
-      'Monkayo',
-      'Montevista',
-      'Pantukan',
     ],
     'Davao Oriental': [
       'Mati City',
@@ -470,21 +470,44 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
           data: (contributions) => voicesAsync.when(
             data: (voices) {
               final List<dynamic> combined = [
-                ...contributions.map((e) => {'type': 'word', 'data': e, 'time': e.validatedAt ?? DateTime.fromMillisecondsSinceEpoch(0)}),
-                ...voices.map((e) => {'type': 'voice', 'data': e, 'time': e.submittedAt ?? DateTime.fromMillisecondsSinceEpoch(0)}),
+                ...contributions.map((e) => {
+                      'type': 'word',
+                      'data': e,
+                      'status': e.status.name.toLowerCase(),
+                      'time': e.validatedAt ?? DateTime.fromMillisecondsSinceEpoch(0),
+                    }),
+                ...voices.map((e) => {
+                      'type': 'voice',
+                      'data': e,
+                      'status': e.status.name.toLowerCase(),
+                      'time': e.submittedAt ?? DateTime.fromMillisecondsSinceEpoch(0),
+                    }),
               ];
 
-              // Sort by time descending
-              combined.sort((a, b) => b['time'].compareTo(a['time']));
+              // Filter based on selected stat card
+              final filtered = combined.where((item) {
+                if (_filterStatus == 'all') return true;
+                if (_filterStatus == 'approved') return item['status'] == 'approved';
+                if (_filterStatus == 'pending') return item['status'] == 'pending';
+                if (_filterStatus == 'flagged') {
+                  return item['status'] == 'flagged' || item['status'] == 'rejected';
+                }
+                return true;
+              }).toList();
 
-              final displayItems = combined.take(5).toList();
+              // Sort by time descending
+              filtered.sort((a, b) => b['time'].compareTo(a['time']));
+
+              final displayItems = filtered.take(10).toList();
 
               if (displayItems.isEmpty) {
                 return Center(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 40),
                     child: Text(
-                      'No recent legacy found.',
+                      _filterStatus == 'all'
+                          ? 'No recent legacy found.'
+                          : 'No ${_filterStatus.toUpperCase()} items found.',
                       style: AppTypography.body.copyWith(color: Colors.white24),
                     ),
                   ),
@@ -1195,26 +1218,43 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
               ),
               const SizedBox(height: 32),
               contributionsAsync.when(
-                data: (contributions) {
-                  final approvedCount = contributions
-                      .where((c) => c.status == ValidationStatus.approved)
-                      .length;
-                  final pendingCount = contributions
-                      .where((c) => c.status == ValidationStatus.pending)
-                      .length;
-                  final flaggedCount = contributions
-                      .where(
-                        (c) =>
+                data: (contributions) => voicesAsync.when(
+                  data: (voices) {
+                    // Count words
+                    final approvedWords = contributions
+                        .where((c) => c.status == ValidationStatus.approved)
+                        .length;
+                    final pendingWords = contributions
+                        .where((c) => c.status == ValidationStatus.pending)
+                        .length;
+                    final flaggedWords = contributions
+                        .where((c) =>
                             c.status == ValidationStatus.flagged ||
-                            c.status == ValidationStatus.rejected,
-                      )
-                      .length;
-                  return _buildInteractiveStats(
-                    approvedCount,
-                    pendingCount,
-                    flaggedCount,
-                  );
-                },
+                            c.status == ValidationStatus.rejected)
+                        .length;
+
+                    // Count voices
+                    final approvedVoices = voices
+                        .where((v) => v.status == VoiceStatus.approved)
+                        .length;
+                    final pendingVoices = voices
+                        .where((v) => v.status == VoiceStatus.pending)
+                        .length;
+                    final flaggedVoices = voices
+                        .where((v) =>
+                            v.status == VoiceStatus.flagged ||
+                            v.status == VoiceStatus.rejected)
+                        .length;
+
+                    return _buildInteractiveStats(
+                      approvedWords + approvedVoices,
+                      pendingWords + pendingVoices,
+                      flaggedWords + flaggedVoices,
+                    );
+                  },
+                  loading: () => _buildInteractiveStats(0, 0, 0),
+                  error: (_, __) => _buildInteractiveStats(0, 0, 0),
+                ),
                 loading: () => _buildInteractiveStats(0, 0, 0),
                 error: (_, __) => _buildInteractiveStats(0, 0, 0),
               ),
@@ -1577,12 +1617,14 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
         'municipality': _selectedMunicipality,
         'district': _selectedDistrict,
         'barangay': _barangayController.text,
+        'dialect': _selectedLanguage ?? 'Lumad',
         'audioUrl': audioUrl,
         'timestamp': DateTime.now().toIso8601String(),
         'contributorId': user.uid,
+        'status': 'pending', // Added for map filtering
       };
 
-      await ref.read(firebaseServiceProvider).addRecording(municipalityId, recordingData);
+      final recordingDoc = await ref.read(firebaseServiceProvider).addRecording(municipalityId, recordingData);
 
       // Also add to voice_submissions for validation and tracking
       await ref.read(firebaseServiceProvider).addVoiceSubmission(
@@ -1597,6 +1639,8 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
           province: _selectedProvince,
           municipality: _selectedMunicipality,
           status: VoiceStatus.pending,
+          municipalityId: municipalityId, // Add reference for approval logic
+          recordingId: recordingDoc.id, // Add reference for approval logic
         ),
       );
 

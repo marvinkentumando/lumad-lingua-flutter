@@ -11,6 +11,7 @@ import '../widgets/wotd_widget.dart';
 import '../services/firebase_service.dart';
 import '../widgets/ambient_topo_background.dart';
 import '../widgets/preview_audio_player.dart';
+import '../services/haptic_service.dart';
 
 class ValidatorHomeScreen extends ConsumerStatefulWidget {
   const ValidatorHomeScreen({super.key});
@@ -22,6 +23,7 @@ class ValidatorHomeScreen extends ConsumerStatefulWidget {
 
 class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
   bool get isDark => Theme.of(context).brightness == Brightness.dark;
+  final Set<String> _skippedItemIds = {};
 
   @override
   Widget build(BuildContext context) {
@@ -29,23 +31,7 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
     final profile = profileAsync.value;
     final displayName = profile?['username'] ?? 'Elder Validator';
     final currentRank = profile?['rank'] ?? 'Guardian';
-    var userDialect = profile?['indigenousGroup'];
-
-    // Auto-assign current validator to Mansaka/Mandaya if not set
-    if (profile != null && userDialect == null) {
-      final email = profile['email'] ?? '';
-      final assignedDialect = email == 'validator2@gmail.com' ? 'Mandaya' : 'Mansaka';
-      userDialect = assignedDialect;
-      final uid = profile['uid'] ?? profile['id'];
-      if (uid != null) {
-        Future.microtask(() {
-          ref.read(firebaseServiceProvider).updateUserProfile(uid, {
-            'indigenousGroup': assignedDialect,
-            if (email == 'validator2@gmail.com') 'role': 'validator',
-          });
-        });
-      }
-    }
+    final userDialect = profile?['indigenousGroup'];
 
     // Ensure providers use a non-null dialect for counts
     final activeDialect = userDialect ?? 'Mansaka';
@@ -71,6 +57,9 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
         child: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
+            setState(() {
+              _skippedItemIds.clear();
+            });
             ref.invalidate(urgentQueueProvider(activeDialect));
             ref.invalidate(pendingWordsCountProvider(activeDialect));
             ref.invalidate(pendingVoiceSubmissionsCountProvider(activeDialect));
@@ -112,7 +101,11 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
                     .watch(urgentQueueProvider(activeDialect))
                     .when(
                       data: (items) {
-                        if (items.isEmpty) {
+                        final filteredItems = items
+                            .where((item) => !_skippedItemIds.contains(item.id))
+                            .toList();
+
+                        if (filteredItems.isEmpty) {
                           return Center(
                             child: Padding(
                               padding: const EdgeInsets.symmetric(vertical: 40),
@@ -134,13 +127,42 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
                                           : AppColors.forest300,
                                     ),
                                   ),
+                                  const SizedBox(height: 24),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      OutlinedButton.icon(
+                                        onPressed: () => context.push('/validator/entries?history=true'),
+                                        icon: const Icon(Icons.history_rounded, size: 18),
+                                        label: const Text("Check History"),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: AppColors.gold500,
+                                          side: const BorderSide(color: AppColors.gold500),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      TextButton(
+                                        onPressed: () => context.push('/validator/entries'),
+                                        child: Text(
+                                          "Browse All",
+                                          style: TextStyle(
+                                            color: isDark ? Colors.white70 : AppColors.forest500,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ],
                               ),
                             ),
                           );
                         }
                         return Column(
-                          children: items
+                          children: filteredItems
                               .map((item) => _buildUrgentCard(item))
                               .toList(),
                         );
@@ -786,6 +808,30 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
                 ),
               ),
             const SizedBox(width: 8),
+            IconButton(
+              onPressed: () {
+                HapticService.medium();
+                setState(() {
+                  _skippedItemIds.add(item.id);
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text("Item snoozed for this session"),
+                    action: SnackBarAction(
+                      label: "UNDO",
+                      onPressed: () {
+                        setState(() {
+                          _skippedItemIds.remove(item.id);
+                        });
+                      },
+                    ),
+                    backgroundColor: AppColors.forest800,
+                  ),
+                );
+              },
+              icon: const Icon(Icons.snooze_rounded, color: Colors.white24, size: 20),
+              tooltip: 'Snooze',
+            ),
             const Icon(Icons.chevron_right_rounded, color: Colors.white24),
           ],
         ),

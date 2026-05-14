@@ -29,10 +29,19 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
   final MapController _mapController = MapController();
   GeoRecording? _selectedRecording;
   String? _playingAudioId;
-  final Set<RecordingLanguage> _selectedLanguages = {};
+  final Set<String> _selectedLanguages = {};
+  String? _selectedProvince;
   String _searchQuery = '';
   bool _isSatellite = true;
   LatLng? _userLocation;
+
+  final List<String> _provinces = [
+    'Davao de Oro',
+    'Davao del Sur',
+    'Davao del Norte',
+    'Davao Oriental',
+    'Davao Occidental',
+  ];
 
   final AudioPlayer _audioPlayer = AudioPlayer();
   Duration _duration = Duration.zero;
@@ -79,18 +88,36 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
               .when(
                 data: (municipalities) {
                   final filtered = municipalities.where((rec) {
-                    final matchesSearch =
-                        _searchQuery.isEmpty ||
-                        rec.title.toLowerCase().contains(
-                          _searchQuery.toLowerCase(),
-                        ) ||
-                        rec.province.toLowerCase().contains(
-                          _searchQuery.toLowerCase(),
-                        ) ||
-                        rec.language.name.toLowerCase().contains(
-                          _searchQuery.toLowerCase(),
+                    final query = _searchQuery.toLowerCase().trim();
+
+                    // Province check (Priority: Search takes precedence for finding across provinces)
+                    final currentProv = _selectedProvince ?? '';
+                    final matchesProvince = currentProv.isEmpty ||
+                        rec.province.toLowerCase() == currentProv.toLowerCase();
+
+                    // If municipality searched specifically, ignore province filter to find it
+                    if (query.isNotEmpty && rec.title.toLowerCase() == query) {
+                       return true;
+                    }
+
+                    // Search Query Filter
+                    final matchesSearch = query.isEmpty ||
+                        rec.title.toLowerCase().contains(query) ||
+                        rec.province.toLowerCase().contains(query) ||
+                        rec.dialect.toLowerCase().contains(query);
+
+                    // Dialect Chip Filter
+                    final matchesDialect = _selectedLanguages.isEmpty ||
+                        _selectedLanguages.any((lang) =>
+                          rec.dialect.toLowerCase() == lang.toLowerCase()
                         );
-                    return matchesSearch;
+
+                    // If nothing selected and no search, we show nothing (to avoid overwhelming)
+                    if (currentProv.isEmpty && query.isEmpty && _selectedLanguages.isEmpty) {
+                      return false;
+                    }
+
+                    return matchesProvince && matchesSearch && matchesDialect;
                   }).toList();
 
                   return Stack(
@@ -100,9 +127,14 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
                         _buildEmptyState(
                           "No municipalities found matching '$_searchQuery'",
                         ),
-                      if (filtered.isEmpty && _searchQuery.isEmpty)
+                      if (filtered.isEmpty && _searchQuery.isEmpty && _selectedProvince == null)
                         _buildEmptyState(
-                          "The archive is currently empty. Check back soon!",
+                          "Discover the voices of Mindanao. Select a province above to browse cultural sites, or search for a specific dialect or town.",
+                          isGuidance: true,
+                        ),
+                      if (filtered.isEmpty && _searchQuery.isEmpty && _selectedProvince != null)
+                        _buildEmptyState(
+                          "No approved recordings found in $_selectedProvince yet.",
                         ),
                     ],
                   );
@@ -112,7 +144,21 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
               ),
 
           // Top Search & Filter Bar
-          Positioned(top: 120, left: 20, right: 20, child: _buildSearchBar()),
+          Positioned(
+            top: 100,
+            left: 0,
+            right: 0,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: _buildSearchBar(),
+                ),
+                const SizedBox(height: 12),
+                _buildProvinceChips(),
+              ],
+            ),
+          ),
 
           // Floating Map Controls (Right Side)
           Positioned(
@@ -166,7 +212,8 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
                     playingAudioId: _playingAudioId,
                     duration: _duration,
                     position: _position,
-                    onTogglePlay: (audio) => _handlePlayback(audio),
+                    selectedDialects: _selectedLanguages,
+                    onTogglePlay: (audio) => _handlePlayback(audio as Map<String, dynamic>),
                     onSeek: (value) =>
                         _audioPlayer.seek(Duration(milliseconds: value.toInt())),
                     onClose: () => setState(() => _selectedRecording = null),
@@ -215,130 +262,100 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
             tileProvider: CachedTileProvider(),
           ),
 
-        MarkerClusterLayerWidget(
-          options: MarkerClusterLayerOptions(
-            maxClusterRadius: 45,
-            size: const Size(40, 40),
-            alignment: Alignment.center,
-            padding: const EdgeInsets.all(50),
-            maxZoom: 15,
-            markers: municipalities.map((rec) {
-              final isSelected = _selectedRecording?.id == rec.id;
-              return Marker(
-                point: rec.location,
-                width: 100,
-                height: 80,
-                child: GestureDetector(
-                  onTap: () {
-                    HapticFeedback.mediumImpact();
-                    setState(() => _selectedRecording = rec);
-                    _mapController.move(rec.location, 11.0);
-                  },
-                  child: Column(
-                    children: [
-                      Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          if (isSelected)
-                            Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: AppColors.gold500.withValues(alpha: 0.4),
-                                  ),
-                                )
-                                .animate(onPlay: (c) => c.repeat())
-                                .scale(
-                                  begin: const Offset(0.5, 0.5),
-                                  end: const Offset(1.5, 1.5),
-                                  duration: 1500.ms,
-                                )
-                                .fadeOut(duration: 1500.ms),
+        MarkerLayer(
+          markers: municipalities.map((rec) {
+            final isSelected = _selectedRecording?.id == rec.id;
+            return Marker(
+              point: rec.location,
+              width: 120,
+              height: 80,
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  setState(() => _selectedRecording = rec);
+                  _mapController.move(rec.location, 11.0);
+                },
+                child: Column(
+                  children: [
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        if (isSelected)
                           Container(
-                            width: isSelected ? 24 : 16,
-                            height: isSelected ? 24 : 16,
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? AppColors.gold500
-                                  : AppColors.forest700,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isSelected
-                                    ? Colors.white
-                                    : AppColors.gold500,
-                                width: 2,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: isSelected
-                                      ? AppColors.gold500.withValues(alpha: 0.6)
-                                      : Colors.black.withValues(alpha: 0.5),
-                                  blurRadius: isSelected ? 15 : 5,
-                                  spreadRadius: isSelected ? 2 : 0,
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppColors.gold500.withValues(alpha: 0.4),
                                 ),
-                              ],
+                              )
+                              .animate(onPlay: (c) => c.repeat())
+                              .scale(
+                                begin: const Offset(0.5, 0.5),
+                                end: const Offset(1.5, 1.5),
+                                duration: 1500.ms,
+                              )
+                              .fadeOut(duration: 1500.ms),
+                        Container(
+                          width: isSelected ? 24 : 16,
+                          height: isSelected ? 24 : 16,
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppColors.gold500
+                                : AppColors.forest700,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected
+                                  ? Colors.white
+                                  : AppColors.gold500,
+                              width: 2,
                             ),
-                            child: isSelected
-                                ? const Icon(
-                                    Icons.blur_circular_rounded,
-                                    color: Colors.white,
-                                    size: 14,
-                                  )
-                                : null,
+                            boxShadow: [
+                              BoxShadow(
+                                color: isSelected
+                                    ? AppColors.gold500.withValues(alpha: 0.6)
+                                    : Colors.black.withValues(alpha: 0.5),
+                                blurRadius: isSelected ? 15 : 5,
+                                spreadRadius: isSelected ? 2 : 0,
+                              ),
+                            ],
                           ),
-                        ],
+                          child: isSelected
+                              ? const Icon(
+                                  Icons.blur_circular_rounded,
+                                  color: Colors.white,
+                                  size: 14,
+                                )
+                              : null,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
                       ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.8),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          rec.title.toUpperCase(),
-                          style: AppTypography.label.copyWith(
-                            color: AppColors.gold500,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.5,
-                          ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(4),
+                        border: isSelected ? Border.all(color: AppColors.gold500, width: 1) : null,
+                      ),
+                      child: Text(
+                        rec.title.toUpperCase(),
+                        style: AppTypography.label.copyWith(
+                          color: isSelected ? Colors.white : AppColors.gold500,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-            builder: (context, markers) {
-              return Container(
-                decoration: BoxDecoration(
-                  color: AppColors.gold500,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.gold500.withValues(alpha: 0.3),
-                      blurRadius: 10,
                     ),
                   ],
                 ),
-                child: Center(
-                  child: Text(
-                    markers.length.toString(),
-                    style: AppTypography.label.copyWith(
-                      color: AppColors.forest900,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
+              ),
+            );
+          }).toList(),
         ),
 
         if (_userLocation != null)
@@ -357,6 +374,76 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
             ],
           ),
       ],
+    );
+  }
+
+  Widget _buildProvinceChips() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        children: _provinces.map((p) {
+          final isSelected = _selectedProvince == p;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                setState(() {
+                  _selectedProvince = p;
+                  _selectedRecording = null;
+                });
+
+                // Center map on the selected province
+                switch (p) {
+                  case 'Davao de Oro':
+                    _mapController.move(const LatLng(7.33, 126.11), 9.5);
+                    break;
+                  case 'Davao del Sur':
+                    _mapController.move(const LatLng(6.75, 125.35), 9.5);
+                    break;
+                  case 'Davao del Norte':
+                    _mapController.move(const LatLng(7.45, 125.81), 9.5);
+                    break;
+                  case 'Davao Oriental':
+                    _mapController.move(const LatLng(7.05, 126.45), 9.5);
+                    break;
+                  case 'Davao Occidental':
+                    _mapController.move(const LatLng(6.41, 125.61), 9.5);
+                    break;
+                }
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.gold500 : Colors.black.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isSelected ? AppColors.gold500 : Colors.white10,
+                  ),
+                  boxShadow: isSelected ? [
+                    BoxShadow(
+                      color: AppColors.gold500.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    )
+                  ] : [],
+                ),
+                child: Text(
+                  p.toUpperCase(),
+                  style: AppTypography.label.copyWith(
+                    color: isSelected ? Colors.black : Colors.white70,
+                    fontWeight: isSelected ? FontWeight.w900 : FontWeight.bold,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 
@@ -427,14 +514,33 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
   }
 
   Widget _buildSearchBar() {
+    final showFilter = _selectedProvince != null || _searchQuery.length > 1;
     return BrandSearchBar(
       hintText: 'Search municipalities or dialects...',
-      showFilter: true,
+      showFilter: showFilter,
       onFilterTap: _showFilterSheet,
       isMinimal: true,
       onChanged: (val) {
         setState(() {
           _searchQuery = val;
+
+          // Smart Province Switch: If user types an exact municipality name,
+          // find its province and switch the chip automatically.
+          if (val.length > 2) {
+             ref.read(mapMarkersStreamProvider).whenData((muniList) {
+               try {
+                 final match = muniList.firstWhere(
+                   (m) => m.title.toLowerCase().trim() == val.toLowerCase().trim()
+                 );
+                 if (_selectedProvince != match.province) {
+                    setState(() {
+                      _selectedProvince = match.province;
+                    });
+                    _mapController.move(match.location, 11.0);
+                 }
+               } catch (_) {}
+             });
+          }
         });
       },
     );
@@ -445,9 +551,16 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
+            final dialectsAsync = ref.watch(dialectsProvider);
+            final dialects = dialectsAsync.value
+                    ?.where((d) => d != "All")
+                    .toList() ??
+                ['Mandaya', 'Mansaka', 'Lumad', 'Manobo'];
+
             return Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
@@ -461,21 +574,70 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Filter by Dialect',
+                    'Filter Archive',
                     style: AppTypography.h2.copyWith(
                       color: isDark ? Colors.white : AppColors.forest900,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
+
+                  // Province Selector
+                  Text(
+                    'PROVINCE',
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.gold500,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        ChoiceChip(
+                          label: const Text('All Provinces'),
+                          selected: _selectedProvince == null,
+                          onSelected: (selected) {
+                            if (selected) {
+                              setSheetState(() => _selectedProvince = null);
+                              setState(() {});
+                            }
+                          },
+                        ),
+                        ..._provinces.map((p) => Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: ChoiceChip(
+                            label: Text(p),
+                            selected: _selectedProvince == p,
+                            onSelected: (selected) {
+                              if (selected) {
+                                setSheetState(() => _selectedProvince = p);
+                                setState(() {});
+                              }
+                            },
+                          ),
+                        )),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  Text(
+                    'DIALECTS',
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.gold500,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: RecordingLanguage.values.map((lang) {
+                    children: dialects.map((lang) {
                       final isSelected = _selectedLanguages.contains(lang);
-                      final langName =
-                          lang.name[0].toUpperCase() + lang.name.substring(1);
                       return ChoiceChip(
-                        label: Text(langName),
+                        label: Text(lang),
                         selected: isSelected,
                         selectedColor: AppColors.gold500,
                         backgroundColor: isDark
@@ -503,7 +665,7 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
                       );
                     }).toList(),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -522,6 +684,7 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
                 ],
               ),
             );
@@ -616,7 +779,7 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
     );
   }
 
-  Widget _buildEmptyState(String message) {
+  Widget _buildEmptyState(String message, {bool isGuidance = false}) {
     return Center(
       child: GlassBox(
         borderRadius: 24,
@@ -625,8 +788,8 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.location_off_rounded,
+              Icon(
+                isGuidance ? Icons.map_outlined : Icons.location_off_rounded,
                 color: AppColors.gold500,
                 size: 48,
               ),
@@ -639,12 +802,14 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
                   fontSize: 14,
                 ),
               ),
-              const SizedBox(height: 24),
-              BrandButton(
-                text: "Clear Search",
-                type: BrandButtonType.secondary,
-                onTap: () => setState(() => _searchQuery = ''),
-              ),
+              if (!isGuidance) ...[
+                const SizedBox(height: 24),
+                BrandButton(
+                  text: "Clear Search",
+                  type: BrandButtonType.secondary,
+                  onTap: () => setState(() => _searchQuery = ''),
+                ),
+              ],
             ],
           ),
         ),

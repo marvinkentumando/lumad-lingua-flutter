@@ -6,12 +6,13 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import 'recording_card.dart';
 
-class MunicipalityPanel extends ConsumerWidget {
+class MunicipalityPanel extends ConsumerStatefulWidget {
   final GeoRecording rec;
   final ScrollController scrollController;
   final String? playingAudioId;
   final Duration duration;
   final Duration position;
+  final Set<String> selectedDialects;
   final Function(Map<String, dynamic>) onTogglePlay;
   final Function(double) onSeek;
   final VoidCallback onClose;
@@ -24,6 +25,7 @@ class MunicipalityPanel extends ConsumerWidget {
     required this.playingAudioId,
     required this.duration,
     required this.position,
+    this.selectedDialects = const {},
     required this.onTogglePlay,
     required this.onSeek,
     required this.onClose,
@@ -31,7 +33,14 @@ class MunicipalityPanel extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MunicipalityPanel> createState() => _MunicipalityPanelState();
+}
+
+class _MunicipalityPanelState extends ConsumerState<MunicipalityPanel> {
+  String? _internalDialectFilter;
+
+  @override
+  Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
@@ -57,15 +66,14 @@ class MunicipalityPanel extends ConsumerWidget {
             width: 50,
             height: 4,
             decoration: BoxDecoration(
-              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1,
-              ),
+              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
           ),
 
           Expanded(
             child: ListView(
-              controller: scrollController,
+              controller: widget.scrollController,
               padding: const EdgeInsets.symmetric(horizontal: 30),
               children: [
                 Row(
@@ -107,7 +115,7 @@ class MunicipalityPanel extends ConsumerWidget {
                       ],
                     ),
                     GestureDetector(
-                      onTap: onClose,
+                      onTap: widget.onClose,
                       child: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
@@ -128,7 +136,7 @@ class MunicipalityPanel extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  rec.title,
+                  widget.rec.title,
                   style: AppTypography.h1ExtraBold.copyWith(
                     color: isDark ? Colors.white : AppColors.forest700,
                     fontSize: 32,
@@ -144,7 +152,7 @@ class MunicipalityPanel extends ConsumerWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      rec.province,
+                      widget.rec.province,
                       style: AppTypography.body.copyWith(
                         color: isDark ? Colors.white38 : AppColors.creamText2,
                         fontWeight: FontWeight.w600,
@@ -154,7 +162,7 @@ class MunicipalityPanel extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Explore the authentic voices and linguistic heritage of ${rec.title}, located in the province of ${rec.province}.',
+                  'Explore the authentic voices and linguistic heritage of ${widget.rec.title}, located in the province of ${widget.rec.province}.',
                   style: AppTypography.body.copyWith(
                     color: isDark ? Colors.white38 : AppColors.creamText2,
                     fontSize: 14,
@@ -163,11 +171,9 @@ class MunicipalityPanel extends ConsumerWidget {
                 ),
                 const SizedBox(height: 32),
 
-                const SizedBox(height: 16),
-
                 // Live Recordings Sub-collection
                 ref
-                    .watch(municipalityRecordingsProvider(rec.id))
+                    .watch(municipalityRecordingsProvider(widget.rec.id))
                     .when(
                       data: (recordings) {
                         if (recordings.isEmpty) {
@@ -185,7 +191,7 @@ class MunicipalityPanel extends ConsumerWidget {
                                   ),
                                   const SizedBox(height: 12),
                                   Text(
-                                    'No recordings yet for ${rec.title}',
+                                    'No recordings yet for ${widget.rec.title}',
                                     style: AppTypography.label.copyWith(
                                       color: isDark
                                           ? Colors.white24
@@ -197,24 +203,116 @@ class MunicipalityPanel extends ConsumerWidget {
                             ),
                           );
                         }
-                        return ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: recordings.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 16),
-                          itemBuilder: (context, index) {
-                            final recording = recordings[index];
-                            return RecordingCard(
-                              audio: recording,
-                              isPlaying: playingAudioId == recording['id'],
-                              duration: duration,
-                              position: position,
-                              onTogglePlay: () => onTogglePlay(recording),
-                              onSeek: onSeek,
-                              formatDuration: formatDuration,
-                            );
-                          },
+
+                        // Extract unique dialects available in this municipality
+                        final availableDialects = recordings
+                            .map((r) => r['dialect'] as String?)
+                            .where((d) => d != null)
+                            .toSet()
+                            .toList();
+
+                        // Categorize and filter by selected dialects
+                        final filteredRecordings = recordings.where((r) {
+                          // Check global filter from Map Screen
+                          if (widget.selectedDialects.isNotEmpty) {
+                            final dialect = (r['dialect'] as String?)?.toLowerCase();
+                            if (!widget.selectedDialects.any((s) => s.toLowerCase() == dialect)) {
+                              return false;
+                            }
+                          }
+
+                          // Check internal panel filter
+                          if (_internalDialectFilter != null) {
+                             final dialect = (r['dialect'] as String?)?.toLowerCase();
+                             if (dialect != _internalDialectFilter!.toLowerCase()) {
+                               return false;
+                             }
+                          }
+
+                          return true;
+                        }).toList();
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                             Text(
+                               'CATEGORIZED BY DIALECT',
+                               style: AppTypography.label.copyWith(
+                                 color: isDark ? Colors.white24 : AppColors.forest400,
+                                 fontSize: 10,
+                                 letterSpacing: 1.2,
+                               ),
+                             ),
+                             const SizedBox(height: 12),
+                             SingleChildScrollView(
+                               scrollDirection: Axis.horizontal,
+                               child: Row(
+                                 children: [
+                                   _buildFilterChip(
+                                     'ALL',
+                                     _internalDialectFilter == null,
+                                     () => setState(() => _internalDialectFilter = null),
+                                   ),
+                                   ...availableDialects.map((d) => Padding(
+                                     padding: const EdgeInsets.only(left: 8),
+                                     child: _buildFilterChip(
+                                       d!.toUpperCase(),
+                                       _internalDialectFilter == d,
+                                       () => setState(() => _internalDialectFilter = d),
+                                     ),
+                                   )),
+                                 ],
+                               ),
+                             ),
+                             const SizedBox(height: 24),
+
+                            if (filteredRecordings.isEmpty)
+                              Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 40),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Icons.filter_list_off_rounded,
+                                        color: isDark
+                                            ? Colors.white24
+                                            : Colors.black12,
+                                        size: 48,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'No recordings match your filter.',
+                                        style: AppTypography.label.copyWith(
+                                          color: isDark
+                                              ? Colors.white24
+                                              : Colors.black26,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            else
+                              ListView.separated(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: filteredRecordings.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 16),
+                                itemBuilder: (context, index) {
+                                  final recording = filteredRecordings[index];
+                                  return RecordingCard(
+                                    audio: recording,
+                                    isPlaying: widget.playingAudioId == recording['id'],
+                                    duration: widget.duration,
+                                    position: widget.position,
+                                    onTogglePlay: () => widget.onTogglePlay(recording),
+                                    onSeek: widget.onSeek,
+                                    formatDuration: widget.formatDuration,
+                                  );
+                                },
+                              ),
+                          ],
                         );
                       },
                       loading: () =>
@@ -229,8 +327,30 @@ class MunicipalityPanel extends ConsumerWidget {
       ),
     );
   }
+
+  Widget _buildFilterChip(String label, bool isSelected, VoidCallback onTap) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.gold500 : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05)),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? AppColors.gold500 : (isDark ? Colors.white12 : Colors.black12),
+          ),
+        ),
+        child: Text(
+          label,
+          style: AppTypography.label.copyWith(
+            color: isSelected ? Colors.black : (isDark ? Colors.white70 : Colors.black54),
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    );
+  }
 }
-
-
-
-

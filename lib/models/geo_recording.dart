@@ -1,7 +1,5 @@
 import 'package:latlong2/latlong.dart';
 
-enum RecordingLanguage { mansaka, mandaya, lumad, manobo }
-
 class AudioRecording {
   final String id;
   final String title;
@@ -26,7 +24,7 @@ class GeoRecording {
   final String id;
   final String title; // Usually the municipality name
   final String province;
-  final RecordingLanguage language;
+  final String dialect;
   final LatLng location;
   final String metadata;
   final bool isValidated;
@@ -36,25 +34,12 @@ class GeoRecording {
     required this.id,
     required this.title,
     required this.province,
-    required this.language,
+    required this.dialect,
     required this.location,
     required this.metadata,
     required this.isValidated,
     this.recordings = const [],
   });
-
-  String get languageName {
-    switch (language) {
-      case RecordingLanguage.mansaka:
-        return 'Mansaka';
-      case RecordingLanguage.mandaya:
-        return 'Mandaya';
-      case RecordingLanguage.lumad:
-        return 'Lumad';
-      case RecordingLanguage.manobo:
-        return 'Manobo';
-    }
-  }
 
   factory GeoRecording.fromFirestore(Map<String, dynamic> data, String id) {
     var geoPoint = data['coords'];
@@ -62,10 +47,7 @@ class GeoRecording {
       id: id,
       title: data['name'] ?? '',
       province: data['province'] ?? 'Davao Region',
-      language: RecordingLanguage.values.firstWhere(
-        (e) => e.name == (data['dialect']?.toString().toLowerCase() ?? 'lumad'),
-        orElse: () => RecordingLanguage.lumad,
-      ),
+      dialect: data['dialect'] ?? 'Lumad',
       location: geoPoint != null
           ? LatLng(geoPoint.latitude, geoPoint.longitude)
           : const LatLng(0, 0),

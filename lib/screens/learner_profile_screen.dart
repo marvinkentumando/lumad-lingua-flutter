@@ -11,6 +11,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:lumad_lingua/services/firebase_service.dart';
 import '../providers/role_provider.dart';
+import '../providers/student_provider.dart';
 import '../providers/contributor_request_provider.dart';
 import '../providers/artifact_provider.dart';
 import '../models/artifact.dart';
@@ -219,7 +220,8 @@ class LearnerProfileScreen extends ConsumerWidget {
     Map<String, dynamic>? profile,
   ) {
     if (role == UserRole.learner) {
-      final streak = profile?['streak'] as int? ?? 0;
+      final student = ref.watch(studentProvider);
+      final streak = student.displayedStreak;
       final words = profile?['wordCount'] as int? ?? 0;
       return _ProfileStatsRow(xp: xp, streak: streak, words: words);
     }

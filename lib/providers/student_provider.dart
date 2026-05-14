@@ -174,8 +174,31 @@ class StudentNotifier extends Notifier<StudentState> {
       final newActivityMap = Map<String, bool>.from(state.activityMap);
       newActivityMap[dateKey] = true;
 
+      int nextStreak = state.dailyStreak + 1;
+      int nextShields = state.streakShields;
+
+      if (lastActive != null) {
+        final difference = DateTime(now.year, now.month, now.day)
+            .difference(
+              DateTime(lastActive.year, lastActive.month, lastActive.day),
+            )
+            .inDays;
+
+        if (difference > 1) {
+          if (state.streakShields > 0) {
+            // Shield used: streak preserved and incremented for today
+            nextShields = state.streakShields - 1;
+            nextStreak = state.dailyStreak + 1;
+          } else {
+            // No shield: reset
+            nextStreak = 1;
+          }
+        }
+      }
+
       state = state.copyWith(
-        dailyStreak: state.dailyStreak + 1,
+        dailyStreak: nextStreak,
+        streakShields: nextShields,
         lastActive: now,
         activityMap: newActivityMap,
       );
