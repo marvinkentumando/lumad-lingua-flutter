@@ -114,6 +114,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     "Research",
   ];
 
+  bool _acceptedTerms = false;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -140,7 +141,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           _selectedProvince != null &&
           _selectedMunicipality != null;
     } else if (_currentStep == 2) {
-      return _selectedNativeLanguage != null;
+      return _selectedNativeLanguage != null && _acceptedTerms;
     }
     return true;
   }
@@ -164,7 +165,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   Future<void> _handleSignup() async {
-    if (!_validateStep()) return;
+    if (!_validateStep()) {
+      setState(() => _errorMessage = "Please complete all fields and accept the Terms");
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -604,8 +608,103 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             );
           }).toList(),
         ),
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            SizedBox(
+              height: 24,
+              width: 24,
+              child: Checkbox(
+                value: _acceptedTerms,
+                onChanged: (val) => setState(() => _acceptedTerms = val ?? false),
+                activeColor: AppColors.gold500,
+                checkColor: AppColors.forest900,
+                side: BorderSide(
+                  color: isDark ? Colors.white30 : AppColors.forest200,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  text: "I agree to the ",
+                  style: AppTypography.body.copyWith(
+                    fontSize: 12,
+                    color: isDark ? Colors.white70 : AppColors.forest700,
+                  ),
+                  children: [
+                    WidgetSpan(
+                      alignment: PlaceholderAlignment.middle,
+                      child: GestureDetector(
+                        onTap: () => _showLegalDialog(
+                          "Terms & Conditions",
+                          "By using Lumad Lingua, you agree to respect the cultural heritage of the Mansaka and other Lumad tribes. Users are prohibited from misusing, misrepresenting, or commercializing traditional knowledge without proper tribal consent...",
+                        ),
+                        child: Text(
+                          "Terms",
+                          style: TextStyle(
+                            color: AppColors.gold500,
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const TextSpan(text: " and "),
+                    WidgetSpan(
+                      alignment: PlaceholderAlignment.middle,
+                      child: GestureDetector(
+                        onTap: () => _showLegalDialog(
+                          "Privacy Policy",
+                          "We value your privacy. Your data (name, email, and location) is used solely to enhance your learning experience and track your progress. We do not sell your personal information to third parties...",
+                        ),
+                        child: Text(
+                          "Privacy Policy",
+                          style: TextStyle(
+                            color: AppColors.gold500,
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ],
     ).animate().fadeIn();
+  }
+
+  void _showLegalDialog(String title, String content) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.forest900,
+        title: Text(
+          title,
+          style: AppTypography.display.copyWith(color: AppColors.gold500, fontSize: 20),
+        ),
+        content: SingleChildScrollView(
+          child: Text(
+            content,
+            style: AppTypography.body.copyWith(color: Colors.white70),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              "CLOSE",
+              style: TextStyle(color: AppColors.gold500),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildNavigationButtons() {

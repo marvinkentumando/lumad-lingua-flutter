@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/brand_background.dart';
+import '../services/auth_service.dart';
+import '../services/firebase_service.dart';
+import '../providers/student_provider.dart';
 
 class ScenarioNode {
+// ... existing ScenarioNode and ScenarioChoice classes ...
   final String text;
   final String imagePath;
   final List<ScenarioChoice> choices;
@@ -30,17 +35,18 @@ class ScenarioChoice {
   });
 }
 
-class ScenarioSessionScreen extends StatefulWidget {
+class ScenarioSessionScreen extends ConsumerStatefulWidget {
   final String scenarioId;
   const ScenarioSessionScreen({super.key, required this.scenarioId});
 
   @override
-  State<ScenarioSessionScreen> createState() => _ScenarioSessionScreenState();
+  ConsumerState<ScenarioSessionScreen> createState() => _ScenarioSessionScreenState();
 }
 
-class _ScenarioSessionScreenState extends State<ScenarioSessionScreen> {
+class _ScenarioSessionScreenState extends ConsumerState<ScenarioSessionScreen> {
   late String _currentNodeId;
   int _totalXp = 0;
+  bool _isSaving = false;
 
   // Hardcoded scenario for demonstration
   final Map<String, ScenarioNode> _nodes = {
@@ -105,9 +111,31 @@ class _ScenarioSessionScreenState extends State<ScenarioSessionScreen> {
     _currentNodeId = 'start';
   }
 
-  void _handleChoice(ScenarioChoice choice) {
+  Future<void> _handleChoice(ScenarioChoice choice) async {
     if (choice.targetNodeId == 'end') {
-      context.pop();
+      if (_isSaving) return;
+      setState(() => _isSaving = true);
+      
+      try {
+        final user = ref.read(authServiceProvider).currentUser;
+        if (user != null) {
+          // Add a base reward for completion
+          final completionXp = _totalXp + 20; 
+          await ref.read(firebaseServiceProvider).completeScenario(
+            user.uid, 
+            widget.scenarioId, 
+            completionXp,
+          );
+          // Manually update local state to reflect change immediately
+          ref.read(studentProvider.notifier).addXp(completionXp);
+        }
+      } catch (e) {
+        debugPrint("Error saving scenario progress: $e");
+      } finally {
+        if (mounted) {
+          context.pop();
+        }
+      }
       return;
     }
     setState(() {
@@ -137,7 +165,10 @@ class _ScenarioSessionScreenState extends State<ScenarioSessionScreen> {
                           const SizedBox(height: 32),
                           _buildStoryText(node.text),
                           const SizedBox(height: 48),
-                          _buildChoices(node.choices),
+                          if (_isSaving)
+                            const Center(child: CircularProgressIndicator(color: AppColors.gold500))
+                          else
+                            _buildChoices(node.choices),
                         ],
                       ),
                     ),

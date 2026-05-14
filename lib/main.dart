@@ -226,7 +226,10 @@ final _router = GoRouter(
         ),
         GoRoute(
           path: '/validator/entries',
-          builder: (context, state) => const ValidatorEntriesScreen(),
+          builder: (context, state) {
+            final showHistory = state.uri.queryParameters['history'] == 'true';
+            return ValidatorEntriesScreen(showHistory: showHistory);
+          },
         ),
         GoRoute(
           path: '/validator/voices',

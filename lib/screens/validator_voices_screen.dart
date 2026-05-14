@@ -6,6 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:audioplayers/audioplayers.dart';
 
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../models/voice_submission.dart';
@@ -14,6 +17,8 @@ import '../services/auth_service.dart';
 import '../widgets/glass_box.dart';
 import '../widgets/ambient_topo_background.dart';
 import '../services/supabase_storage_service.dart';
+
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ValidatorVoicesScreen extends ConsumerStatefulWidget {
   const ValidatorVoicesScreen({super.key});
@@ -46,6 +51,7 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
   @override
   void initState() {
     super.initState();
+    _loadPlaybackSpeed();
     _positionSub = _audioPlayer.onPositionChanged.listen((pos) {
       if (mounted) setState(() => _currentPosition = pos);
     });
@@ -71,6 +77,16 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
     super.dispose();
   }
 
+  Future<void> _loadPlaybackSpeed() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedSpeed = prefs.getDouble('validator_playback_speed');
+    if (savedSpeed != null && mounted) {
+      setState(() {
+        _playbackSpeed = savedSpeed;
+      });
+    }
+  }
+
   Future<void> _togglePlayback(String id, String audioUrl) async {
     try {
       if (_playingId == id) {
@@ -83,9 +99,12 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
           _currentPosition = Duration.zero;
           _totalDuration = Duration.zero;
         });
-        await _audioPlayer.setPlaybackRate(_playbackSpeed);
-        final resolvedUrl = ref.read(supabaseStorageServiceProvider).getAudioUrl(audioUrl);
+        
+        final resolvedUrl =
+            ref.read(supabaseStorageServiceProvider).getAudioUrl(audioUrl);
         await _audioPlayer.play(UrlSource(resolvedUrl));
+        // Apply speed after play starts to ensure it's not reset by the player
+        await _audioPlayer.setPlaybackRate(_playbackSpeed);
       }
     } catch (e) {
       debugPrint('Error playing audio in validator screen: $e');
@@ -112,12 +131,23 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
     }
     setState(() => _playbackSpeed = nextSpeed);
     await _audioPlayer.setPlaybackRate(nextSpeed);
+
+    // Persist speed preference
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('validator_playback_speed', nextSpeed);
   }
 
   String _formatDuration(Duration d) {
     final minutes = d.inMinutes;
     final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
     return '$minutes:$seconds';
+  }
+
+  void _seekToRelativePosition(double x, double maxWidth) {
+    if (_totalDuration.inMilliseconds <= 0) return;
+    final double relativeProgress = (x / maxWidth).clamp(0.0, 1.0);
+    final int targetMs = (_totalDuration.inMilliseconds * relativeProgress).toInt();
+    _audioPlayer.seek(Duration(milliseconds: targetMs));
   }
 
   @override
@@ -143,54 +173,16 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton:
-          (_isSelectionMode && _selectedIds.isNotEmpty && !_isProcessing)
+      floatingActionButton: (_isSelectionMode &&
+              _selectedIds.isNotEmpty &&
+              !_isProcessing)
           ? FloatingActionButton.extended(
-              onPressed: () async {
-                setState(() => _isProcessing = true);
-                final firebaseService = ref.read(firebaseServiceProvider);
-                final user = ref.read(authStateProvider).value;
-                final userProfile = ref.read(userProfileProvider).value;
-                final validatorRole = userProfile?['role'] ?? 'Validator';
-
-                if (user == null) return;
-
-                int count = 0;
-                for (final id in _selectedIds) {
-                  try {
-                    await firebaseService.approveVoiceSubmission(
-                      id,
-                      user.uid,
-                      validatorRole,
-                    );
-                    count++;
-                  } catch (e) {
-                    debugPrint("Error approving $id: $e");
-                  }
-                }
-
-                setState(() {
-                  _isProcessing = false;
-                  _isSelectionMode = false;
-                  _selectedIds.clear();
-                });
-
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Bulk Approved $count items!'),
-                      backgroundColor: AppColors.semanticGreen,
-                    ),
-                  );
-                }
-              },
+              onPressed: () => _showBulkActionSheet(context),
               backgroundColor: AppColors.gold500,
-              icon: const Icon(
-                Icons.check_circle_rounded,
-                color: AppColors.forest900,
-              ),
+              icon: const Icon(Icons.playlist_add_check_rounded,
+                  color: AppColors.forest900),
               label: Text(
-                'APPROVE ${_selectedIds.length} ITEMS',
+                'ACTIONS (${_selectedIds.length})',
                 style: AppTypography.label.copyWith(
                   color: AppColors.forest900,
                   fontWeight: FontWeight.w900,
@@ -771,11 +763,37 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              "Submission ID: #ANC-${item.id.substring(0, 4)}",
-              style: AppTypography.mono.copyWith(
-                color: AppColors.creamText3,
-                fontSize: 12,
+            GestureDetector(
+              onTap: () => _showSubmissionAuditLog(item),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.forest900.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        "Submission ID: #ANC-${item.id.substring(0, 4)}",
+                        style: AppTypography.mono.copyWith(
+                          color: AppColors.gold500,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.history_rounded,
+                        size: 14,
+                        color: AppColors.gold500,
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -859,33 +877,56 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SizedBox(
-                                height: 24,
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: List.generate(30, (i) {
-                                    final bool isPast = i / 30 < progress;
-                                    return Expanded(
-                                      child: AnimatedContainer(
-                                        duration: const Duration(
-                                          milliseconds: 120,
-                                        ),
-                                        margin: const EdgeInsets.symmetric(
-                                          horizontal: 1,
-                                        ),
-                                        height: barHeights[i],
-                                        decoration: BoxDecoration(
-                                          color: isPast
-                                              ? AppColors.gold500
-                                              : AppColors.forest700,
-                                          borderRadius: BorderRadius.circular(
-                                            2,
-                                          ),
-                                        ),
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  return GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onHorizontalDragUpdate: (details) {
+                                      if (isPlaying) {
+                                        _seekToRelativePosition(
+                                          details.localPosition.dx,
+                                          constraints.maxWidth,
+                                        );
+                                      }
+                                    },
+                                    onTapDown: (details) {
+                                      if (isPlaying) {
+                                        _seekToRelativePosition(
+                                          details.localPosition.dx,
+                                          constraints.maxWidth,
+                                        );
+                                      }
+                                    },
+                                    child: SizedBox(
+                                      height: 24,
+                                      child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        children: List.generate(30, (i) {
+                                          final bool isPast = i / 30 < progress;
+                                          return Expanded(
+                                            child: AnimatedContainer(
+                                              duration: const Duration(
+                                                milliseconds: 120,
+                                              ),
+                                              margin: const EdgeInsets.symmetric(
+                                                horizontal: 1,
+                                              ),
+                                              height: barHeights[i],
+                                              decoration: BoxDecoration(
+                                                color: isPast
+                                                    ? AppColors.gold500
+                                                    : AppColors.forest700,
+                                                borderRadius: BorderRadius.circular(
+                                                  2,
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        }),
                                       ),
-                                    );
-                                  }),
-                                ),
+                                    ),
+                                  );
+                                },
                               ),
                               const SizedBox(height: 8),
                               Row(
@@ -955,7 +996,7 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
 
   Widget _buildActionButtons({required VoiceSubmission submission}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final userProfile = ref.watch(userProfileProvider).value;
+    final userProfile = ref.read(userProfileProvider).value;
     final validatorRole = userProfile?['role'] ?? 'Validator';
 
     return Column(
@@ -1173,6 +1214,402 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
           ),
       ],
     );
+  }
+
+  void _showBulkActionSheet(BuildContext context) {
+    final feedbackController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.forest800,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 24,
+            right: 24,
+            top: 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Bulk Actions',
+                style: AppTypography.h2ExtraBold.copyWith(
+                  color: AppColors.gold500,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Apply actions to ${_selectedIds.length} selected items',
+                style: AppTypography.body.copyWith(
+                  color: AppColors.creamText3,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 24),
+              TextField(
+                controller: feedbackController,
+                maxLines: 3,
+                style: TextStyle(
+                  color: isDark ? Colors.white : AppColors.creamText,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Feedback for Reject/Flag (optional for bulk)',
+                  hintStyle: TextStyle(
+                    color: isDark ? Colors.white38 : AppColors.creamText3,
+                  ),
+                  filled: true,
+                  fillColor: isDark
+                      ? AppColors.forest900
+                      : Colors.black.withValues(alpha: 0.05),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.semanticGreen,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      onPressed: () =>
+                          _handleBulkAction('approve', feedbackController.text),
+                      child: Text(
+                        'APPROVE ALL',
+                        style: AppTypography.label.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.terracotta.withValues(
+                          alpha: 0.2,
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: const BorderSide(color: AppColors.terracotta),
+                        ),
+                      ),
+                      onPressed: () {
+                        if (feedbackController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content:
+                                  Text('Feedback required for bulk rejection'),
+                              backgroundColor: AppColors.terracotta,
+                            ),
+                          );
+                          return;
+                        }
+                        _handleBulkAction('reject', feedbackController.text);
+                      },
+                      child: Text(
+                        'REJECT ALL',
+                        style: AppTypography.label.copyWith(
+                          color: AppColors.terracotta,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.terracotta,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      onPressed: () {
+                        if (feedbackController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Feedback required for bulk flag'),
+                              backgroundColor: AppColors.terracotta,
+                            ),
+                          );
+                          return;
+                        }
+                        _handleBulkAction('flag', feedbackController.text);
+                      },
+                      child: Text(
+                        'FLAG ALL',
+                        style: AppTypography.label.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 32),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _handleBulkAction(String action, String feedback) async {
+    Navigator.pop(context); // Close sheet
+    setState(() => _isProcessing = true);
+
+    final firebaseService = ref.read(firebaseServiceProvider);
+    final user = ref.read(authStateProvider).value;
+    final userProfile = ref.read(userProfileProvider).value;
+    final validatorRole = userProfile?['role'] ?? 'Validator';
+
+    if (user == null) return;
+
+    int count = 0;
+    final idsToProcess = List<String>.from(_selectedIds);
+
+    for (final id in idsToProcess) {
+      try {
+        if (action == 'approve') {
+          await firebaseService.approveVoiceSubmission(
+            id,
+            user.uid,
+            validatorRole,
+          );
+        } else if (action == 'reject') {
+          await firebaseService.rejectVoiceSubmission(
+            id,
+            user.uid,
+            validatorRole,
+            feedback,
+          );
+        } else if (action == 'flag') {
+          await firebaseService.flagVoiceSubmission(
+            id,
+            user.uid,
+            validatorRole,
+            feedback,
+          );
+        }
+        count++;
+      } catch (e) {
+        debugPrint("Error processing $id: $e");
+      }
+    }
+
+    setState(() {
+      _isProcessing = false;
+      _isSelectionMode = false;
+      _selectedIds.clear();
+    });
+
+    if (mounted) {
+      String message = '';
+      Color bgColor = AppColors.semanticGreen;
+
+      if (action == 'approve') {
+        message = 'Bulk Approved $count items!';
+      } else if (action == 'reject') {
+        message = 'Bulk Rejected $count items!';
+        bgColor = AppColors.semanticRed;
+      } else if (action == 'flag') {
+        message = 'Bulk Flagged $count items!';
+        bgColor = AppColors.terracotta;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: bgColor,
+        ),
+      );
+    }
+  }
+
+  void _showSubmissionAuditLog(VoiceSubmission submission) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.forest800,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final dateFormat = DateFormat('MMM dd, yyyy • hh:mm a');
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Audit Trail',
+                    style: AppTypography.h2ExtraBold.copyWith(
+                      color: AppColors.gold500,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, color: AppColors.creamText3),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildAuditItem(
+                'Full Submission ID',
+                submission.id,
+                Icons.fingerprint_rounded,
+                isDark,
+                showCopy: true,
+              ),
+              const Divider(color: Colors.white10, height: 32),
+              _buildAuditItem(
+                'Contributor',
+                '${submission.contributorName} (${submission.contributorId.substring(0, 6)}...)',
+                Icons.person_outline_rounded,
+                isDark,
+              ),
+              const SizedBox(height: 16),
+              _buildAuditItem(
+                'Submitted On',
+                submission.submittedAt != null
+                    ? dateFormat.format(submission.submittedAt!)
+                    : 'Unknown',
+                Icons.calendar_today_rounded,
+                isDark,
+              ),
+              const SizedBox(height: 16),
+              _buildAuditItem(
+                'Current Status',
+                submission.status.name.toUpperCase(),
+                Icons.info_outline_rounded,
+                isDark,
+                valueColor: _getStatusColor(submission.status),
+              ),
+              if (submission.validatedAt != null) ...[
+                const SizedBox(height: 16),
+                _buildAuditItem(
+                  'Validated On',
+                  dateFormat.format(submission.validatedAt!),
+                  Icons.verified_user_outlined,
+                  isDark,
+                ),
+                const SizedBox(height: 16),
+                _buildAuditItem(
+                  'Validator Role',
+                  submission.validatorRole ?? 'Unknown',
+                  Icons.shield_outlined,
+                  isDark,
+                ),
+              ],
+              const SizedBox(height: 32),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAuditItem(
+    String label,
+    String value,
+    IconData icon,
+    bool isDark, {
+    bool showCopy = false,
+    Color? valueColor,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColors.forest900,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: AppColors.gold500, size: 16),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label.toUpperCase(),
+                style: AppTypography.label.copyWith(
+                  color: AppColors.creamText3,
+                  fontSize: 9,
+                  letterSpacing: 1,
+                ),
+              ),
+              const SizedBox(height: 2),
+              GestureDetector(
+                onTap: showCopy
+                    ? () {
+                        Clipboard.setData(ClipboardData(text: value));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('ID copied to clipboard'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    : null,
+                child: Text(
+                  value,
+                  style: AppTypography.mono.copyWith(
+                    color: valueColor ?? (isDark ? Colors.white : AppColors.forest900),
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _getStatusColor(VoiceStatus status) {
+    switch (status) {
+      case VoiceStatus.approved:
+        return AppColors.semanticGreen;
+      case VoiceStatus.flagged:
+        return AppColors.terracotta;
+      case VoiceStatus.rejected:
+        return AppColors.semanticRed;
+      default:
+        return AppColors.gold500;
+    }
   }
 
   void _showFlagActionSheet(VoiceSubmission submission) {

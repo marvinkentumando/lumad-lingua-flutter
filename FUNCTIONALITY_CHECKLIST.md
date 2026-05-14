@@ -30,29 +30,29 @@ When adding a new item, please use the following format:
 - [x] **Daily Goal Customization (Validator)**: Added a dialog to allow validators to set their own daily verification targets from the Home Screen.
 - [x] **Profile/Shield Header Interaction (Validator)**: Linked the header area in Validator Home to the Profile screen.
 - [x] **Daily Impact Stats Detail**: Tapping the Daily Impact card shows a breakdown of today's work (approved vs rejected vs flagged) with live data.
-- [ ] **Urgent Queue Management**:
-    - [ ] **Skip/Snooze Function**: Urgent items cannot be dismissed or snoozed if a validator is unable to process them immediately.
-    - [ ] **Empty State Action**: The "All caught up!" state is static. It could include a "Check History" or "Browse All" button.
+- [x] **Urgent Queue Management**:
+    - [x] **Skip/Snooze Function**: Urgent items cannot be dismissed or snoozed if a validator is unable to process them immediately.
+    - [x] **Empty State Action**: The "All caught up!" state is static. It could include a "Check History" or "Browse All" button.
 - [ ] **Hardcoded Dialect Assignment**: Assignment of validators to specific dialects (e.g., Mansaka, Mandaya) is partially hardcoded based on email in the build logic. This should be moved to a proper User Management system.
 
 ## 📱 Global Layout (Validator)
-- [ ] **Top Bar "Validations" Stat Interaction**: The pill showing the number of validations in the top bar is non-interactive. It could link to a detailed **Validator Activity Log** or **History** page.
+- [x] **Top Bar "Validations" Stat Interaction**: The pill showing the number of validations in the top bar is non-interactive. It could link to a detailed **Validator Activity Log** or **History** page.
 
 ## 📖 Validator Entries Screen
-- [ ] **Search History Management**: No way to clear or delete specific items from the search history list.
-- [ ] **Infinite Scroll Indicator**: Missing a loading spinner at the bottom of the list when fetching more entries.
+- [x] **Search History Management**: Added functionality to clear all search history and delete specific terms from the search history list in the Validator Entries Screen.
+- [x] **Infinite Scroll Indicator**: Added a themed loading spinner at the bottom of the list when fetching more entries to improve user feedback during pagination.
 - [ ] **Bulk Action Variety**: Bulk selection only supports "Approve". No bulk "Reject" or "Flag" options are available.
 - [ ] **Audio Tip Recording**: The "Record" button in the Flagging sheet is a placeholder (only shows a SnackBar) and lacks actual recording/upload functionality.
 - [ ] **Contributor Reputation Accuracy**: Stats like "98% APPROVAL" on entry cards appear to be UI placeholders rather than live data synced with contributor profiles.
-- [ ] **Search Existing Logic**: The "Search Existing" button in the term detail view only filters the current local list; it doesn't query the full dictionary database for duplicates.
-- [ ] **Feedback Display Persistence**: In the History view, the feedback is shown with an "info" icon, but there's no way to edit or add more comments after a decision is made.
+- [x] **Search Existing Logic**: The "Search Existing" button in the term detail view now queries the full dictionary database for duplicates, not just the local list.
+- [x] **Feedback Display Persistence**: In the History view, the feedback is now interactive and can be edited to update decisions (e.g., change from Reject to Approve or update Flag comments).
 
 ## 🎙️ Validator Voices Screen
-- [ ] **Audio Speed Persistence**: Playback speed (0.5x, 1.0x) resets to 1.0x when switching between items or closing the screen.
-- [ ] **Waveform Interactivity**: The audio waveform is a visualization only; users cannot tap on the waveform to seek to a specific part of the audio.
+- [x] **Audio Speed Persistence**: Playback speed (0.5x, 1.0x) resets to 1.0x when switching between items or closing the screen.
+- [x] **Waveform Interactivity**: The audio waveform is no longer just a visualization; validators can now tap or drag on the waveform to seek to a specific part of the audio during playback.
 - [ ] **Dialect Filter UI**: Similar to the entries screen, there is a `_selectedDialect` variable and a list of `_dialects`, but no UI (chips/dropdown) to allow the validator to change the filter.
-- [ ] **Bulk Rejection/Flagging**: Bulk selection mode only supports "Approve". There is no way to bulk reject or bulk flag multiple audio submissions.
-- [ ] **Submission ID Truncation**: The "Submission ID" display uses a simple substring of the Firestore ID; it doesn't link to a detailed log or audit trail of that specific submission.
+- [x] **Bulk Rejection/Flagging**: Bulk selection mode now supports "Approve", "Reject", and "Flag" options via a unified bulk action sheet.
+- [x] **Submission ID Truncation**: The "Submission ID" display is now interactive; tapping it opens a detailed **Audit Trail** showing the full Firestore ID, contributor details, timestamps, and validation history.
 - [ ] **Contributor Approval Rate**: The "96% APPROVAL" shown on contributor profiles is a UI placeholder and not based on actual historical data.
 - [ ] **Transcript Editing**: Validators can view the transcript but cannot suggest a correction or edit it if there's a minor typo. They must either Approve, Flag, or Reject.
 
@@ -94,6 +94,7 @@ When adding a new item, please use the following format:
 - [ ] **Record Fragment: Audio Quality Indicator**: No visual feedback on recording quality (e.g., silence detection or background noise warning) before submission.
 
 ## 🏹 Learner Home Screen
+- [x] **Scenario Hub Improvements**: Added Completion Badges ("Mastered") and Thematic Thumbnails for scenario stories.
 - [ ] **Village Echoes (Social Feed) Live Sync**: The feed is currently hardcoded with static names ("Datu Matu", "Guardian Tala"). It lacks integration with a live activity or notification system.
 - [ ] **Artifact Spotlight Randomization**: The spotlighted artifact ("Mansaka Binallog") is hardcoded. It should ideally display a random or recently discovered artifact from the database.
 - [ ] **Village Echoes Avatar Interaction**: Tapping avatars in the Village Echoes feed does nothing. They should link to the corresponding **Member Profile**.

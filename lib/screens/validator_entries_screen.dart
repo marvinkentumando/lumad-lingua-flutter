@@ -16,7 +16,8 @@ import 'package:confetti/confetti.dart';
 import 'dart:math';
 
 class ValidatorEntriesScreen extends ConsumerStatefulWidget {
-  const ValidatorEntriesScreen({super.key});
+  final bool showHistory;
+  const ValidatorEntriesScreen({super.key, this.showHistory = false});
 
   @override
   ConsumerState<ValidatorEntriesScreen> createState() =>
@@ -27,7 +28,8 @@ class _ValidatorEntriesScreenState
     extends ConsumerState<ValidatorEntriesScreen> {
   bool get isDark => Theme.of(context).brightness == Brightness.dark;
   bool _isSelectionMode = false;
-  bool _showHistory = false;
+  late bool _showHistory;
+  bool _isGlobalSearch = false;
   final Set<String> _selectedIds = {};
   bool _isProcessing = false;
   bool _isFetchingMore = false;
@@ -45,6 +47,7 @@ class _ValidatorEntriesScreenState
   @override
   void initState() {
     super.initState();
+    _showHistory = widget.showHistory;
     _confettiController = ConfettiController(
       duration: const Duration(seconds: 2),
     );
@@ -107,6 +110,24 @@ class _ValidatorEntriesScreenState
     });
   }
 
+  Future<void> _deleteSearchTerm(String term) async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentHistory = prefs.getStringList('validator_search_history') ?? [];
+    currentHistory.remove(term);
+    await prefs.setStringList('validator_search_history', currentHistory);
+    setState(() {
+      _searchHistory = currentHistory;
+    });
+  }
+
+  Future<void> _clearSearchHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('validator_search_history');
+    setState(() {
+      _searchHistory = [];
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(userProfileProvider);
@@ -116,19 +137,9 @@ class _ValidatorEntriesScreenState
 
     final metricsAsync = ref.watch(validatorMetricsProvider(userId));
 
-    final entriesAsync = _showHistory
+    final entriesAsync = _isGlobalSearch
         ? ref.watch(
-            validatorHistoryStreamProvider(
-              ValidatorQuery(
-                userId,
-                _documentLimit,
-                search: _searchQuery,
-                dialect: userDialect,
-              ),
-            ),
-          )
-        : ref.watch(
-            pendingDictionaryStreamProvider(
+            globalDictionaryStreamProvider(
               ValidatorQuery(
                 '',
                 _documentLimit,
@@ -136,7 +147,28 @@ class _ValidatorEntriesScreenState
                 dialect: userDialect,
               ),
             ),
-          );
+          )
+        : (_showHistory
+            ? ref.watch(
+                validatorHistoryStreamProvider(
+                  ValidatorQuery(
+                    userId,
+                    _documentLimit,
+                    search: _searchQuery,
+                    dialect: userDialect,
+                  ),
+                ),
+              )
+            : ref.watch(
+                pendingDictionaryStreamProvider(
+                  ValidatorQuery(
+                    '',
+                    _documentLimit,
+                    search: _searchQuery,
+                    dialect: userDialect,
+                  ),
+                ),
+              ));
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -278,8 +310,34 @@ class _ValidatorEntriesScreenState
                                   horizontal: 24,
                                   vertical: 8,
                                 ),
-                                itemCount: filteredList.length,
+                                itemCount: filteredList.length + (_isFetchingMore ? 1 : 0),
                                 itemBuilder: (context, index) {
+                                  if (index == filteredList.length) {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 32,
+                                      ),
+                                      child: Center(
+                                        child: Column(
+                                          children: [
+                                            const CircularProgressIndicator(
+                                              color: AppColors.gold500,
+                                              strokeWidth: 3,
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Text(
+                                              "Summoning more ancient knowledge...",
+                                              style:
+                                                  AppTypography.label.copyWith(
+                                                color: AppColors.gold500,
+                                                fontSize: 10,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }
                                   return Padding(
                                         padding: const EdgeInsets.only(
                                           bottom: 16,
@@ -382,7 +440,9 @@ class _ValidatorEntriesScreenState
               Text(
                 _isSelectionMode
                     ? 'Selection Mode'
-                    : (_showHistory ? 'My History' : 'Dictionary Entries'),
+                    : (_isGlobalSearch
+                        ? 'Duplicate Check'
+                        : (_showHistory ? 'My History' : 'Dictionary Entries')),
                 style: AppTypography.displayBold.copyWith(
                   fontSize: _isSelectionMode ? 24 : 32,
                   color: AppColors.gold500,
@@ -492,6 +552,28 @@ class _ValidatorEntriesScreenState
                     ),
                   ],
                 )
+              else if (_isGlobalSearch)
+                GestureDetector(
+                  onTap: () => setState(() {
+                    _isGlobalSearch = false;
+                    _searchQuery = "";
+                  }),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.semanticRed.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.semanticRed.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      color: AppColors.semanticRed,
+                      size: 20,
+                    ),
+                  ),
+                )
               else
                 GestureDetector(
                   onTap: () => setState(() => _showHistory = !_showHistory),
@@ -534,7 +616,12 @@ class _ValidatorEntriesScreenState
               ),
             ),
             child: TextField(
-              onChanged: (val) => setState(() => _searchQuery = val),
+              onChanged: (val) {
+                setState(() {
+                  _searchQuery = val;
+                  if (val.isEmpty) _isGlobalSearch = false;
+                });
+              },
               onSubmitted: (val) => _saveSearchTerm(val),
               style: TextStyle(
                 color: isDark ? Colors.white : AppColors.creamText,
@@ -554,43 +641,70 @@ class _ValidatorEntriesScreenState
               ),
             ),
           ),
-          if (_searchQuery.isEmpty && !_isSelectionMode) ...[
+          if (_searchQuery.isEmpty && !_isSelectionMode && _searchHistory.isNotEmpty) ...[
             const SizedBox(height: 12),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  Icon(
-                    Icons.history_rounded,
-                    color: isDark ? Colors.white38 : AppColors.forest200,
-                    size: 16,
+                  GestureDetector(
+                    onTap: _clearSearchHistory,
+                    child: Tooltip(
+                      message: "Clear All History",
+                      child: Icon(
+                        Icons.history_rounded,
+                        color: isDark ? AppColors.gold500 : AppColors.forest400,
+                        size: 16,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 8),
                   ..._searchHistory.map(
                     (term) => Padding(
                       padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: () => setState(() => _searchQuery = term),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
+                      child: Container(
+                        padding: const EdgeInsets.only(left: 12, right: 4),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.05)
+                              : AppColors.forest50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark ? Colors.white10 : AppColors.forest100,
                           ),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.05)
-                                : AppColors.forest50,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            term,
-                            style: AppTypography.label.copyWith(
-                              color: isDark
-                                  ? Colors.white70
-                                  : AppColors.forest700,
-                              fontSize: 10,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            GestureDetector(
+                              onTap: () => setState(() => _searchQuery = term),
+                              child: Text(
+                                term,
+                                style: AppTypography.label.copyWith(
+                                  color: isDark
+                                      ? Colors.white70
+                                      : AppColors.forest700,
+                                  fontSize: 10,
+                                ),
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 4),
+                            GestureDetector(
+                              onTap: () => _deleteSearchTerm(term),
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.close_rounded,
+                                  size: 10,
+                                  color: isDark ? Colors.white38 : AppColors.forest300,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -1002,28 +1116,34 @@ class _ValidatorEntriesScreenState
 
   Widget _buildActionButtons({required DictionaryEntry entry}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final userAsync = ref.watch(userProfileProvider);
+    final userAsync = ref.read(userProfileProvider);
     final userId = userAsync.value?['uid'] ?? userAsync.value?['id'] ?? '';
     final userRole = userAsync.value?['role'] ?? 'VALIDATOR';
 
     if (entry.status != ValidationStatus.pending) {
+      final canEdit = entry.validatorId == userId;
       return Padding(
         padding: const EdgeInsets.only(top: 8.0),
         child: Row(
           children: [
-            const Icon(
-              Icons.info_outline,
-              color: AppColors.creamText3,
-              size: 14,
+            Icon(
+              canEdit ? Icons.edit_note_rounded : Icons.info_outline,
+              color: AppColors.gold500,
+              size: 16,
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                entry.validatorFeedback ?? "No feedback provided.",
-                style: AppTypography.body.copyWith(
-                  color: AppColors.creamText3,
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
+              child: GestureDetector(
+                onTap: canEdit ? () => _showFlagActionSheet(entry) : null,
+                child: Text(
+                  entry.validatorFeedback ?? "No feedback provided.",
+                  style: AppTypography.body.copyWith(
+                    color: isDark ? Colors.white70 : AppColors.forest700,
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    decoration: canEdit ? TextDecoration.underline : null,
+                    decorationColor: AppColors.gold500.withValues(alpha: 0.3),
+                  ),
                 ),
               ),
             ),
@@ -1190,8 +1310,8 @@ class _ValidatorEntriesScreenState
   }
 
   void _showFlagActionSheet(DictionaryEntry entry) {
-    _feedbackController.clear();
-    final userAsync = ref.watch(userProfileProvider);
+    _feedbackController.text = entry.validatorFeedback ?? "";
+    final userAsync = ref.read(userProfileProvider);
     final userId = userAsync.value?['uid'] ?? userAsync.value?['id'] ?? '';
     final userRole = userAsync.value?['role'] ?? 'VALIDATOR';
 
@@ -1215,14 +1335,16 @@ class _ValidatorEntriesScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Action Required',
+                entry.status == ValidationStatus.pending ? 'Action Required' : 'Edit Decision',
                 style: AppTypography.h2ExtraBold.copyWith(
                   color: AppColors.gold500,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
-                'Decide how to handle "${entry.indigenousWord}"',
+                entry.status == ValidationStatus.pending 
+                  ? 'Decide how to handle "${entry.indigenousWord}"'
+                  : 'Update your decision or feedback for "${entry.indigenousWord}"',
                 style: AppTypography.body.copyWith(
                   color: AppColors.creamText3,
                   fontSize: 12,
@@ -1368,14 +1490,14 @@ class _ValidatorEntriesScreenState
                         if (!context.mounted) return;
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Entry Rejected'),
+                          SnackBar(
+                            content: Text(entry.status == ValidationStatus.pending ? 'Entry Rejected' : 'Decision Updated'),
                             backgroundColor: AppColors.semanticRed,
                           ),
                         );
                       },
                       child: Text(
-                        'REJECT',
+                        entry.status == ValidationStatus.rejected ? 'UPDATE REJECT' : 'REJECT',
                         style: AppTypography.label.copyWith(
                           color: AppColors.terracotta,
                           fontWeight: FontWeight.w900,
@@ -1414,14 +1536,14 @@ class _ValidatorEntriesScreenState
                         if (!context.mounted) return;
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Clarification request sent'),
+                          SnackBar(
+                            content: Text(entry.status == ValidationStatus.pending ? 'Clarification request sent' : 'Decision Updated'),
                             backgroundColor: AppColors.gold500,
                           ),
                         );
                       },
                       child: Text(
-                        'FLAG ENTRY',
+                        entry.status == ValidationStatus.flagged ? 'UPDATE FLAG' : 'FLAG ENTRY',
                         style: AppTypography.label.copyWith(
                           color: AppColors.forest900,
                           fontWeight: FontWeight.w900,
@@ -1431,6 +1553,42 @@ class _ValidatorEntriesScreenState
                   ),
                 ],
               ),
+              if (entry.status != ValidationStatus.pending && entry.status != ValidationStatus.approved) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: const BorderSide(color: AppColors.semanticGreen),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    onPressed: () async {
+                      HapticFeedback.mediumImpact();
+                      await ref
+                          .read(firebaseServiceProvider)
+                          .approveWord(entry.id, userId, userRole);
+                      if (!context.mounted) return;
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Decision Changed: Approved!'),
+                          backgroundColor: AppColors.semanticGreen,
+                        ),
+                      );
+                    },
+                    child: Text(
+                      'CHANGE TO APPROVE',
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.semanticGreen,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         );
@@ -1491,7 +1649,7 @@ class _ValidatorEntriesScreenState
                           Navigator.pop(context);
                           setState(() {
                             _searchQuery = entry.indigenousWord;
-                            _showHistory = true; // Search in history/existing
+                            _isGlobalSearch = true; // Global Duplicate Check
                           });
                         },
                         icon: const Icon(

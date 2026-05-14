@@ -181,6 +181,36 @@ class FirebaseService {
     });
   }
 
+  Stream<List<DictionaryEntry>> getGlobalDictionaryWords({
+    int limit = 50,
+    String? search,
+    String? dialect,
+  }) {
+    Query query = _db.collection('words');
+
+    if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
+      query = query.where('dialect', isEqualTo: dialect);
+    }
+
+    if (search != null && search.isNotEmpty) {
+      final queryTerm = search.toLowerCase();
+      query = query
+          .where('term_lowercase', isGreaterThanOrEqualTo: queryTerm)
+          .where('term_lowercase', isLessThanOrEqualTo: '$queryTerm\uf8ff');
+    }
+
+    return query.limit(limit).snapshots().map((snapshot) {
+      return snapshot.docs
+          .map(
+            (doc) => DictionaryEntry.fromFirestore(
+              doc.data() as Map<String, dynamic>,
+              doc.id,
+            ),
+          )
+          .toList();
+    });
+  }
+
   Stream<List<DictionaryEntry>> getValidatorHistory(
     String validatorId, {
     int limit = 50,
@@ -1459,6 +1489,27 @@ class FirebaseService {
     await _db.collection('config').doc('app').update(data);
   }
 
+  Future<void> completeScenario(String userId, String scenarioId, int xpReward) async {
+    final userRef = _db.collection('users').doc(userId);
+    final progressRef = _db
+        .collection('users')
+        .doc(userId)
+        .collection('progress')
+        .doc(scenarioId);
+
+    await _db.runTransaction((transaction) async {
+      transaction.set(progressRef, {
+        'completed': true,
+        'lastCompleted': FieldValue.serverTimestamp(),
+        'bestScore': 100, // Scenarios are pass/fail for now
+      }, SetOptions(merge: true));
+
+      transaction.update(userRef, {
+        'xp': FieldValue.increment(xpReward),
+      });
+    });
+  }
+
   Future<Map<String, dynamic>> completeLesson(
     String userId,
     String lessonId,
@@ -2473,6 +2524,15 @@ final dictionaryStreamProvider = StreamProvider<List<DictionaryEntry>>((ref) {
 final pendingDictionaryStreamProvider =
     StreamProvider.family<List<DictionaryEntry>, ValidatorQuery>((ref, query) {
       return ref.watch(firebaseServiceProvider).getPendingDictionaryWords(
+            limit: query.limit,
+            search: query.search,
+            dialect: query.dialect,
+          );
+    });
+
+final globalDictionaryStreamProvider =
+    StreamProvider.family<List<DictionaryEntry>, ValidatorQuery>((ref, query) {
+      return ref.watch(firebaseServiceProvider).getGlobalDictionaryWords(
             limit: query.limit,
             search: query.search,
             dialect: query.dialect,
