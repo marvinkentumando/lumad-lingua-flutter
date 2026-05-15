@@ -218,6 +218,36 @@ class FirebaseService {
     });
   }
 
+  Stream<List<DictionaryEntry>> getGlobalDictionaryWords({
+    int limit = 50,
+    String? search,
+    String? dialect,
+  }) {
+    Query query = _db.collection('words');
+
+    if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
+      query = query.where('dialect', isEqualTo: dialect);
+    }
+
+    if (search != null && search.isNotEmpty) {
+      final queryTerm = search.toLowerCase();
+      query = query
+          .where('term_lowercase', isGreaterThanOrEqualTo: queryTerm)
+          .where('term_lowercase', isLessThanOrEqualTo: '$queryTerm\uf8ff');
+    }
+
+    return query.limit(limit).snapshots().map((snapshot) {
+      return snapshot.docs
+          .map(
+            (doc) => DictionaryEntry.fromFirestore(
+              doc.data() as Map<String, dynamic>,
+              doc.id,
+            ),
+          )
+          .toList();
+    });
+  }
+
   Stream<List<DictionaryEntry>> getValidatorHistory(
     String validatorId, {
     int limit = 50,
