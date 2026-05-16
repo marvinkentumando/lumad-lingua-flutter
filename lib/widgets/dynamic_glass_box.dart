@@ -54,8 +54,6 @@ class _DynamicGlassBoxState extends State<DynamicGlassBox> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return ClipRRect(
       borderRadius: BorderRadius.circular(widget.borderRadius),
       child: BackdropFilter(
@@ -64,14 +62,12 @@ class _DynamicGlassBoxState extends State<DynamicGlassBox> {
           decoration: BoxDecoration(
             color:
                 widget.color ??
-                (isDark
-                    ? Colors.white.withValues(alpha: widget.opacity)
-                    : Colors.black.withValues(alpha: widget.opacity)),
+                Colors.white.withValues(alpha: widget.opacity),
             borderRadius: BorderRadius.circular(widget.borderRadius),
             border:
                 widget.border ??
                 Border.all(
-                  color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1,
+                  color: Colors.white.withValues(alpha: 0.1,
                   ),
                   width: 1.5,
                 ),
@@ -79,7 +75,7 @@ class _DynamicGlassBoxState extends State<DynamicGlassBox> {
               begin: Alignment(_tiltX - 0.5, _tiltY - 0.5),
               end: Alignment(_tiltX + 0.5, _tiltY + 0.5),
               colors: [
-                Colors.white.withValues(alpha: isDark ? 0.08 : 0.15),
+                Colors.white.withValues(alpha: 0.08),
                 Colors.white.withValues(alpha: 0.0),
               ],
             ),

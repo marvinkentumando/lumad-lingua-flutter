@@ -3,66 +3,6 @@ import 'app_colors.dart';
 import 'app_typography.dart';
 
 class AppTheme {
-  static ThemeData get lightTheme {
-    return ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.light,
-      scaffoldBackgroundColor: AppColors.creamBg,
-      colorScheme: const ColorScheme.light(
-        primary: AppColors.forest500,
-        secondary: AppColors.terracotta,
-        tertiary: AppColors.gold500,
-        surface: AppColors.creamBg,
-        surfaceContainerHighest: Colors.white,
-        error: AppColors.semanticRed,
-        onPrimary: Colors.white,
-        onSecondary: Colors.white,
-        onTertiary: Colors.black,
-        onSurface: AppColors.creamText,
-        onSurfaceVariant: AppColors.creamText2,
-        outline: AppColors.creamBorder,
-        outlineVariant: Color(0xFFE5D5B5),
-        onError: Colors.white,
-      ),
-      appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.creamBg,
-        elevation: 0,
-        centerTitle: false,
-        titleTextStyle: AppTypography.h3.copyWith(color: AppColors.forest500),
-        iconTheme: const IconThemeData(color: AppColors.forest500, size: 24),
-      ),
-      bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: AppColors.creamBg,
-        modalBackgroundColor: AppColors.creamBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-        ),
-      ),
-      cardTheme: const CardThemeData(
-        color: Colors.white,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(24)),
-        ),
-      ),
-      dialogTheme: const DialogThemeData(
-        backgroundColor: AppColors.creamBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(24)),
-        ),
-      ),
-      iconTheme: const IconThemeData(color: AppColors.forest500),
-      textTheme: _buildTextTheme(Brightness.light),
-      inputDecorationTheme: _buildInputTheme(Brightness.light),
-      dividerTheme: DividerThemeData(
-        color: AppColors.creamBorder.withValues(alpha: 0.5),
-      ),
-      splashColor: AppColors.forest500.withValues(alpha: 0.1),
-      highlightColor: AppColors.forest500.withValues(alpha: 0.05),
-      splashFactory: InkSparkle.splashFactory,
-    );
-  }
-
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
@@ -112,8 +52,8 @@ class AppTheme {
         ),
       ),
       iconTheme: const IconThemeData(color: AppColors.gold500),
-      textTheme: _buildTextTheme(Brightness.dark),
-      inputDecorationTheme: _buildInputTheme(Brightness.dark),
+      textTheme: _buildTextTheme(),
+      inputDecorationTheme: _buildInputTheme(),
       dividerTheme: DividerThemeData(
         color: Colors.white.withValues(alpha: 0.1),
       ),
@@ -123,13 +63,9 @@ class AppTheme {
     );
   }
 
-  static TextTheme _buildTextTheme(Brightness brightness) {
-    final color = brightness == Brightness.light
-        ? AppColors.creamText
-        : Colors.white;
-    final secondaryColor = brightness == Brightness.light
-        ? AppColors.creamText2
-        : Colors.white70;
+  static TextTheme _buildTextTheme() {
+    const color = Colors.white;
+    const secondaryColor = Colors.white70;
 
     return TextTheme(
       displayLarge: AppTypography.display.copyWith(color: color),
@@ -142,18 +78,11 @@ class AppTheme {
     );
   }
 
-  static InputDecorationTheme _buildInputTheme(Brightness brightness) {
-    final isDark = brightness == Brightness.dark;
-    final fillColor = isDark
-        ? Colors.white.withValues(alpha: 0.08)
-        : Colors.black.withValues(alpha: 0.05);
-    final hintColor = isDark
-        ? Colors.white.withValues(alpha: 0.3)
-        : Colors.black.withValues(alpha: 0.3);
-    final borderColor = isDark
-        ? Colors.white.withValues(alpha: 0.15)
-        : Colors.black.withValues(alpha: 0.1);
-    final focusedColor = isDark ? AppColors.gold500 : AppColors.forest500;
+  static InputDecorationTheme _buildInputTheme() {
+    final fillColor = Colors.white.withValues(alpha: 0.08);
+    final hintColor = Colors.white.withValues(alpha: 0.3);
+    final borderColor = Colors.white.withValues(alpha: 0.15);
+    const focusedColor = AppColors.gold500;
 
     return InputDecorationTheme(
       filled: true,

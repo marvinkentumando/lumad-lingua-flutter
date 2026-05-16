@@ -3,9 +3,14 @@ import '../services/auth_service.dart';
 
 enum UserRole { learner, contributor, validator, educator, admin }
 
+final isSimulatingProvider = StateProvider<bool>((ref) => false);
+
 class RoleNotifier extends Notifier<UserRole> {
   @override
   UserRole build() {
+    final isSimulating = ref.watch(isSimulatingProvider);
+    if (isSimulating) return UserRole.learner;
+
     final profile = ref.watch(userProfileProvider).value;
     final roleString = profile?['role']?.toString().toLowerCase();
 

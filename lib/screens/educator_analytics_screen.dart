@@ -26,6 +26,7 @@ class _EducatorAnalyticsScreenState
     final allUsersAsync = ref.watch(allUsersProvider);
     final dialectDistAsync = ref.watch(dialectDistributionProvider);
     final topLearnersAsync = ref.watch(topLearnersProvider);
+    final analyticsAsync = ref.watch(educatorAnalyticsProvider);
     final totalWordsAsync = ref.watch(totalWordsCountProvider);
 
     return Scaffold(
@@ -79,22 +80,55 @@ class _EducatorAnalyticsScreenState
                 _buildWordsStatsCard(totalWordsAsync),
 
                 const SizedBox(height: 32),
-                _buildSectionTitle('Quiz Performance (Mocked)'),
-                const SizedBox(height: 16),
-                ..._mockQuizPerformance.map((q) => _buildQuizItem(q)),
+                analyticsAsync.when(
+                  data: (analytics) {
+                    final quizPerformance = List<Map<String, dynamic>>.from(analytics['quizPerformance'] ?? []);
+                    final commonHurdles = List<Map<String, dynamic>>.from(analytics['commonHurdles'] ?? []);
 
-                const SizedBox(height: 32),
-                _buildSectionTitle('Common Hurdles (Mocked)'),
-                const SizedBox(height: 16),
-                _buildHurdleItem(
-                  'Verb Conjugation',
-                  '45% failure rate in Unit 3',
-                  'Family Lineage Vocabulary',
-                ),
-                _buildHurdleItem(
-                  'Phonetic Tones',
-                  'Struggled by 12 new learners',
-                  'Basic Mansaka Greetings',
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSectionTitle('Quiz Performance'),
+                        const SizedBox(height: 16),
+                        if (quizPerformance.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 32),
+                            child: Text(
+                              'No quiz data recorded yet.',
+                              style: AppTypography.body.copyWith(color: isDark ? Colors.white24 : AppColors.creamText3),
+                            ),
+                          )
+                        else
+                          ...quizPerformance.map((q) => _buildQuizItem(q)),
+
+                        const SizedBox(height: 32),
+                        _buildSectionTitle('Common Hurdles'),
+                        const SizedBox(height: 16),
+                        if (commonHurdles.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 32),
+                            child: Text(
+                              'No significant hurdles identified yet.',
+                              style: AppTypography.body.copyWith(color: isDark ? Colors.white24 : AppColors.creamText3),
+                            ),
+                          )
+                        else
+                          ...commonHurdles.map((h) => _buildHurdleItem(
+                                h['topic'] ?? 'Unknown Topic',
+                                h['stat'] ?? 'No stats',
+                                h['lessonName'] ?? 'Unknown Lesson',
+                              )),
+                      ],
+                    );
+                  },
+                  loading: () => Column(
+                    children: [
+                      _buildLoadingCard(150),
+                      const SizedBox(height: 32),
+                      _buildLoadingCard(150),
+                    ],
+                  ),
+                  error: (e, _) => const SizedBox.shrink(),
                 ),
 
                 const SizedBox(height: 32),
@@ -840,12 +874,6 @@ class _EducatorAnalyticsScreenState
       ),
     );
   }
-
-  final List<Map<String, dynamic>> _mockQuizPerformance = [
-    {'name': 'Basic Greetings Quiz', 'pass': 87, 'fail': 13},
-    {'name': 'Counting Quiz', 'pass': 72, 'fail': 28},
-    {'name': 'Family Vocab Quiz', 'pass': 55, 'fail': 45},
-  ];
 }
 
 class _GrowthPainter extends CustomPainter {

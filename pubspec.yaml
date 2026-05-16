@@ -74,6 +74,7 @@ dependencies:
   flutter_local_notifications: ^21.0.0
   timezone: ^0.11.0
   supabase_flutter: ^2.12.4
+  flutter_tts: ^4.2.5
 
 dev_dependencies:
   flutter_test:

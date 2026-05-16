@@ -3,12 +3,14 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 class AudioService {
   final _recorder = AudioRecorder();
   final _player = AudioPlayer();
   final _bgPlayer = AudioPlayer();
   final _sfxPlayer = AudioPlayer();
+  final _tts = FlutterTts();
 
   AudioService() {
     _bgPlayer.setReleaseMode(ReleaseMode.loop);
@@ -37,12 +39,17 @@ class AudioService {
         case 'error':
           assetPath = 'audio/error.MP3';
           break;
-        case 'level_up':
-        case 'milestone':
-          assetPath = 'audio/success_1.MP3'; // Using alternative success for milestones
+        case 'session_complete':
+          assetPath = 'audio/success_1.MP3';
           break;
         case 'click':
           assetPath = 'audio/click.MP3';
+          break;
+        case 'success':
+        case 'level_up':
+        case 'milestone':
+        default:
+          assetPath = 'audio/success.MP3';
           break;
       }
       await _sfxPlayer.play(AssetSource(assetPath));
@@ -94,6 +101,19 @@ class AudioService {
     }
   }
 
+  Future<void> speak(String text) async {
+    try {
+      // fil-PH is used as a best-effort fallback for indigenous dialects
+      await _tts.setLanguage("fil-PH");
+      await _tts.setSpeechRate(0.5);
+      await _tts.setVolume(1.0);
+      await _tts.setPitch(1.0);
+      await _tts.speak(text);
+    } catch (e) {
+      debugPrint("TTS Error: $e");
+    }
+  }
+
   Future<void> preCacheAudio(List<String> urls) async {
     for (var url in urls) {
       if (url.isEmpty) continue;
@@ -111,6 +131,7 @@ class AudioService {
 
   Future<void> stopPlayback() async {
     await _player.stop();
+    await _tts.stop();
   }
 
   void dispose() {

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,13 +38,23 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _showBurst = false;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (mounted) setState(() {});
+    });
     Future.microtask(() {
       ref.read(questActionProvider.notifier).generateDynamicQuests();
     });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -90,8 +101,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     _buildMapCard(context),
                     const SizedBox(height: 32),
                     _buildVillageEchoes(context),
-                    const SizedBox(height: 32),
-                    _buildArtifactSpotlight(context),
                     const SizedBox(height: 32),
                     _buildLeaderboardHeader(context),
                     const SizedBox(height: 16),
@@ -478,6 +487,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 icon: Icons.terrain_rounded,
                 color: const Color(0xFF6B4226),
                 route: '/saka-game',
+              ),
+              const SizedBox(width: 16),
+              _buildChallengeCard(
+                context,
+                title: 'Shadowing',
+                subtitle: 'Audio Compare',
+                icon: Icons.mic_external_on_rounded,
+                color: const Color(0xFF4A2C2C),
+                route: '/audio-comparison',
               ),
             ],
           ),
@@ -877,109 +895,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildArtifactSpotlight(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'ARTIFACT SPOTLIGHT',
-          style: AppTypography.label.copyWith(
-            color: Colors.white24,
-            letterSpacing: 2,
-            fontWeight: FontWeight.w900,
-            fontSize: 10,
-          ),
-        ),
-        const SizedBox(height: 16),
-        BrandCard(
-          theme: BrandCardTheme.vibrant,
-          padding: EdgeInsets.zero,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                height: 160,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(32),
-                  ),
-                  image: const DecorationImage(
-                    image: AssetImage('assets/images/artifact_weave.png'),
-                    fit: BoxFit.cover,
-                  ),
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.5),
-                    ],
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Mansaka Binallog',
-                          style: AppTypography.h3.copyWith(
-                            color: Colors.white,
-                            fontSize: 18,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.gold500.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: AppColors.gold500.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Text(
-                            'TEXTILE',
-                            style: AppTypography.label.copyWith(
-                              color: AppColors.gold500,
-                              fontSize: 8,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '\u201cA masterpiece of patience and spirit, woven with natural fibers by the elders.\u201d',
-                      style: AppTypography.body.copyWith(
-                        color: Colors.white38,
-                        fontStyle: FontStyle.italic,
-                        fontSize: 13,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    BrandButton(
-                      text: 'VIEW IN GALLERY',
-                      onTap: () => context.push('/gallery'),
-                      type: BrandButtonType.primary,
-                      icon: Icons.unfold_more_rounded,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildLeaderboardHeader(BuildContext context) {
     return Row(
@@ -1148,92 +1063,102 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final xp = user['xp'] ?? 0;
     final avatarUrl = user['photoURL'] ?? user['avatarUrl'];
     final title = _getLevelTitle(xp, config);
+    final userId = user['uid'];
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 24,
-            child: Text(
-              '$rank',
-              style: AppTypography.mono.copyWith(
-                color: isDark ? Colors.white24 : AppColors.creamText3,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+    return InkWell(
+      onTap: userId != null
+          ? () {
+              HapticService.light();
+              context.push('/member/$userId');
+            }
+          : null,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 24,
+              child: Text(
+                '$rank',
+                style: AppTypography.mono.copyWith(
+                  color: isDark ? Colors.white24 : AppColors.creamText3,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: isDark ? Colors.white10 : Colors.black12,
-              image: avatarUrl != null
-                  ? DecorationImage(
-                      image: avatarUrl.startsWith('http')
-                          ? NetworkImage(avatarUrl) as ImageProvider
-                          : AssetImage(avatarUrl),
-                      fit: BoxFit.cover,
+            const SizedBox(width: 12),
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: isDark ? Colors.white10 : Colors.black12,
+                image: avatarUrl != null
+                    ? DecorationImage(
+                        image: avatarUrl.startsWith('http')
+                            ? NetworkImage(avatarUrl) as ImageProvider
+                            : AssetImage(avatarUrl),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+              ),
+              child: avatarUrl == null
+                  ? Center(
+                      child: Text(
+                        name[0].toUpperCase(),
+                        style: AppTypography.h3.copyWith(color: Colors.white24),
+                      ),
                     )
                   : null,
             ),
-            child: avatarUrl == null
-                ? Center(
-                    child: Text(
-                      name[0].toUpperCase(),
-                      style: AppTypography.h3.copyWith(color: Colors.white24),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.bodyLarge.copyWith(
+                      color: isDark ? Colors.white : AppColors.forest700,
+                      fontWeight: FontWeight.bold,
                     ),
-                  )
-                : null,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+                  ),
+                  Text(
+                    title,
+                    style: AppTypography.body.copyWith(
+                      color: isDark ? Colors.white24 : AppColors.creamText2,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.bodyLarge.copyWith(
-                    color: isDark ? Colors.white : AppColors.forest700,
+                  '$xp',
+                  style: AppTypography.mono.copyWith(
+                    color: isDark ? AppColors.gold500 : AppColors.forest500,
                     fontWeight: FontWeight.bold,
+                    fontSize: 16,
                   ),
                 ),
                 Text(
-                  title,
-                  style: AppTypography.body.copyWith(
-                    color: isDark ? Colors.white24 : AppColors.creamText2,
-                    fontSize: 11,
+                  'ARCHIVE XP',
+                  style: AppTypography.label.copyWith(
+                    color: isDark ? Colors.white10 : Colors.black12,
+                    fontSize: 8,
                   ),
                 ),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '$xp',
-                style: AppTypography.mono.copyWith(
-                  color: isDark ? AppColors.gold500 : AppColors.forest500,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              Text(
-                'ARCHIVE XP',
-                style: AppTypography.label.copyWith(
-                  color: isDark ? Colors.white10 : Colors.black12,
-                  fontSize: 8,
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

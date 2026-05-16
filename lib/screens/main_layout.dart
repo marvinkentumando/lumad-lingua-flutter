@@ -28,7 +28,12 @@ class MainLayout extends ConsumerWidget {
     final currentRole = ref.watch(roleProvider);
     final navItems = getNavItemsForRole(currentRole);
 
-    final String location = GoRouterState.of(context).uri.toString();
+    final String location = GoRouterState.of(context).uri.path;
+    final bool hideBottomNav = location.startsWith('/scenario-session') ||
+        location == '/lingua-duel' ||
+        location == '/saka-game' ||
+        location == '/scenario-hub' ||
+        location == '/audio-comparison';
 
     // Find matching route. Special handling for '/' to avoid matching everything
     int currentIndex = navItems.indexWhere((item) {
@@ -39,73 +44,74 @@ class MainLayout extends ConsumerWidget {
     if (currentIndex == -1) currentIndex = 0; // Fallback
 
     final userAsync = ref.watch(authStateProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     final culturalTheme = ref.watch(culturalThemeProvider);
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        titleSpacing: 20,
-        automaticallyImplyLeading: false,
-        title: _buildTopBar(
-          context,
-          ref,
-          userAsync,
-          culturalTheme,
-          currentRole,
-        ),
-      ),
+      appBar: hideBottomNav
+          ? null
+          : AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              titleSpacing: 20,
+              automaticallyImplyLeading: false,
+              title: _buildTopBar(
+                context,
+                ref,
+                userAsync,
+                culturalTheme,
+                currentRole,
+              ),
+            ),
       body: BrandBackground(child: child),
-
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.only(
-          bottom: 24,
-          left: 20,
-          right: 20,
-          top: 10,
-        ),
-        color: Colors.transparent,
-        child: DynamicGlassBox(
-          borderRadius: 32,
-          blur: 20,
-          opacity: isDark ? 0.12 : 0.6,
-          child: BottomNavigationBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            type: BottomNavigationBarType.fixed,
-            currentIndex: currentIndex,
-            selectedItemColor: isDark
-                ? culturalTheme.accentColor
-                : culturalTheme.primaryColor,
-            unselectedItemColor: (isDark ? Colors.white : Colors.black)
-                .withValues(alpha: 0.3),
-            selectedLabelStyle: AppTypography.label.copyWith(
-              fontSize: 8,
-              fontWeight: FontWeight.w900,
-              color: isDark
-                  ? culturalTheme.accentColor
-                  : culturalTheme.primaryColor,
+      bottomNavigationBar: hideBottomNav
+          ? null
+          : Container(
+              padding: EdgeInsets.only(
+                bottom: bottomPadding > 0 ? bottomPadding : 12,
+                left: 30,
+                right: 30,
+                top: 0,
+              ),
+              color: Colors.transparent,
+              child: DynamicGlassBox(
+                borderRadius: 20,
+                blur: 20,
+                opacity: 0.12,
+                child: BottomNavigationBar(
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  type: BottomNavigationBarType.fixed,
+                  showSelectedLabels: true,
+                  showUnselectedLabels: true,
+                  selectedFontSize: 8,
+                  unselectedFontSize: 8,
+                  currentIndex: currentIndex,
+                  selectedItemColor: culturalTheme.accentColor,
+                  unselectedItemColor: Colors.white.withValues(alpha: 0.3),
+                  selectedLabelStyle: AppTypography.label.copyWith(
+                    fontSize: 8,
+                    fontWeight: FontWeight.w900,
+                    color: culturalTheme.accentColor,
+                  ),
+                  unselectedLabelStyle: AppTypography.label.copyWith(
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  onTap: (index) {
+                    if (index >= 0 && index < navItems.length) {
+                      HapticService.light();
+                      context.go(navItems[index].route);
+                    }
+                  },
+                  items: navItems.map((item) {
+                    final isSelected = navItems.indexOf(item) == currentIndex;
+                    return _buildNavItem(item.icon, item.label, isSelected);
+                  }).toList(),
+                ),
+              ),
             ),
-            unselectedLabelStyle: AppTypography.label.copyWith(
-              fontSize: 8,
-              fontWeight: FontWeight.bold,
-            ),
-            onTap: (index) {
-              if (index >= 0 && index < navItems.length) {
-                HapticService.light();
-                context.go(navItems[index].route);
-              }
-            },
-            items: navItems.map((item) {
-              final isSelected = navItems.indexOf(item) == currentIndex;
-              return _buildNavItem(item.icon, item.label, isSelected);
-            }).toList(),
-          ),
-        ),
-      ),
     );
   }
 
@@ -115,10 +121,7 @@ class MainLayout extends ConsumerWidget {
     bool isSelected,
   ) {
     return BottomNavigationBarItem(
-      icon: Padding(
-        padding: const EdgeInsets.only(bottom: 4),
-        child: Icon(icon, size: 24),
-      ),
+      icon: Icon(icon, size: 24),
       label: label,
     );
   }

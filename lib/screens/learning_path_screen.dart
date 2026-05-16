@@ -6,6 +6,7 @@ import '../services/firebase_service.dart';
 import '../models/lesson.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:confetti/confetti.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/unit_header_card.dart';
@@ -13,6 +14,7 @@ import '../widgets/lesson_step_card.dart';
 import '../widgets/skeleton.dart';
 import '../utils/icon_utils.dart';
 import '../providers/student_provider.dart';
+import '../providers/user_preferences_provider.dart';
 import '../widgets/ambient_topo_background.dart';
 
 class LearningPathScreen extends ConsumerStatefulWidget {
@@ -24,10 +26,11 @@ class LearningPathScreen extends ConsumerStatefulWidget {
 
 class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
     with TickerProviderStateMixin {
-  bool _isClassic = false; // Default to Mountain for the "path" experience
   late ScrollController _scrollController;
   late AnimationController _pulseController;
+  late ConfettiController _confettiController;
   bool _hasScrolledToActive = false;
+  bool _showCelebration = false;
   final GlobalKey _activeNodeKey = GlobalKey();
 
   @override
@@ -39,32 +42,45 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
+
+    _confettiController = ConfettiController(duration: const Duration(seconds: 5));
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
     _pulseController.dispose();
+    _confettiController.dispose();
     super.dispose();
   }
 
   void _scrollToActiveLesson() {
     if (_hasScrolledToActive) return;
+    _hasScrolledToActive = true; // Guard immediately to prevent duplicate calls
 
-    // Add a slight delay to ensure rendering is complete
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (!mounted) return;
-      final keyContext = _activeNodeKey.currentContext;
-      if (keyContext != null && keyContext.mounted) {
-        Scrollable.ensureVisible(
-          keyContext,
-          duration: const Duration(milliseconds: 800),
-          curve: Curves.easeInOutQuart,
-          alignment: 0.5,
-        );
-        _hasScrolledToActive = true;
-      }
+    // Use post-frame callback to ensure the widget tree is fully laid out
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _attemptScrollToActive(retries: 5);
     });
+  }
+
+  void _attemptScrollToActive({required int retries}) {
+    if (!mounted || retries <= 0) return;
+
+    final keyContext = _activeNodeKey.currentContext;
+    if (keyContext != null && keyContext.mounted) {
+      Scrollable.ensureVisible(
+        keyContext,
+        duration: const Duration(milliseconds: 800),
+        curve: Curves.easeInOutQuart,
+        alignment: 0.4, // Position slightly above center for better visibility
+      );
+    } else {
+      // Widget tree may still be settling — retry after a short delay
+      Future.delayed(const Duration(milliseconds: 200), () {
+        _attemptScrollToActive(retries: retries - 1);
+      });
+    }
   }
 
   @override
@@ -72,6 +88,8 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
     final lessonsAsync = ref.watch(lessonsStreamProvider);
     final uri = GoRouterState.of(context).uri;
     final lessonId = uri.queryParameters['lessonId'];
+    final prefs = ref.watch(userPreferencesProvider);
+    final isClassic = prefs.learningPathView == 'CLASSIC';
 
     // Resolve language name from data for the header
     final resolvedLanguage =
@@ -89,7 +107,18 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: AmbientTopoBackground(
+      body: AnimatedBuilder(
+        animation: _scrollController,
+        builder: (context, child) {
+          double scrollOffset = 0.0;
+          if (_scrollController.hasClients) {
+            scrollOffset = _scrollController.offset;
+          }
+          return AmbientTopoBackground(
+            scrollOffset: scrollOffset,
+            child: child!,
+          );
+        },
         child: Stack(
           children: [
             CustomScrollView(
@@ -104,12 +133,12 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                 const SliverToBoxAdapter(child: SizedBox(height: 32)),
 
                 SliverToBoxAdapter(
-                  child: Center(child: _buildToggle()),
+                  child: Center(child: _buildToggle(isClassic)),
                 ),
 
                 const SliverToBoxAdapter(child: SizedBox(height: 48)),
 
-                _buildSliverPathContent(context),
+                _buildSliverPathContent(context, isClassic),
 
                 const SliverToBoxAdapter(child: SizedBox(height: 100)),
               ],
@@ -117,10 +146,105 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
 
             // Glassmorphic Header
             _buildGlassHeader(context, resolvedLanguage),
+
+            if (_showCelebration) _buildCelebrationOverlay(),
+
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirectionality: BlastDirectionality.explosive,
+                shouldLoop: false,
+                colors: const [
+                  AppColors.gold500,
+                  AppColors.terracotta,
+                  AppColors.forest500,
+                  Colors.white,
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildCelebrationOverlay() {
+    return GestureDetector(
+      onTap: () => setState(() => _showCelebration = false),
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.8),
+        width: double.infinity,
+        height: double.infinity,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.emoji_events_rounded,
+                color: AppColors.gold500,
+                size: 120,
+              ).animate().scale(duration: 600.ms, curve: Curves.elasticOut).shimmer(delay: 600.ms),
+              const SizedBox(height: 24),
+              Text(
+                'SUMMIT REACHED!',
+                style: AppTypography.displayBold.copyWith(
+                  color: AppColors.gold500,
+                  fontSize: 32,
+                  letterSpacing: 2,
+                ),
+              ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.2),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: Text(
+                  'You have reached the Peak of Wisdom. Your journey through this ancestral language is complete!',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.bodyLarge.copyWith(color: Colors.white70),
+                ),
+              ).animate().fadeIn(delay: 500.ms),
+              const SizedBox(height: 48),
+              Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [AppColors.gold500, AppColors.terracotta]),
+                  borderRadius: BorderRadius.circular(32),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Text(
+                    'CLAIM CERTIFICATE',
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.gold500,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ).animate().scale(delay: 800.ms, curve: Curves.easeOutBack).shimmer(delay: 2.seconds),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () => setState(() => _showCelebration = false),
+                child: Text(
+                  'RETURN TO PATH',
+                  style: AppTypography.label.copyWith(color: Colors.white24),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _triggerSummitCelebration() {
+    HapticFeedback.heavyImpact();
+    setState(() => _showCelebration = true);
+    _confettiController.play();
   }
 
   Widget _buildGlassHeader(BuildContext context, String language) {
@@ -246,7 +370,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
     );
   }
 
-  Widget _buildToggle() {
+  Widget _buildToggle(bool isClassic) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(5),
@@ -259,8 +383,8 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _toggleBtn('CLASSIC', _isClassic),
-          _toggleBtn('MOUNTAIN', !_isClassic),
+          _toggleBtn('CLASSIC', isClassic),
+          _toggleBtn('MOUNTAIN', !isClassic),
         ],
       ),
     );
@@ -271,7 +395,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
-        setState(() => _isClassic = label == 'CLASSIC');
+        ref.read(userPreferencesProvider.notifier).setLearningPathView(label);
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
@@ -299,7 +423,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
     );
   }
 
-  Widget _buildSliverPathContent(BuildContext context) {
+  Widget _buildSliverPathContent(BuildContext context, bool isClassic) {
     final lessonsAsync = ref.watch(lessonsStreamProvider);
     final studentState = ref.watch(studentProvider);
 
@@ -334,14 +458,17 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
           grouped.putIfAbsent(l.unitNumber, () => []).add(l);
         }
 
+        final isSummitUnlocked = lessons.isNotEmpty &&
+            lessons.every((l) => studentState.lessonProgress[l.id]?['completed'] == true);
+
         // Trigger auto-scroll
         _scrollToActiveLesson();
 
         return SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          sliver: _isClassic
-              ? _buildSliverClassicPath(context, grouped, studentState)
-              : _buildSliverMountainPath(context, grouped, studentState),
+          sliver: isClassic
+              ? _buildSliverClassicPath(context, grouped, studentState, isSummitUnlocked)
+              : _buildSliverMountainPath(context, grouped, studentState, isSummitUnlocked),
         );
       },
       loading: () => SliverToBoxAdapter(child: _buildPathSkeleton()),
@@ -371,6 +498,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
     BuildContext context,
     Map<int, List<Lesson>> grouped,
     StudentState studentState,
+    bool isSummitUnlocked,
   ) {
     final List<Widget> children = [];
     final sortedUnits = grouped.keys.toList()..sort(); // Unit 1, 2, 3...
@@ -466,55 +594,69 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
 
     // Add Summit at the bottom for top-to-bottom classic path
     children.add(const SizedBox(height: 20));
-    children.add(_buildSummitVisual());
+    children.add(_buildSummitVisual(isSummitUnlocked));
 
     return SliverList(delegate: SliverChildListDelegate(children));
   }
 
-  Widget _buildSummitVisual() {
+  Widget _buildSummitVisual(bool isUnlocked) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.gold500.withValues(alpha: 0.1),
-            border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3), width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.gold500.withValues(alpha: 0.2),
-                blurRadius: 40,
-                spreadRadius: 10,
+    return GestureDetector(
+      onTap: isUnlocked ? _triggerSummitCelebration : null,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isUnlocked
+                  ? AppColors.gold500.withValues(alpha: 0.2)
+                  : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+              border: Border.all(
+                color: isUnlocked
+                    ? AppColors.gold500.withValues(alpha: 0.5)
+                    : (isDark ? Colors.white10 : Colors.black12),
+                width: 2,
               ),
-            ],
+              boxShadow: isUnlocked
+                  ? [
+                      BoxShadow(
+                        color: AppColors.gold500.withValues(alpha: 0.2),
+                        blurRadius: 40,
+                        spreadRadius: 10,
+                      ),
+                    ]
+                  : [],
+            ),
+            child: Icon(
+              Icons.wb_sunny_rounded, // Ancestral Sun
+              color: isUnlocked
+                  ? AppColors.gold500
+                  : (isDark ? Colors.white10 : Colors.black12),
+              size: 64,
+            ),
+          ).animate(onPlay: (c) => isUnlocked ? c.repeat(reverse: true) : null)
+           .scale(begin: const Offset(1, 1), end: const Offset(1.1, 1.1), duration: 3.seconds, curve: Curves.easeInOut)
+           .shimmer(delay: 2.seconds, duration: 2.seconds),
+          const SizedBox(height: 16),
+          Text(
+            'THE PEAK OF WISDOM',
+            style: AppTypography.label.copyWith(
+              color: isUnlocked ? AppColors.gold500 : (isDark ? Colors.white24 : Colors.black26),
+              letterSpacing: 4,
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+            ),
           ),
-          child: const Icon(
-            Icons.wb_sunny_rounded, // Ancestral Sun
-            color: AppColors.gold500,
-            size: 64,
+          Text(
+            isUnlocked ? 'Tap to enter the Peak' : 'Complete all lessons to reach the summit',
+            style: AppTypography.body.copyWith(
+              color: isDark ? Colors.white24 : Colors.black26,
+              fontSize: 10,
+            ),
           ),
-        ).animate(onPlay: (c) => c.repeat(reverse: true))
-         .scale(begin: const Offset(1, 1), end: const Offset(1.1, 1.1), duration: 3.seconds, curve: Curves.easeInOut)
-         .shimmer(delay: 2.seconds, duration: 2.seconds),
-        const SizedBox(height: 16),
-        Text(
-          'THE PEAK OF WISDOM',
-          style: AppTypography.label.copyWith(
-            color: AppColors.gold500,
-            letterSpacing: 4,
-            fontWeight: FontWeight.w900,
-            fontSize: 12,
-          ),
-        ),
-        Text(
-          'Complete all lessons to reach the summit',
-          style: AppTypography.body.copyWith(
-            color: isDark ? Colors.white24 : Colors.black26,
-            fontSize: 10,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -522,13 +664,14 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
     BuildContext context,
     Map<int, List<Lesson>> grouped,
     StudentState studentState,
+    bool isSummitUnlocked,
   ) {
     final List<Widget> children = [];
     final sortedUnits = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
     bool activeNodeKeyAssigned = false;
 
     // Add Summit to the Mountain Path
-    children.add(_buildSummitVisual());
+    children.add(_buildSummitVisual(isSummitUnlocked));
     children.add(const SizedBox(height: 80));
 
     int globalIndex = 0;
@@ -580,6 +723,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
           ),
         );
 
+        // Add line leading TO this node from the PREVIOUS one (which is lower in the list, so globalIndex + 1)
         if (globalIndex < (totalLessons - 1)) {
           double nextShift = 0;
           int nextIdx = globalIndex + 1;
@@ -590,9 +734,36 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
             _buildMountainLine(
               context,
               isCompleted: isCompleted,
-              isTransition: isCompleted && !isActive,
+              isActive: isActive,
               startShift: horizontalShift,
               endShift: nextShift,
+            ),
+          );
+        } else {
+          // This is the very first lesson (bottom of the mountain)
+          // Add a starting line coming from below
+          children.add(
+            _buildMountainLine(
+              context,
+              isCompleted: isCompleted,
+              isActive: isActive,
+              startShift: horizontalShift,
+              endShift: horizontalShift, // Vertical line
+            ),
+          );
+        }
+
+        // Special case: If this is the highest lesson (globalIndex == 0), 
+        // add a line connecting it TO the Summit above it.
+        if (globalIndex == 0) {
+          children.insert(
+            2, // After Summit visual and its spacing
+            _buildMountainLine(
+              context,
+              isCompleted: isSummitUnlocked,
+              isActive: !isSummitUnlocked && isCompleted,
+              startShift: 0, // Summit is centered
+              endShift: horizontalShift,
             ),
           );
         }
@@ -729,7 +900,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
   Widget _buildMountainLine(
     BuildContext context, {
     required bool isCompleted,
-    bool isTransition = false,
+    bool isActive = false,
     double startShift = 0,
     double endShift = 0,
   }) {
@@ -741,8 +912,13 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
         painter: PathLinePainter(
           startShift: startShift,
           endShift: endShift,
-          color: isCompleted ? AppColors.gold500 : (isDark ? Colors.white10 : Colors.black12),
-          isDashed: !isCompleted,
+          color: isCompleted 
+              ? AppColors.gold500 
+              : (isActive 
+                  ? (isDark ? Colors.white30 : Colors.black38) 
+                  : (isDark ? Colors.white10 : Colors.black12)),
+          isDashed: !isCompleted && !isActive,
+          isCompleted: isCompleted,
         ),
       ),
     );
@@ -754,12 +930,14 @@ class PathLinePainter extends CustomPainter {
   final double endShift;
   final Color color;
   final bool isDashed;
+  final bool isCompleted;
 
   PathLinePainter({
     required this.startShift,
     required this.endShift,
     required this.color,
     this.isDashed = false,
+    this.isCompleted = false,
   });
 
   @override
@@ -793,16 +971,24 @@ class PathLinePainter extends CustomPainter {
     } else {
       canvas.drawPath(path, paint);
 
-      final glowPaint = Paint()
-        ..color = color.withValues(alpha: 0.3)
-        ..strokeWidth = 12
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8)
-        ..strokeCap = StrokeCap.round
-        ..style = PaintingStyle.stroke;
-      canvas.drawPath(path, glowPaint);
+      if (isCompleted) {
+        final glowPaint = Paint()
+          ..color = color.withValues(alpha: 0.3)
+          ..strokeWidth = 12
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8)
+          ..strokeCap = StrokeCap.round
+          ..style = PaintingStyle.stroke;
+        canvas.drawPath(path, glowPaint);
+      }
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant PathLinePainter oldDelegate) {
+    return oldDelegate.color != color || 
+           oldDelegate.isDashed != isDashed || 
+           oldDelegate.isCompleted != isCompleted ||
+           oldDelegate.startShift != startShift ||
+           oldDelegate.endShift != endShift;
+  }
 }

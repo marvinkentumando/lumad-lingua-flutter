@@ -4,6 +4,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../models/educator_models.dart';
+import '../providers/educator_provider.dart';
 
 enum StudentSort { name, progress, level }
 
@@ -24,174 +25,8 @@ class _EducatorStudentsScreenState
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
-  final List<EducatorStudent> _students = [
-    const EducatorStudent(
-      id: 's1',
-      name: 'Datu Marubay',
-      level: 'Intermediate',
-      progress: 0.85,
-      avatar: 'assets/images/user1.png',
-      village: 'Village A',
-      lessonsCompleted: 14,
-      streakDays: 5,
-      isStruggling: false,
-      lessonBreakdown: [
-        StudentLessonProgress(
-          lessonTitle: 'Basic Greetings',
-          progress: 1.0,
-          status: 'Completed',
-        ),
-        StudentLessonProgress(
-          lessonTitle: 'Counting 1-100',
-          progress: 1.0,
-          status: 'Completed',
-        ),
-        StudentLessonProgress(
-          lessonTitle: 'Family Lineage',
-          progress: 0.6,
-          status: 'In Progress',
-        ),
-        StudentLessonProgress(
-          lessonTitle: 'Farming Phrases',
-          progress: 0.0,
-          status: 'Not Started',
-        ),
-      ],
-    ),
-    const EducatorStudent(
-      id: 's2',
-      name: 'Guardian Tala',
-      level: 'Beginner',
-      progress: 0.42,
-      avatar: 'assets/images/user2.png',
-      village: 'Village B',
-      lessonsCompleted: 6,
-      streakDays: 2,
-      isStruggling: true,
-      lessonBreakdown: [
-        StudentLessonProgress(
-          lessonTitle: 'Basic Greetings',
-          progress: 1.0,
-          status: 'Completed',
-        ),
-        StudentLessonProgress(
-          lessonTitle: 'Counting 1-100',
-          progress: 0.3,
-          status: 'In Progress',
-        ),
-        StudentLessonProgress(
-          lessonTitle: 'Family Lineage',
-          progress: 0.0,
-          status: 'Not Started',
-        ),
-      ],
-    ),
-    const EducatorStudent(
-      id: 's3',
-      name: 'Elena Mansaka',
-      level: 'Expert',
-      progress: 0.98,
-      avatar: 'assets/images/user3.png',
-      village: 'Village A',
-      lessonsCompleted: 22,
-      streakDays: 14,
-      isStruggling: false,
-      lessonBreakdown: [
-        StudentLessonProgress(
-          lessonTitle: 'Basic Greetings',
-          progress: 1.0,
-          status: 'Completed',
-        ),
-        StudentLessonProgress(
-          lessonTitle: 'Counting 1-100',
-          progress: 1.0,
-          status: 'Completed',
-        ),
-        StudentLessonProgress(
-          lessonTitle: 'Family Lineage',
-          progress: 1.0,
-          status: 'Completed',
-        ),
-        StudentLessonProgress(
-          lessonTitle: 'Farming Phrases',
-          progress: 0.9,
-          status: 'In Progress',
-        ),
-      ],
-    ),
-    const EducatorStudent(
-      id: 's4',
-      name: 'Juan Mandaya',
-      level: 'Beginner',
-      progress: 0.15,
-      avatar: 'assets/images/user4.png',
-      village: 'Youth Group',
-      lessonsCompleted: 2,
-      streakDays: 0,
-      isStruggling: true,
-      lessonBreakdown: [
-        StudentLessonProgress(
-          lessonTitle: 'Basic Greetings',
-          progress: 0.4,
-          status: 'In Progress',
-        ),
-        StudentLessonProgress(
-          lessonTitle: 'Counting 1-100',
-          progress: 0.0,
-          status: 'Not Started',
-        ),
-      ],
-    ),
-    const EducatorStudent(
-      id: 's5',
-      name: 'Bai Rosa',
-      level: 'Intermediate',
-      progress: 0.62,
-      avatar: 'assets/images/user1.png',
-      village: 'Village B',
-      lessonsCompleted: 10,
-      streakDays: 3,
-      isStruggling: false,
-      lessonBreakdown: [
-        StudentLessonProgress(
-          lessonTitle: 'Basic Greetings',
-          progress: 1.0,
-          status: 'Completed',
-        ),
-        StudentLessonProgress(
-          lessonTitle: 'Counting 1-100',
-          progress: 0.8,
-          status: 'In Progress',
-        ),
-        StudentLessonProgress(
-          lessonTitle: 'Family Lineage',
-          progress: 0.2,
-          status: 'In Progress',
-        ),
-      ],
-    ),
-    const EducatorStudent(
-      id: 's6',
-      name: 'Kadaw Lumad',
-      level: 'Beginner',
-      progress: 0.08,
-      avatar: 'assets/images/user2.png',
-      village: 'Youth Group',
-      lessonsCompleted: 1,
-      streakDays: 0,
-      isStruggling: true,
-      lessonBreakdown: [
-        StudentLessonProgress(
-          lessonTitle: 'Basic Greetings',
-          progress: 0.1,
-          status: 'In Progress',
-        ),
-      ],
-    ),
-  ];
-
-  List<EducatorStudent> get _filteredStudents {
-    var list = _students.where((s) {
+  List<EducatorStudent> _getFilteredStudents(List<EducatorStudent> allStudents) {
+    var list = allStudents.where((s) {
       final matchesFilter =
           _selectedFilter == 'All Villages' || s.village == _selectedFilter;
       final matchesSearch =
@@ -226,156 +61,164 @@ class _EducatorStudentsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final students = _filteredStudents;
-    final strugglingCount = _students.where((s) => s.isStruggling).length;
+    final studentsAsync = ref.watch(educatorStudentsProvider);
 
-    return Scaffold(
-      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Student Hub',
-                    style: AppTypography.displayBold.copyWith(
-                      color: AppColors.gold500,
-                      fontSize: 32,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
+    return studentsAsync.when(
+      data: (allStudents) {
+        final filteredStudents = _getFilteredStudents(allStudents);
+        final strugglingCount = allStudents.where((s) => s.isStruggling).length;
+        final villages = ['All Villages', ...allStudents.map((s) => s.village).toSet()];
+
+        return Scaffold(
+          backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+          body: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${_students.length} learners',
-                        style: AppTypography.body.copyWith(
-                          color: isDark ? Colors.white24 : AppColors.creamText3,
+                        'Student Hub',
+                        style: AppTypography.displayBold.copyWith(
+                          color: AppColors.gold500,
+                          fontSize: 32,
                         ),
                       ),
-                      if (strugglingCount > 0) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.semanticRed.withValues(alpha: 0.15,
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '$strugglingCount STRUGGLING',
-                            style: AppTypography.label.copyWith(
-                              color: AppColors.semanticRed,
-                              fontSize: 8,
-                              fontWeight: FontWeight.w900,
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            '${allStudents.length} learners',
+                            style: AppTypography.body.copyWith(
+                              color: isDark ? Colors.white24 : AppColors.creamText3,
                             ),
                           ),
-                        ),
-                      ],
+                          if (strugglingCount > 0) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.semanticRed.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '$strugglingCount STRUGGLING',
+                                style: AppTypography.label.copyWith(
+                                  color: AppColors.semanticRed,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Search bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.forestDarkCard : Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.05)
-                        : AppColors.creamBorder,
+                ),
+                const SizedBox(height: 20),
+                // Search bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.forestDarkCard : Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.05)
+                            : AppColors.creamBorder,
+                      ),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (val) => setState(() => _searchQuery = val),
+                      style: TextStyle(
+                        color: isDark ? Colors.white : AppColors.creamText,
+                      ),
+                      decoration: InputDecoration(
+                        icon: const Icon(
+                          Icons.search_rounded,
+                          color: AppColors.gold500,
+                          size: 20,
+                        ),
+                        hintText: 'Search students...',
+                        hintStyle: AppTypography.body.copyWith(
+                          color: isDark ? Colors.white24 : AppColors.creamText3,
+                          fontSize: 14,
+                        ),
+                        border: InputBorder.none,
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(
+                                  Icons.close_rounded,
+                                  color: isDark ? Colors.white38 : AppColors.creamText3,
+                                  size: 18,
+                                ),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchQuery = '');
+                                },
+                              )
+                            : null,
+                      ),
+                    ),
                   ),
                 ),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (val) => setState(() => _searchQuery = val),
-                  style: TextStyle(
-                    color: isDark ? Colors.white : AppColors.creamText,
+                const SizedBox(height: 16),
+                // Filters + sort row
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Row(
+                    children: [
+                      Expanded(child: _buildStudentFilterTabs(villages.toList())),
+                      const SizedBox(width: 8),
+                      _buildSortDropdown(),
+                    ],
                   ),
-                  decoration: InputDecoration(
-                    icon: const Icon(
-                      Icons.search_rounded,
-                      color: AppColors.gold500,
-                      size: 20,
-                    ),
-                    hintText: 'Search students...',
-                    hintStyle: AppTypography.body.copyWith(
+                ),
+                const SizedBox(height: 8),
+                // Result count
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    '${filteredStudents.length} result${filteredStudents.length == 1 ? '' : 's'}',
+                    style: AppTypography.label.copyWith(
                       color: isDark ? Colors.white24 : AppColors.creamText3,
-                      fontSize: 14,
+                      fontSize: 10,
                     ),
-                    border: InputBorder.none,
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: Icon(
-                              Icons.close_rounded,
-                              color: isDark ? Colors.white38 : AppColors.creamText3,
-                              size: 18,
-                            ),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                          )
-                        : null,
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Filters + sort row
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  Expanded(child: _buildStudentFilterTabs()),
-                  const SizedBox(width: 8),
-                  _buildSortDropdown(),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            // Result count
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                '${students.length} result${students.length == 1 ? '' : 's'}',
-                style: AppTypography.label.copyWith(
-                  color: isDark ? Colors.white24 : AppColors.creamText3,
-                  fontSize: 10,
+                const SizedBox(height: 12),
+                Expanded(
+                  child: filteredStudents.isEmpty
+                      ? _buildEmptyState()
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: filteredStudents.length + 1, // +1 for bottom spacing
+                          itemBuilder: (context, index) {
+                            if (index == filteredStudents.length) {
+                              return const SizedBox(height: 100);
+                            }
+                            return _buildStudentCard(filteredStudents[index]);
+                          },
+                        ),
                 ),
-              ),
+              ],
             ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: students.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      physics: const BouncingScrollPhysics(),
-                      itemCount: students.length + 1, // +1 for bottom spacing
-                      itemBuilder: (context, index) {
-                        if (index == students.length) {
-                          return const SizedBox(height: 100);
-                        }
-                        return _buildStudentCard(students[index]);
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.gold500))),
+      error: (err, _) => Scaffold(body: Center(child: Text('Error: $err'))),
     );
   }
 
@@ -473,12 +316,11 @@ class _EducatorStudentsScreenState
     );
   }
 
-  Widget _buildStudentFilterTabs() {
-    final filters = ['All Villages', 'Village A', 'Village B', 'Youth Group'];
+  Widget _buildStudentFilterTabs(List<String> villages) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: filters.map((filter) {
+        children: villages.map((filter) {
           final isSelected = _selectedFilter == filter;
           return Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -519,7 +361,9 @@ class _EducatorStudentsScreenState
                   CircleAvatar(
                     radius: 24,
                     backgroundColor: AppColors.gold500.withValues(alpha: 0.1),
-                    backgroundImage: AssetImage(student.avatar),
+                    backgroundImage: student.avatar.startsWith('http')
+                        ? NetworkImage(student.avatar) as ImageProvider
+                        : AssetImage(student.avatar),
                   ),
                   if (student.isStruggling)
                     Positioned(
@@ -668,9 +512,10 @@ class _EducatorStudentsScreenState
                       children: [
                         CircleAvatar(
                           radius: 40,
-                          backgroundColor: AppColors.gold500.withValues(alpha: 0.1,
-                          ),
-                          backgroundImage: AssetImage(student.avatar),
+                          backgroundColor: AppColors.gold500.withValues(alpha: 0.1),
+                          backgroundImage: student.avatar.startsWith('http')
+                              ? NetworkImage(student.avatar) as ImageProvider
+                              : AssetImage(student.avatar),
                         ),
                         if (student.isStruggling)
                           Positioned(

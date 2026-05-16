@@ -13,6 +13,7 @@ import '../widgets/skeleton.dart';
 import '../widgets/brand_search_bar.dart';
 import '../widgets/ambient_topo_background.dart';
 import '../providers/search_history_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class DictionaryScreen extends ConsumerStatefulWidget {
   const DictionaryScreen({super.key});
@@ -29,15 +30,6 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
   final _searchController = TextEditingController();
 
   final PageController _pageController = PageController();
-  final List<String> _categories = [
-    'ALL',
-    'SAVED',
-    'MANSAKA',
-    'MANDAYA',
-    'TAGAKAULO',
-    'B\'LAAN',
-    'BAGOGO',
-  ];
 
 
   List<DictionaryEntry> _applySort(List<DictionaryEntry> entries) {
@@ -83,6 +75,13 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
     final srsAsync = user != null
         ? ref.watch(srsProgressStreamProvider(user.uid))
         : const AsyncValue.data(<SRSProgress>[]);
+    final dialectsAsync = ref.watch(dialectsProvider);
+
+    final List<String> categories = [
+      'ALL',
+      'SAVED',
+      ...?dialectsAsync.value?.where((d) => d != 'All').map((d) => d.toUpperCase()),
+    ];
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -104,7 +103,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                             const SizedBox(height: 10),
                             _buildSearchBar(),
                             const SizedBox(height: 24),
-                            _buildCategoryRow(),
+                            _buildCategoryRow(categories),
                             const SizedBox(height: 16),
                           ],
                         ),
@@ -113,13 +112,15 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                         child: PageView.builder(
                           controller: _pageController,
                           onPageChanged: (index) {
-                            setState(() {
-                              _selectedCategory = _categories[index];
-                            });
+                            if (index < categories.length) {
+                              setState(() {
+                                _selectedCategory = categories[index];
+                              });
+                            }
                           },
-                          itemCount: _categories.length,
+                          itemCount: categories.length,
                           itemBuilder: (context, index) {
-                            final category = _categories[index];
+                            final category = categories[index];
                             var items = entries;
                             if (category == 'SAVED') {
                               items = items
@@ -349,14 +350,14 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
     );
   }
 
-  Widget _buildCategoryRow() {
+  Widget _buildCategoryRow(List<String> categories) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
       child: Row(
-        children: List.generate(_categories.length, (index) {
-          final cat = _categories[index];
+        children: List.generate(categories.length, (index) {
+          final cat = categories[index];
           final isSelected = _selectedCategory == cat;
           return Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -430,9 +431,14 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard>
 
   void _togglePlay() {
     if (widget.entry.audioUrl == null || widget.entry.audioUrl!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No audio available for this entry.')),
-      );
+      // Fallback to TTS if no recording is available
+      setState(() => _isPlaying = true);
+      ref
+          .read(audioServiceProvider)
+          .speak(widget.entry.indigenousWord)
+          .then((_) {
+        if (mounted) setState(() => _isPlaying = false);
+      });
       return;
     }
 
@@ -693,12 +699,20 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard>
                       icon: Icons.share_outlined,
                       type: BrandButtonType.secondary,
                       onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Sharing ${widget.entry.indigenousWord} to your network...',
-                            ),
-                            backgroundColor: AppColors.semanticBlue,
+                        final String shareText =
+                            'Lumad Lingua - Learn ${widget.entry.language}\n\n'
+                            'Word: ${widget.entry.indigenousWord}\n'
+                            '${widget.entry.phonetic != null && widget.entry.phonetic!.isNotEmpty ? "Phonetic: ${widget.entry.phonetic}\n" : ""}'
+                            'Translation (EN): ${widget.entry.translation}\n'
+                            'Translation (FIL): ${widget.entry.translationFilipino}\n\n'
+                            'Definition: ${widget.entry.usageContext}\n'
+                            '${widget.entry.usageExampleNative != null && widget.entry.usageExampleNative!.isNotEmpty ? "\nExample: \"${widget.entry.usageExampleNative}\"\n(${widget.entry.usageExampleTranslation ?? ""})" : ""}';
+
+                        SharePlus.instance.share(
+                          ShareParams(
+                            text: shareText,
+                            subject:
+                                'Learning ${widget.entry.indigenousWord} in ${widget.entry.language}',
                           ),
                         );
                       },

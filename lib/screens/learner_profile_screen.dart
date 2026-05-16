@@ -5,7 +5,6 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import 'package:lumad_lingua/services/auth_service.dart';
 import '../providers/learning_provider.dart';
-import '../providers/theme_provider.dart';
 import '../widgets/brand_card.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
@@ -484,27 +483,17 @@ class LearnerProfileScreen extends ConsumerWidget {
     dynamic user,
     Map<String, dynamic>? profile,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Journey Management',
           style: AppTypography.h3.copyWith(
-            color: isDark ? AppColors.gold500 : AppColors.forest500,
+            color: AppColors.gold500,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 20),
-        _buildManagementTile(
-          context,
-          isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-          isDark ? 'Bright Mode' : 'Ancient Mode',
-          'Toggle your path visibility',
-          onTap: () => ref.read(themeNotifierProvider.notifier).toggleTheme(),
-        ),
-        const SizedBox(height: 12),
         _buildManagementTile(
           context,
           Icons.settings_suggest_rounded,
@@ -518,6 +507,75 @@ class LearnerProfileScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 12),
+        _buildManagementTile(
+          context,
+          Icons.trending_up_rounded,
+          'Wisdom Progression',
+          'View requirements for your next rank and titles',
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Rank Progression details coming soon.'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        _buildManagementTile(
+          context,
+          Icons.notifications_active_rounded,
+          'Notification Sanctuary',
+          'Manage alerts for daily goals and community messages',
+          onTap: () => context.push('/notifications'),
+        ),
+        const SizedBox(height: 12),
+        _buildManagementTile(
+          context,
+          Icons.security_rounded,
+          'Data & Privacy',
+          'Export your contributions or manage account security',
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Privacy settings and Data Export coming soon.'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        _buildManagementTile(
+          context,
+          Icons.cloud_download_rounded,
+          'Offline Wisdom',
+          'Manage cached lessons and audio files for offline use',
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Offline Sync Manager coming soon.'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        if (profile?['role']?.toString().toLowerCase() == 'admin') ...[
+          _buildManagementTile(
+            context,
+            ref.watch(isSimulatingProvider) 
+                ? Icons.admin_panel_settings_rounded 
+                : Icons.supervised_user_circle_rounded,
+            ref.watch(isSimulatingProvider) 
+                ? 'Exit Simulation' 
+                : 'Simulation Mode',
+            ref.watch(isSimulatingProvider)
+                ? 'Return to Admin Overview'
+                : 'Switch to Learner view to test content',
+            onTap: () => ref.read(isSimulatingProvider.notifier).state = !ref.read(isSimulatingProvider),
+          ),
+          const SizedBox(height: 12),
+        ],
         if (role == UserRole.learner || role == UserRole.educator)
           ref
               .watch(pendingContributorRequestProvider)
@@ -1059,10 +1117,9 @@ class LearnerProfileScreen extends ConsumerWidget {
                 _buildEditField('Tribe Name', nameController),
                 const SizedBox(height: 16),
                 _buildEditField(
-                  'Location',
+                  'Location (e.g. Pantukan, DDO)',
                   locationController,
-                  enabled: false,
-                  hint: 'Location is locked',
+                  enabled: true,
                 ),
                 const SizedBox(height: 16),
                 _buildEditField(
@@ -1087,6 +1144,7 @@ class LearnerProfileScreen extends ConsumerWidget {
                           try {
                             await ref.read(firebaseServiceProvider).updateUserProfile(userId, {
                               'username': nameController.text,
+                              'location': locationController.text,
                               'bio': bioController.text,
                             });
                             if (context.mounted) Navigator.pop(context);

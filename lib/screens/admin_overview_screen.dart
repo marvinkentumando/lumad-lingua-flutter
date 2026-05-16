@@ -4,7 +4,6 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
-import '../services/database_seeder.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/firebase_service.dart';
@@ -408,106 +407,6 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                                       ),
                                       child: const Text(
                                         'GO TO ECONOMICS HUB',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w900,
-                                          letterSpacing: 1.2,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-                          _sectionLabel('DATABASE MAINTENANCE'),
-                          const SizedBox(height: 16),
-                          BrandCard(
-                            theme: BrandCardTheme.vibrant,
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                children: [
-                                  Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.storage_rounded,
-                                        color: AppColors.gold500,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'INITIALIZE DATA',
-                                              style: AppTypography.h3.copyWith(
-                                                color: Colors.white,
-                                                fontSize: 16,
-                                              ),
-                                            ),
-                                            Text(
-                                              'Seed Firestore with sample words and map data.',
-                                              style: AppTypography.body
-                                                  .copyWith(
-                                                    color: Colors.white60,
-                                                    fontSize: 12,
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 20),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton(
-                                      onPressed: () async {
-                                        try {
-                                          await DatabaseSeeder.seedAll();
-                                          if (!context.mounted) return;
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                'Database seeded successfully!',
-                                              ),
-                                              backgroundColor:
-                                                  AppColors.semanticGreen,
-                                            ),
-                                          );
-                                        } catch (e) {
-                                          if (!context.mounted) return;
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                'Error seeding: $e',
-                                              ),
-                                              backgroundColor:
-                                                  AppColors.semanticRed,
-                                            ),
-                                          );
-                                        }
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.gold500,
-                                        foregroundColor: AppColors.forest900,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 16,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                      ),
-                                      child: const Text(
-                                        'SEED DATABASE',
                                         style: TextStyle(
                                           fontWeight: FontWeight.w900,
                                           letterSpacing: 1.2,

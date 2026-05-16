@@ -38,7 +38,7 @@ class StreakHistoryScreen extends ConsumerWidget {
                   const SizedBox(height: 32),
                   _buildMonthlyCalendar(context, student),
                   const SizedBox(height: 32),
-                  _buildStreakMilestones(context, student),
+                  _buildStreakMilestones(context, student, ref),
                 ],
               ),
             ),
@@ -267,11 +267,11 @@ class StreakHistoryScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStreakMilestones(BuildContext context, StudentState student) {
+  Widget _buildStreakMilestones(BuildContext context, StudentState student, WidgetRef ref) {
     final milestones = [
-      {'days': 7, 'title': 'One Week', 'reward': '100 Crystals'},
-      {'days': 30, 'title': 'Month of Wisdom', 'reward': '500 Crystals'},
-      {'days': 100, 'title': 'Tribe Guardian', 'reward': 'Rare Artifact'},
+      {'days': 7, 'title': 'One Week', 'reward': 100, 'rewardText': '100 Crystals'},
+      {'days': 30, 'title': 'Month of Wisdom', 'reward': 500, 'rewardText': '500 Crystals'},
+      {'days': 100, 'title': 'Tribe Guardian', 'reward': 2000, 'rewardText': '2,000 Crystals'},
     ];
 
     return Column(
@@ -284,7 +284,9 @@ class StreakHistoryScreen extends ConsumerWidget {
         const SizedBox(height: 16),
         ...milestones.map((m) {
           final days = m['days'] as int;
+          final reward = m['reward'] as int;
           final isUnlocked = student.displayedStreak >= days;
+          final isClaimed = student.claimedMilestones.contains(days);
           final progress = (student.displayedStreak / days).clamp(0.0, 1.0);
 
           return Padding(
@@ -297,12 +299,16 @@ class StreakHistoryScreen extends ConsumerWidget {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: isUnlocked ? AppColors.gold500 : Colors.white10,
+                      color: isUnlocked
+                          ? (isClaimed ? Colors.white10 : AppColors.gold500)
+                          : Colors.white10,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      isUnlocked ? Icons.emoji_events_rounded : Icons.lock_rounded,
-                      color: isUnlocked ? Colors.black : Colors.grey,
+                      isClaimed
+                          ? Icons.check_circle_rounded
+                          : (isUnlocked ? Icons.emoji_events_rounded : Icons.lock_rounded),
+                      color: isUnlocked && !isClaimed ? Colors.black : Colors.grey,
                       size: 20,
                     ),
                   ),
@@ -315,9 +321,18 @@ class StreakHistoryScreen extends ConsumerWidget {
                           m['title'] as String,
                           style: AppTypography.h3.copyWith(
                             color: isUnlocked ? Colors.white : Colors.grey,
+                            fontSize: 16,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        Text(
+                          m['rewardText'] as String,
+                          style: AppTypography.label.copyWith(
+                            color: isUnlocked ? AppColors.gold500 : Colors.grey,
+                            fontSize: 10,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(2),
                           child: LinearProgressIndicator(
@@ -331,13 +346,29 @@ class StreakHistoryScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  Text(
-                    '$days d',
-                    style: AppTypography.mono.copyWith(
-                      color: AppColors.gold500,
-                      fontSize: 14,
+                  if (isUnlocked && !isClaimed)
+                    BrandButton(
+                      text: 'CLAIM',
+                      onTap: () {
+                        ref.read(studentProvider.notifier).claimMilestone(days, reward);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Claimed ${m['rewardText']}! 🎉'),
+                            backgroundColor: AppColors.forest700,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                      type: BrandButtonType.small,
+                    )
+                  else
+                    Text(
+                      '$days d',
+                      style: AppTypography.mono.copyWith(
+                        color: isUnlocked ? AppColors.gold500 : Colors.grey,
+                        fontSize: 14,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),

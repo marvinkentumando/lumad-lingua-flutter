@@ -1,11 +1,12 @@
-import 'dart:async';
 import 'dart:ui';
 import 'dart:math';
+import '../widgets/saka_painter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../theme/app_colors.dart';
 
 class SakaGameScreen extends StatefulWidget {
@@ -34,6 +35,11 @@ class _SakaGameScreenState extends State<SakaGameScreen> with TickerProviderStat
   final List<Offset> playerTrail = [];
   double transitionOpacity = 0;
   Color transitionColor = Colors.black;
+  double landingSquash = 0;
+  double mistTransition = 0;
+  bool isVictorySequence = false;
+  double victoryTimer = 0;
+  final List<SakaEnvParticle> envParticles = [];
 
   // Constants
   static const double groundLevel = 348;
@@ -75,9 +81,17 @@ class _SakaGameScreenState extends State<SakaGameScreen> with TickerProviderStat
   late AnimationController _gameLoopController;
   late AnimationController _characterController;
 
+  // Audio
+  late AudioPlayer _bgPlayer;
+  late AudioPlayer _sfxPlayer;
+
   @override
   void initState() {
     super.initState();
+    _bgPlayer = AudioPlayer();
+    _sfxPlayer = AudioPlayer();
+    _bgPlayer.setReleaseMode(ReleaseMode.loop);
+    _bgPlayer.play(AssetSource('audio/forest_bg.MP3'), volume: 0.3);
     _stopwatch = Stopwatch()..start();
     _gameLoopController = AnimationController(
       vsync: this,
@@ -118,6 +132,8 @@ class _SakaGameScreenState extends State<SakaGameScreen> with TickerProviderStat
 
   @override
   void dispose() {
+    _bgPlayer.dispose();
+    _sfxPlayer.dispose();
     _gameLoopController.dispose();
     _characterController.dispose();
     super.dispose();
@@ -165,7 +181,9 @@ class _SakaGameScreenState extends State<SakaGameScreen> with TickerProviderStat
           playerY = slopeY;
           if (velocityY > 10) {
             cameraShake = 8.0;
+            landingSquash = (velocityY * 0.0005).clamp(0.0, 0.4);
             _createDustPuff(playerX, playerY);
+            HapticFeedback.mediumImpact(); // thump
           }
           velocityY = 0;
           isJumping = false;
@@ -205,12 +223,29 @@ class _SakaGameScreenState extends State<SakaGameScreen> with TickerProviderStat
         _triggerTransition(newStage == 5 ? Colors.white : Colors.black);
       }
 
-      if (playerX >= targetX && !isQuizActive) {
-        _showWinScreen();
+      if (playerX >= targetX && !isQuizActive && !isVictorySequence) {
+        _triggerVictorySequence();
+      }
+
+      if (isVictorySequence) {
+        victoryTimer += dt;
+        zoomLevel = lerpDouble(zoomLevel, 0.5, dt * 0.5)!;
+        if (victoryTimer > 4.0) {
+          _showWinScreen();
+          isVictorySequence = false;
+        }
       }
 
       if (speedBoost > 0) speedBoost -= 50 * dt;
       if (speedBoost < 0) speedBoost = 0;
+
+      if (landingSquash > 0) landingSquash -= 2 * dt;
+      if (landingSquash < 0) landingSquash = 0;
+
+      if (mistTransition > 0) mistTransition -= dt;
+      if (mistTransition < 0) mistTransition = 0;
+
+      _updateEnvParticles(dt);
 
       // Echoes of the Elders Logic
       _updateLore(dt);
@@ -220,13 +255,30 @@ class _SakaGameScreenState extends State<SakaGameScreen> with TickerProviderStat
   void _updateLore(double dt) {
     bool isNearWaterfall = (playerX - 1500).abs() < 100;
     bool isNearTree = (playerX - 2800).abs() < 100;
+    bool isNearTotem = (playerX - 3500).abs() < 100;
+    
+    bool isNearShrine = false;
+    int nearestShrine = -1;
+    for (int i = 0; i < shrines.length; i++) {
+      if ((playerX - shrines[i]).abs() < 100) {
+        isNearShrine = true;
+        nearestShrine = i;
+        break;
+      }
+    }
 
-    if (velocityX == 0 && (isNearWaterfall || isNearTree)) {
+    if (velocityX == 0 && (isNearWaterfall || isNearTree || isNearTotem || isNearShrine)) {
       standingStillTime += dt;
       if (standingStillTime > 2.0) {
-        currentLore = isNearWaterfall 
-          ? "The daliyog's song is the memory of our first breath. It washes the dust of the world from the spirit."
-          : "The diwata sleep in the roots of the daku. To pass is to be judged by the silence of the forest.";
+        if (isNearWaterfall) {
+          currentLore = "The daliyog's song is the memory of our first breath. It washes the dust of the world from the spirit.";
+        } else if (isNearTree) {
+          currentLore = "The diwata sleep in the roots of the daku. To pass is to be judged by the silence of the forest.";
+        } else if (isNearTotem) {
+          currentLore = "The ancestors carved their names in the stone. They watch your ascent, Baylan.";
+        } else if (isNearShrine) {
+          currentLore = _getShrineLore(nearestShrine);
+        }
       }
     } else {
       standingStillTime = 0;
@@ -234,16 +286,67 @@ class _SakaGameScreenState extends State<SakaGameScreen> with TickerProviderStat
     }
   }
 
+  String _getShrineLore(int index) {
+    switch (index) {
+      case 0: return "The first step is always the heaviest. Remember your roots.";
+      case 1: return "The mountain provides, but it also tests. Patience is your shield.";
+      case 2: return "The clouds gather below you. The world is small from here.";
+      case 3: return "The air grows thin, but the spirit grows strong.";
+      case 4: return "The summit is near. The ancestors await your arrival.";
+      default: return "Echoes of the elders whisper in the wind.";
+    }
+  }
+
   void _triggerTransition(Color color) {
     setState(() {
+      mistTransition = 1.0;
       transitionColor = color;
-      transitionOpacity = 1.0;
     });
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        setState(() => transitionOpacity = 0.0);
-      }
+  }
+
+  void _triggerVictorySequence() async {
+    setState(() {
+      isVictorySequence = true;
+      victoryTimer = 0;
     });
+    _bgPlayer.stop();
+    _sfxPlayer.play(AssetSource('audio/success_1.MP3'), volume: 1.0);
+    HapticFeedback.vibrate();
+    await Future.delayed(const Duration(milliseconds: 200));
+    HapticFeedback.vibrate();
+    await Future.delayed(const Duration(milliseconds: 200));
+    HapticFeedback.vibrate();
+  }
+
+  void _updateEnvParticles(double dt) {
+    final rand = Random();
+    // Spawn particles based on stage
+    if (currentStage == 3 && envParticles.length < 20) {
+      // Falling Leaves
+      envParticles.add(SakaEnvParticle(
+        x: rand.nextDouble() * 1000 - 200, // Relative to screen
+        y: -20,
+        vx: (rand.nextDouble() - 0.5) * 50,
+        vy: 40 + rand.nextDouble() * 30,
+        type: SakaEnvType.leaf,
+        life: 5.0,
+      ));
+    } else if (currentStage == 5 && envParticles.length < 50) {
+      // Snow/Glow flakes
+      envParticles.add(SakaEnvParticle(
+        x: rand.nextDouble() * 1000,
+        y: rand.nextDouble() * 800,
+        vx: -100 - rand.nextDouble() * 100, // Wind blowing left
+        vy: 20 + rand.nextDouble() * 20,
+        type: SakaEnvType.snow,
+        life: 3.0,
+      ));
+    }
+
+    for (int i = envParticles.length - 1; i >= 0; i--) {
+      envParticles[i].update(dt);
+      if (envParticles[i].life <= 0) envParticles.removeAt(i);
+    }
   }
 
   void _collectCrystal(int index) {
@@ -251,6 +354,7 @@ class _SakaGameScreenState extends State<SakaGameScreen> with TickerProviderStat
     score += 10;
     speedBoost = 150.0;
     HapticFeedback.lightImpact();
+    _sfxPlayer.play(AssetSource('audio/success.MP3'), volume: 0.8);
     _createBurst(mistCrystals[index].dx, mistCrystals[index].dy, Colors.cyanAccent, 5);
   }
 
@@ -296,7 +400,7 @@ class _SakaGameScreenState extends State<SakaGameScreen> with TickerProviderStat
       barrierDismissible: false,
       builder: (context) => SakaQuizPanel(
         question: question,
-        onSuccess: () {
+        onSuccess: () async {
           _createBurst(playerX, playerY - 30, AppColors.gold500, 30);
           setState(() {
             clearedShrines.add(index);
@@ -304,6 +408,12 @@ class _SakaGameScreenState extends State<SakaGameScreen> with TickerProviderStat
             score += 100;
           });
           Navigator.pop(context);
+          
+          HapticFeedback.heavyImpact();
+          await Future.delayed(const Duration(milliseconds: 150));
+          HapticFeedback.heavyImpact();
+          await Future.delayed(const Duration(milliseconds: 150));
+          HapticFeedback.heavyImpact();
         },
       ),
     );
@@ -357,6 +467,7 @@ class _SakaGameScreenState extends State<SakaGameScreen> with TickerProviderStat
                 playerX: playerX,
                 playerY: playerY,
                 velocityX: velocityX,
+                velocityY: velocityY,
                 isJumping: isJumping,
                 currentStage: currentStage,
                 shrines: shrines,
@@ -369,6 +480,11 @@ class _SakaGameScreenState extends State<SakaGameScreen> with TickerProviderStat
                 zoomLevel: zoomLevel,
                 segments: segments,
                 playerTrail: playerTrail,
+                landingSquash: landingSquash,
+                mistTransition: mistTransition,
+                envParticles: envParticles,
+                isVictory: isVictorySequence,
+                speedBoost: speedBoost,
               ),
               size: Size.infinite,
             ),
@@ -435,15 +551,22 @@ class _SakaGameScreenState extends State<SakaGameScreen> with TickerProviderStat
   }
 
   Widget _buildTopHUD() {
+    int distance = (targetX - playerX).toInt();
+    int distanceKey = (distance / 100).floor(); // Animate every 100m
+    
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('SCORE: ${score.toInt()}', style: GoogleFonts.fredoka(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('SCORE: ${score.toInt()}', style: GoogleFonts.fredoka(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))
+              .animate(key: ValueKey(score.toInt()))
+              .scale(begin: const Offset(1.2, 1.2), end: const Offset(1.0, 1.0), duration: 300.ms, curve: Curves.easeOutBack),
             const SizedBox(height: 4),
-            Text('DISTANCE TO SUMMIT', style: GoogleFonts.fredoka(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+            Text('DISTANCE: ${distance > 0 ? distance : 0}m', style: GoogleFonts.fredoka(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2))
+              .animate(key: ValueKey(distanceKey))
+              .scale(begin: const Offset(1.2, 1.2), end: const Offset(1.0, 1.0), duration: 200.ms, curve: Curves.easeOut),
             const SizedBox(height: 8),
             _buildProgressBar(),
           ],
@@ -533,7 +656,7 @@ class _SakaGameScreenState extends State<SakaGameScreen> with TickerProviderStat
           const SizedBox(width: 20),
           _controlButton(icon: Icons.arrow_forward_ios, onTapDown: (_) => setState(() => isMovingRight = true), onTapUp: (_) => setState(() => isMovingRight = false)),
         ]),
-        _controlButton(icon: Icons.expand_less, onTapDown: (_) { if (!isJumping) setState(() { isJumping = true; velocityY = jumpForce / 60; }); }, onTapUp: (_) {}),
+        _controlButton(icon: Icons.expand_less, onTapDown: (_) { if (!isJumping) setState(() { isJumping = true; velocityY = jumpForce / 60; }); }, onTapUp: (_) { if (isJumping && velocityY < 0) setState(() => velocityY *= 0.4); }),
       ],
     );
   }
@@ -563,30 +686,36 @@ class _SakaGameScreenState extends State<SakaGameScreen> with TickerProviderStat
     1: [
       SakaQuestion(text: "What does 'Yagwakat' mean?", options: ["Dawn", "Sunset", "Forest", "Mountain"], correctIndex: 0),
       SakaQuestion(text: "Which material is used for Mansaka weaving?", options: ["Rattan", "Silk", "Plastic", "Wool"], correctIndex: 0),
+      SakaQuestion(text: "What time does the 'Yagwakat' occur?", options: ["Morning", "Afternoon", "Evening", "Night"], correctIndex: 0),
+      SakaQuestion(text: "What is 'Daliyog'?", options: ["Waterfall", "River", "Lake", "Ocean"], correctIndex: 0),
     ],
     2: [
       SakaQuestion(text: "Which animal is commonly pastured in the farm?", options: ["Carabao", "Lion", "Elephant", "Tiger"], correctIndex: 0),
       SakaQuestion(text: "What is 'Uma'?", options: ["Farm", "Sea", "Cloud", "Sky"], correctIndex: 0),
+      SakaQuestion(text: "Who feeds the pig and chicken?", options: ["Farmers", "Fishermen", "Hunters", "Warriors"], correctIndex: 0),
+      SakaQuestion(text: "What is the primary role of a 'Carabao'?", options: ["Farming", "Racing", "Hunting", "Guarding"], correctIndex: 0),
     ],
     3: [
       SakaQuestion(text: "Where is rattan primarily collected?", options: ["Timberland", "Desert", "Ocean", "Village"], correctIndex: 0),
       SakaQuestion(text: "What is the Mansaka word for Forest?", options: ["Kagulangan", "Banwa", "Bukid", "Uma"], correctIndex: 0),
+      SakaQuestion(text: "What is the purpose of gathering rattan?", options: ["Goods/Trade", "Cooking", "Weapons", "Clothing"], correctIndex: 0),
+      SakaQuestion(text: "Which word means 'Get' or 'Gather' in Mansaka?", options: ["Managkas", "Maglakar", "Manubong", "Magabalin"], correctIndex: 0),
     ],
     4: [
       SakaQuestion(text: "Why does a child go to the mountain farm?", options: ["Weed grasses", "Play games", "Sleep", "Swim"], correctIndex: 0),
       SakaQuestion(text: "What is 'Bukid'?", options: ["Mountain", "River", "Valley", "Path"], correctIndex: 0),
+      SakaQuestion(text: "What does 'Maglabon' mean?", options: ["To weed", "To plant", "To harvest", "To water"], correctIndex: 0),
+      SakaQuestion(text: "Who is 'Mangayso'?", options: ["Child", "Elder", "Warrior", "Healer"], correctIndex: 0),
     ],
     5: [
       SakaQuestion(text: "What is carried by mountain people far from town?", options: ["Ancient wisdom", "Modern tech", "Nothing", "Gold only"], correctIndex: 0),
       SakaQuestion(text: "What does 'Kalibutan' represent?", options: ["The World", "A house", "A tool", "A fruit"], correctIndex: 0),
+      SakaQuestion(text: "What is 'Banwa'?", options: ["Town/Village", "Mountain", "Forest", "Sea"], correctIndex: 0),
+      SakaQuestion(text: "Who are the 'taga mambukid'?", options: ["Mountain people", "City dwellers", "Fishermen", "Traders"], correctIndex: 0),
     ],
   };
 }
 
-class SakaSegment {
-  final double startX, endX, startY, endY;
-  SakaSegment({required this.startX, required this.endX, required this.startY, required this.endY});
-}
 
 class SakaQuestion {
   final String text;
@@ -600,366 +729,7 @@ class SakaStageInfo {
   SakaStageInfo({required this.mansaka, required this.english});
 }
 
-class SakaParticle {
-  double x, y, vx, vy, life;
-  Color color;
-  SakaParticle({required this.x, required this.y, required this.vx, required this.vy, required this.color, required this.life});
-  void update(double dt) { x += vx * dt; y += vy * dt; vy += 500 * dt; life -= dt; }
-}
 
-class SakaPainter extends CustomPainter {
-  final double playerX, playerY, velocityX, animValue, cameraShake, zoomLevel;
-  final bool isJumping;
-  final int currentStage;
-  final List<double> shrines;
-  final Set<int> clearedShrines;
-  final List<SakaParticle> particles;
-  final List<Offset> mistCrystals;
-  final Set<int> collectedCrystals;
-  final List<SakaSegment> segments;
-  final List<Offset> playerTrail;
-
-  SakaPainter({
-    required this.playerX, required this.playerY, required this.velocityX, required this.isJumping,
-    required this.currentStage, required this.shrines, required this.clearedShrines,
-    required this.animValue, required this.particles, required this.mistCrystals,
-    required this.collectedCrystals, required this.cameraShake, required this.zoomLevel,
-    required this.segments, required this.playerTrail,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    double cameraX = playerX - (size.width / 3);
-    if (cameraX < 0) cameraX = 0;
-    canvas.save();
-    if (cameraShake > 0) {
-      final rand = Random();
-      canvas.translate((rand.nextDouble() - 0.5) * cameraShake, (rand.nextDouble() - 0.5) * cameraShake);
-    }
-
-    _drawCelestialBodies(canvas, size);
-
-    canvas.translate(size.width / 2, size.height / 2);
-    canvas.scale(zoomLevel);
-    canvas.translate(-size.width / 2, -size.height / 2);
-    _drawParallaxLayer(canvas, size, cameraX, 0.1, const Color(0xFF080712), 150);
-    _drawParallaxLayer(canvas, size, cameraX, 0.3, const Color(0xFF0F1424), 100);
-    _drawParallaxLayer(canvas, size, cameraX, 0.5, const Color(0xFF141B2D), 50);
-    if (currentStage == 3) _drawMist(canvas, size, true);
-    _drawOrganicGround(canvas, size, cameraX);
-    _drawLandmarks(canvas, size, cameraX);
-    _drawMistCrystals(canvas, cameraX, size);
-    for (int i = 0; i < shrines.length; i++) {
-      double sx = shrines[i] - cameraX;
-      if (sx > -200 && sx < size.width + 200) _drawShrine(canvas, sx, clearedShrines.contains(i), shrines[i], size);
-    }
-    _drawSpeedTrail(canvas, cameraX, size);
-    _drawParticles(canvas, cameraX, size);
-    if (currentStage == 1) _drawFireflies(canvas, size);
-    if (currentStage == 4) _drawWind(canvas, size);
-    if (currentStage == 5) _drawSummitGlow(canvas, size);
-    _drawPlayer(canvas, size, cameraX);
-    _drawVignette(canvas, size);
-    _drawSunFlare(canvas, size);
-    canvas.restore();
-  }
-
-  void _drawSpeedTrail(Canvas canvas, double cameraX, Size size) {
-    if (playerTrail.isEmpty) return;
-    double visualOffset = size.height - 348;
-    for (int i = 0; i < playerTrail.length; i++) {
-      double alpha = (i / playerTrail.length) * 0.2;
-      final paint = Paint()..color = Colors.white.withValues(alpha: alpha);
-      double tx = playerTrail[i].dx - cameraX;
-      double ty = playerTrail[i].dy + visualOffset;
-      
-      canvas.drawCircle(Offset(tx, ty - 35), 8, paint);
-      canvas.drawRect(Rect.fromLTWH(tx - 6, ty - 27, 12, 18), paint);
-    }
-  }
-
-  void _drawVignette(Canvas canvas, Size size) {
-    double intensity = 0;
-    if (currentStage == 2) intensity = 0.2;
-    if (currentStage == 3) intensity = 0.4;
-    if (intensity == 0) return;
-
-    final paint = Paint()
-      ..shader = RadialGradient(
-        colors: [Colors.transparent, Colors.black.withValues(alpha: intensity)],
-        stops: const [0.6, 1.0],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
-  }
-
-  void _drawSunFlare(Canvas canvas, Size size) {
-    if (currentStage != 5) return;
-    double progress = (playerX / 5400).clamp(0.0, 1.0);
-    double sunAlpha = ((progress - 0.4) / 0.6).clamp(0.0, 1.0);
-    double sunY = size.height * 0.7 - (sunAlpha * size.height * 0.6);
-    Offset sunPos = Offset(size.width * 0.8, sunY);
-    
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.05)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
-    canvas.drawCircle(sunPos, 150, paint);
-    
-    // Lens flare elements
-    for (int i = 0; i < 3; i++) {
-      double dist = 100.0 * (i + 1);
-      canvas.drawCircle(
-        Offset(sunPos.dx - dist * 0.5, sunPos.dy + dist * 0.5), 
-        30 - (i * 5), 
-        Paint()..color = Colors.orangeAccent.withValues(alpha: 0.03)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10)
-      );
-    }
-  }
-
-  void _drawParallaxLayer(Canvas canvas, Size size, double cameraX, double speed, Color color, double heightOffset) {
-    final paint = Paint()..color = color;
-    final path = Path();
-    double offset = -(cameraX * speed) % 800;
-    path.moveTo(0, size.height);
-    for (double x = 0; x <= size.width + 800; x += 100) {
-      double dx = x + offset;
-      double h = (sin(x / 200) * 40) + heightOffset + (size.height * 0.4);
-      path.lineTo(dx, size.height - h);
-    }
-    path.lineTo(size.width + 800, size.height);
-    path.close();
-    canvas.drawPath(path, paint);
-  }
-
-  void _drawOrganicGround(Canvas canvas, Size size, double cameraX) {
-    final groundPaint = Paint()..color = const Color(0xFF1B2E1D);
-    final grassPaint = Paint()..color = const Color(0xFF2D4F3C)..strokeWidth = 2;
-    final path = Path();
-    double visualOffset = size.height - 348;
-    path.moveTo(0, size.height);
-    for (double x = 0; x <= size.width; x += 5) {
-      double worldX = x + cameraX;
-      double baseSlopeY = _getSlopeY(worldX);
-      double noise = sin(worldX * 0.05) * 3 + cos(worldX * 0.02) * 2;
-      path.lineTo(x, baseSlopeY + visualOffset + noise);
-
-      // Interactive & Swaying Grass
-      if (Random(worldX.toInt()).nextDouble() > 0.96) {
-        double distToPlayer = (worldX - playerX).abs();
-        double tilt = sin(worldX * 0.1 + animValue * pi * 2) * 4;
-        if (distToPlayer < 40) {
-          double push = (40 - distToPlayer) / 40 * 15;
-          tilt += (worldX > playerX) ? push : -push;
-        }
-        canvas.drawLine(
-          Offset(x, baseSlopeY + visualOffset + noise),
-          Offset(x + tilt, baseSlopeY + visualOffset + noise - 12),
-          grassPaint,
-        );
-      }
-    }
-    path.lineTo(size.width, size.height);
-    path.close();
-    canvas.drawPath(path, groundPaint);
-  }
-
-  double _getSlopeY(double x) {
-    for (var seg in segments) {
-      if (x >= seg.startX && x <= seg.endX) {
-        double t = (x - seg.startX) / (seg.endX - seg.startX);
-        return lerpDouble(seg.startY, seg.endY, t)!;
-      }
-    }
-    return 348;
-  }
-
-  void _drawMistCrystals(Canvas canvas, double cameraX, Size size) {
-    final paint = Paint()..color = Colors.cyanAccent.withValues(alpha: 0.8);
-    final glow = Paint()..color = Colors.cyanAccent.withValues(alpha: 0.3)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
-    double visualOffset = size.height - 348;
-    for (int i = 0; i < mistCrystals.length; i++) {
-      if (collectedCrystals.contains(i)) continue;
-      double dx = mistCrystals[i].dx - cameraX;
-      if (dx < -50 || dx > size.width + 50) continue;
-      double hover = sin(animValue * pi * 2 + i) * 5;
-      Offset pos = Offset(dx, mistCrystals[i].dy + visualOffset + hover);
-      canvas.drawCircle(pos, 8, glow); canvas.drawCircle(pos, 4, paint);
-    }
-  }
-
-  void _drawParticles(Canvas canvas, double cameraX, Size size) {
-    final paint = Paint();
-    double visualOffset = size.height - 348;
-    for (var p in particles) {
-      double dx = p.x - cameraX;
-      if (dx < -10 || dx > size.width + 10) continue;
-      paint.color = p.color.withValues(alpha: p.life.clamp(0.0, 1.0));
-      canvas.drawCircle(Offset(dx, p.y + visualOffset), 3 * p.life, paint);
-    }
-  }
-
-  void _drawLandmarks(Canvas canvas, Size size, double cameraX) {
-    double visualOffset = size.height - 348;
-    if (cameraX < 2000 && cameraX + size.width > 1200) {
-      double x = 1500 - cameraX;
-      double y = _getSlopeY(1500) + visualOffset;
-      _drawWaterfall(canvas, x, y);
-    }
-    if (cameraX < 3500 && cameraX + size.width > 2500) {
-      double x = 2800 - cameraX;
-      double y = _getSlopeY(2800) + visualOffset;
-      _drawBaleteTree(canvas, x, y);
-    }
-  }
-
-  void _drawWaterfall(Canvas canvas, double x, double y) {
-    final paint = Paint()..color = Colors.lightBlueAccent.withValues(alpha: 0.4);
-    final streamPaint = Paint()..color = Colors.white.withValues(alpha: 0.3)..strokeWidth = 2;
-    final mistPaint = Paint()..color = Colors.white.withValues(alpha: 0.2)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15);
-
-    canvas.drawRect(Rect.fromLTWH(x - 30, y, 60, 400), paint);
-    
-    // Animated streams
-    for (int i = 0; i < 3; i++) {
-      double sx = x - 20 + (i * 20);
-      double offset = (animValue * 400 + i * 130) % 400;
-      canvas.drawLine(Offset(sx, y + offset), Offset(sx, y + offset + 30), streamPaint);
-    }
-
-    // Mist at bottom
-    for (int i = 0; i < 5; i++) {
-      double mx = x - 30 + (i * 15) + sin(animValue * pi * 2 + i) * 5;
-      double my = y + 380 + cos(animValue * pi + i) * 5;
-      canvas.drawCircle(Offset(mx, my), 20, mistPaint);
-    }
-  }
-
-  void _drawBaleteTree(Canvas canvas, double x, double y) {
-    final trunkPaint = Paint()..color = const Color(0xFF2A1A0A);
-    final leafPaint = Paint()..color = const Color(0xFF14241A);
-    canvas.drawRect(Rect.fromLTWH(x - 20, y - 150, 40, 150), trunkPaint);
-    canvas.drawCircle(Offset(x, y - 180), 80, leafPaint);
-
-    // Birds flying away when approached
-    double treeWorldX = 2800;
-    double dist = (playerX - treeWorldX).abs();
-    if (dist < 400) {
-      double t = (400 - dist) / 400; 
-      final birdPaint = Paint()..color = Colors.black.withValues(alpha: (1.0 - t).clamp(0.2, 0.8))..style = PaintingStyle.stroke..strokeWidth = 1.2;
-      for (int i = 0; i < 4; i++) {
-        double bx = x + (i * 40) - (t * 500);
-        double by = y - 200 - (t * 300) + sin(animValue * pi * 10 + i) * 15;
-        Path birdPath = Path();
-        birdPath.moveTo(bx - 6, by);
-        birdPath.quadraticBezierTo(bx, by - 6, bx + 6, by);
-        canvas.drawPath(birdPath, birdPaint);
-      }
-    }
-  }
-
-  void _drawShrine(Canvas canvas, double x, bool cleared, double worldX, Size size) {
-    final paint = Paint()..color = cleared ? AppColors.gold500 : Colors.blueGrey;
-    double visualOffset = size.height - 348;
-    double y = _getSlopeY(worldX) + visualOffset;
-    canvas.drawRect(Rect.fromLTWH(x - 25, y - 50, 50, 50), paint);
-    if (cleared) {
-      double hover = sin(animValue * pi * 2) * 5;
-      canvas.drawCircle(Offset(x, y - 70 + hover), 8, paint..color = Colors.white);
-    }
-  }
-
-  void _drawPlayer(Canvas canvas, Size size, double cameraX) {
-    double drawX = playerX - cameraX;
-    double drawY = playerY + (size.height - 348);
-    final paint = Paint()..color = Colors.white;
-
-    // Dynamic Scarf/Cape
-    final scarfPaint = Paint()
-      ..color = AppColors.gold500
-      ..style = PaintingStyle.fill;
-    
-    final scarfPath = Path();
-    double neckX = drawX;
-    double neckY = drawY - 27;
-    
-    // Wind & Movement Physics for Scarf
-    double windFactor = (currentStage == 4) ? -25 : 0;
-    double moveFactor = -velocityX * 0.15;
-    double sway = sin(animValue * pi * 4) * 4;
-    
-    scarfPath.moveTo(neckX, neckY);
-    // Control point for the curve
-    double cpX = neckX + moveFactor + windFactor;
-    double cpY = neckY + sway;
-    // End point of the scarf
-    double endX = neckX + (moveFactor * 1.8) + (windFactor * 1.5);
-    double endY = neckY + 12 + sway;
-
-    scarfPath.quadraticBezierTo(cpX, cpY, endX, endY);
-    scarfPath.lineTo(endX, endY + 8);
-    scarfPath.quadraticBezierTo(cpX, cpY + 5, neckX, neckY + 5);
-    scarfPath.close();
-    
-    canvas.drawPath(scarfPath, scarfPaint);
-
-    // Character Head and Body
-    canvas.drawCircle(Offset(drawX, drawY - 35), 8, paint);
-    canvas.drawRect(Rect.fromLTWH(drawX - 6, drawY - 27, 12, 18), paint);
-  }
-
-  void _drawFireflies(Canvas canvas, Size size) {
-    final random = Random(42);
-    final paint = Paint()..color = Colors.greenAccent.withValues(alpha: 0.4);
-    for (int i = 0; i < 30; i++) {
-      double x = (random.nextDouble() * size.width + animValue * 100) % size.width;
-      double y = (random.nextDouble() * size.height + sin(animValue * pi * 2 + i) * 20) % size.height;
-      canvas.drawCircle(Offset(x, y), 1.5, paint);
-    }
-  }
-
-  void _drawMist(Canvas canvas, Size size, bool back) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.05)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 30);
-    for (int i = 0; i < 3; i++) {
-      double xOffset = (animValue * size.width * 0.5 + i * 200) % size.width;
-      canvas.drawOval(Rect.fromLTWH(xOffset - 200, size.height * 0.3 + i * 100, size.width * 0.8, 150), paint);
-    }
-  }
-
-  void _drawWind(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.15)..strokeWidth = 1;
-    final rand = Random(99);
-    for (int i = 0; i < 15; i++) {
-      double x = (rand.nextDouble() * size.width - animValue * size.width) % size.width;
-      double y = rand.nextDouble() * size.height;
-      canvas.drawLine(Offset(x, y), Offset(x + 50, y - 5), paint);
-    }
-  }
-
-  void _drawSummitGlow(Canvas canvas, Size size) {
-    final paint = Paint()..shader = RadialGradient(colors: [const Color(0xFFFFC200).withValues(alpha: 0.2), Colors.transparent]).createShader(Rect.fromLTWH(size.width - 200, -100, 400, 400));
-    canvas.drawCircle(Offset(size.width - 50, 50), 300 + sin(animValue * pi * 2) * 20, paint);
-  }
-
-  void _drawCelestialBodies(Canvas canvas, Size size) {
-    double progress = (playerX / 5400).clamp(0.0, 1.0);
-    
-    // Fading Moon/Stars
-    if (progress < 0.6) {
-      double alpha = (1.0 - (progress / 0.6)).clamp(0.0, 1.0);
-      final moonPaint = Paint()..color = Colors.white.withValues(alpha: alpha * 0.5);
-      canvas.drawCircle(Offset(size.width * 0.2, 100 + progress * 150), 25, moonPaint);
-    }
-    
-    // Rising Sun
-    if (progress > 0.4) {
-      double sunAlpha = ((progress - 0.4) / 0.6).clamp(0.0, 1.0);
-      double sunY = size.height * 0.7 - (sunAlpha * size.height * 0.6);
-      final sunGlow = Paint()..color = const Color(0xFFFFC200).withValues(alpha: sunAlpha * 0.4)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 30);
-      canvas.drawCircle(Offset(size.width * 0.8, sunY), 50, sunGlow);
-      canvas.drawCircle(Offset(size.width * 0.8, sunY), 25, Paint()..color = Colors.white.withValues(alpha: sunAlpha * 0.8));
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant SakaPainter oldDelegate) => true;
-}
 
 class SakaIntroScreen extends StatelessWidget {
   final VoidCallback onStart;
@@ -1059,6 +829,7 @@ class _SakaQuizPanelState extends State<SakaQuizPanel> {
     );
   }
 }
+
 
 class SakaWinScreen extends StatelessWidget {
   final VoidCallback onClose;

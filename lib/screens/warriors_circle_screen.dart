@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
@@ -168,7 +169,7 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
                 text: 'DUEL',
                 onTap: () {
                   HapticService.selection();
-                  // Duel logic
+                  context.push('/lingua-duel');
                 },
                 type: BrandButtonType.primary,
                 padding: const EdgeInsets.symmetric(
