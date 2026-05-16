@@ -68,7 +68,7 @@ class _AdminMapArchitectScreenState extends ConsumerState<AdminMapArchitectScree
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: dialects.contains(selectedDialect) ? selectedDialect : dialects.first,
+                    initialValue: dialects.contains(selectedDialect) ? selectedDialect : dialects.first,
                     dropdownColor: AppColors.forest800,
                     style: const TextStyle(color: Colors.white),
                     decoration: _inputDecoration('Primary Dialect'),

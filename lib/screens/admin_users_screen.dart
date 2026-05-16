@@ -7,7 +7,6 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/ambient_topo_background.dart';
-import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../providers/admin_users_provider.dart';
 
@@ -807,7 +806,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: selectedRole,
+                initialValue: selectedRole,
                 dropdownColor: AppColors.forest800,
                 decoration: InputDecoration(
                   labelText: 'Role',
@@ -843,7 +842,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                         final list =
                             dialects.where((d) => d != 'All').toList();
                         return DropdownButtonFormField<String>(
-                          value: selectedDialect,
+                          initialValue: selectedDialect,
                           dropdownColor: AppColors.forest800,
                           decoration: InputDecoration(
                             labelText: 'Assign Indigenous Group',
@@ -928,7 +927,12 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                             type: BrandButtonType.primary,
                             onTap: () {
                               final text = 'Maayong Adlaw!\n\nYou have been invited to join Lumad Lingua as a ${selectedRole.toUpperCase()}${selectedDialect != null ? " for $selectedDialect" : ""}.\n\nPlease sign up at [App Link] using your email: $email\n\nYour staff privileges will activate automatically upon registration.\n\nSee you in the highlands!';
-                              Share.share(text, subject: 'Lumad Lingua Staff Invitation');
+                              SharePlus.instance.share(
+                                ShareParams(
+                                  text: text,
+                                  subject: 'Lumad Lingua Staff Invitation',
+                                ),
+                              );
                               Navigator.pop(context);
                             },
                           ),

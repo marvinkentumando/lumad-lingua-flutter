@@ -10,7 +10,6 @@ import '../widgets/glass_box.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:geolocator/geolocator.dart';
 import '../widgets/municipality_panel.dart';
 import '../widgets/brand_button.dart';
@@ -213,7 +212,7 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
                     duration: _duration,
                     position: _position,
                     selectedDialects: _selectedLanguages,
-                    onTogglePlay: (audio) => _handlePlayback(audio as Map<String, dynamic>),
+                    onTogglePlay: (audio) => _handlePlayback(audio),
                     onSeek: (value) =>
                         _audioPlayer.seek(Duration(milliseconds: value.toInt())),
                     onClose: () => setState(() => _selectedRecording = null),

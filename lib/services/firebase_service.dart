@@ -164,7 +164,7 @@ class FirebaseService {
         .map((snapshot) {
       var docs = snapshot.docs
           .map((doc) => DictionaryEntry.fromFirestore(
-              doc.data() as Map<String, dynamic>, doc.id))
+              doc.data(), doc.id))
           .toList();
 
       // Filter by dialect client-side
@@ -218,35 +218,6 @@ class FirebaseService {
     });
   }
 
-  Stream<List<DictionaryEntry>> getGlobalDictionaryWords({
-    int limit = 50,
-    String? search,
-    String? dialect,
-  }) {
-    Query query = _db.collection('words');
-
-    if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
-      query = query.where('dialect', isEqualTo: dialect);
-    }
-
-    if (search != null && search.isNotEmpty) {
-      final queryTerm = search.toLowerCase();
-      query = query
-          .where('term_lowercase', isGreaterThanOrEqualTo: queryTerm)
-          .where('term_lowercase', isLessThanOrEqualTo: '$queryTerm\uf8ff');
-    }
-
-    return query.limit(limit).snapshots().map((snapshot) {
-      return snapshot.docs
-          .map(
-            (doc) => DictionaryEntry.fromFirestore(
-              doc.data() as Map<String, dynamic>,
-              doc.id,
-            ),
-          )
-          .toList();
-    });
-  }
 
   Stream<List<DictionaryEntry>> getValidatorHistory(
     String validatorId, {
@@ -262,7 +233,7 @@ class FirebaseService {
         .map((snapshot) {
       var docs = snapshot.docs
           .map((doc) => DictionaryEntry.fromFirestore(
-              doc.data() as Map<String, dynamic>, doc.id))
+              doc.data(), doc.id))
           .toList();
 
       // Client filter
@@ -1266,7 +1237,7 @@ class FirebaseService {
         .map((snapshot) {
       var list = snapshot.docs
           .map((doc) =>
-              Lesson.fromFirestore(doc.data() as Map<String, dynamic>, doc.id))
+              Lesson.fromFirestore(doc.data(), doc.id))
           .toList();
 
       if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
@@ -2270,7 +2241,7 @@ class FirebaseService {
       final List<ValidationItem> items = [];
 
       for (var doc in wordSnap.docs) {
-        final data = doc.data() as Map<String, dynamic>;
+        final data = doc.data();
         // Filter dialect client-side
         if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
           if (data['dialect'] != dialect) continue;
@@ -2293,7 +2264,7 @@ class FirebaseService {
       }
 
       for (var doc in voiceSnap.docs) {
-        final data = doc.data() as Map<String, dynamic>;
+        final data = doc.data();
         // Filter dialect client-side
         if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
           if (data['dialect'] != dialect) continue;
@@ -2342,7 +2313,7 @@ class FirebaseService {
         .map((snapshot) {
       var list = snapshot.docs
           .map((doc) => VoiceSubmission.fromFirestore(
-              doc.data() as Map<String, dynamic>, doc.id))
+              doc.data(), doc.id))
           .toList();
 
       if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {

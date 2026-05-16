@@ -6,7 +6,6 @@ import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../services/auth_service.dart';
 import '../providers/student_provider.dart';
 import '../services/firebase_service.dart';
 import '../models/lesson.dart';
