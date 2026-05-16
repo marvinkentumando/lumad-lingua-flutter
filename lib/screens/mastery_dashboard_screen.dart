@@ -4,8 +4,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../services/srs_service.dart';
+import '../services/firebase_service.dart';
+import '../services/auth_service.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_background.dart';
+import '../widgets/skeleton.dart';
 
 class MasteryDashboardScreen extends ConsumerWidget {
   const MasteryDashboardScreen({super.key});
@@ -259,37 +262,68 @@ class MasteryDashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildReviewAction(BuildContext context) {
-    return BrandCard(
-      theme: BrandCardTheme.vibrant,
-      padding: const EdgeInsets.all(24),
-      child: Row(
-        children: [
-          const Icon(Icons.timer_outlined, color: AppColors.gold500, size: 28),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '12 Words Ready for Review',
-                  style: AppTypography.h3.copyWith(
-                    color: Colors.white,
-                    fontSize: 16,
-                  ),
+    return Consumer(
+      builder: (context, ref, _) {
+        final userId = ref.watch(authServiceProvider).currentUser?.uid;
+        if (userId == null) return const SizedBox.shrink();
+
+        final dueCountAsync = ref.watch(dueSRSCountProvider(userId));
+
+        return dueCountAsync.when(
+          data: (count) {
+            final hasDue = count > 0;
+            return GestureDetector(
+              onTap: hasDue
+                  ? () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Starting Review Session...')),
+                      );
+                      // TODO: Navigate to Review Session Screen
+                    }
+                  : null,
+              child: BrandCard(
+                theme: hasDue ? BrandCardTheme.vibrant : BrandCardTheme.cream,
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  children: [
+                    Icon(
+                      hasDue ? Icons.alarm_on_rounded : Icons.check_circle_outline_rounded,
+                      color: hasDue ? AppColors.gold500 : AppColors.semanticGreen,
+                      size: 28,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            hasDue ? '$count Words Ready for Review' : 'All Caught Up!',
+                            style: AppTypography.h3.copyWith(
+                              color: hasDue ? Colors.white : AppColors.forest900,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            hasDue ? 'Keep your streak alive!' : 'Come back later for more reviews.',
+                            style: AppTypography.body.copyWith(
+                              color: hasDue ? Colors.white38 : AppColors.forest700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (hasDue)
+                      const Icon(Icons.chevron_right_rounded, color: AppColors.gold500),
+                  ],
                 ),
-                Text(
-                  'Keep your streak alive!',
-                  style: AppTypography.body.copyWith(
-                    color: Colors.white38,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Icon(Icons.chevron_right_rounded, color: AppColors.gold500),
-        ],
-      ),
+              ),
+            ).animate(target: hasDue ? 1 : 0).shimmer(duration: 2.seconds);
+          },
+          loading: () => Skeleton(height: 80, borderRadius: 24),
+          error: (_, __) => const SizedBox.shrink(),
+        );
+      },
     );
   }
 }

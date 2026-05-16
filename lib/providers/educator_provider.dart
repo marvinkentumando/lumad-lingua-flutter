@@ -1,9 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/firebase_service.dart';
 import '../models/educator_models.dart';
-import '../models/admin_models.dart';
-import '../models/lesson.dart';
-import 'dart:math' as math;
 
 final educatorStudentsProvider = StreamProvider<List<EducatorStudent>>((ref) {
   final firebaseService = ref.watch(firebaseServiceProvider);
@@ -27,11 +24,15 @@ final educatorStudentsProvider = StreamProvider<List<EducatorStudent>>((ref) {
       int completedCount = 0;
       double totalProgress = 0;
 
-      progressData.forEach((lessonId, data) {
+      for (final entry in progressData.entries) {
+        final lessonId = entry.key;
+        final data = entry.value;
         final lesson = lessonMap[lessonId];
         if (lesson != null) {
           final isCompleted = data['completed'] == true;
-          if (isCompleted) completedCount++;
+          if (isCompleted) {
+            completedCount++;
+          }
           
           final bestScore = (data['bestScore'] as num?)?.toDouble() ?? 0.0;
           totalProgress += bestScore / 100.0;
@@ -42,7 +43,9 @@ final educatorStudentsProvider = StreamProvider<List<EducatorStudent>>((ref) {
           if (performance != null && performance.isNotEmpty) {
              // Heuristic: more recorded mistakes = lower accuracy
              int totalMistakes = 0;
-             performance.values.forEach((v) => totalMistakes += (v as num).toInt());
+             for (final v in performance.values) {
+               totalMistakes += (v as num).toInt();
+             }
              accuracy = (1.0 - (totalMistakes / (lesson.tasks.length * 5))).clamp(0.1, 1.0);
           }
 
@@ -53,12 +56,15 @@ final educatorStudentsProvider = StreamProvider<List<EducatorStudent>>((ref) {
             accuracy: accuracy,
           ));
         }
-      });
+      }
 
       // Simple heuristic for level title
       String level = 'Beginner';
-      if (user.xp > 500) level = 'Expert';
-      else if (user.xp > 100) level = 'Intermediate';
+      if (user.xp > 500) {
+        level = 'Expert';
+      } else if (user.xp > 100) {
+        level = 'Intermediate';
+      }
 
       students.add(EducatorStudent(
         id: user.id,

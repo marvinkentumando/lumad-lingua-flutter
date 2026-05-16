@@ -363,16 +363,16 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           if (_combo >= 10) {
             _confettiController.play();
             HapticService.celebration();
-            ref.read(audioServiceProvider).playSFX('milestone');
+            ref.read(audioServiceProvider).playSFX('success');
             _checkLeaderboardRank();
           } else if (_combo >= 5) {
             _confettiController.play();
             HapticService.celebration();
-            ref.read(audioServiceProvider).playSFX('milestone');
+            ref.read(audioServiceProvider).playSFX('success');
           } else if (_combo >= 3) {
             HapticService.combo();
 
-            ref.read(audioServiceProvider).playSFX('click');
+            ref.read(audioServiceProvider).playSFX('success');
           }
         }
       });
@@ -433,6 +433,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           _isCelebrating = true;
           _calculatedSessionXp = sessionXp;
         });
+        ref.read(audioServiceProvider).playSFX('session_complete');
 
         ref
             .read(firebaseServiceProvider)
@@ -841,7 +842,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     if (!mounted) return;
 
     HapticService.celebration();
-    ref.read(audioServiceProvider).playSFX('milestone');
+    ref.read(audioServiceProvider).playSFX('session_complete');
     _confettiController.play();
 
 
@@ -1533,16 +1534,18 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                 ),
 
               if (_isCelebrating)
-                Container(
-                  color: Colors.black.withValues(alpha: 0.85),
-                  child: XPCelebration(
-                    xpEarned: _calculatedSessionXp,
-                    onComplete: () => _showSessionSummary(
+                Positioned.fill(
+                  child: Container(
+                    color: Colors.black.withValues(alpha: 0.85),
+                    child: XPCelebration(
                       xpEarned: _calculatedSessionXp,
-                      stars: sessionStars,
-                      totalTasks: state.totalTasks,
-                      distinctMistakeTasks: distinctMistakeTasks,
-                      bonusXp: _bonusXp,
+                      onComplete: () => _showSessionSummary(
+                        xpEarned: _calculatedSessionXp,
+                        stars: sessionStars,
+                        totalTasks: state.totalTasks,
+                        distinctMistakeTasks: distinctMistakeTasks,
+                        bonusXp: _bonusXp,
+                      ),
                     ),
                   ),
                 ),

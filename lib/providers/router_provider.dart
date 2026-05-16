@@ -52,6 +52,8 @@ import '../screens/mastery_dashboard_screen.dart';
 import '../screens/warriors_circle_screen.dart';
 import '../screens/streak_history_screen.dart';
 import '../screens/saka_game_screen.dart';
+import '../screens/audio_comparison_screen.dart';
+import '../screens/wisdom_progression_screen.dart';
 import '../models/artifact.dart';
 
 class RouterNotifier extends ChangeNotifier {
@@ -299,10 +301,18 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/saka-game',
             builder: (context, state) => const SakaGameScreen(),
           ),
+          GoRoute(
+            path: '/audio-comparison',
+            builder: (context, state) => const AudioComparisonScreen(),
+          ),
         ],
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/signup', builder: (context, state) => const SignupScreen()),
+      GoRoute(
+        path: '/wisdom-progression',
+        builder: (context, state) => const WisdomProgressionScreen(),
+      ),
       GoRoute(
         path: '/flashcards',
         builder: (context, state) => const FlashcardsScreen(),

@@ -211,16 +211,8 @@ class _MunicipalityPanelState extends ConsumerState<MunicipalityPanel> {
                             .toSet()
                             .toList();
 
-                        // Categorize and filter by selected dialects
+                        // Categorize and filter by internal panel filter
                         final filteredRecordings = recordings.where((r) {
-                          // Check global filter from Map Screen
-                          if (widget.selectedDialects.isNotEmpty) {
-                            final dialect = (r['dialect'] as String?)?.toLowerCase();
-                            if (!widget.selectedDialects.any((s) => s.toLowerCase() == dialect)) {
-                              return false;
-                            }
-                          }
-
                           // Check internal panel filter
                           if (_internalDialectFilter != null) {
                              final dialect = (r['dialect'] as String?)?.toLowerCase();

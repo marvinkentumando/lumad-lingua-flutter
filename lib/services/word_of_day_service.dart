@@ -32,11 +32,23 @@ class WordOfDayService {
         }
 
         final lastPicked = lastPickedTs.toDate();
+        final isManual = data['isManual'] as bool? ?? false;
 
         // If it's a new day, pick a new word
         if (lastPicked.day != now.day ||
             lastPicked.month != now.month ||
             lastPicked.year != now.year) {
+
+          // If it was manually set, we might want to keep it if it's still today
+          // but if it's a new day, do we rotate?
+          // The user said "override the automatic rotation".
+          // Usually this means if an admin set it, it stays until they say otherwise or it expires.
+          // Let's implement: if isManual is true, we don't auto-rotate.
+          if (isManual) {
+            debugPrint('WOTD: New day, but manual override is active. Keeping current word.');
+            return wordId != null ? await _fetchWord(wordId) : await _pickNewWord();
+          }
+
           // Only pick if we aren't currently waiting for a write to complete
           if (doc.metadata.hasPendingWrites) {
             return wordId != null ? await _fetchWord(wordId) : null;
@@ -119,6 +131,7 @@ class WordOfDayService {
           'wordId': selectedDoc.id,
           'lastPicked': FieldValue.serverTimestamp(),
           'term': entry.indigenousWord,
+          'isManual': false,
         });
       });
 
@@ -128,12 +141,52 @@ class WordOfDayService {
       return null;
     }
   }
+
+  Stream<Map<String, dynamic>?> getWordOfDayMetadata() {
+    return _db.collection('global_stats').doc('word_of_day').snapshots().map((doc) => doc.data());
+  }
+
+  Future<void> forceNewWord() async {
+    await _pickNewWord();
+  }
+
+  Future<void> setManualWord(String wordId) async {
+    try {
+      final wordDoc = await _db.collection('words').doc(wordId).get();
+      if (!wordDoc.exists) throw Exception('Word not found');
+
+      final entry = DictionaryEntry.fromFirestore(wordDoc.data()!, wordDoc.id);
+
+      await _db.collection('global_stats').doc('word_of_day').set({
+        'wordId': wordId,
+        'lastPicked': FieldValue.serverTimestamp(),
+        'term': entry.indigenousWord,
+        'isManual': true,
+      });
+    } catch (e) {
+      debugPrint('WOTD: Error setting manual word: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> resumeAutomaticRotation() async {
+    await _db.collection('global_stats').doc('word_of_day').update({
+      'isManual': false,
+    });
+    // This will trigger a re-pick on the next getWordOfDay call if it's a new day,
+    // or we can force it now:
+    await _pickNewWord();
+  }
 }
 
 final wordOfDayServiceProvider = Provider((ref) => WordOfDayService());
 
 final wordOfDayStreamProvider = StreamProvider<DictionaryEntry?>((ref) {
   return ref.watch(wordOfDayServiceProvider).getWordOfDay();
+});
+
+final wotdMetadataProvider = StreamProvider<Map<String, dynamic>?>((ref) {
+  return ref.watch(wordOfDayServiceProvider).getWordOfDayMetadata();
 });
 
 

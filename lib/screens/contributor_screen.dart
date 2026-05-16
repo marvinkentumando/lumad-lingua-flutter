@@ -1605,9 +1605,9 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
       }
 
       // Save Metadata to Firestore
-      final municipalityId =
-          _selectedMunicipality?.toLowerCase().replaceAll(' ', '_') ??
-          'unknown';
+      final provinceSlug = _selectedProvince?.toLowerCase().replaceAll(' ', '_') ?? 'unknown';
+      final municipalitySlug = _selectedMunicipality?.toLowerCase().replaceAll(' ', '_') ?? 'unknown';
+      final municipalityId = '${provinceSlug}_${municipalitySlug}';
       
       final recordingData = {
         'title': 'New Pronunciation',

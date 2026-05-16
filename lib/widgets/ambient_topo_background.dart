@@ -3,10 +3,12 @@ import 'topo_background.dart';
 
 class AmbientTopoBackground extends StatelessWidget {
   final Widget child;
+  final double scrollOffset;
 
   const AmbientTopoBackground({
     super.key,
     required this.child,
+    this.scrollOffset = 0.0,
   });
 
   @override
@@ -30,7 +32,7 @@ class AmbientTopoBackground extends StatelessWidget {
         Container(color: ambientColor),
         
         // Dynamic Topo Background
-        TopoBackground(baseColor: ambientColor, opacity: 0.08),
+        TopoBackground(baseColor: ambientColor, opacity: 0.08, scrollOffset: scrollOffset),
         
         // Content
         child,

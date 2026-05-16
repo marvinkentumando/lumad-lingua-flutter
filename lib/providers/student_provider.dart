@@ -13,6 +13,7 @@ class StudentState {
   final Map<String, dynamic> lessonProgress;
   final DateTime? lastActive;
   final Map<String, bool> activityMap;
+  final List<int> claimedMilestones;
 
   StudentState({
     required this.mistCrystals,
@@ -23,6 +24,7 @@ class StudentState {
     required this.lessonProgress,
     this.lastActive,
     this.activityMap = const {},
+    this.claimedMilestones = const [],
   });
 
   StudentState copyWith({
@@ -34,6 +36,7 @@ class StudentState {
     Map<String, dynamic>? lessonProgress,
     DateTime? lastActive,
     Map<String, bool>? activityMap,
+    List<int>? claimedMilestones,
   }) {
     return StudentState(
       mistCrystals: mistCrystals ?? this.mistCrystals,
@@ -44,6 +47,7 @@ class StudentState {
       lessonProgress: lessonProgress ?? this.lessonProgress,
       lastActive: lastActive ?? this.lastActive,
       activityMap: activityMap ?? this.activityMap,
+      claimedMilestones: claimedMilestones ?? this.claimedMilestones,
     );
   }
 
@@ -124,7 +128,33 @@ class StudentNotifier extends Notifier<StudentState> {
       lessonProgress: progress,
       lastActive: (profile?['lastActive'] as Timestamp?)?.toDate(),
       activityMap: Map<String, bool>.from(profile?['activityMap'] ?? {}),
+      claimedMilestones: List<int>.from(profile?['claimedMilestones'] ?? []),
     );
+  }
+
+  void claimMilestone(int days, int crystals) {
+    if (!state.claimedMilestones.contains(days)) {
+      final newClaimed = [...state.claimedMilestones, days];
+      state = state.copyWith(
+        claimedMilestones: newClaimed,
+        mistCrystals: state.mistCrystals + crystals,
+      );
+
+      final user = ref.read(authStateProvider).value;
+      if (user != null) {
+        ref.read(firebaseServiceProvider).db.collection('users').doc(user.uid).update({
+          'claimedMilestones': FieldValue.arrayUnion([days]),
+          'mistCrystals': FieldValue.increment(crystals),
+        });
+
+        // Add a notification
+        ref.read(firebaseServiceProvider).addNotification(user.uid, {
+          'title': 'Milestone Reached! 🏆',
+          'message': 'You claimed $crystals crystals for reaching a $days-day streak!',
+          'type': 'reward',
+        });
+      }
+    }
   }
 
   void addMistCrystals(int amount) {

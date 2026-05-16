@@ -769,11 +769,15 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        item.dialect,
-                        style: AppTypography.label.copyWith(
-                          color: AppColors.creamText3,
-                          fontSize: 10,
+                      Expanded(
+                        child: Text(
+                          item.dialect,
+                          style: AppTypography.label.copyWith(
+                            color: AppColors.creamText3,
+                            fontSize: 10,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
                     ],
@@ -831,6 +835,10 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
               },
               icon: const Icon(Icons.snooze_rounded, color: Colors.white24, size: 20),
               tooltip: 'Snooze',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              visualDensity: VisualDensity.compact,
+              splashRadius: 24,
             ),
             const Icon(Icons.chevron_right_rounded, color: Colors.white24),
           ],

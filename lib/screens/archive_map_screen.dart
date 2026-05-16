@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -16,6 +17,7 @@ import '../widgets/brand_button.dart';
 import '../widgets/cached_tile_provider.dart';
 import '../widgets/brand_search_bar.dart';
 import '../services/supabase_storage_service.dart';
+import '../providers/search_history_provider.dart';
 
 class ArchiveMapScreen extends ConsumerStatefulWidget {
   const ArchiveMapScreen({super.key});
@@ -31,8 +33,15 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
   final Set<String> _selectedLanguages = {};
   String? _selectedProvince;
   String _searchQuery = '';
+  String _activeSearchQuery = '';
   bool _isSatellite = true;
   LatLng? _userLocation;
+  bool _followUser = false;
+  StreamSubscription<Position>? _positionStream;
+
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  bool _showSuggestions = false;
 
   final List<String> _provinces = [
     'Davao de Oro',
@@ -50,6 +59,11 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
   void initState() {
     super.initState();
     _setupAudioListeners();
+    _searchFocusNode.addListener(() {
+      setState(() {
+        _showSuggestions = _searchFocusNode.hasFocus;
+      });
+    });
   }
 
   void _setupAudioListeners() {
@@ -72,6 +86,9 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
   @override
   void dispose() {
     _audioPlayer.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    _positionStream?.cancel();
     super.dispose();
   }
 
@@ -86,38 +103,49 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
               .watch(mapMarkersStreamProvider)
               .when(
                 data: (municipalities) {
-                  final filtered = municipalities.where((rec) {
-                    final query = _searchQuery.toLowerCase().trim();
+                  final List<GeoRecording> filtered = [];
 
-                    // Province check (Priority: Search takes precedence for finding across provinces)
-                    final currentProv = _selectedProvince ?? '';
-                    final matchesProvince = currentProv.isEmpty ||
-                        rec.province.toLowerCase() == currentProv.toLowerCase();
+                  for (final rec in municipalities) {
+                    try {
+                      final query = _searchQuery.toLowerCase().trim();
+                      final currentProv = _selectedProvince ?? '';
 
-                    // If municipality searched specifically, ignore province filter to find it
-                    if (query.isNotEmpty && rec.title.toLowerCase() == query) {
-                       return true;
+                      // 1. Filter Logic (Province and Dialect Chips) - This is now the primary constraint
+                      final matchesProvince = currentProv.isEmpty ||
+                          rec.province.toLowerCase() == currentProv.toLowerCase();
+
+                      final matchesDialect = _selectedLanguages.isEmpty ||
+                          _selectedLanguages.any((lang) {
+                            final String l = lang.trim().toLowerCase();
+                            return rec.dialect.trim().toLowerCase() == l ||
+                                (rec.safeSupportedDialects.any((sd) => sd.trim().toLowerCase() == l));
+                          });
+
+                      // 2. Search Query Filter - Now acts as a sub-filter within selected province/dialect
+                      final isSearchActive = query.isNotEmpty;
+                      final matchesSearch = !isSearchActive ||
+                          rec.title.toLowerCase().contains(query) ||
+                          rec.province.toLowerCase().contains(query) ||
+                          rec.dialect.toLowerCase().contains(query) ||
+                          (rec.safeSupportedDialects.any((sd) => sd.toLowerCase().contains(query)));
+
+                      // 3. Initial State Guard: If nothing selected and no search, we show nothing
+                      if (currentProv.isEmpty && !isSearchActive && _selectedLanguages.isEmpty) {
+                        continue;
+                      }
+
+                      // Apply all constraints together
+                      // Exception: If a user types the EXACT municipality name, we show it regardless of other filters
+                      // to avoid a "dead end" where a user searches for a town they can see the name of but it's hidden.
+                      final isExactMatch = isSearchActive && rec.title.toLowerCase() == query;
+
+                      if (isExactMatch || (matchesProvince && matchesDialect && matchesSearch)) {
+                        filtered.add(rec);
+                      }
+                    } catch (e) {
+                      debugPrint('Error filtering municipality ${rec.title}: $e');
                     }
-
-                    // Search Query Filter
-                    final matchesSearch = query.isEmpty ||
-                        rec.title.toLowerCase().contains(query) ||
-                        rec.province.toLowerCase().contains(query) ||
-                        rec.dialect.toLowerCase().contains(query);
-
-                    // Dialect Chip Filter
-                    final matchesDialect = _selectedLanguages.isEmpty ||
-                        _selectedLanguages.any((lang) =>
-                          rec.dialect.toLowerCase() == lang.toLowerCase()
-                        );
-
-                    // If nothing selected and no search, we show nothing (to avoid overwhelming)
-                    if (currentProv.isEmpty && query.isEmpty && _selectedLanguages.isEmpty) {
-                      return false;
-                    }
-
-                    return matchesProvince && matchesSearch && matchesDialect;
-                  }).toList();
+                  }
 
                   return Stack(
                     children: [
@@ -126,14 +154,14 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
                         _buildEmptyState(
                           "No municipalities found matching '$_searchQuery'",
                         ),
-                      if (filtered.isEmpty && _searchQuery.isEmpty && _selectedProvince == null)
+                      if (filtered.isEmpty && _searchQuery.isEmpty && _selectedProvince == null && _selectedLanguages.isEmpty)
                         _buildEmptyState(
                           "Discover the voices of Mindanao. Select a province above to browse cultural sites, or search for a specific dialect or town.",
                           isGuidance: true,
                         ),
-                      if (filtered.isEmpty && _searchQuery.isEmpty && _selectedProvince != null)
+                      if (filtered.isEmpty && _searchQuery.isEmpty && (_selectedProvince != null || _selectedLanguages.isNotEmpty))
                         _buildEmptyState(
-                          "No approved recordings found in $_selectedProvince yet.",
+                          "No approved recordings found matching your filters yet.",
                         ),
                     ],
                   );
@@ -153,6 +181,13 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: _buildSearchBar(),
                 ),
+                if (_showSuggestions)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                    child: _buildSuggestionsList(),
+                  ),
+                const SizedBox(height: 12),
+                _buildActiveFilters(),
                 const SizedBox(height: 12),
                 _buildProvinceChips(),
               ],
@@ -165,30 +200,35 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
             bottom: _selectedRecording != null
                 ? 380
                 : 100, // Move up if panel is open
-            child: Column(
-              children: [
-                _buildMapControl(Icons.add_rounded, () {
-                  final zoom = _mapController.camera.zoom;
-                  _mapController.move(_mapController.camera.center, zoom + 1);
-                }),
-                const SizedBox(height: 12),
-                _buildMapControl(Icons.remove_rounded, () {
-                  final zoom = _mapController.camera.zoom;
-                  _mapController.move(_mapController.camera.center, zoom - 1);
-                }),
-                const SizedBox(height: 12),
-                _buildMapControl(
-                  Icons.my_location,
-                  () => _getCurrentLocation(),
-                ),
-                const SizedBox(height: 12),
-                _buildMapControl(
-                  _isSatellite
-                      ? Icons.map_outlined
-                      : Icons.satellite_alt_rounded,
-                  () => setState(() => _isSatellite = !_isSatellite),
-                ),
-              ],
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 300),
+              opacity: (_selectedProvince != null || _searchQuery.isNotEmpty || _selectedLanguages.isNotEmpty) ? 1.0 : 0.4,
+              child: Column(
+                children: [
+                  _buildMapControl(Icons.add_rounded, () {
+                    final zoom = _mapController.camera.zoom;
+                    _mapController.move(_mapController.camera.center, zoom + 1);
+                  }),
+                  const SizedBox(height: 12),
+                  _buildMapControl(Icons.remove_rounded, () {
+                    final zoom = _mapController.camera.zoom;
+                    _mapController.move(_mapController.camera.center, zoom - 1);
+                  }),
+                  const SizedBox(height: 12),
+                  _buildMapControl(
+                    _followUser ? Icons.gps_fixed : Icons.gps_not_fixed,
+                    () => _toggleFollowMe(),
+                    isActive: _followUser,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildMapControl(
+                    _isSatellite
+                        ? Icons.map_outlined
+                        : Icons.satellite_alt_rounded,
+                    () => setState(() => _isSatellite = !_isSatellite),
+                  ),
+                ],
+              ),
             ),
           ),
 
@@ -233,6 +273,14 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
       options: MapOptions(
         initialCenter: const LatLng(7.13, 125.90), // Centered on Pantukan
         initialZoom: 10.0,
+        minZoom: 8.0,
+        maxZoom: 18.0,
+        cameraConstraint: CameraConstraint.contain(
+          bounds: LatLngBounds(
+            const LatLng(5.0, 121.0), // South West Mindanao
+            const LatLng(10.0, 127.5), // North East Mindanao
+          ),
+        ),
         onTap: (_, __) => setState(() => _selectedRecording = null),
       ),
       children: [
@@ -376,6 +424,42 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
     );
   }
 
+  Widget _buildActiveFilters() {
+    if (_selectedLanguages.isEmpty) return const SizedBox.shrink();
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: _selectedLanguages.map((lang) {
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Chip(
+              backgroundColor: AppColors.gold500.withValues(alpha: 0.1),
+              side: BorderSide(color: AppColors.gold500.withValues(alpha: 0.3)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              label: Text(
+                lang.toUpperCase(),
+                style: AppTypography.label.copyWith(
+                  color: AppColors.gold500,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              deleteIcon: const Icon(Icons.close_rounded, size: 14, color: AppColors.gold500),
+              onDeleted: () {
+                HapticFeedback.lightImpact();
+                setState(() {
+                  _selectedLanguages.remove(lang);
+                });
+              },
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   Widget _buildProvinceChips() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -390,9 +474,15 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
               onTap: () {
                 HapticFeedback.selectionClick();
                 setState(() {
-                  _selectedProvince = p;
+                  if (_selectedProvince == p) {
+                    _selectedProvince = null;
+                  } else {
+                    _selectedProvince = p;
+                  }
                   _selectedRecording = null;
                 });
+
+                if (_selectedProvince == null) return;
 
                 // Center map on the selected province
                 switch (p) {
@@ -446,7 +536,7 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
     );
   }
 
-  Widget _buildMapControl(IconData icon, VoidCallback onTap) {
+  Widget _buildMapControl(IconData icon, VoidCallback onTap, {bool isActive = false}) {
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
@@ -455,14 +545,18 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
       child: GlassBox(
         borderRadius: 25,
         blur: 15,
-        opacity: 0.15,
+        opacity: isActive ? 0.3 : 0.15,
         child: Container(
           width: 50,
           height: 50,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            color: isActive ? AppColors.gold500.withValues(alpha: 0.2) : null,
+            border: Border.all(
+              color: isActive ? AppColors.gold500 : Colors.white.withValues(alpha: 0.1),
+              width: isActive ? 2 : 1,
+            ),
           ),
           child: Icon(icon, color: AppColors.gold500, size: 22),
         ),
@@ -515,33 +609,154 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
   Widget _buildSearchBar() {
     final showFilter = _selectedProvince != null || _searchQuery.length > 1;
     return BrandSearchBar(
+      controller: _searchController,
+      focusNode: _searchFocusNode,
       hintText: 'Search municipalities or dialects...',
       showFilter: showFilter,
       onFilterTap: _showFilterSheet,
       isMinimal: true,
+      onSubmitted: (val) {
+        setState(() {
+          _searchQuery = val;
+          _activeSearchQuery = val; // Ensure active query updates
+        });
+        if (val.trim().isNotEmpty) {
+          ref.read(searchHistoryProvider.notifier).addTerm(val.trim());
+        }
+        _searchFocusNode.unfocus();
+      },
       onChanged: (val) {
         setState(() {
           _searchQuery = val;
+          if (val.isEmpty) {
+            _activeSearchQuery = "";
+          }
 
           // Smart Province Switch: If user types an exact municipality name,
           // find its province and switch the chip automatically.
           if (val.length > 2) {
-             ref.read(mapMarkersStreamProvider).whenData((muniList) {
-               try {
-                 final match = muniList.firstWhere(
-                   (m) => m.title.toLowerCase().trim() == val.toLowerCase().trim()
-                 );
-                 if (_selectedProvince != match.province) {
-                    setState(() {
-                      _selectedProvince = match.province;
-                    });
-                    _mapController.move(match.location, 11.0);
-                 }
-               } catch (_) {}
-             });
+            ref.read(mapMarkersStreamProvider).whenData((muniList) {
+              try {
+                final match = muniList.firstWhere(
+                    (m) => m.title.toLowerCase().trim() == val.toLowerCase().trim());
+                if (_selectedProvince != match.province) {
+                  setState(() {
+                    _selectedProvince = match.province;
+                  });
+                  _mapController.move(match.location, 11.0);
+                }
+              } catch (_) {}
+            });
           }
         });
       },
+    );
+  }
+
+  Widget _buildSuggestionsList() {
+    final history = ref.watch(searchHistoryProvider);
+    final municipalitiesAsync = ref.watch(mapMarkersStreamProvider);
+
+    return municipalitiesAsync.when(
+      data: (muniList) {
+        final query = _searchQuery.toLowerCase().trim();
+
+        // Combined suggestions: History (filtered) + Municipality Titles + Dialects
+        final List<String> suggestions = [];
+
+        if (query.isEmpty) {
+          suggestions.addAll(history);
+        } else {
+          // Filter history
+          suggestions.addAll(history.where((item) => item.toLowerCase().contains(query)));
+
+          // Add municipalities matching query
+          final muniMatches = muniList
+              .where((m) => m.title.toLowerCase().contains(query))
+              .map((m) => m.title)
+              .toList();
+          for (var m in muniMatches) {
+            if (!suggestions.any((s) => s.toLowerCase() == m.toLowerCase())) {
+              suggestions.add(m);
+            }
+          }
+
+          // Add dialects matching query
+          final dialectMatches = muniList
+              .where((m) => m.dialect.toLowerCase().contains(query))
+              .map((m) => m.dialect)
+              .toSet()
+              .toList();
+          for (var d in dialectMatches) {
+            if (!suggestions.any((s) => s.toLowerCase() == d.toLowerCase())) {
+              suggestions.add(d);
+            }
+          }
+        }
+
+        if (suggestions.isEmpty) return const SizedBox.shrink();
+
+        return GlassBox(
+          borderRadius: 20,
+          child: Container(
+            constraints: const BoxConstraints(maxHeight: 250),
+            child: ListView.separated(
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: suggestions.length > 6 ? 6 : suggestions.length,
+              separatorBuilder: (context, index) =>
+                  Divider(color: Colors.white.withValues(alpha: 0.05), height: 1),
+              itemBuilder: (context, index) {
+                final suggestion = suggestions[index];
+                final isHistory = history.contains(suggestion);
+
+                return ListTile(
+                  dense: true,
+                  leading: Icon(
+                    isHistory ? Icons.history_rounded : Icons.location_on_outlined,
+                    size: 18,
+                    color: AppColors.gold500.withValues(alpha: 0.7),
+                  ),
+                  title: Text(
+                    suggestion,
+                    style: AppTypography.body.copyWith(
+                      color: Colors.white,
+                      fontSize: 14,
+                    ),
+                  ),
+                  trailing: isHistory
+                      ? IconButton(
+                          icon: const Icon(Icons.close_rounded, size: 14, color: Colors.white38),
+                          onPressed: () {
+                            ref.read(searchHistoryProvider.notifier).removeTerm(suggestion);
+                          },
+                        )
+                      : const Icon(Icons.north_west_rounded, size: 14, color: Colors.white30),
+                  onTap: () {
+                    setState(() {
+                      _searchQuery = suggestion;
+                      _searchController.text = suggestion;
+                      _showSuggestions = false;
+                    });
+                    ref.read(searchHistoryProvider.notifier).addTerm(suggestion);
+                    _searchFocusNode.unfocus();
+
+                    // Trigger map movement if it's a municipality
+                    try {
+                      final match = muniList.firstWhere(
+                          (m) => m.title.toLowerCase() == suggestion.toLowerCase());
+                      setState(() => _selectedProvince = match.province);
+                      _mapController.move(match.location, 11.0);
+                    } catch (_) {}
+                  },
+                );
+              },
+            ),
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 
@@ -578,48 +793,6 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
                       color: isDark ? Colors.white : AppColors.forest900,
                     ),
                   ),
-                  const SizedBox(height: 24),
-
-                  // Province Selector
-                  Text(
-                    'PROVINCE',
-                    style: AppTypography.label.copyWith(
-                      color: AppColors.gold500,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        ChoiceChip(
-                          label: const Text('All Provinces'),
-                          selected: _selectedProvince == null,
-                          onSelected: (selected) {
-                            if (selected) {
-                              setSheetState(() => _selectedProvince = null);
-                              setState(() {});
-                            }
-                          },
-                        ),
-                        ..._provinces.map((p) => Padding(
-                          padding: const EdgeInsets.only(left: 8),
-                          child: ChoiceChip(
-                            label: Text(p),
-                            selected: _selectedProvince == p,
-                            onSelected: (selected) {
-                              if (selected) {
-                                setSheetState(() => _selectedProvince = p);
-                                setState(() {});
-                              }
-                            },
-                          ),
-                        )),
-                      ],
-                    ),
-                  ),
-
                   const SizedBox(height: 24),
 
                   Text(
@@ -700,7 +873,13 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
     return "$twoDigitMinutes:$twoDigitSeconds";
   }
 
-  Future<void> _getCurrentLocation() async {
+  Future<void> _toggleFollowMe() async {
+    if (_followUser) {
+      _positionStream?.cancel();
+      setState(() => _followUser = false);
+      return;
+    }
+
     bool serviceEnabled;
     LocationPermission permission;
 
@@ -748,13 +927,45 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
       return;
     }
 
-    final position = await Geolocator.getCurrentPosition();
-    setState(() {
-      _userLocation = LatLng(position.latitude, position.longitude);
-      _mapController.move(_userLocation!, 13.0);
+    setState(() => _followUser = true);
+    HapticFeedback.mediumImpact();
+
+    _positionStream = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10,
+      ),
+    ).listen((Position position) {
+      if (!mounted) return;
+
+      final latLng = LatLng(position.latitude, position.longitude);
+
+      // Check if within Mindanao bounds (Lat: 5.0-10.0, Lng: 121.0-127.5)
+      final bool isWithinBounds = position.latitude >= 5.0 &&
+          position.latitude <= 10.0 &&
+          position.longitude >= 121.0 &&
+          position.longitude <= 127.5;
+
+      setState(() {
+        _userLocation = latLng;
+        if (_followUser) {
+          _mapController.move(latLng, 13.0);
+        }
+      });
+
+      if (!isWithinBounds && _followUser) {
+        _positionStream?.cancel();
+        setState(() => _followUser = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('You are outside the covered cultural regions of Mindanao.'),
+            backgroundColor: AppColors.terracotta,
+          ),
+        );
+      }
     });
-    HapticFeedback.heavyImpact();
   }
+
 
   Widget _buildLoadingOverlay() {
     return Container(

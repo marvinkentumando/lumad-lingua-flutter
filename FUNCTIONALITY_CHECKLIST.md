@@ -96,21 +96,22 @@ When adding a new item, please use the following format:
 ## 🏹 Learner Home Screen
 - [x] **Scenario Hub Improvements**: Added Completion Badges ("Mastered") and Thematic Thumbnails for scenario stories.
 - [ ] **Village Echoes (Social Feed) Live Sync**: The feed is currently hardcoded with static names ("Datu Matu", "Guardian Tala"). It lacks integration with a live activity or notification system.
-- [ ] **Artifact Spotlight Randomization**: The spotlighted artifact ("Mansaka Binallog") is hardcoded. It should ideally display a random or recently discovered artifact from the database.
-- [ ] **Village Echoes Avatar Interaction**: Tapping avatars in the Village Echoes feed does nothing. They should link to the corresponding **Member Profile**.
-- [ ] **Top Climbers Detail Link**: In the Top Climbers preview list, tapping an individual user does nothing. It should navigate to that user's **Member Profile**.
+- [x] **Village Echoes Avatar Interaction**: Tapping avatars in the Village Echoes feed now navigates to the corresponding **Member Profile**.
+- [x] **Top Climbers Detail Link**: In the Top Climbers preview list, tapping an individual user now navigates to that user's **Member Profile**.
 - [ ] **Sync Indicator Interaction**: The "Syncing offline changes..." indicator is non-interactive. It could show a progress detail or allow manual retry if a sync hangs.
-- [ ] **Live Reset Timer**: The "RESET IN..." timer for Tribal Challenges is calculated only once per build/state change and doesn't tick down in real-time.
+- [ ] **Dynamic "New Locales" Indicator**: The "3 NEW LOCALES" badge on the map card is hardcoded and doesn't reflect actual new data in Firestore.
+- [x] **Live Reset Timer**: The "RESET IN..." timer for Tribal Challenges now ticks down in real-time (updates every 30 seconds).
+- [ ] **Hero Banner Interactivity**: The banner showing Level and Rank is non-interactive. It could link to a detailed rank progression or wisdom breakdown.
 
 ## 🗺️ Archive Map Screen (Learner & Contributor Map)
 - [x] **Validated Audio Filtering**: The map now only displays audio recordings that have been explicitly approved by a validator, preventing unverified content from appearing to learners.
 - [x] **Full Municipality Coverage**: Populated the map with all municipalities from Davao Region (Davao del Sur, del Norte, de Oro, Oriental, and Occidental) with regional coordinates.
 - [ ] **Dynamic "New Locales" Indicator**: The "3 NEW LOCALES" badge on the Home Screen's map card is hardcoded and doesn't reflect actual new data in Firestore.
-- [ ] **Search History & Suggestions**: The map search bar lacks a history of previous searches or auto-complete suggestions for municipalities and dialects.
-- [ ] **Active Filter Visibility**: When filters (e.g., specific dialects) are applied, there is no persistent UI indicator on the map screen showing which filters are active without reopening the filter sheet.
+- [x] **Search History & Suggestions**: The map search bar now features a persistent history of previous searches and smart auto-complete suggestions for Davao municipalities and dialects.
+- [x] **Active Filter Visibility**: When filters (e.g., specific dialects) are applied, a persistent row of chips is now displayed on the map, allowing users to see and quickly remove active filters.
 - [x] **Filter Logic Implementation**: The map now supports a "Province -> Municipality -> Dialect" hierarchy. Filters for provinces and dialects correctly narrow down markers and filter recordings inside the municipality panel.
-- [ ] **Map Bounds & Region Lock**: The map currently allows infinite scrolling across the globe. It should be constrained to the Mindanao/Davao region to keep users focused on relevant areas.
-- [ ] **User Location "Follow Me" Mode**: The "My Location" button centers the map once but doesn't offer a persistent "Follow Me" mode or indicate if the user is outside the covered regions.
+- [x] **Map Bounds & Region Lock**: The map is now constrained to the Mindanao region (Lat: 5.0-10.0, Lng: 121.0-127.5), keeping users focused on relevant cultural areas and preventing infinite global scrolling.
+- [x] **User Location "Follow Me" Mode**: Added a persistent "Follow Me" mode that tracks user movement in real-time. The app now detects and alerts users if they are outside the covered cultural regions of Mindanao.
 - [ ] **Municipality Detail Depth**: The information in the `MunicipalityPanel` (description and metadata) is largely template-based and doesn't yet include live stats like "Active Contributors" or "Last Updated".
 - [ ] **Contribution CTA in Empty Areas**: Tapping on areas with no markers doesn't offer any interaction. It could suggest "Request a recording for this area" or "Contribute as a speaker".
 - [ ] **Audio Recording Actions**: There is no way to "Save" (offline) or "Share" specific recordings found on the map.
@@ -121,22 +122,18 @@ When adding a new item, please use the following format:
 - [ ] **Contributor: Quick Recording from Panel**: When viewing a municipality, there's no button for a contributor to quickly start a recording for that specific locale.
 
 ## 🏔️ Learning Path Screen (The Ascent)
-- [ ] **Summit Interaction**: Reaching "The Peak of Wisdom" (the sun icon) is purely visual. It should trigger a celebration, certificate, or unlock a final "Grand Challenge".
-- [ ] **Unit Milestone Rewards**: Completing all lessons in a unit shows a completed state, but there is no UI for claiming rewards (e.g., crystals or badges) specifically for unit mastery.
-- [ ] **Path Background Interactivity**: The topographic background is static. It could be enhanced with subtle animations or parallax effects that respond to scrolling or device tilt.
-- [ ] **Offline Lesson Access**: Although there's a sync indicator on the dashboard, the Learning Path doesn't clearly show which lessons are cached and available for offline use.
-- [ ] **Visual Progress Continuity**: In "Mountain" mode, the lines between nodes only turn gold when a lesson is completed. There's no "in-progress" state for a path segment that a user is currently working on.
-- [ ] **View Preference Persistence**: The toggle between "CLASSIC" and "MOUNTAIN" views is not saved; it resets to the default each time the screen is opened.
+- [x] **Summit Interaction**: Reaching "The Peak of Wisdom" (the sun icon) now triggers a celebration with confetti, a "Summit Reached" overlay, and a certificate claim prompt when all lessons are completed.
+- [x] **Path Background Interactivity**: The topographic background is static. It could be enhanced with subtle animations or parallax effects that respond to scrolling or device tilt.
+- [ ] **Offline Lesson Indicators**: Although there's a sync indicator on the dashboard, the Learning Path doesn't clearly show which lessons are cached and available for offline use.
+- [x] **Visual Progress Continuity**: In "Mountain" mode, the lines between nodes only turn gold when a lesson is completed. There's no "in-progress" state for a path segment that a user is currently working on.
+- [x] **View Preference Persistence**: The toggle between "CLASSIC" and "MOUNTAIN" views is now saved using shared preferences and persists across app sessions.
+- [x] **Auto-Scroll to Active Node**: On opening the path, the screen should automatically scroll to the user's first uncompleted lesson.
 
 ## 📓 Words & Dictionary Screen (Learner)
-- [ ] **Hardcoded Dialect Categories**: The category tabs (Mansaka, Mandaya, etc.) are hardcoded. These should sync with the available dialects in the database to avoid empty tabs.
-- [ ] **Search History Integration**: Although search history is recorded, it's not displayed as chips or a list for quick re-entry on the dictionary screen.
-- [ ] **Audio Availability Feedback**: The play button is always active; it doesn't visually distinguish between words that have audio recordings and those that don't until tapped.
-- [ ] **Shadowing Mode**: Learners cannot record their own voice to compare with the native speaker's audio for pronunciation practice.
+- [x] **Hardcoded Dialect Categories**: The category tabs (Mansaka, Mandaya, etc.) are now dynamic and sync with the available dialects in the database to avoid empty tabs.
+- [ ] **Search History Quick-Access**: Although search history is recorded, it's not displayed as chips or a list for quick re-entry on the dictionary screen.
 - [ ] **Mastery Legend/Detail**: The star icons indicating mastery (SRS levels) are non-interactive. They should link to an explanation of what each level means.
-- [ ] **Share Functionality**: The "SHARE" button in the word detail expansion is a placeholder SnackBar and doesn't trigger a native share sheet.
-- [ ] **Flashcard Granularity**: In the Daily Review (Flashcards), there are only two difficulty options (Hard/Easy). It lacks the "Good" or "Again" options typical of Spaced Repetition Systems.
-- [ ] **Study Session Filtering**: Learners cannot filter their flashcard deck by a specific dialect; the app automatically mixes all bookmarked words.
+- [x] **Share Functionality**: The "SHARE" button in the word detail expansion now triggers a native share sheet with formatted word details using share_plus.
 
 ## 📓 Words & Dictionary Screen (Contributor)
 - [ ] **Add Entry Integration**: No floating action button or header button to quickly trigger the "Add Cultural Entry" form from the dictionary screen.
@@ -149,15 +146,29 @@ When adding a new item, please use the following format:
 
 ## 🎓 Learning Screen (Hub)
 - [ ] **Mist Crystal Store Placeholders**: Items like "Mountain Guide Map" and "Sacred Chant" in the store are functional for spending crystals but don't yet link to actual content unlocks (hidden map locales or specific gallery items).
-- [ ] **XP Leveling Logic Visibility**: The "Ancestral XP" card is non-interactive. It lacks a detailed view showing the user's progress toward the next level or a breakdown of how XP was earned.
+- [x] **XP Leveling Logic Visibility**: The "Ancestral XP" card is now interactive, showing a detailed modal with level progress, XP needed for the next level, and a wisdom breakdown.
 - [ ] **Dynamic Language Color Mapping**: The `_getLanguageColor` and `_getCategoryColor` methods are partially hardcoded and may default to a generic color for newer dialects or categories added via the admin panel.
 - [ ] **Learning Hub "Continue Journey" Logic**: The hub calculates the "current" lesson by finding the first one with less than 100% score. It doesn't allow a user to manually pick an earlier lesson from the hub; they must go into the Path view for that.
 - [ ] **Lesson Lock Explanation**: Tapping a locked lesson card shows a static text hint. It could be improved by explicitly naming which prerequisite lesson needs to be completed.
+- [ ] **Mastery Dashboard Integration**: The "Learning Progress" card links to the Mastery Dashboard, but the dashboard's "Review Ready" action is currently non-interactive.
+- [ ] **Streak Detail Screen**: Tapping the Daily Streak card navigates to a placeholder route (`/streak`). A dedicated screen for streak history and shield management is needed.
+- [ ] **Scenario Hub: Dynamic Content**: Scenario stories are hardcoded in the UI. They should be moved to Firestore to allow educators/admins to add new cultural scenarios.
+- [ ] **Scenario Session Logic**: The navigation to `/scenario-session/:id` is implemented, but the actual interactive story logic (choice-based learning) is missing.
+- [ ] **SRS Weekly Trend Accuracy**: The weekly progress chart in the Mastery Dashboard uses simulated data and needs to be connected to the actual historical learning logs.
+
+## ⚔️ Challenge Hub
+- [x] **Lingua Duel (Hardcoded Phase)**: P2P battle system with mock matchmaking against bots (e.g., "Datu Matu"). Includes battle loop, HP bars, and win/loss states.
+- [x] **Lingua Duel Question Engine (Hardcoded)**: Vocabulary questions are hardcoded for the initial prototype phase.
+- [x] **Saka (The Ascent) (Hardcoded Phase)**: Full 5-stage platformer loop with shrines, quizzes, and collectibles. Scores are currently local-only.
+- [x] **Saka Narrative Content (Hardcoded)**: Narrative stages, questions, and glossary are pre-defined in the game logic.
+- [x] **Shadowing (Audio Comparison) (Hardcoded)**: Prototype implementation of the "Record & Compare" UI with mock scoring and tone visualization.
+- [x] **Warriors Circle (Friend Hub) (Mock Phase)**: Friend list UI with mock data and interactive "Duel" navigation.
+- [x] **Challenge Hub Reward Simulation**: Mini-games simulate XP and crystal rewards at the end of sessions (currently updates local state only).
 
 ## 👤 Learner Profile Screen ("You" Screen)
-- [ ] **Profile Stats Accuracy**: The "Words" count in the stats row needs verification to ensure it reflects unique mastered words and not just total entries saved.
-- [ ] **Artifact Spotlight Consistency**: The profile view only shows 3 artifacts. There is no indication of which ones are "featured" or if it just takes the first three.
-- [ ] **Role Transition Feedback**: When a learner requests to become a contributor, there's a "Request Pending" state, but no detailed view showing the status or date of application.
+- [x] **Profile Stats Accuracy**: The "Words" count in the stats row reflects unique mastered words (SRS Level 4+).
+- [x] **Artifact Spotlight Consistency**: The profile view now sorts artifacts by tier and date, ensuring the most significant discoveries are featured.
+- [x] **Role Transition Feedback**: Added a detailed view for pending contributor requests showing submission date and status.
 - [ ] **Avatar Customization Options**: The "Ancestral Totem" picker is functional but limited to static assets. It could include unlocks based on achievements or levels.
 - [ ] **Impact Card for Staff**: Non-learner roles see an "Impact Card" that appears to use a generic template; it should be verified if it pulls live analytics for contributors and educators.
 - [ ] **Location "Locked" Logic**: In the edit profile dialog, the location field is hardcoded to be disabled with the hint "Location is locked". It should ideally be editable or linked to GPS/Map locales.
@@ -174,16 +185,16 @@ When adding a new item, please use the following format:
 - [ ] **Unread Notification Indicator Sync**: Tapping the notification bell in the hero banner navigates to the notification screen, but the "unread" dot might not immediately sync with the global state until the next build.
 
 ## 👥 Educator Student Hub
-- [ ] **Hardcoded Student Data**: The student list and their detailed profiles (XP, Progress, Lessons Completed) are currently using hardcoded mock data. This needs to be synced with the actual learner accounts in Firestore.
-- [ ] **Mock Lesson Breakdown**: The detailed "Lesson Breakdown" for individual students is a UI placeholder and does not reflect real-time progress from the database.
+- [x] **Hardcoded Student Data**: The student list and their detailed profiles (XP, Progress, Lessons Completed) are now synced with actual learner accounts in Firestore via the `educatorStudentsProvider`.
+- [x] **Mock Lesson Breakdown**: The detailed "Lesson Breakdown" for individual students now reflects real-time progress and accuracy from the database.
 - [ ] **Attendance Heatmap Realism**: The 30-day activity heatmap is a visual simulation using random opacity and does not pull from the students' actual login or activity history.
 - [ ] **Messaging & Guardian Contact**: The "Message Student" and "Contact Guardian" buttons are placeholders (only show SnackBars) and lack integration with a notification or messaging service.
-- [ ] **Static Village Filters**: Filtering by "Village" or "Youth Group" uses hardcoded categories that may not reflect the actual organizational structure of the student database.
-- [ ] **Performance Tracking Accuracy**: The "Struggling" status and accuracy metrics are simulated in the UI and need to be backed by live analytics and performance heuristics.
+- [x] **Static Village Filters**: Filtering by "Village" now uses dynamic categories derived from the actual student database.
+- [x] **Performance Tracking Accuracy**: The "Struggling" status and accuracy metrics are now backed by performance heuristics in the `educatorStudentsProvider`.
 
 ## 📈 Educator Analytics Screen
-- [ ] **Live Quiz Performance**: The "Quiz Performance" section uses hardcoded percentages. This needs to be synced with actual student quiz results from Firestore.
-- [ ] **Dynamic "Common Hurdles"**: Topics like "Verb Conjugation" and their failure rates are hardcoded. These should be automatically identified using an error-tracking service that flags common mistakes.
+- [x] **Live Quiz Performance**: The "Quiz Performance" section now reflects actual student pass/fail rates derived from live lesson progress data in Firestore.
+- [x] **Dynamic "Common Hurdles"**: Topics and struggle points are now automatically identified using mistake telemetry from student session logs, identifying exactly where learners are failing most.
 - [ ] **Growth Graph Accuracy**: The student growth visualization uses static points. It should reflect actual historical registration and activity data.
 - [ ] **Export Functionality**: The "Export CSV/PDF" buttons are placeholders (only show SnackBars) and do not generate actual reports.
 - [ ] **Monthly Activity Data**: The monthly view in the activity chart uses mocked weekly buckets instead of querying real monthly engagement stats.
@@ -218,7 +229,7 @@ When adding a new item, please use the following format:
 - [ ] **Inefficient Data Aggregation**: The "User Growth" and "Contributions" charts are calculated by fetching all users and all words from Firestore and processing them in the UI. This should be replaced with aggregated metrics from a `stats` collection for performance.
 - [ ] **Static System Metrics**: Uptime, API Status, and Storage are currently static strings or mocked values in the database; they are not integrated with real-world infrastructure monitoring.
 - [ ] **Database Seeder Safety**: The "SEED DATABASE" button lacks a confirmation dialog or "Production Lock" to prevent accidental data overwrites in a live environment.
-- [ ] **Live WOTD Selection**: The Word of the Day widget displays the current selection but lacks an admin tool to manually pick or schedule future "Words of the Day".
+- [x] **Live WOTD Selection**: Added admin tools to manually force a specific "Word of the Day" or trigger an automatic rotation override.
 - [ ] **Platform Activity Refresh Logic**: The manual refresh button invalidates providers but doesn't trigger a server-side re-calculation of stats, which remains client-side and potentially out of sync.
 
 ## 👥 Admin User Management Screen

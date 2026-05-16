@@ -35,9 +35,13 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
   bool _showHistory = false;
   final Set<String> _selectedIds = {};
   String _searchQuery = "";
+  String _activeSearchQuery = "";
+  String _sortBy = "latest"; // "latest" or "alpha"
   final String _selectedDialect = "All";
   String? _playingId;
   double _playbackSpeed = 1.0;
+
+  final TextEditingController _searchController = TextEditingController();
 
   // ── Real Audio Player state ──
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -162,12 +166,12 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
     final submissionsAsync = _showHistory
         ? ref.watch(
             voiceValidatorHistoryProvider(
-              ValidatorQuery(userId, 50, dialect: userDialect),
+              ValidatorQuery(userId, 50, dialect: userDialect, search: _activeSearchQuery),
             ),
           )
         : ref.watch(
             pendingVoiceSubmissionsProvider(
-              ValidatorQuery('', 50, dialect: userDialect),
+              ValidatorQuery('', 50, dialect: userDialect, search: _activeSearchQuery),
             ),
           );
 
@@ -387,37 +391,99 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
                         ],
                       ),
                       const SizedBox(height: 20),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: isDark ? AppColors.forest800 : Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isDark
-                                ? AppColors.forest700
-                                : AppColors.creamBorder,
-                          ),
-                        ),
-                        child: TextField(
-                          onChanged: (val) =>
-                              setState(() => _searchQuery = val),
-                          style: TextStyle(
-                            color: isDark ? Colors.white : AppColors.creamText,
-                          ),
-                          decoration: InputDecoration(
-                            icon: const Icon(
-                              Icons.search_rounded,
-                              color: AppColors.gold500,
-                              size: 20,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              decoration: BoxDecoration(
+                                color: isDark ? AppColors.forest800 : Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isDark
+                                      ? AppColors.forest700
+                                      : AppColors.creamBorder,
+                                ),
+                              ),
+                              child: TextField(
+                                controller: _searchController,
+                                onChanged: (val) {
+                                  setState(() {
+                                    _searchQuery = val;
+                                    if (val.isEmpty) {
+                                      _activeSearchQuery = "";
+                                    }
+                                  });
+                                },
+                                onSubmitted: (val) {
+                                  setState(() => _activeSearchQuery = val);
+                                },
+                                style: TextStyle(
+                                  color: isDark ? Colors.white : AppColors.creamText,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: 'Search by title...',
+                                  hintStyle: AppTypography.body.copyWith(
+                                    color: AppColors.creamText3,
+                                    fontSize: 14,
+                                  ),
+                                  border: InputBorder.none,
+                                  suffixIcon: GestureDetector(
+                                    onTap: () {
+                                      setState(() => _activeSearchQuery = _searchController.text);
+                                      FocusScope.of(context).unfocus();
+                                    },
+                                    child: const Icon(
+                                      Icons.search_rounded,
+                                      color: AppColors.gold500,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
-                            hintText: 'Search by title, dialect, or name...',
-                            hintStyle: AppTypography.body.copyWith(
-                              color: AppColors.creamText3,
-                              fontSize: 14,
-                            ),
-                            border: InputBorder.none,
                           ),
-                        ),
+                          const SizedBox(width: 12),
+                          PopupMenuButton<String>(
+                            onSelected: (val) {
+                              setState(() => _sortBy = val);
+                            },
+                            icon: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isDark ? Colors.white24 : AppColors.creamBorder,
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.sort_rounded,
+                                color: AppColors.gold500,
+                                size: 20,
+                              ),
+                            ),
+                            color: isDark ? AppColors.forest800 : Colors.white,
+                            itemBuilder: (context) => [
+                              PopupMenuItem(
+                                value: "latest",
+                                child: Text("Latest - Oldest", style: TextStyle(color: isDark ? Colors.white : AppColors.forest900)),
+                              ),
+                              PopupMenuItem(
+                                value: "oldest",
+                                child: Text("Oldest - Latest", style: TextStyle(color: isDark ? Colors.white : AppColors.forest900)),
+                              ),
+                              PopupMenuItem(
+                                value: "a-z",
+                                child: Text("A-Z", style: TextStyle(color: isDark ? Colors.white : AppColors.forest900)),
+                              ),
+                              PopupMenuItem(
+                                value: "z-a",
+                                child: Text("Z-A", style: TextStyle(color: isDark ? Colors.white : AppColors.forest900)),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                       if (_showHistory) ...[
                         const SizedBox(height: 24),
@@ -487,7 +553,7 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
                 Expanded(
                   child: submissionsAsync.when(
                         data: (voices) {
-                          var filteredList = voices;
+                          var filteredList = List<VoiceSubmission>.from(voices);
 
                           if (_selectedDialect != "All") {
                             filteredList = filteredList
@@ -497,16 +563,31 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
                                 .toList();
                           }
 
-                          if (_searchQuery.isNotEmpty) {
-                            final query = _searchQuery.toLowerCase();
+                          if (_activeSearchQuery.isNotEmpty) {
+                            final query = _activeSearchQuery.toLowerCase();
                             filteredList = filteredList.where((item) {
-                              final title = item.title.toLowerCase();
-                              final dialect = item.dialect.toLowerCase();
-                              final name = item.contributorName.toLowerCase();
-                              return title.contains(query) ||
-                                  dialect.contains(query) ||
-                                  name.contains(query);
+                              return item.title.toLowerCase().contains(query);
                             }).toList();
+                          }
+
+                          // Apply Sorting
+                          if (_sortBy == "a-z") {
+                            filteredList.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+                          } else if (_sortBy == "z-a") {
+                            filteredList.sort((a, b) => b.title.toLowerCase().compareTo(a.title.toLowerCase()));
+                          } else if (_sortBy == "oldest") {
+                            filteredList.sort((a, b) {
+                              final aTime = a.submittedAt ?? DateTime(0);
+                              final bTime = b.submittedAt ?? DateTime(0);
+                              return aTime.compareTo(bTime);
+                            });
+                          } else {
+                            // latest
+                            filteredList.sort((a, b) {
+                              final aTime = a.submittedAt ?? DateTime(0);
+                              final bTime = b.submittedAt ?? DateTime(0);
+                              return bTime.compareTo(aTime);
+                            });
                           }
 
                           if (filteredList.isEmpty) {

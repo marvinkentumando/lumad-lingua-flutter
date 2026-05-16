@@ -34,6 +34,8 @@ class _ValidatorEntriesScreenState
   bool _isProcessing = false;
   bool _isFetchingMore = false;
   String _searchQuery = "";
+  String _activeSearchQuery = "";
+  String _sortBy = "latest"; // "latest" or "alpha"
   final String _selectedDialect = "All";
 
   int _documentLimit = 50;
@@ -43,6 +45,7 @@ class _ValidatorEntriesScreenState
 
   List<String> _searchHistory = [];
   final TextEditingController _feedbackController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -143,7 +146,7 @@ class _ValidatorEntriesScreenState
               ValidatorQuery(
                 '',
                 _documentLimit,
-                search: _searchQuery,
+                search: _activeSearchQuery,
                 dialect: userDialect,
               ),
             ),
@@ -154,7 +157,7 @@ class _ValidatorEntriesScreenState
                   ValidatorQuery(
                     userId,
                     _documentLimit,
-                    search: _searchQuery,
+                    search: _activeSearchQuery,
                     dialect: userDialect,
                   ),
                 ),
@@ -164,7 +167,7 @@ class _ValidatorEntriesScreenState
                   ValidatorQuery(
                     '',
                     _documentLimit,
-                    search: _searchQuery,
+                    search: _activeSearchQuery,
                     dialect: userDialect,
                   ),
                 ),
@@ -240,7 +243,7 @@ class _ValidatorEntriesScreenState
           children: [
             entriesAsync.when(
               data: (entries) {
-                var filteredList = entries;
+                var filteredList = List<DictionaryEntry>.from(entries);
 
                 if (_selectedDialect != "All") {
                   filteredList = filteredList
@@ -252,19 +255,36 @@ class _ValidatorEntriesScreenState
                       .toList();
                 }
 
-                if (_searchQuery.isNotEmpty) {
-                  final query = _searchQuery.toLowerCase();
+                if (_activeSearchQuery.isNotEmpty) {
+                  final query = _activeSearchQuery.toLowerCase();
                   filteredList = filteredList.where((item) {
                     final word = item.indigenousWord.toLowerCase();
-                    final dialect = item.language.toLowerCase();
-                    final name = (item.contributorName ?? '').toLowerCase();
-                    return word.contains(query) ||
-                        dialect.contains(query) ||
-                        name.contains(query);
+                    // Removed dialect and contributor name search as per request
+                    return word.contains(query);
                   }).toList();
                 }
 
-                if (_searchQuery.isEmpty &&
+                // Apply Sorting
+                if (_sortBy == "a-z") {
+                  filteredList.sort((a, b) => a.indigenousWord.toLowerCase().compareTo(b.indigenousWord.toLowerCase()));
+                } else if (_sortBy == "z-a") {
+                  filteredList.sort((a, b) => b.indigenousWord.toLowerCase().compareTo(a.indigenousWord.toLowerCase()));
+                } else if (_sortBy == "oldest") {
+                  filteredList.sort((a, b) {
+                    final aTime = a.submittedAt ?? DateTime(0);
+                    final bTime = b.submittedAt ?? DateTime(0);
+                    return aTime.compareTo(bTime);
+                  });
+                } else {
+                  // latest
+                  filteredList.sort((a, b) {
+                    final aTime = a.submittedAt ?? DateTime(0);
+                    final bTime = b.submittedAt ?? DateTime(0);
+                    return bTime.compareTo(aTime);
+                  });
+                }
+
+                if (_activeSearchQuery.isEmpty &&
                     !_showHistory &&
                     filteredList.isEmpty &&
                     !_hasPlayedConfetti) {
@@ -606,42 +626,107 @@ class _ValidatorEntriesScreenState
             ],
           ),
           const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.forest800 : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isDark ? AppColors.forest700 : AppColors.creamBorder,
-              ),
-            ),
-            child: TextField(
-              onChanged: (val) {
-                setState(() {
-                  _searchQuery = val;
-                  if (val.isEmpty) _isGlobalSearch = false;
-                });
-              },
-              onSubmitted: (val) => _saveSearchTerm(val),
-              style: TextStyle(
-                color: isDark ? Colors.white : AppColors.creamText,
-              ),
-              decoration: InputDecoration(
-                icon: const Icon(
-                  Icons.search_rounded,
-                  color: AppColors.gold500,
-                  size: 20,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.forest800 : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark ? AppColors.forest700 : AppColors.creamBorder,
+                    ),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (val) {
+                      setState(() {
+                        _searchQuery = val;
+                        if (val.isEmpty) {
+                          _activeSearchQuery = "";
+                          _isGlobalSearch = false;
+                        }
+                      });
+                    },
+                    onSubmitted: (val) {
+                      setState(() {
+                        _activeSearchQuery = val;
+                      });
+                      _saveSearchTerm(val);
+                    },
+                    style: TextStyle(
+                      color: isDark ? Colors.white : AppColors.creamText,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Search by word...',
+                      hintStyle: AppTypography.body.copyWith(
+                        color: AppColors.creamText3,
+                        fontSize: 14,
+                      ),
+                      border: InputBorder.none,
+                      suffixIcon: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _activeSearchQuery = _searchController.text;
+                          });
+                          _saveSearchTerm(_searchController.text);
+                          FocusScope.of(context).unfocus();
+                        },
+                        child: const Icon(
+                          Icons.search_rounded,
+                          color: AppColors.gold500,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-                hintText: 'Search by word, dialect, or name...',
-                hintStyle: AppTypography.body.copyWith(
-                  color: AppColors.creamText3,
-                  fontSize: 14,
-                ),
-                border: InputBorder.none,
               ),
-            ),
+              const SizedBox(width: 12),
+              PopupMenuButton<String>(
+                onSelected: (val) {
+                  setState(() => _sortBy = val);
+                },
+                icon: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isDark ? Colors.white24 : AppColors.creamBorder,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.sort_rounded,
+                    color: AppColors.gold500,
+                    size: 20,
+                  ),
+                ),
+                color: isDark ? AppColors.forest800 : Colors.white,
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: "latest",
+                    child: Text("Latest - Oldest", style: TextStyle(color: isDark ? Colors.white : AppColors.forest900)),
+                  ),
+                  PopupMenuItem(
+                    value: "oldest",
+                    child: Text("Oldest - Latest", style: TextStyle(color: isDark ? Colors.white : AppColors.forest900)),
+                  ),
+                  PopupMenuItem(
+                    value: "a-z",
+                    child: Text("A-Z", style: TextStyle(color: isDark ? Colors.white : AppColors.forest900)),
+                  ),
+                  PopupMenuItem(
+                    value: "z-a",
+                    child: Text("Z-A", style: TextStyle(color: isDark ? Colors.white : AppColors.forest900)),
+                  ),
+                ],
+              ),
+            ],
           ),
-          if (_searchQuery.isEmpty && !_isSelectionMode && _searchHistory.isNotEmpty) ...[
+          if (_activeSearchQuery.isEmpty && !_isSelectionMode && _searchHistory.isNotEmpty) ...[
             const SizedBox(height: 12),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -677,7 +762,13 @@ class _ValidatorEntriesScreenState
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             GestureDetector(
-                              onTap: () => setState(() => _searchQuery = term),
+                              onTap: () {
+                                setState(() {
+                                  _searchQuery = term;
+                                  _activeSearchQuery = term;
+                                  _searchController.text = term;
+                                });
+                              },
                               child: Text(
                                 term,
                                 style: AppTypography.label.copyWith(

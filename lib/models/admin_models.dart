@@ -11,6 +11,9 @@ class AdminUser {
   final DateTime lastActive;
   final int totalContributions;
 
+  String? photoURL;
+  int streak;
+
   AdminUser({
     required this.id,
     required this.name,
@@ -23,6 +26,8 @@ class AdminUser {
     DateTime? joinedAt,
     DateTime? lastActive,
     this.totalContributions = 0,
+    this.photoURL,
+    this.streak = 0,
   }) : joinedAt = joinedAt ?? DateTime.now(),
        lastActive = lastActive ?? DateTime.now();
 
@@ -32,7 +37,7 @@ class AdminUser {
       name: data['username'] ?? data['name'] ?? 'Unknown',
       email: data['email'] ?? '',
       role: data['role'] ?? 'learner',
-      indigenousGroup: data['indigenousGroup'],
+      indigenousGroup: data['indigenousGroup'] ?? data['dialect'],
       xp: data['xp'] ?? 0,
       status: data['status'] ?? 'active',
       suspensionReason: data['suspensionReason'],
@@ -43,6 +48,8 @@ class AdminUser {
           ? (data['lastLogin'] as dynamic).toDate()
           : DateTime.now(),
       totalContributions: data['wordCount'] ?? 0,
+      photoURL: data['photoURL'],
+      streak: data['streak'] ?? 0,
     );
   }
 }

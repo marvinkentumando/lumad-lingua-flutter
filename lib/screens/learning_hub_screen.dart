@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,9 +9,14 @@ import '../widgets/brand_button.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../providers/student_provider.dart';
 import '../services/firebase_service.dart';
+import '../services/auth_service.dart';
 import '../models/lesson.dart';
+import '../widgets/skeleton.dart';
 import '../widgets/ambient_topo_background.dart';
 import '../widgets/mist_crystal_store.dart';
+import '../widgets/vine_progress_bar.dart';
+import '../services/haptic_service.dart';
+import '../widgets/dynamic_glass_box.dart';
 
 class LearningHubScreen extends ConsumerWidget {
   const LearningHubScreen({super.key});
@@ -74,7 +80,7 @@ class LearningHubScreen extends ConsumerWidget {
                               '${studentState.xp}',
                               'LEVEL UP',
                               '🔥',
-                              null,
+                              () => _showXpDetailDialog(context, studentState),
                             ),
                           ],
                         ),
@@ -84,53 +90,98 @@ class LearningHubScreen extends ConsumerWidget {
                       // Mastery Trends Entry Card
                       GestureDetector(
                         onTap: () => context.push('/mastery-dashboard'),
-                        child: BrandCard(
-                          theme: BrandCardTheme.gold,
-                          padding: const EdgeInsets.all(24),
-                          borderRadius: 32,
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: const BoxDecoration(
-                                  color: Colors.black12,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.auto_graph_rounded,
-                                  color: Colors.black,
-                                  size: 28,
-                                ),
-                              ),
-                              const SizedBox(width: 20),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Learning Progress',
-                                      style: AppTypography.h3.copyWith(
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.w900,
+                        child: ref.watch(userProfileProvider).when(
+                          data: (profile) {
+                            final userId = ref.watch(authServiceProvider).currentUser?.uid;
+                            final dueCount = userId != null
+                                ? ref.watch(dueSRSCountProvider(userId)).value ?? 0
+                                : 0;
+
+                            return Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                BrandCard(
+                                  theme: dueCount > 0 ? BrandCardTheme.vibrant : BrandCardTheme.gold,
+                                  padding: const EdgeInsets.all(24),
+                                  borderRadius: 32,
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: dueCount > 0 ? Colors.white10 : Colors.black12,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          dueCount > 0 ? Icons.alarm_on_rounded : Icons.auto_graph_rounded,
+                                          color: dueCount > 0 ? Colors.white : Colors.black,
+                                          size: 28,
+                                        ),
                                       ),
-                                    ),
-                                    Text(
-                                      'View your mastery trends and SRS analytics',
-                                      style: AppTypography.body.copyWith(
-                                        color: Colors.black54,
-                                        fontSize: 12,
+                                      const SizedBox(width: 20),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              dueCount > 0 ? 'Review Ready' : 'Learning Progress',
+                                              style: AppTypography.h3.copyWith(
+                                                color: dueCount > 0 ? Colors.white : Colors.black,
+                                                fontWeight: FontWeight.w900,
+                                              ),
+                                            ),
+                                            Text(
+                                              dueCount > 0
+                                                  ? '$dueCount terms need your attention'
+                                                  : 'View your mastery trends and SRS analytics',
+                                              style: AppTypography.body.copyWith(
+                                                color: dueCount > 0 ? Colors.white60 : Colors.black54,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                      Icon(
+                                        Icons.arrow_forward_ios_rounded,
+                                        color: dueCount > 0 ? Colors.white : Colors.black54,
+                                        size: 16,
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              const Icon(
-                                Icons.arrow_forward_ios_rounded,
-                                color: Colors.black54,
-                                size: 16,
-                              ),
-                            ],
-                          ),
+                                if (dueCount > 0)
+                                  Positioned(
+                                    top: -8,
+                                    right: -8,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.semanticRed,
+                                        borderRadius: BorderRadius.circular(20),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppColors.semanticRed.withValues(alpha: 0.4),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Text(
+                                        'DUE',
+                                        style: AppTypography.label.copyWith(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ).animate(onPlay: (c) => c.repeat()).shimmer(duration: 2.seconds),
+                                  ),
+                              ],
+                            );
+                          },
+                          loading: () => Skeleton(height: 100, borderRadius: 32),
+                          error: (_, __) => const SizedBox.shrink(),
                         ),
                       ).animate().fadeIn(delay: 250.ms).slideX(begin: 0.1),
 
@@ -224,6 +275,187 @@ class LearningHubScreen extends ConsumerWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showXpDetailDialog(BuildContext context, StudentState student) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final nextLevelXp = math.pow(student.level, 2).toInt() * 50;
+    final currentLevelBaseXp = math.pow(student.level - 1, 2).toInt() * 50;
+    final progressInLevel = student.xp - currentLevelBaseXp;
+    final xpToNextLevel = nextLevelXp - student.xp;
+
+    HapticService.medium();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => DynamicGlassBox(
+        borderRadius: 40,
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.forest900.withValues(alpha: 0.8)
+                : Colors.white.withValues(alpha: 0.9),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white24 : Colors.black12,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 32),
+              // Level Badge
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.gold500.withValues(alpha: 0.1),
+                  border: Border.all(color: AppColors.gold500, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.gold500.withValues(alpha: 0.2),
+                      blurRadius: 30,
+                    ),
+                  ],
+                ),
+                child: Text(
+                  '${student.level}',
+                  style: AppTypography.displayBold.copyWith(
+                    color: AppColors.gold500,
+                    fontSize: 48,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                student.levelTitle.toUpperCase(),
+                style: AppTypography.label.copyWith(
+                  color: AppColors.gold500,
+                  letterSpacing: 3,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 32),
+              // XP Progress
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'PROGRESS',
+                    style: AppTypography.label.copyWith(
+                      color: isDark ? Colors.white38 : AppColors.creamText3,
+                    ),
+                  ),
+                  Text(
+                    '$progressInLevel / ${nextLevelXp - currentLevelBaseXp} XP',
+                    style: AppTypography.mono.copyWith(
+                      color: isDark ? Colors.white70 : AppColors.forest700,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              VineProgressBar(value: student.levelProgress, height: 16),
+              const SizedBox(height: 16),
+              Text(
+                '${xpToNextLevel.clamp(0, 99999)} XP UNTIL NEXT LEVEL',
+                style: AppTypography.body.copyWith(
+                  color: isDark ? Colors.white24 : AppColors.creamText3,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 40),
+              // Breakdown Header
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'WISDOM BREAKDOWN',
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.gold500,
+                    letterSpacing: 2,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // List of activities (Simulated history based on progress)
+              _buildXpRow(
+                context,
+                'Lessons Mastered',
+                '${student.lessonProgress.values.where((v) => v['completed'] == true).length}',
+                Icons.menu_book_rounded,
+              ),
+              _buildXpRow(
+                context,
+                'Current Streak',
+                '${student.displayedStreak} Days',
+                Icons.local_fire_department_rounded,
+              ),
+              _buildXpRow(
+                context,
+                'Total Mist Crystals',
+                '${student.mistCrystals}',
+                Icons.auto_awesome_rounded,
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: BrandButton(
+                  text: 'CLOSE',
+                  onTap: () => Navigator.pop(context),
+                  type: BrandButtonType.secondary,
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildXpRow(BuildContext context, String label, String value, IconData icon) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.gold500, size: 20),
+            const SizedBox(width: 16),
+            Text(
+              label,
+              style: AppTypography.body.copyWith(
+                color: isDark ? Colors.white70 : AppColors.forest700,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              value,
+              style: AppTypography.mono.copyWith(
+                color: AppColors.gold500,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -5,18 +5,21 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import 'package:lumad_lingua/services/auth_service.dart';
 import '../providers/learning_provider.dart';
-import '../providers/theme_provider.dart';
 import '../widgets/brand_card.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:lumad_lingua/services/firebase_service.dart';
+import 'package:lumad_lingua/services/auth_service.dart';
 import '../providers/role_provider.dart';
 import '../providers/student_provider.dart';
 import '../providers/contributor_request_provider.dart';
 import '../providers/artifact_provider.dart';
 import '../models/artifact.dart';
+import '../models/contributor_request.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../widgets/impact_card.dart';
+import '../widgets/brand_button.dart';
 import '../services/impact_service.dart';
 import '../services/supabase_storage_service.dart';
 import '../widgets/daily_check_in_board.dart';
@@ -109,7 +112,7 @@ class LearnerProfileScreen extends ConsumerWidget {
     );
   }
 
-  String _getRoleBadge(UserRole role, Map<String, dynamic>? profile) {
+  String _getRoleBadge(UserRole role, Map<String, dynamic>? profile, WidgetRef ref) {
     final location = profile?['location'] ?? 'PHILIPPINES';
     switch (role) {
       case UserRole.admin:
@@ -121,7 +124,8 @@ class LearnerProfileScreen extends ConsumerWidget {
       case UserRole.contributor:
         return 'CULTURAL KEEPER  \u2022  $location';
       case UserRole.learner:
-        return 'ELDER PATHFINDER  \u2022  $location';
+        final student = ref.watch(studentProvider);
+        return '${student.levelTitle.toUpperCase()}  \u2022  $location';
     }
   }
 
@@ -200,7 +204,7 @@ class LearnerProfileScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          _getRoleBadge(role, profile),
+          _getRoleBadge(role, profile, ref),
           style: AppTypography.label.copyWith(
             color: isDark ? Colors.white38 : AppColors.creamText3,
             fontSize: 12,
@@ -222,10 +226,10 @@ class LearnerProfileScreen extends ConsumerWidget {
     if (role == UserRole.learner) {
       final student = ref.watch(studentProvider);
       final streak = student.displayedStreak;
-      final words = profile?['wordCount'] as int? ?? 0;
+      final words = ref.watch(masteredWordsCountProvider(userId)).value ?? 0;
       return _ProfileStatsRow(xp: xp, streak: streak, words: words);
     }
-    return _StaffStatsRow(role: role, userId: userId);
+    return _StaffStatsRow(role: role, userId: userId, xp: xp);
   }
 
   Widget _unusedImpact(
@@ -484,27 +488,17 @@ class LearnerProfileScreen extends ConsumerWidget {
     dynamic user,
     Map<String, dynamic>? profile,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Journey Management',
           style: AppTypography.h3.copyWith(
-            color: isDark ? AppColors.gold500 : AppColors.forest500,
+            color: AppColors.gold500,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 20),
-        _buildManagementTile(
-          context,
-          isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-          isDark ? 'Bright Mode' : 'Ancient Mode',
-          'Toggle your path visibility',
-          onTap: () => ref.read(themeNotifierProvider.notifier).toggleTheme(),
-        ),
-        const SizedBox(height: 12),
         _buildManagementTile(
           context,
           Icons.settings_suggest_rounded,
@@ -518,6 +512,68 @@ class LearnerProfileScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 12),
+        _buildManagementTile(
+          context,
+          Icons.trending_up_rounded,
+          'Wisdom Progression',
+          'View requirements for your next rank and titles',
+          onTap: () => context.push('/wisdom-progression'),
+        ),
+        const SizedBox(height: 12),
+        _buildManagementTile(
+          context,
+          Icons.notifications_active_rounded,
+          'Notification Sanctuary',
+          'Manage alerts for daily goals and community messages',
+          onTap: () => context.push('/notifications'),
+        ),
+        const SizedBox(height: 12),
+        _buildManagementTile(
+          context,
+          Icons.security_rounded,
+          'Data & Privacy',
+          'Export your contributions or manage account security',
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Privacy settings and Data Export coming soon.'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        _buildManagementTile(
+          context,
+          Icons.cloud_download_rounded,
+          'Offline Wisdom',
+          'Manage cached lessons and audio files for offline use',
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Offline Sync Manager coming soon.'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        if (profile?['role']?.toString().toLowerCase() == 'admin') ...[
+          _buildManagementTile(
+            context,
+            ref.watch(isSimulatingProvider) 
+                ? Icons.admin_panel_settings_rounded 
+                : Icons.supervised_user_circle_rounded,
+            ref.watch(isSimulatingProvider) 
+                ? 'Exit Simulation' 
+                : 'Simulation Mode',
+            ref.watch(isSimulatingProvider)
+                ? 'Return to Admin Overview'
+                : 'Switch to Learner view to test content',
+            onTap: () => ref.read(isSimulatingProvider.notifier).state = !ref.read(isSimulatingProvider),
+          ),
+          const SizedBox(height: 12),
+        ],
         if (role == UserRole.learner || role == UserRole.educator)
           ref
               .watch(pendingContributorRequestProvider)
@@ -537,8 +593,8 @@ class LearnerProfileScreen extends ConsumerWidget {
                       context,
                       Icons.hourglass_empty_rounded,
                       'Request Pending',
-                      'Tap to cancel your application',
-                      onTap: () => _cancelContributorRequest(context, ref, pendingRequest.id),
+                      'Tap to view status or cancel',
+                      onTap: () => _showRequestDetailsDialog(context, ref, pendingRequest),
                     );
                   }
                   return _buildManagementTile(
@@ -566,47 +622,43 @@ class LearnerProfileScreen extends ConsumerWidget {
     String sub, {
     VoidCallback? onTap,
   }) {
-    return GestureDetector(
-      onTap:
-          onTap ??
-          () {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('Opening $title...')));
-          },
-      child: BrandCard(
-        theme: BrandCardTheme.gold,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        borderRadius: 35,
-        child: Row(
-          children: [
-            Icon(icon, color: Colors.black, size: 24),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: AppTypography.h3.copyWith(
-                      color: Colors.black,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 18,
-                    ),
+    return BrandCard(
+      onTap: onTap ?? () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Opening $title...')),
+        );
+      },
+      theme: BrandCardTheme.gold,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      borderRadius: 35,
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.black, size: 24),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTypography.h3.copyWith(
+                    color: Colors.black,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
                   ),
-                  Text(
-                    sub,
-                    style: AppTypography.body.copyWith(
-                      color: Colors.black54,
-                      fontSize: 12,
-                    ),
+                ),
+                Text(
+                  sub,
+                  style: AppTypography.body.copyWith(
+                    color: Colors.black54,
+                    fontSize: 12,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.black54),
-          ],
-        ),
+          ),
+          const Icon(Icons.chevron_right_rounded, color: Colors.black54),
+        ],
       ),
     );
   }
@@ -695,6 +747,88 @@ class LearnerProfileScreen extends ConsumerWidget {
         }
       }
     }
+  }
+
+  void _showRequestDetailsDialog(BuildContext context, WidgetRef ref, ContributorRequest request) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: AppColors.forest900.withValues(alpha: 0.95),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 24),
+            Text(
+              'Application Details',
+              style: AppTypography.h2.copyWith(color: AppColors.gold500),
+            ),
+            const SizedBox(height: 24),
+            _buildDetailRow('Status', request.status.toUpperCase(), isStatus: true),
+            const SizedBox(height: 12),
+            _buildDetailRow('Submitted', DateFormat('MMM dd, yyyy').format(request.createdAt)),
+            const SizedBox(height: 32),
+            Text(
+              'Your request is being reviewed by the community elders. This process usually takes 2-3 sun cycles.',
+              style: AppTypography.body.copyWith(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 40),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.semanticRed.withValues(alpha: 0.2),
+                      foregroundColor: AppColors.semanticRed,
+                      side: const BorderSide(color: AppColors.semanticRed),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _cancelContributorRequest(context, ref, request.id);
+                    },
+                    child: const Text('CANCEL REQUEST', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: BrandButton(
+                    text: 'CLOSE',
+                    onTap: () => Navigator.pop(ctx),
+                    type: BrandButtonType.primary,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value, {bool isStatus = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: AppTypography.label.copyWith(color: Colors.white38),
+        ),
+        Text(
+          value,
+          style: AppTypography.mono.copyWith(
+            color: isStatus ? AppColors.gold500 : Colors.white70,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
   }
 
   Future<void> _cancelContributorRequest(BuildContext context, WidgetRef ref, String requestId) async {
@@ -1059,10 +1193,9 @@ class LearnerProfileScreen extends ConsumerWidget {
                 _buildEditField('Tribe Name', nameController),
                 const SizedBox(height: 16),
                 _buildEditField(
-                  'Location',
+                  'Location (e.g. Pantukan, DDO)',
                   locationController,
-                  enabled: false,
-                  hint: 'Location is locked',
+                  enabled: true,
                 ),
                 const SizedBox(height: 16),
                 _buildEditField(
@@ -1087,6 +1220,7 @@ class LearnerProfileScreen extends ConsumerWidget {
                           try {
                             await ref.read(firebaseServiceProvider).updateUserProfile(userId, {
                               'username': nameController.text,
+                              'location': locationController.text,
                               'bio': bioController.text,
                             });
                             if (context.mounted) Navigator.pop(context);
@@ -1372,8 +1506,13 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow>
 class _StaffStatsRow extends ConsumerWidget {
   final UserRole role;
   final String userId;
+  final int xp;
 
-  const _StaffStatsRow({required this.role, required this.userId});
+  const _StaffStatsRow({
+    required this.role,
+    required this.userId,
+    required this.xp,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1389,6 +1528,8 @@ class _StaffStatsRow extends ConsumerWidget {
     final contributionCount = role == UserRole.contributor
         ? ref.watch(contributorWordCountProvider(userId)).value ?? 0
         : 0;
+
+    final impactAsync = ref.watch(userImpactMetricsProvider(userId));
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -1415,16 +1556,32 @@ class _StaffStatsRow extends ConsumerWidget {
             'CONTRIBUTIONS',
           ),
 
-        _buildMetricCircle(context, Icons.star_rounded, '4.9', 'RATING'),
+        impactAsync.when(
+          data: (impact) => _buildMetricCircle(
+            context,
+            Icons.star_rounded,
+            (impact['accuracy'] * 5).toStringAsFixed(1),
+            'ACCURACY',
+          ),
+          loading: () => _buildMetricCircle(context, Icons.star_rounded, '...', 'RATING'),
+          error: (_, __) => _buildMetricCircle(context, Icons.star_rounded, 'N/A', 'RATING'),
+        ),
 
         _buildMetricCircle(
           context,
           Icons.workspace_premium_rounded,
-          'ELITE',
+          _getStaffRank(xp),
           'RANK',
         ),
       ],
     ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1);
+  }
+
+  String _getStaffRank(int xp) {
+    if (xp < 500) return 'NOVICE';
+    if (xp < 2000) return 'GUARDIAN';
+    if (xp < 5000) return 'ELDER';
+    return 'ELITE';
   }
 
   Widget _buildMetricCircle(

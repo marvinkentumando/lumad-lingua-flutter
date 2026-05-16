@@ -4,7 +4,6 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
-import '../services/database_seeder.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/firebase_service.dart';
@@ -12,6 +11,9 @@ import 'package:go_router/go_router.dart';
 import '../providers/contributor_request_provider.dart';
 import '../widgets/wotd_widget.dart';
 import '../services/auth_service.dart';
+import '../services/database_seeder.dart';
+import '../services/word_of_day_service.dart';
+import '../models/dictionary_entry.dart';
 
 class AdminOverviewScreen extends ConsumerStatefulWidget {
   const AdminOverviewScreen({super.key});
@@ -96,6 +98,8 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                     _sectionLabel('VILLAGE PULSE'),
                           const SizedBox(height: 16),
                           const WotdWidget(),
+                          const SizedBox(height: 12),
+                          _buildWotdAdminControls(),
                           const SizedBox(height: 32),
                           _sectionLabel('PLATFORM STATS'),
                           const SizedBox(height: 16),
@@ -420,100 +424,86 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                             ),
                           ),
                           const SizedBox(height: 32),
-                          _sectionLabel('DATABASE MAINTENANCE'),
+                          _sectionLabel('SYSTEM MAINTENANCE'),
                           const SizedBox(height: 16),
                           BrandCard(
                             theme: BrandCardTheme.vibrant,
                             child: Padding(
                               padding: const EdgeInsets.all(16),
                               child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
                                     children: [
                                       const Icon(
-                                        Icons.storage_rounded,
-                                        color: AppColors.gold500,
+                                        Icons.auto_fix_high_rounded,
+                                        color: AppColors.semanticRed,
                                       ),
                                       const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'INITIALIZE DATA',
-                                              style: AppTypography.h3.copyWith(
-                                                color: Colors.white,
-                                                fontSize: 16,
-                                              ),
-                                            ),
-                                            Text(
-                                              'Seed Firestore with sample words and map data.',
-                                              style: AppTypography.body
-                                                  .copyWith(
-                                                    color: Colors.white60,
-                                                    fontSize: 12,
-                                                  ),
-                                            ),
-                                          ],
+                                      Text(
+                                        'DATABASE SEEDER',
+                                        style: AppTypography.h3.copyWith(
+                                          color: Colors.white,
+                                          fontSize: 16,
                                         ),
                                       ),
                                     ],
                                   ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Reset or initialize core platform data (Municipalities, Lessons, Dictionary). Use with caution.',
+                                    style: AppTypography.body.copyWith(
+                                      color: Colors.white60,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                   const SizedBox(height: 20),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton(
-                                      onPressed: () async {
-                                        try {
-                                          await DatabaseSeeder.seedAll();
-                                          if (!context.mounted) return;
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                'Database seeded successfully!',
-                                              ),
-                                              backgroundColor:
-                                                  AppColors.semanticGreen,
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: ElevatedButton(
+                                          onPressed: () => _showSeedConfirmation(),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppColors.semanticRed.withValues(alpha: 0.2),
+                                            foregroundColor: AppColors.semanticRed,
+                                            side: const BorderSide(color: AppColors.semanticRed),
+                                            padding: const EdgeInsets.symmetric(vertical: 16),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(12),
                                             ),
-                                          );
-                                        } catch (e) {
-                                          if (!context.mounted) return;
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                'Error seeding: $e',
-                                              ),
-                                              backgroundColor:
-                                                  AppColors.semanticRed,
+                                          ),
+                                          child: const Text(
+                                            'SEED DATABASE',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 1.2,
                                             ),
-                                          );
-                                        }
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.gold500,
-                                        foregroundColor: AppColors.forest900,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 16,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
                                           ),
                                         ),
                                       ),
-                                      child: const Text(
-                                        'SEED DATABASE',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w900,
-                                          letterSpacing: 1.2,
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: ElevatedButton(
+                                          onPressed: () => _syncMetadata(),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppColors.gold500.withValues(alpha: 0.2),
+                                            foregroundColor: AppColors.gold500,
+                                            side: const BorderSide(color: AppColors.gold500),
+                                            padding: const EdgeInsets.symmetric(vertical: 16),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                          child: const Text(
+                                            'SYNC METADATA',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 1.2,
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -528,6 +518,146 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildWotdAdminControls() {
+    final metadataAsync = ref.watch(wotdMetadataProvider);
+
+    return metadataAsync.when(
+      data: (data) {
+        final isManual = data?['isManual'] as bool? ?? false;
+        return Row(
+          children: [
+            Expanded(
+              child: BrandButton(
+                text: "FORCE ROTATION",
+                type: BrandButtonType.secondary,
+                icon: Icons.refresh_rounded,
+                onTap: () => _forceWotdRotation(),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: BrandButton(
+                text: isManual ? "RESUME AUTO" : "PICK MANUALLY",
+                type: isManual ? BrandButtonType.primary : BrandButtonType.secondary,
+                icon: isManual ? Icons.auto_mode_rounded : Icons.edit_calendar_rounded,
+                onTap: () {
+                  if (isManual) {
+                    _resumeAutoRotation();
+                  } else {
+                    _showWordPickerDialog();
+                  }
+                },
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  Future<void> _forceWotdRotation() async {
+    try {
+      await ref.read(wordOfDayServiceProvider).forceNewWord();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Word of the Day rotated.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Rotation failed: $e')),
+      );
+    }
+  }
+
+  Future<void> _resumeAutoRotation() async {
+    try {
+      await ref.read(wordOfDayServiceProvider).resumeAutomaticRotation();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Automatic rotation resumed.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to resume: $e')),
+      );
+    }
+  }
+
+  void _showWordPickerDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const _WordPickerSheet(),
+    );
+  }
+
+  Future<void> _syncMetadata() async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Syncing town metadata...')),
+      );
+      await ref.read(firebaseServiceProvider).syncMunicipalityDialects();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Metadata synced! Towns updated with current dialects.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Sync failed: $e')),
+      );
+    }
+  }
+
+  void _showSeedConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? AppColors.forest800 : Colors.white,
+        title: const Text('Seed Database?'),
+        content: const Text(
+          'This will re-initialize core platform data and update municipality IDs. Existing records will be merged or updated. Proceed?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              _runSeeder();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticRed),
+            child: const Text('PROCEED'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _runSeeder() async {
+    try {
+      // Import the seeder service
+      // Note: We need to import database_seeder.dart at the top
+      await DatabaseSeeder.seedAll();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Database seeded successfully!')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Seeding failed: $e')),
+      );
+    }
   }
 
   Widget _buildHeroBanner(BuildContext context) {
@@ -884,6 +1014,238 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
         return AppColors.gold700;
       default:
         return AppColors.forest700;
+    }
+  }
+}
+
+class _WordPickerSheet extends ConsumerStatefulWidget {
+  const _WordPickerSheet();
+
+  @override
+  ConsumerState<_WordPickerSheet> createState() => _WordPickerSheetState();
+}
+
+class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
+  String _search = '';
+  String _dialect = 'All';
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dialectsAsync = ref.watch(dialectsProvider);
+    final wordsAsync = ref.watch(
+      globalDictionaryStreamProvider(
+        ValidatorQuery('', 20, search: _search, dialect: _dialect),
+      ),
+    );
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.forest800 : AppColors.creamBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white10 : Colors.black12,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Select WOTD',
+                        style: AppTypography.h2.copyWith(
+                          color: isDark ? Colors.white : AppColors.forest900,
+                        ),
+                      ),
+                      Text(
+                        'Force a word to be the Word of the Day',
+                        style: AppTypography.body.copyWith(
+                          color: isDark ? Colors.white60 : AppColors.forest600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: TextField(
+              onChanged: (v) => setState(() => _search = v),
+              style: TextStyle(color: isDark ? Colors.white : Colors.black),
+              decoration: InputDecoration(
+                hintText: 'Search for a word...',
+                hintStyle: TextStyle(
+                  color: isDark ? Colors.white38 : Colors.black38,
+                ),
+                prefixIcon: const Icon(Icons.search_rounded),
+                filled: true,
+                fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          dialectsAsync.when(
+            data: (dialects) => SizedBox(
+              height: 40,
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                scrollDirection: Axis.horizontal,
+                itemCount: dialects.length,
+                itemBuilder: (context, i) {
+                  final d = dialects[i];
+                  final isSelected = _dialect == d;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(d),
+                      selected: isSelected,
+                      onSelected: (s) => setState(() => _dialect = d),
+                      selectedColor: AppColors.gold500,
+                      labelStyle: TextStyle(
+                        color: isSelected
+                            ? Colors.black
+                            : (isDark ? Colors.white70 : Colors.black87),
+                        fontWeight: isSelected ? FontWeight.bold : null,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: wordsAsync.when(
+              data: (words) {
+                // Filter to only show approved words for WOTD
+                final approvedWords = words.where((w) => w.status == ValidationStatus.approved).toList();
+
+                if (approvedWords.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.search_off_rounded,
+                          size: 48,
+                          color: isDark ? Colors.white10 : Colors.black12,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No approved words found',
+                          style: TextStyle(
+                            color: isDark ? Colors.white38 : Colors.black38,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  itemCount: approvedWords.length,
+                  itemBuilder: (context, i) {
+                    final w = approvedWords[i];
+                    return Card(
+                      color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.white,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: ListTile(
+                        onTap: () => _confirmSelection(w),
+                        title: Text(
+                          w.indigenousWord,
+                          style: AppTypography.h3.copyWith(
+                            color: isDark ? Colors.white : AppColors.forest900,
+                            fontSize: 18,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${w.language} • ${w.translation}',
+                          style: AppTypography.body.copyWith(
+                            color: isDark ? Colors.white60 : AppColors.forest600,
+                            fontSize: 12,
+                          ),
+                        ),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                      ),
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(child: Text('Error: $err')),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmSelection(DictionaryEntry word) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm WOTD'),
+        content: Text('Set "${word.indigenousWord}" as the Word of the Day? This will override automatic rotation.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              Navigator.pop(context); // Close sheet
+              _setWord(word);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500),
+            child: const Text('SET AS WOTD', style: TextStyle(color: Colors.black)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _setWord(DictionaryEntry word) async {
+    try {
+      await ref.read(wordOfDayServiceProvider).setManualWord(word.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('"${word.indigenousWord}" is now the Word of the Day.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to set word: $e')),
+      );
     }
   }
 }

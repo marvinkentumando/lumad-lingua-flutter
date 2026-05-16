@@ -28,6 +28,7 @@ class GeoRecording {
   final LatLng location;
   final String metadata;
   final bool isValidated;
+  final List<String> supportedDialects;
   final List<AudioRecording> recordings;
 
   const GeoRecording({
@@ -38,11 +39,26 @@ class GeoRecording {
     required this.location,
     required this.metadata,
     required this.isValidated,
+    this.supportedDialects = const [],
     this.recordings = const [],
   });
 
+  // Explicitly ensure the getter exists and is safe
+  List<String> get safeSupportedDialects => supportedDialects;
+
   factory GeoRecording.fromFirestore(Map<String, dynamic> data, String id) {
     var geoPoint = data['coords'];
+
+    // Safely extract supported dialects
+    List<String> dialects = [];
+    if (data['supportedDialects'] != null) {
+      if (data['supportedDialects'] is List) {
+        dialects = List<String>.from(data['supportedDialects']);
+      } else if (data['supportedDialects'] is String) {
+        dialects = [data['supportedDialects'] as String];
+      }
+    }
+
     return GeoRecording(
       id: id,
       title: data['name'] ?? '',
@@ -53,6 +69,7 @@ class GeoRecording {
           : const LatLng(0, 0),
       metadata: data['description'] ?? '',
       isValidated: data['status'] == 'validated',
+      supportedDialects: dialects,
       recordings: [], // Can implement from Firestore later
     );
   }

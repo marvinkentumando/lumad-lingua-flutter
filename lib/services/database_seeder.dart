@@ -236,6 +236,32 @@ class DatabaseSeeder {
   }
 
   static Future<void> seedMunicipalities() async {
+    // 1. Cleanup: Identify and delete old documents that don't follow the province_ prefix format
+    final oldDocs = await _db.collection('municipalities').get();
+    final cleanupBatch = _db.batch();
+    bool needsCleanup = false;
+
+    for (var doc in oldDocs.docs) {
+      final id = doc.id;
+      // If the ID doesn't contain an underscore prefix (like davao_de_oro_), it's likely an old format
+      // We check if it matches any of our province slugs
+      final List<String> provincePrefixes = [
+        'davao_de_oro_',
+        'davao_del_sur_',
+        'davao_del_norte_',
+        'davao_oriental_',
+        'davao_occidental_'
+      ];
+
+      bool isNewFormat = provincePrefixes.any((prefix) => id.startsWith(prefix));
+      if (!isNewFormat) {
+        cleanupBatch.delete(doc.reference);
+        needsCleanup = true;
+      }
+    }
+    if (needsCleanup) await cleanupBatch.commit();
+
+    // 2. Seed/Update with new format
     final List<Map<String, dynamic>> sampleMunis = [
       {
         'name': 'Davao City',
@@ -420,6 +446,7 @@ class DatabaseSeeder {
         'coords': const GeoPoint(7.3333, 126.1167),
         'description': 'Known for its cold climate and Mansaka heritage.',
         'status': 'validated',
+        'supportedDialects': ['Mansaka'],
       },
       {
         'name': 'Mawab',
@@ -460,6 +487,7 @@ class DatabaseSeeder {
         'coords': const GeoPoint(6.9500, 126.2167),
         'description': 'Coastal area with rich Mandaya cultural roots.',
         'status': 'validated',
+        'supportedDialects': ['Mandaya'],
       },
       {
         'name': 'Baganga',
@@ -577,8 +605,11 @@ class DatabaseSeeder {
 
     final batch = _db.batch();
     for (var muni in sampleMunis) {
-      // Use a consistent ID generation logic: name lowercase with underscores
-      final docId = muni['name'].toString().toLowerCase().replaceAll(' ', '_');
+      // Consistent ID: province_municipality (handles duplicate names like Santa Maria)
+      final provinceSlug = muni['province'].toString().toLowerCase().replaceAll(' ', '_');
+      final nameSlug = muni['name'].toString().toLowerCase().replaceAll(' ', '_');
+      final docId = '${provinceSlug}_${nameSlug}';
+
       final docRef = _db.collection('municipalities').doc(docId);
       batch.set(docRef, muni, SetOptions(merge: true));
     }

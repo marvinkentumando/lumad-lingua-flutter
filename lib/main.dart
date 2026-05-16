@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'providers/theme_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -74,14 +73,13 @@ class LumadLinguaApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeNotifierProvider);
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(
       title: 'Lumad Lingua',
-      theme: AppTheme.lightTheme,
+      theme: AppTheme.darkTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: themeMode,
+      themeMode: ThemeMode.dark,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
       builder: (context, child) {
@@ -94,7 +92,7 @@ class LumadLinguaApp extends ConsumerWidget {
             ),
           ),
           child: AnimatedTheme(
-            data: themeMode == ThemeMode.dark ? AppTheme.darkTheme : AppTheme.lightTheme,
+            data: AppTheme.darkTheme,
             duration: const Duration(milliseconds: 500),
             curve: Curves.easeInOut,
             child: child!,

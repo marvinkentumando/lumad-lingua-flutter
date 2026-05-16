@@ -43,7 +43,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
 
       bool matchesDialect = true;
       if (_roleFilter == 'Validator' && _selectedDialectFilter != 'All') {
-        matchesDialect = u.indigenousGroup == _selectedDialectFilter;
+        final group = u.indigenousGroup?.toLowerCase() ?? '';
+        matchesDialect = group == _selectedDialectFilter.toLowerCase();
       }
 
       final matchesSearch =
@@ -506,6 +507,16 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                 : null,
                           ),
                         ),
+                        if (user.role == 'validator' && user.indigenousGroup != null)
+                          Text(
+                            user.indigenousGroup!.toUpperCase(),
+                            style: AppTypography.label.copyWith(
+                              color: isSuspended ? Colors.white24 : AppColors.gold500,
+                              fontSize: 9,
+                              letterSpacing: 1,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         const SizedBox(height: 4),
                         Row(
                           children: [
@@ -629,6 +640,18 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                     ),
                     const SizedBox(height: 8),
                     _roleBadge(user.role, color),
+                    if (user.role == 'validator' && user.indigenousGroup != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'ASSIGNED TO: ${user.indigenousGroup!.toUpperCase()}',
+                        style: AppTypography.label.copyWith(
+                          color: AppColors.gold500,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

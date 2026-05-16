@@ -309,12 +309,23 @@ class FirebaseService {
         .collection('users')
         .doc(userId)
         .collection('artifacts')
-        .orderBy('tier', descending: true)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs
+          final list = snapshot.docs
               .map((doc) => Artifact.fromFirestore(doc.data(), doc.id))
               .toList();
+
+          // Sort by tier index (descending) then by earned date
+          list.sort((a, b) {
+            final tierCompare = b.tier.index.compareTo(a.tier.index);
+            if (tierCompare != 0) return tierCompare;
+
+            final dateA = a.earnedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+            final dateB = b.earnedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+            return dateB.compareTo(dateA);
+          });
+
+          return list;
         });
   }
 
@@ -375,6 +386,10 @@ class FirebaseService {
       final term = data['term'] ?? 'your entry';
 
       if (contributorId != null) {
+        final contributorRef = _db.collection('users').doc(contributorId);
+        final contributorDoc = await transaction.get(contributorRef);
+        final cData = contributorDoc.data();
+
         // Add Notification using Template
         final notifRef = _db
             .collection('users')
@@ -397,10 +412,24 @@ class FirebaseService {
         });
 
         // Award XP from Config
-        final userRef = _db.collection('users').doc(contributorId);
-        transaction.update(userRef, {
+        transaction.update(contributorRef, {
           'xp': FieldValue.increment(config.wordApprovalXp),
           'wordCount': FieldValue.increment(1),
+        });
+
+        // Community Feed: New Term
+        final feedRef = _db.collection('community_feed').doc();
+        transaction.set(feedRef, {
+          'userId': contributorId,
+          'userName': cData?['username'] ?? data['contributorName'] ?? 'A tribe member',
+          'userPhotoUrl': cData?['photoURL'],
+          'type': 'contribution',
+          'message': 'added a new ${data['dialect'] ?? ''} term: "$term"!',
+          'emoji': '🌿',
+          'likeCount': 0,
+          'commentCount': 0,
+          'likedBy': [],
+          'createdAt': FieldValue.serverTimestamp(),
         });
       }
     });
@@ -513,6 +542,37 @@ class FirebaseService {
       ...data,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  /// Re-scans all approved recordings and updates municipality metadata
+  Future<void> syncMunicipalityDialects() async {
+    final muniSnaps = await _db.collection('municipalities').get();
+
+    for (var muniDoc in muniSnaps.docs) {
+      final recordingsSnap = await muniDoc.reference
+          .collection('recordings')
+          .where('status', isEqualTo: 'approved')
+          .get();
+
+      final Set<String> dialects = {};
+
+      // Also include the primary dialect
+      final primary = muniDoc.data()['dialect'];
+      if (primary != null && primary != 'Lumad' && primary != 'lumad') {
+        dialects.add(primary);
+      }
+
+      for (var recDoc in recordingsSnap.docs) {
+        final d = recDoc.data()['dialect'];
+        if (d != null) dialects.add(d);
+      }
+
+      if (dialects.isNotEmpty) {
+        await muniDoc.reference.update({
+          'supportedDialects': dialects.toList(),
+        });
+      }
+    }
   }
 
   Future<void> deleteMunicipality(String id) async {
@@ -1557,6 +1617,10 @@ class FirebaseService {
         .doc(scenarioId);
 
     await _db.runTransaction((transaction) async {
+      final userDoc = await transaction.get(userRef);
+      final progressDoc = await transaction.get(progressRef);
+      final isNew = !(progressDoc.data()?['completed'] == true);
+
       transaction.set(progressRef, {
         'completed': true,
         'lastCompleted': FieldValue.serverTimestamp(),
@@ -1566,6 +1630,22 @@ class FirebaseService {
       transaction.update(userRef, {
         'xp': FieldValue.increment(xpReward),
       });
+
+      if (isNew) {
+        final feedRef = _db.collection('community_feed').doc();
+        transaction.set(feedRef, {
+          'userId': userId,
+          'userName': userDoc.data()?['username'] ?? 'A tribe member',
+          'userPhotoUrl': userDoc.data()?['photoURL'],
+          'type': 'contribution',
+          'message': 'survived the "$scenarioId" cultural scenario!',
+          'emoji': '🔥',
+          'likeCount': 0,
+          'commentCount': 0,
+          'likedBy': [],
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
     });
   }
 
@@ -1772,6 +1852,21 @@ class FirebaseService {
           artifactData['isEarned'] = true;
           artifactData['earnedAt'] = FieldValue.serverTimestamp();
           transaction.set(userArtifactRef, artifactData);
+
+          // Community Feed: Artifact Unlocked
+          final feedRef = _db.collection('community_feed').doc();
+          transaction.set(feedRef, {
+            'userId': userId,
+            'userName': userDoc.data()?['username'] ?? 'A tribe member',
+            'userPhotoUrl': userDoc.data()?['photoURL'],
+            'type': 'achievement',
+            'message': 'discovered the "${droppedArtifact?.title}" artifact!',
+            'emoji': '🏺',
+            'likeCount': 0,
+            'commentCount': 0,
+            'likedBy': [],
+            'createdAt': FieldValue.serverTimestamp(),
+          });
         } else {
           // User already has this artifact, grant 25 crystals instead
           droppedArtifact = null;
@@ -1779,6 +1874,25 @@ class FirebaseService {
             'mistCrystals': FieldValue.increment(25),
           });
         }
+      }
+
+      // Community Feed: Lesson Completion (only if new best stars)
+      if (stars >= 2 && (existingData?['stars'] ?? 0) < stars) {
+        final feedRef = _db.collection('community_feed').doc();
+        transaction.set(feedRef, {
+          'userId': userId,
+          'userName': userDoc.data()?['username'] ?? 'A tribe member',
+          'userPhotoUrl': userDoc.data()?['photoURL'],
+          'type': 'lesson_completed',
+          'message': stars == 3
+              ? 'perfected "${lesson?.title ?? 'a lesson'}"!'
+              : 'completed "${lesson?.title ?? 'a lesson'}"!',
+          'emoji': stars == 3 ? '🌟' : '📚',
+          'likeCount': 0,
+          'commentCount': 0,
+          'likedBy': [],
+          'createdAt': FieldValue.serverTimestamp(),
+        });
       }
 
       return {
@@ -1947,6 +2061,24 @@ class FirebaseService {
           } else if (difference == 1) {
             debugPrint("Streak: Continued streak for $userId. New streak: ${currentStreak + 1}.");
             updates['streak'] = FieldValue.increment(1);
+
+            // Community Feed: Streak Milestone
+            final newStreak = currentStreak + 1;
+            if (newStreak > 0 && newStreak % 5 == 0) {
+              final feedRef = _db.collection('community_feed').doc();
+              transaction.set(feedRef, {
+                'userId': userId,
+                'userName': data['username'] ?? 'A tribe member',
+                'userPhotoUrl': data['photoURL'],
+                'type': 'streak',
+                'message': 'reached a $newStreak-day streak!',
+                'emoji': '🔥',
+                'likeCount': 0,
+                'commentCount': 0,
+                'likedBy': [],
+                'createdAt': FieldValue.serverTimestamp(),
+              });
+            }
           } else {
             // Streak broken? Check shields
             if (currentShields > 0) {
@@ -2122,6 +2254,10 @@ class FirebaseService {
     );
   }
 
+  Future<void> recordActivity(CommunityActivity activity) async {
+    await _db.collection('community_feed').add(activity.toFirestore());
+  }
+
   // Gallery Operations
   Stream<List<Artifact>> getArtifacts() {
     return _db.collection('artifacts').snapshots().map((snapshot) {
@@ -2178,6 +2314,10 @@ class FirebaseService {
           .collection('artifacts')
           .doc(artifactId);
 
+      // Fetch global artifact for details
+      final artifactGlobalDoc = await transaction.get(_db.collection('artifacts').doc(artifactId));
+      final artifactName = artifactGlobalDoc.data()?['name'] ?? artifactId;
+
       transaction.update(userRef, {
         'mistCrystals': FieldValue.increment(-cost),
       });
@@ -2185,6 +2325,21 @@ class FirebaseService {
         'unlockedAt': FieldValue.serverTimestamp(),
         'isEarned': true,
       }, SetOptions(merge: true));
+
+      // Community Feed: Artifact Purchased
+      final feedRef = _db.collection('community_feed').doc();
+      transaction.set(feedRef, {
+        'userId': userId,
+        'userName': userDoc.data()?['username'] ?? 'A tribe member',
+        'userPhotoUrl': userDoc.data()?['photoURL'],
+        'type': 'achievement',
+        'message': 'acquired the "$artifactName" from the Mist Store!',
+        'emoji': '✨',
+        'likeCount': 0,
+        'commentCount': 0,
+        'likedBy': [],
+        'createdAt': FieldValue.serverTimestamp(),
+      });
     });
   }
 
@@ -2200,11 +2355,15 @@ class FirebaseService {
         .doc(badgeId);
 
     return _db.runTransaction((transaction) async {
+      final userRef = _db.collection('users').doc(userId);
+      final userDoc = await transaction.get(userRef);
       final doc = await transaction.get(achievementRef);
-      final currentCount = (doc.data()?['currentCount'] ?? 0) + increment;
+      final data = doc.data();
+      final currentCount = (data?['currentCount'] ?? 0) + increment;
+      final oldTier = data?['tier'] ?? 0;
 
       // Tier Logic: 10 = Tier I, 50 = Tier II, 100 = Tier III
-      int tier = 1;
+      int tier = 0;
       if (currentCount >= 100) {
         tier = 3;
       } else if (currentCount >= 50) {
@@ -2218,6 +2377,22 @@ class FirebaseService {
         'tier': tier,
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+
+      if (tier > oldTier) {
+        final feedRef = _db.collection('community_feed').doc();
+        transaction.set(feedRef, {
+          'userId': userId,
+          'userName': userDoc.data()?['username'] ?? 'A tribe member',
+          'userPhotoUrl': userDoc.data()?['photoURL'],
+          'type': 'achievement',
+          'message': 'earned the Tier $tier "${badgeId.replaceAll('_', ' ')}" badge!',
+          'emoji': '🎖️',
+          'likeCount': 0,
+          'commentCount': 0,
+          'likedBy': [],
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
     });
   }
   // ── Voice Submission Operations ──────────────────────────────────────────
@@ -2360,15 +2535,40 @@ class FirebaseService {
     String validatorRole,
   ) async {
     return _db.runTransaction((transaction) async {
+      // 1. ALL READS
       final docRef = _db.collection('voice_submissions').doc(id);
       final doc = await transaction.get(docRef);
       final data = doc.data();
       if (data == null) return;
 
-      // READS MUST COME BEFORE WRITES IN TRANSACTIONS
       final configDoc = await transaction.get(_db.collection('config').doc('app'));
       final config = AppConfig.fromFirestore(configDoc.data() ?? {});
 
+      String? municipalityId = data['municipalityId'];
+      // Fallback: If IDs are missing or in old format (no province prefix), reconstruct them
+      if (data['municipality'] != null && data['province'] != null) {
+        final pSlug = data['province'].toString().toLowerCase().replaceAll(' ', '_');
+        final mSlug = data['municipality'].toString().toLowerCase().replaceAll(' ', '_');
+        final reconstructedId = '${pSlug}_${mSlug}';
+
+        // Use reconstructed ID if missing or potentially in old format (no underscore prefix)
+        if (municipalityId == null || !municipalityId.startsWith(pSlug)) {
+           municipalityId = reconstructedId;
+        }
+      }
+
+      DocumentSnapshot? muniDoc;
+      if (municipalityId != null) {
+        muniDoc = await transaction.get(_db.collection('municipalities').doc(municipalityId));
+      }
+
+      final contributorId = data['contributorId'];
+      DocumentSnapshot? userDoc;
+      if (contributorId != null) {
+        userDoc = await transaction.get(_db.collection('users').doc(contributorId));
+      }
+
+      // 2. ALL WRITES
       transaction.update(docRef, {
         'status': 'approved',
         'validatorId': validatorId,
@@ -2377,37 +2577,29 @@ class FirebaseService {
       });
 
       // Update the actual recording in the municipality sub-collection
-      String? municipalityId = data['municipalityId'];
       String? recordingId = data['recordingId'];
 
-      // Fallback: If IDs are missing (legacy data), try to find by municipality name
-      if (municipalityId == null && data['municipality'] != null) {
-        municipalityId = data['municipality'].toString().toLowerCase().replaceAll(' ', '_');
-      }
-
       if (municipalityId != null) {
-        final recordingsRef = _db
-            .collection('municipalities')
-            .doc(municipalityId)
-            .collection('recordings');
+        final muniRef = _db.collection('municipalities').doc(municipalityId);
+        final recordingsRef = muniRef.collection('recordings');
 
         if (recordingId != null) {
           transaction.update(recordingsRef.doc(recordingId), {'status': 'approved'});
-        } else {
-          // Extreme fallback: if we don't have recordingId, find the one matching this audioUrl
-          final audioUrl = data['audioUrl'];
-          if (audioUrl != null) {
-             final snapshot = await recordingsRef.where('audioUrl', isEqualTo: audioUrl).get();
-             for (var doc in snapshot.docs) {
-               transaction.update(doc.reference, {'status': 'approved'});
-             }
+
+          // Update supportedDialects in the parent municipality document
+          if (muniDoc != null && muniDoc.exists) {
+            final muniData = muniDoc.data() as Map<String, dynamic>?;
+            final List<String> dialects = List<String>.from(muniData?['supportedDialects'] ?? []);
+            final String dialect = data['dialect'] ?? 'Lumad';
+            if (!dialects.contains(dialect)) {
+              dialects.add(dialect);
+              transaction.update(muniRef, {'supportedDialects': dialects});
+            }
           }
         }
       }
 
-      final contributorId = data['contributorId'];
-
-      if (contributorId != null) {
+      if (contributorId != null && userDoc != null && userDoc.exists) {
         final notifRef = _db
             .collection('users')
             .doc(contributorId)
@@ -2432,21 +2624,120 @@ class FirebaseService {
           'xp': FieldValue.increment(config.voiceApprovalXp),
           'voiceCount': FieldValue.increment(1),
         });
+
+        // Community Feed: New Voice
+        final feedRef = _db.collection('community_feed').doc();
+        transaction.set(feedRef, {
+          'userId': contributorId,
+          'userName': (userDoc?.data() as Map<String, dynamic>?)?['username'] ?? data['speakerName'] ?? data['contributorName'] ?? 'A tribe member',
+          'userPhotoUrl': (userDoc?.data() as Map<String, dynamic>?)?['photoURL'],
+          'type': 'contribution',
+          'message': 'shared a new voice recording: "${data['title'] ?? 'untitled'}"!',
+          'emoji': '🎤',
+          'likeCount': 0,
+          'commentCount': 0,
+          'likedBy': [],
+          'createdAt': FieldValue.serverTimestamp(),
+        });
       }
     });
   }
 
-  Future<void> bulkApproveVoiceSubmissions(List<String> ids, String validatorId, String validatorRole) async {
-    final batch = _db.batch();
-    for (var id in ids) {
-      batch.update(_db.collection('voice_submissions').doc(id), {
-        'status': 'approved',
-        'validatorId': validatorId,
-        'validatorRole': validatorRole,
-        'validatedAt': FieldValue.serverTimestamp(),
-      });
-    }
-    await batch.commit();
+  Future<void> bulkApproveVoiceSubmissions(
+    List<String> ids,
+    String validatorId,
+    String validatorRole,
+  ) async {
+    return _db.runTransaction((transaction) async {
+      // 1. ALL READS
+      final List<DocumentSnapshot<Map<String, dynamic>>> submissionSnaps = [];
+      for (var id in ids) {
+        final snap = await transaction.get(_db.collection('voice_submissions').doc(id)) as DocumentSnapshot<Map<String, dynamic>>;
+        if (snap.exists) submissionSnaps.add(snap);
+      }
+
+      final Set<String> municipalityIds = {};
+      for (var snap in submissionSnaps) {
+        final data = snap.data();
+        String? mId = data?['municipalityId'];
+
+        // Ensure we handle legacy IDs by checking province + municipality
+        if (data?['province'] != null && data?['municipality'] != null) {
+          final pSlug = data!['province'].toString().toLowerCase().replaceAll(' ', '_');
+          final mSlug = data['municipality'].toString().toLowerCase().replaceAll(' ', '_');
+          final reconstructedId = '${pSlug}_${mSlug}';
+
+          if (mId == null || !mId.startsWith(pSlug)) {
+            mId = reconstructedId;
+          }
+        }
+
+        if (mId != null) municipalityIds.add(mId);
+      }
+
+      final Map<String, List<String>> muniDialects = {};
+      for (var mId in municipalityIds) {
+        final mSnap = await transaction.get(_db.collection('municipalities').doc(mId)) as DocumentSnapshot<Map<String, dynamic>>;
+        if (mSnap.exists) {
+          muniDialects[mId] = List<String>.from(mSnap.data()?['supportedDialects'] ?? []);
+        } else {
+          muniDialects[mId] = [];
+        }
+      }
+
+      // 2. ALL WRITES
+      final Set<String> modifiedMuniIds = {};
+
+      for (var snap in submissionSnaps) {
+        final data = snap.data()!;
+        transaction.update(snap.reference, {
+          'status': 'approved',
+          'validatorId': validatorId,
+          'validatorRole': validatorRole,
+          'validatedAt': FieldValue.serverTimestamp(),
+        });
+
+        final String? mIdInDoc = data['municipalityId'];
+        String? mId = mIdInDoc;
+        final String? rId = data['recordingId'];
+        final String? dialect = data['dialect'];
+        final String? province = data['province'];
+        final String? municipality = data['municipality'];
+
+        if (province != null && municipality != null) {
+          final pSlug = province.toLowerCase().replaceAll(' ', '_');
+          final mSlug = municipality.toLowerCase().replaceAll(' ', '_');
+          final reconstructedId = '${pSlug}_${mSlug}';
+          if (mId == null || !mId.startsWith(pSlug)) {
+            mId = reconstructedId;
+          }
+        }
+
+        if (mId != null) {
+          if (rId != null) {
+            transaction.update(
+              _db.collection('municipalities').doc(mId).collection('recordings').doc(rId),
+              {'status': 'approved'},
+            );
+          }
+
+          if (dialect != null) {
+            final dialects = muniDialects[mId]!;
+            if (!dialects.contains(dialect)) {
+              dialects.add(dialect);
+              modifiedMuniIds.add(mId);
+            }
+          }
+        }
+      }
+
+      // Update supportedDialects for all affected municipalities
+      for (var mId in modifiedMuniIds) {
+        transaction.update(_db.collection('municipalities').doc(mId), {
+          'supportedDialects': muniDialects[mId],
+        });
+      }
+    });
   }
 
   Future<void> bulkDeleteVoiceSubmissions(List<String> ids) async {
@@ -2946,6 +3237,30 @@ final allWordsProvider = StreamProvider<List<DictionaryEntry>>((ref) {
 
 final allVoiceSubmissionsProvider = StreamProvider<List<VoiceSubmission>>((ref) {
   return ref.watch(firebaseServiceProvider).getAllVoiceSubmissions();
+});
+
+final masteredWordsCountProvider = StreamProvider.family<int, String>((ref, userId) {
+  return ref.watch(firebaseServiceProvider).db
+      .collection('users')
+      .doc(userId)
+      .collection('srs_progress')
+      .where('level', isGreaterThanOrEqualTo: 4)
+      .snapshots()
+      .map((snap) => snap.size);
+});
+
+final dueSRSCountProvider = StreamProvider.family<int, String>((ref, userId) {
+  return ref.watch(firebaseServiceProvider).db
+      .collection('users')
+      .doc(userId)
+      .collection('srs_progress')
+      .where('nextReview', isLessThanOrEqualTo: DateTime.now())
+      .snapshots()
+      .map((snap) => snap.size);
+});
+
+final userImpactMetricsProvider = StreamProvider.family<Map<String, dynamic>, String>((ref, userId) {
+  return ref.watch(firebaseServiceProvider).getUserImpactMetrics(userId);
 });
 
 

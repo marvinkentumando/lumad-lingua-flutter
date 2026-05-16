@@ -104,8 +104,6 @@ class _BrandSearchBarState extends State<BrandSearchBar> {
       ),
       child: Row(
         children: [
-          Icon(Icons.search_rounded, color: iconColor, size: 22),
-          const SizedBox(width: 12),
           Expanded(
             child: TextField(
               controller: _controller,
@@ -167,20 +165,32 @@ class _BrandSearchBarState extends State<BrandSearchBar> {
                           ),
                         ),
                       )
-                    : widget.showMic
-                        ? GestureDetector(
-                            key: const ValueKey('mic'),
+                    : Row(
+                        key: const ValueKey('search_mic'),
+                        children: [
+                          if (widget.showMic) ...[
+                            GestureDetector(
+                              onTap: () {
+                                HapticFeedback.mediumImpact();
+                                widget.onMicTap?.call();
+                              },
+                              child: Icon(
+                                Icons.mic_none_rounded,
+                                color: iconColor,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          GestureDetector(
                             onTap: () {
                               HapticFeedback.mediumImpact();
-                              widget.onMicTap?.call();
+                              widget.onSubmitted?.call(_controller.text);
                             },
-                            child: Icon(
-                              Icons.mic_none_rounded,
-                              color: iconColor,
-                              size: 22,
-                            ),
-                          )
-                        : const SizedBox.shrink(key: ValueKey('none')),
+                            child: Icon(Icons.search_rounded, color: iconColor, size: 22),
+                          ),
+                        ],
+                      ),
               ),
 
               // Persistent Filter Section

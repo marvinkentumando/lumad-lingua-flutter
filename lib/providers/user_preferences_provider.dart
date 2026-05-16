@@ -43,6 +43,11 @@ class UserPreferencesNotifier extends Notifier<UserPreferences> {
     await _save();
   }
 
+  Future<void> setLearningPathView(String view) async {
+    state = state.copyWith(learningPathView: view);
+    await _save();
+  }
+
   Future<void> _save() async {
     await _prefs.setString(_prefKey, jsonEncode(state.toJson()));
   }

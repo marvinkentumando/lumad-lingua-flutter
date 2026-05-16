@@ -65,6 +65,8 @@ class DictionaryEntry {
   final String? contributorId;
   @HiveField(17)
   final DateTime? validatedAt;
+  @HiveField(18)
+  final DateTime? submittedAt;
 
   const DictionaryEntry({
     required this.id,
@@ -85,6 +87,7 @@ class DictionaryEntry {
     this.contributorName,
     this.contributorId,
     this.validatedAt,
+    this.submittedAt,
   });
 
   bool get isValidated => status == ValidationStatus.approved;
@@ -109,6 +112,16 @@ class DictionaryEntry {
         validatedAt = data['validatedAt'].toDate();
       } else if (data['validatedAt'] is String) {
         validatedAt = DateTime.tryParse(data['validatedAt']);
+      }
+    }
+
+    DateTime? submittedAt;
+    final dynamic rawCreatedAt = data['createdAt'] ?? data['timestamp'];
+    if (rawCreatedAt != null) {
+      if (rawCreatedAt.runtimeType.toString().contains('Timestamp')) {
+        submittedAt = rawCreatedAt.toDate();
+      } else if (rawCreatedAt is String) {
+        submittedAt = DateTime.tryParse(rawCreatedAt);
       }
     }
 
@@ -140,6 +153,7 @@ class DictionaryEntry {
       contributorName: data['contributorName'],
       contributorId: data['contributorId'],
       validatedAt: validatedAt,
+      submittedAt: submittedAt,
     );
   }
 
