@@ -7,12 +7,18 @@ import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/ambient_topo_background.dart';
 import '../widgets/glass_box.dart';
 import '../widgets/preview_audio_player.dart';
+import '../services/supabase_storage_service.dart';
 import 'package:flutter/services.dart';
 import 'package:confetti/confetti.dart';
+import 'package:record/record.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'dart:async';
 import 'dart:math';
 
 class ValidatorEntriesScreen extends ConsumerStatefulWidget {
@@ -47,6 +53,11 @@ class _ValidatorEntriesScreenState
   final TextEditingController _feedbackController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
 
+  final AudioRecorder _recorder = AudioRecorder();
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  String? _recordedTipPath;
+  bool _isRecordingTip = false;
+
   @override
   void initState() {
     super.initState();
@@ -76,7 +87,34 @@ class _ValidatorEntriesScreenState
   void dispose() {
     _scrollController.dispose();
     _confettiController.dispose();
+    _recorder.dispose();
+    _audioPlayer.dispose();
     super.dispose();
+  }
+
+  Future<void> _startRecordingTip() async {
+    try {
+      if (await _recorder.hasPermission()) {
+        final directory = await getTemporaryDirectory();
+        final path = '${directory.path}/tip_${DateTime.now().millisecondsSinceEpoch}.m4a';
+        await _recorder.start(const RecordConfig(), path: path);
+        setState(() => _isRecordingTip = true);
+      }
+    } catch (e) {
+      debugPrint('Error starting recording: $e');
+    }
+  }
+
+  Future<void> _stopRecordingTip() async {
+    try {
+      final path = await _recorder.stop();
+      setState(() {
+        _isRecordingTip = false;
+        _recordedTipPath = path;
+      });
+    } catch (e) {
+      debugPrint('Error stopping recording: $e');
+    }
   }
 
   Future<void> _loadSearchHistory() async {
@@ -178,58 +216,14 @@ class _ValidatorEntriesScreenState
       floatingActionButton:
           (_isSelectionMode && _selectedIds.isNotEmpty && !_isProcessing)
           ? FloatingActionButton.extended(
-              onPressed: () async {
-                HapticFeedback.mediumImpact();
-                setState(() => _isProcessing = true);
-                final firebaseService = ref.read(firebaseServiceProvider);
-                final List<String> succeededIds = [];
-                final List<String> failedIds = [];
-
-                for (final id in _selectedIds) {
-                  try {
-                    await firebaseService.approveWord(id, userId, userRole);
-                    succeededIds.add(id);
-                  } catch (e) {
-                    failedIds.add(id);
-                    debugPrint('Error approving $id: $e');
-                  }
-                }
-
-                if (!mounted) return;
-
-                setState(() {
-                  _selectedIds.removeWhere((id) => succeededIds.contains(id));
-                  if (_selectedIds.isEmpty) _isSelectionMode = false;
-                  _isProcessing = false;
-                });
-
-                if (context.mounted) {
-                  if (failedIds.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Bulk Approved!'),
-                        backgroundColor: AppColors.semanticGreen,
-                      ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Approved ${succeededIds.length} items. ${failedIds.length} failed.',
-                        ),
-                        backgroundColor: AppColors.terracotta,
-                      ),
-                    );
-                  }
-                }
-              },
+              onPressed: () => _showBulkActionSheet(userId, userRole),
               backgroundColor: AppColors.gold500,
               icon: const Icon(
-                Icons.check_circle_rounded,
+                Icons.playlist_add_check_rounded,
                 color: AppColors.forest900,
               ),
               label: Text(
-                'APPROVE ${_selectedIds.length} ITEMS',
+                'ACTIONS (${_selectedIds.length})',
                 style: AppTypography.label.copyWith(
                   color: AppColors.forest900,
                   fontWeight: FontWeight.w900,
@@ -1350,6 +1344,24 @@ class _ValidatorEntriesScreenState
                 icon: Icons.check_circle_outline,
                 type: BrandButtonType.primary,
                 onTap: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Confirm Approval'),
+                      content: Text('Are you sure you want to approve "${entry.indigenousWord}"? This will make it live in the dictionary.'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticGreen),
+                          child: const Text('APPROVE', style: TextStyle(color: Colors.white)),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirmed != true) return;
+
                   HapticFeedback.mediumImpact();
                   try {
                     await ref
@@ -1400,8 +1412,170 @@ class _ValidatorEntriesScreenState
     );
   }
 
+  void _showBulkActionSheet(String userId, String userRole) {
+    final feedbackController = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.forest800,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 24,
+            right: 24,
+            top: 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Bulk Actions',
+                style: AppTypography.h2ExtraBold.copyWith(color: AppColors.gold500),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Apply actions to ${_selectedIds.length} selected entries',
+                style: AppTypography.body.copyWith(color: AppColors.creamText3, fontSize: 12),
+              ),
+              const SizedBox(height: 24),
+              TextField(
+                controller: feedbackController,
+                maxLines: 3,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Feedback for Reject/Flag (required for bulk)',
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  filled: true,
+                  fillColor: AppColors.forest900,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.semanticGreen,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      onPressed: () async {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Confirm Bulk Approval'),
+                            content: Text('Are you sure you want to approve ${_selectedIds.length} entries at once?'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
+                              ElevatedButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticGreen),
+                                child: const Text('APPROVE ALL', style: TextStyle(color: Colors.white)),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed == true) {
+                          _handleBulkAction('approve', '', userId, userRole);
+                        }
+                      },
+                      child: Text('APPROVE ALL', style: AppTypography.label.copyWith(color: Colors.white, fontWeight: FontWeight.w900)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.terracotta.withValues(alpha: 0.2),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: AppColors.terracotta)),
+                      ),
+                      onPressed: () {
+                        if (feedbackController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feedback required for bulk rejection'), backgroundColor: AppColors.terracotta));
+                          return;
+                        }
+                        _handleBulkAction('reject', feedbackController.text, userId, userRole);
+                      },
+                      child: Text('REJECT ALL', style: AppTypography.label.copyWith(color: AppColors.terracotta, fontWeight: FontWeight.w900)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.terracotta,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      onPressed: () {
+                        if (feedbackController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feedback required for bulk flag'), backgroundColor: AppColors.terracotta));
+                          return;
+                        }
+                        _handleBulkAction('flag', feedbackController.text, userId, userRole);
+                      },
+                      child: Text('FLAG ALL', style: AppTypography.label.copyWith(color: Colors.white, fontWeight: FontWeight.w900)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 32),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _handleBulkAction(String action, String feedback, String userId, String userRole) async {
+    Navigator.pop(context);
+    setState(() => _isProcessing = true);
+    final firebaseService = ref.read(firebaseServiceProvider);
+    final ids = _selectedIds.toList();
+
+    try {
+      if (action == 'approve') {
+        await firebaseService.bulkApproveWords(ids, userId, userRole);
+      } else if (action == 'reject') {
+        await firebaseService.bulkRejectWords(ids, userId, userRole, feedback);
+      } else if (action == 'flag') {
+        await firebaseService.bulkFlagWords(ids, userId, userRole, feedback);
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Bulk ${action.substring(0, 1).toUpperCase() + action.substring(1)}ed ${ids.length} items!'),
+          backgroundColor: action == 'approve' ? AppColors.semanticGreen : AppColors.semanticRed,
+        ));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Bulk action failed: $e'), backgroundColor: AppColors.semanticRed));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+          _isSelectionMode = false;
+          _selectedIds.clear();
+        });
+      }
+    }
+  }
+
   void _showFlagActionSheet(DictionaryEntry entry) {
     _feedbackController.text = entry.validatorFeedback ?? "";
+    _recordedTipPath = null;
+    _isRecordingTip = false;
     final userAsync = ref.read(userProfileProvider);
     final userId = userAsync.value?['uid'] ?? userAsync.value?['id'] ?? '';
     final userRole = userAsync.value?['role'] ?? 'VALIDATOR';
@@ -1414,274 +1588,241 @@ class _ValidatorEntriesScreenState
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                entry.status == ValidationStatus.pending ? 'Action Required' : 'Edit Decision',
-                style: AppTypography.h2ExtraBold.copyWith(
-                  color: AppColors.gold500,
-                ),
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
               ),
-              const SizedBox(height: 4),
-              Text(
-                entry.status == ValidationStatus.pending 
-                  ? 'Decide how to handle "${entry.indigenousWord}"'
-                  : 'Update your decision or feedback for "${entry.indigenousWord}"',
-                style: AppTypography.body.copyWith(
-                  color: AppColors.creamText3,
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 24),
-              TextField(
-                controller: _feedbackController,
-                maxLines: 3,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText:
-                      'e.g., Please provide a clearer audio sample or verify the spelling.',
-                  hintStyle: const TextStyle(color: Colors.white38),
-                  filled: true,
-                  fillColor: AppColors.forest900,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    entry.status == ValidationStatus.pending ? 'Action Required' : 'Edit Decision',
+                    style: AppTypography.h2ExtraBold.copyWith(color: AppColors.gold500),
                   ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children:
-                    [
-                      'Audio Unclear',
-                      'Spelling Error',
-                      'Inappropriate Content',
-                      'Wrong Translation',
-                      'Incorrect POS',
-                      'Incomplete Bio',
-                      'Missing Context',
+                  const SizedBox(height: 4),
+                  Text(
+                    entry.status == ValidationStatus.pending
+                      ? 'Decide how to handle "${entry.indigenousWord}"'
+                      : 'Update your decision or feedback for "${entry.indigenousWord}"',
+                    style: AppTypography.body.copyWith(color: AppColors.creamText3, fontSize: 12),
+                  ),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: _feedbackController,
+                    maxLines: 3,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'e.g., Please provide a clearer audio sample or verify the spelling.',
+                      hintStyle: const TextStyle(color: Colors.white38),
+                      filled: true,
+                      fillColor: AppColors.forest900,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      'Audio Unclear', 'Spelling Error', 'Inappropriate Content', 'Wrong Translation', 'Incorrect POS', 'Incomplete Bio', 'Missing Context',
                     ].map((reason) {
                       final bool isAudioReason = reason == 'Audio Unclear';
-                      final bool hasAudio =
-                          entry.audioUrl != null && entry.audioUrl!.isNotEmpty;
+                      final bool hasAudio = entry.audioUrl != null && entry.audioUrl!.isNotEmpty;
                       final bool isDisabled = isAudioReason && !hasAudio;
 
                       return ActionChip(
-                        label: Text(
-                          reason,
-                          style: AppTypography.label.copyWith(
-                            color: isDisabled
-                                ? Colors.white30
-                                : AppColors.gold500,
-                            fontSize: 10,
-                          ),
-                        ),
-                        backgroundColor: isDisabled
-                            ? Colors.black26
-                            : AppColors.gold500.withValues(alpha: 0.1),
-                        side: BorderSide(
-                          color: isDisabled
-                              ? Colors.white10
-                              : AppColors.gold500.withValues(alpha: 0.3),
-                        ),
-                        onPressed: isDisabled
-                            ? null
-                            : () {
-                                final currentText = _feedbackController.text;
-                                if (currentText.isEmpty) {
-                                  _feedbackController.text = reason;
-                                } else {
-                                  _feedbackController.text =
-                                      '$currentText, $reason';
-                                }
-                              },
+                        label: Text(reason, style: AppTypography.label.copyWith(color: isDisabled ? Colors.white30 : AppColors.gold500, fontSize: 10)),
+                        backgroundColor: isDisabled ? Colors.black26 : AppColors.gold500.withValues(alpha: 0.1),
+                        side: BorderSide(color: isDisabled ? Colors.white10 : AppColors.gold500.withValues(alpha: 0.3)),
+                        onPressed: isDisabled ? null : () {
+                          final currentText = _feedbackController.text;
+                          if (currentText.isEmpty) {
+                            _feedbackController.text = reason;
+                          } else {
+                            _feedbackController.text = '$currentText, $reason';
+                          }
+                        },
                       );
                     }).toList(),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.forest900,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.mic_rounded, color: AppColors.gold500),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Add Audio Tip',
-                        style: AppTypography.body.copyWith(
-                          color: AppColors.creamText3,
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(color: AppColors.forest900, borderRadius: BorderRadius.circular(16)),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.mic_rounded, color: AppColors.gold500),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _recordedTipPath != null
+                                ? 'Tip Recorded: ${_recordedTipPath!.split('/').last}'
+                                : (_isRecordingTip ? 'Recording...' : 'Add Audio Tip'),
+                            style: AppTypography.body.copyWith(color: AppColors.creamText3, fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (_recordedTipPath != null)
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded, color: AppColors.terracotta, size: 20),
+                            onPressed: () {
+                              setModalState(() => _recordedTipPath = null);
+                              setState(() => _recordedTipPath = null);
+                            },
+                          ),
+                        BrandButton(
+                          text: _isRecordingTip ? 'Stop' : (_recordedTipPath != null ? 'Play' : 'Record'),
+                          type: BrandButtonType.secondary,
+                          onTap: () async {
+                            if (_isRecordingTip) {
+                              final path = await _recorder.stop();
+                              setModalState(() {
+                                _isRecordingTip = false;
+                                _recordedTipPath = path;
+                              });
+                              setState(() {
+                                _isRecordingTip = false;
+                                _recordedTipPath = path;
+                              });
+                            } else if (_recordedTipPath != null) {
+                              await _audioPlayer.play(DeviceFileSource(_recordedTipPath!));
+                            } else {
+                              if (await _recorder.hasPermission()) {
+                                final directory = await getTemporaryDirectory();
+                                final path = '${directory.path}/tip_${DateTime.now().millisecondsSinceEpoch}.m4a';
+                                await _recorder.start(const RecordConfig(), path: path);
+                                setModalState(() => _isRecordingTip = true);
+                                setState(() => _isRecordingTip = true);
+                              }
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.terracotta.withValues(alpha: 0.2),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: AppColors.terracotta)),
+                          ),
+                          onPressed: () async {
+                            final feedback = _feedbackController.text.trim();
+                            if (feedback.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please provide feedback for rejection')));
+                              return;
+                            }
+
+                            // Upload audio tip if exists
+                            String? audioTipUrl;
+                            if (_recordedTipPath != null) {
+                               setModalState(() => _isProcessing = true);
+                               final fileName = 'tip_${DateTime.now().millisecondsSinceEpoch}.m4a';
+                               audioTipUrl = await ref.read(supabaseStorageServiceProvider).uploadAudio(File(_recordedTipPath!), fileName);
+                               setModalState(() => _isProcessing = false);
+                            }
+
+                            await ref.read(firebaseServiceProvider).rejectWord(entry.id, userId, userRole, feedback);
+                            if (audioTipUrl != null) {
+                              // Link audio tip to word if needed (currently not in model, but could be added)
+                            }
+
+                            if (!mounted) return;
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(entry.status == ValidationStatus.pending ? 'Entry Rejected' : 'Decision Updated'), backgroundColor: AppColors.semanticRed));
+                          },
+                          child: Text(entry.status == ValidationStatus.rejected ? 'UPDATE REJECT' : 'REJECT', style: AppTypography.label.copyWith(color: AppColors.terracotta, fontWeight: FontWeight.w900)),
                         ),
                       ),
-                    ),
-                    BrandButton(
-                      text: 'Record',
-                      type: BrandButtonType.secondary,
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Recording Audio Tip...'),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.gold500,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           ),
-                        );
-                      },
+                          onPressed: () async {
+                            final feedback = _feedbackController.text.trim();
+                            if (feedback.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please provide feedback for flagging')));
+                              return;
+                            }
+
+                            // Upload audio tip if exists
+                            String? audioTipUrl;
+                            if (_recordedTipPath != null) {
+                               setModalState(() => _isProcessing = true);
+                               final fileName = 'tip_${DateTime.now().millisecondsSinceEpoch}.m4a';
+                               audioTipUrl = await ref.read(supabaseStorageServiceProvider).uploadAudio(File(_recordedTipPath!), fileName);
+                               setModalState(() => _isProcessing = false);
+                            }
+
+                            await ref.read(firebaseServiceProvider).flagWord(entry.id, userId, userRole, feedback);
+                            // Link audioTipUrl if needed
+
+                            if (!mounted) return;
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(entry.status == ValidationStatus.pending ? 'Clarification request sent' : 'Decision Updated'), backgroundColor: AppColors.gold500));
+                          },
+                          child: Text(entry.status == ValidationStatus.flagged ? 'UPDATE FLAG' : 'FLAG ENTRY', style: AppTypography.label.copyWith(color: AppColors.forest900, fontWeight: FontWeight.w900)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (entry.status != ValidationStatus.pending && entry.status != ValidationStatus.approved) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          side: const BorderSide(color: AppColors.semanticGreen),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        onPressed: () async {
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Confirm Change'),
+                              content: Text('Change your decision for "${entry.indigenousWord}" to Approved?'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticGreen),
+                                  child: const Text('CONFIRM', style: TextStyle(color: Colors.white)),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (confirmed != true) return;
+
+                          await ref.read(firebaseServiceProvider).approveWord(entry.id, userId, userRole);
+                          if (!mounted) return;
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Decision Changed: Approved!'), backgroundColor: AppColors.semanticGreen));
+                        },
+                        child: Text('CHANGE TO APPROVE', style: AppTypography.label.copyWith(color: AppColors.semanticGreen, fontWeight: FontWeight.w900)),
+                      ),
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.terracotta.withValues(alpha: 0.2,
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: const BorderSide(color: AppColors.terracotta),
-                        ),
-                      ),
-                      onPressed: () async {
-                        HapticFeedback.lightImpact();
-                        final feedback = _feedbackController.text.trim();
-                        if (feedback.isEmpty) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Please provide feedback for rejection',
-                                ),
-                              ),
-                            );
-                          }
-                          return;
-                        }
-                        await ref
-                            .read(firebaseServiceProvider)
-                            .rejectWord(entry.id, userId, userRole, feedback);
-                        if (!context.mounted) return;
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(entry.status == ValidationStatus.pending ? 'Entry Rejected' : 'Decision Updated'),
-                            backgroundColor: AppColors.semanticRed,
-                          ),
-                        );
-                      },
-                      child: Text(
-                        entry.status == ValidationStatus.rejected ? 'UPDATE REJECT' : 'REJECT',
-                        style: AppTypography.label.copyWith(
-                          color: AppColors.terracotta,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.gold500,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      onPressed: () async {
-                        HapticFeedback.mediumImpact();
-                        final feedback = _feedbackController.text.trim();
-                        if (feedback.isEmpty) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Please provide feedback for flagging',
-                                ),
-                              ),
-                            );
-                          }
-                          return;
-                        }
-                        await ref
-                            .read(firebaseServiceProvider)
-                            .flagWord(entry.id, userId, userRole, feedback);
-                        if (!context.mounted) return;
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(entry.status == ValidationStatus.pending ? 'Clarification request sent' : 'Decision Updated'),
-                            backgroundColor: AppColors.gold500,
-                          ),
-                        );
-                      },
-                      child: Text(
-                        entry.status == ValidationStatus.flagged ? 'UPDATE FLAG' : 'FLAG ENTRY',
-                        style: AppTypography.label.copyWith(
-                          color: AppColors.forest900,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
               ),
-              if (entry.status != ValidationStatus.pending && entry.status != ValidationStatus.approved) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: const BorderSide(color: AppColors.semanticGreen),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    onPressed: () async {
-                      HapticFeedback.mediumImpact();
-                      await ref
-                          .read(firebaseServiceProvider)
-                          .approveWord(entry.id, userId, userRole);
-                      if (!context.mounted) return;
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Decision Changed: Approved!'),
-                          backgroundColor: AppColors.semanticGreen,
-                        ),
-                      );
-                    },
-                    child: Text(
-                      'CHANGE TO APPROVE',
-                      style: AppTypography.label.copyWith(
-                        color: AppColors.semanticGreen,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
+            );
+          },
         );
       },
     );

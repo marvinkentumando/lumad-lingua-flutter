@@ -12,9 +12,11 @@ class VoiceSubmission {
   final String contributorName;
   final String audioUrl;
   final String transcript;
+  final String? culturalNote;
   final String speakerRole;
   final String? province;
   final String? municipality;
+  final String? barangay;
   final String? duration;
   final bool priority;
   final VoiceStatus status;
@@ -34,9 +36,11 @@ class VoiceSubmission {
     required this.contributorName,
     required this.audioUrl,
     this.transcript = '',
+    this.culturalNote,
     this.speakerRole = 'Community Member',
     this.province,
     this.municipality,
+    this.barangay,
     this.duration,
     this.priority = false,
     this.status = VoiceStatus.pending,
@@ -58,10 +62,12 @@ class VoiceSubmission {
       contributorName:
           data['contributorName'] ?? data['speakerName'] ?? 'Unknown',
       audioUrl: data['audioUrl'] ?? '',
-      transcript: data['transcript'] ?? '',
+      transcript: data['transcript'] ?? data['transcription'] ?? '',
+      culturalNote: data['culturalNote'] ?? data['note'],
       speakerRole: data['speakerRole'] ?? 'Community Member',
       province: data['province'],
       municipality: data['municipality'],
+      barangay: data['barangay'],
       duration: data['duration'],
       priority: data['priority'] == true,
       status: _parseStatus(data['status']),
@@ -83,9 +89,11 @@ class VoiceSubmission {
       'contributorName': contributorName,
       'audioUrl': audioUrl,
       'transcript': transcript,
+      'culturalNote': culturalNote,
       'speakerRole': speakerRole,
       'province': province,
       'municipality': municipality,
+      'barangay': barangay,
       'duration': duration,
       'priority': priority,
       'status': status.name,

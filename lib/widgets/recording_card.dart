@@ -27,10 +27,14 @@ class RecordingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final title = audio['title'] ?? 'Untitled Recording';
     final speakerName = audio['speakerName'] ?? 'Tribe Member';
     final speakerRole = audio['speakerRole'] ?? 'Community Member';
+    final barangay = audio['barangay'];
     final dialect = audio['dialect'] ?? 'Indigenous';
     final photoUrl = audio['speakerPhotoUrl'];
+    final transcription = audio['transcript'] ?? audio['transcription'];
+    final culturalNote = audio['culturalNote'] ?? audio['note'];
 
     return BrandCard(
       theme: isDark ? BrandCardTheme.vibrant : BrandCardTheme.cream,
@@ -39,6 +43,37 @@ class RecordingCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTypography.h3.copyWith(
+                    color: isDark ? AppColors.gold500 : AppColors.forest700,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.gold500.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  dialect.toUpperCase(),
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.gold500,
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
           Row(
             children: [
               Container(
@@ -72,19 +107,18 @@ class RecordingCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      dialect.toUpperCase(),
-                      style: AppTypography.label.copyWith(
-                        color: isDark ? AppColors.gold500 : AppColors.forest500,
-                        fontSize: 9,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    Text(
-                      '$speakerName • $speakerRole',
+                      speakerName,
                       style: AppTypography.body.copyWith(
                         color: isDark ? Colors.white : AppColors.forest700,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
+                      ),
+                    ),
+                    Text(
+                      '$speakerRole${barangay != null ? " • $barangay" : ""}',
+                      style: AppTypography.label.copyWith(
+                        color: isDark ? Colors.white38 : AppColors.creamText2,
+                        fontSize: 9,
                       ),
                     ),
                   ],
@@ -208,13 +242,48 @@ class RecordingCard extends StatelessWidget {
               ),
             ),
 
-          if (audio['transcription'] != null)
+          if (transcription != null && transcription.isNotEmpty) ...[
             Text(
-              '“${audio['transcription']}”',
+              '“$transcription”',
               style: AppTypography.body.copyWith(
                 color: isDark ? Colors.white70 : AppColors.forest700,
                 fontStyle: FontStyle.italic,
-                fontSize: 14,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          if (culturalNote != null && culturalNote.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.03),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    color: AppColors.gold500,
+                    size: 14,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      culturalNote,
+                      style: AppTypography.body.copyWith(
+                        color: isDark ? Colors.white38 : AppColors.creamText3,
+                        fontSize: 11,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
         ],

@@ -8,6 +8,11 @@ import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import '../services/haptic_service.dart';
 import 'package:audio_waveforms/audio_waveforms.dart';
+import '../services/pronunciation_service.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'dart:math';
+import 'package:flutter/services.dart';
 
 class AudioComparisonScreen extends ConsumerStatefulWidget {
   const AudioComparisonScreen({super.key});
@@ -20,47 +25,98 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   bool _isRecording = false;
   bool _hasResult = false;
   double _score = 0.0;
-  
+  PronunciationStrictness _strictness = PronunciationStrictness.normal;
+
   late final RecorderController _recorderController;
+  late final PlayerController _playerController;
+  String? _lastRecordingPath;
 
   @override
   void initState() {
     super.initState();
     _recorderController = RecorderController();
+    _playerController = PlayerController();
   }
 
   @override
   void dispose() {
     _recorderController.dispose();
+    _playerController.dispose();
     super.dispose();
+  }
+
+  Future<String> _getAssetPath(String asset) async {
+    final byteData = await rootBundle.load(asset);
+    final directory = await getTemporaryDirectory();
+    final file = File('${directory.path}/${asset.split('/').last}');
+    await file.writeAsBytes(byteData.buffer.asUint8List());
+    return file.path;
   }
 
   void _toggleRecording() async {
     HapticService.selection();
     if (!_isRecording) {
-      await _recorderController.record();
+      final directory = await getTemporaryDirectory();
+      final path = '${directory.path}/user_pronunciation.m4a';
+      await _recorderController.record(path: path);
       setState(() {
         _isRecording = true;
         _hasResult = false;
+        _lastRecordingPath = path;
       });
     } else {
-      await _recorderController.stop();
+      final path = await _recorderController.stop();
       setState(() {
         _isRecording = false;
         _isComparing = true;
       });
-      
-      // Mock comparison delay
-      Future.delayed(const Duration(seconds: 2), () {
+
+      try {
+        // 1. Extract waveform from User recording
+        final userWaveform = await _playerController.waveformExtraction.extractWaveformData(
+          path: path!,
+          noOfSamples: 100,
+        );
+
+        // 2. Simulate Native Waveform (In a real app, this would be pre-extracted or extracted from asset)
+        // For this demo, we'll try to extract it from a real asset if it exists, otherwise use a fallback
+        List<double> nativeWaveform;
+        try {
+          final nativePath = await _getAssetPath('assets/audio/madyaw_native.mp3');
+          nativeWaveform = await _playerController.waveformExtraction.extractWaveformData(
+            path: nativePath,
+            noOfSamples: 100,
+          );
+        } catch (e) {
+          // Fallback to a mock "perfect" pattern if asset is missing for now
+          nativeWaveform = List.generate(100, (i) => (sin(i / 5) * 0.5) + 0.5);
+        }
+
+        // 3. Compare using the real DTW algorithm
+        final resultScore = PronunciationService.compareWaveforms(
+          nativeWaveform,
+          userWaveform,
+          strictness: _strictness,
+        );
+
         if (mounted) {
           setState(() {
             _isComparing = false;
             _hasResult = true;
-            _score = 0.85; // Hardcoded mock score
+            _score = resultScore;
           });
-          HapticService.success();
+          if (_score > 0.7) {
+            HapticService.success();
+          } else {
+            HapticService.selection();
+          }
         }
-      });
+      } catch (e) {
+        debugPrint('Comparison error: $e');
+        if (mounted) {
+          setState(() => _isComparing = false);
+        }
+      }
     }
   }
 
@@ -91,6 +147,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                _buildStrictnessSelector(isDark),
+                const SizedBox(height: 24),
                 _buildNativeSpeakerCard(isDark),
                 const SizedBox(height: 32),
                 _buildUserRecordingCard(isDark),
@@ -100,6 +158,40 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildStrictnessSelector(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: PronunciationStrictness.values.map((s) {
+          final isSelected = _strictness == s;
+          return GestureDetector(
+            onTap: () => setState(() => _strictness = s),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.gold500 : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                s.name.toUpperCase(),
+                style: AppTypography.label.copyWith(
+                  color: isSelected ? Colors.black : (isDark ? Colors.white38 : AppColors.creamText3),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }

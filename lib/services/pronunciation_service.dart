@@ -1,51 +1,86 @@
 import 'dart:math';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class PronunciationScore {
-  final double overallScore; // 0-100
-  final double accuracy;
-  final double fluency;
-  final double clarity;
-  final List<double> nativeWaveform;
-  final List<double> studentWaveform;
+enum PronunciationStrictness {
+  /// Very forgiving, good for absolute beginners.
+  easy(2.5),
 
-  PronunciationScore({
-    required this.overallScore,
-    required this.accuracy,
-    required this.fluency,
-    required this.clarity,
-    required this.nativeWaveform,
-    required this.studentWaveform,
-  });
+  /// Balanced, the default setting.
+  normal(5.0),
+
+  /// Strict, requires high precision in rhythm and tone.
+  hard(8.5);
+
+  final double sensitivity;
+  const PronunciationStrictness(this.sensitivity);
 }
-
-final pronunciationServiceProvider = Provider((ref) => PronunciationService());
 
 class PronunciationService {
-  Future<PronunciationScore> analyzePronunciation(
-    String audioPath,
-    String referenceText,
-  ) async {
-    // Simulate ML processing delay
-    await Future.delayed(const Duration(seconds: 2));
+  /// Compares two waveforms using Dynamic Time Warping (DTW)
+  /// and returns a match score between 0.0 and 1.0.
+  static double compareWaveforms(
+    List<double> nativeWave,
+    List<double> userWave, {
+    PronunciationStrictness strictness = PronunciationStrictness.normal,
+  }) {
+    if (nativeWave.isEmpty || userWave.isEmpty) return 0.0;
 
-    final random = Random();
+    // 1. Normalize both waveforms to 0.0 - 1.0 range
+    final normalizedNative = _normalize(nativeWave);
+    final normalizedUser = _normalize(userWave);
 
-    // In a real implementation, this would use a TFLite model or a cloud API (like Google Cloud Speech-to-Text with adaptation)
-    // Here we generate realistic-looking comparison data
-    return PronunciationScore(
-      overallScore: 75.0 + random.nextDouble() * 20,
-      accuracy: 0.82 + random.nextDouble() * 0.1,
-      fluency: 0.70 + random.nextDouble() * 0.2,
-      clarity: 0.88 + random.nextDouble() * 0.1,
-      nativeWaveform: List.generate(40, (i) => sin(i * 0.5).abs() * 0.8 + 0.1),
-      studentWaveform: List.generate(
-        40,
-        (i) => sin(i * 0.5 + 0.2).abs() * 0.6 + random.nextDouble() * 0.3,
-      ),
+    // 2. Perform Dynamic Time Warping
+    // DTW calculates the "distance" between two time-series patterns.
+    // A distance of 0 means they are identical.
+    final distance = _calculateDTW(normalizedNative, normalizedUser);
+
+    // 3. Convert distance to a percentage score
+    // We normalize the distance by the length of the paths to make it comparable.
+    final normalizedDistance = distance / (normalizedNative.length + normalizedUser.length);
+
+    // 4. Map distance to score using the strictness multiplier
+    // exp(-S * d) ensures that 0 distance is always 100%.
+    // Higher sensitivity (S) makes the score drop faster as distance increases.
+    final score = exp(-strictness.sensitivity * normalizedDistance);
+
+    return score.clamp(0.0, 1.0);
+  }
+
+  static List<double> _normalize(List<double> wave) {
+    if (wave.isEmpty) return [];
+
+    double maxVal = wave.map((e) => e.abs()).reduce(max);
+    if (maxVal == 0) return List.filled(wave.length, 0.0);
+
+    return wave.map((e) => e.abs() / maxVal).toList();
+  }
+
+  static double _calculateDTW(List<double> s, List<double> t) {
+    final n = s.length;
+    final m = t.length;
+
+    // Create a cost matrix
+    List<List<double>> dtw = List.generate(
+      n + 1,
+      (_) => List.filled(m + 1, double.infinity),
     );
+
+    dtw[0][0] = 0;
+
+    for (int i = 1; i <= n; i++) {
+      for (int j = 1; j <= m; j++) {
+        double cost = (s[i - 1] - t[j - 1]).abs();
+        dtw[i][j] = cost + _min3(
+          dtw[i - 1][j],     // insertion
+          dtw[i][j - 1],     // deletion
+          dtw[i - 1][j - 1], // match
+        );
+      }
+    }
+
+    return dtw[n][m];
+  }
+
+  static double _min3(double a, double b, double c) {
+    return min(a, min(b, c));
   }
 }
-
-
-

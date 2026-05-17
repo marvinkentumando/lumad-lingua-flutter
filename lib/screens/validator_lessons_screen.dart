@@ -56,7 +56,26 @@ class _ValidatorLessonsScreenState
       backgroundColor: Colors.transparent,
       floatingActionButton: (_isSelectionMode && _selectedIds.isNotEmpty)
           ? FloatingActionButton.extended(
-              onPressed: () => _handleBulkApprove(userId, userRole),
+              onPressed: () async {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Confirm Bulk Approval'),
+                    content: Text('Are you sure you want to approve ${_selectedIds.length} lessons at once?'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticGreen),
+                        child: const Text('APPROVE ALL', style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirmed == true) {
+                  _handleBulkApprove(userId, userRole);
+                }
+              },
               backgroundColor: AppColors.gold500,
               icon: const Icon(
                 Icons.check_circle_rounded,
@@ -446,9 +465,45 @@ class _ValidatorLessonsScreenState
                   children: [
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () => ref
-                            .read(firebaseServiceProvider)
-                            .approveLesson(lesson.id, userId, userRole),
+                        onPressed: () async {
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Confirm Approval'),
+                              content: Text('Are you sure you want to approve "${lesson.title}"? This will make the lesson live for all students.'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticGreen),
+                                  child: const Text('APPROVE', style: TextStyle(color: Colors.white)),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirmed == true) {
+                            try {
+                              await ref.read(firebaseServiceProvider).approveLesson(lesson.id, userId, userRole);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Lesson Approved!'),
+                                    backgroundColor: AppColors.semanticGreen,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error: $e'),
+                                    backgroundColor: AppColors.semanticRed,
+                                  ),
+                                );
+                              }
+                            }
+                          }
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.gold500,
                           shape: RoundedRectangleBorder(

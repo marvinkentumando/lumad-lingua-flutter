@@ -7,6 +7,8 @@ import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_background.dart';
 import '../providers/student_provider.dart';
+import '../services/firebase_service.dart';
+import '../models/scenario_models.dart';
 
 class ScenarioHubScreen extends ConsumerWidget {
   const ScenarioHubScreen({super.key});
@@ -14,8 +16,8 @@ class ScenarioHubScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final student = ref.watch(studentProvider);
-    // Assuming scenario completion is tracked in lessonProgress or a similar map
     final completedScenarios = student.lessonProgress;
+    final scenariosAsync = ref.watch(scenariosProvider);
 
     return Scaffold(
       body: Stack(
@@ -27,60 +29,52 @@ class ScenarioHubScreen extends ConsumerWidget {
                 children: [
                   _buildHeader(context),
                   Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.all(24),
-                      children: [
-                        Text(
-                          'Scenario Stories',
-                          style: AppTypography.displayBold.copyWith(
-                            color: AppColors.gold500,
-                            fontSize: 32,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Choose your path. Every word matters.',
-                          style: AppTypography.body.copyWith(
-                            color: Colors.white60,
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        _buildScenarioCard(
-                          context,
-                          title: 'The Elder\'s Request',
-                          description:
-                              'Help an elder navigate the forest by following their Mansaka instructions.',
-                          difficulty: 'Beginner',
-                          reward: '50 XP',
-                          id: 'elders_request',
-                          icon: Icons.person_search_rounded,
-                          isCompleted: completedScenarios.containsKey('elders_request'),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildScenarioCard(
-                          context,
-                          title: 'Market Negotiations',
-                          description:
-                              'Trade goods at the local market using traditional counting and naming.',
-                          difficulty: 'Intermediate',
-                          reward: '100 XP',
-                          id: 'market_negotiations',
-                          icon: Icons.storefront_rounded,
-                          isCompleted: completedScenarios.containsKey('market_negotiations'),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildScenarioCard(
-                          context,
-                          title: 'The Sacred Ritual',
-                          description:
-                              'Participate in a village ceremony and learn the sacred terminology.',
-                          difficulty: 'Advanced',
-                          reward: '200 XP',
-                          id: 'sacred_ritual',
-                          icon: Icons.auto_awesome_rounded,
-                          isCompleted: completedScenarios.containsKey('sacred_ritual'),
-                        ),
-                      ],
+                    child: scenariosAsync.when(
+                      data: (scenarios) => ListView.builder(
+                        padding: const EdgeInsets.all(24),
+                        itemCount: scenarios.length + 1,
+                        itemBuilder: (context, index) {
+                          if (index == 0) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Scenario Stories',
+                                  style: AppTypography.displayBold.copyWith(
+                                    color: AppColors.gold500,
+                                    fontSize: 32,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Choose your path. Every word matters.',
+                                  style: AppTypography.body.copyWith(
+                                    color: Colors.white60,
+                                  ),
+                                ),
+                                const SizedBox(height: 32),
+                              ],
+                            );
+                          }
+
+                          final scenario = scenarios[index - 1];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: _buildScenarioCard(
+                              context,
+                              title: scenario.title,
+                              description: scenario.description,
+                              difficulty: scenario.difficulty,
+                              reward: '${scenario.baseReward} XP',
+                              id: scenario.id,
+                              icon: _getIconData(scenario.iconName),
+                              isCompleted: completedScenarios.containsKey(scenario.id),
+                            ),
+                          );
+                        },
+                      ),
+                      loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
+                      error: (err, _) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
                     ),
                   ),
                 ],
@@ -90,6 +84,15 @@ class ScenarioHubScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  IconData _getIconData(String name) {
+    switch (name) {
+      case 'person_search': return Icons.person_search_rounded;
+      case 'storefront': return Icons.storefront_rounded;
+      case 'auto_awesome': return Icons.auto_awesome_rounded;
+      default: return Icons.auto_stories_rounded;
+    }
   }
 
   Widget _buildHeader(BuildContext context) {

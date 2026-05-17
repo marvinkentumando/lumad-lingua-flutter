@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../services/srs_service.dart';
@@ -274,12 +275,7 @@ class MasteryDashboardScreen extends ConsumerWidget {
             final hasDue = count > 0;
             return GestureDetector(
               onTap: hasDue
-                  ? () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Starting Review Session...')),
-                      );
-                      // TODO: Navigate to Review Session Screen
-                    }
+                  ? () => context.push('/flashcards?mode=review')
                   : null,
               child: BrandCard(
                 theme: hasDue ? BrandCardTheme.vibrant : BrandCardTheme.cream,

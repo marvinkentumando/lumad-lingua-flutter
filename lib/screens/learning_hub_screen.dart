@@ -89,7 +89,18 @@ class LearningHubScreen extends ConsumerWidget {
 
                       // Mastery Trends Entry Card
                       GestureDetector(
-                        onTap: () => context.push('/mastery-dashboard'),
+                        onTap: () {
+                          final userId = ref.read(authServiceProvider).currentUser?.uid;
+                          final dueCount = userId != null
+                              ? ref.read(dueSRSCountProvider(userId)).value ?? 0
+                              : 0;
+
+                          if (dueCount > 0) {
+                            context.push('/flashcards?mode=review');
+                          } else {
+                            context.push('/mastery-dashboard');
+                          }
+                        },
                         child: ref.watch(userProfileProvider).when(
                           data: (profile) {
                             final userId = ref.watch(authServiceProvider).currentUser?.uid;

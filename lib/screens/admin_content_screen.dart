@@ -104,6 +104,43 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
     );
   }
 
+  void _handleSelectAll() {
+    List<String> idsToSelect = [];
+    if (_tabController.index == 0) {
+      final words = ref.read(allWordsProvider).value ?? [];
+      idsToSelect = words.where((w) =>
+          w.indigenousWord.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          (w.contributorName?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false)
+        ).map((e) => e.id).toList();
+    } else if (_tabController.index == 1) {
+       final recordings = ref.read(allVoiceSubmissionsProvider).value ?? [];
+       idsToSelect = recordings.where((v) =>
+          v.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          v.contributorName.toLowerCase().contains(_searchQuery.toLowerCase())
+        ).map((e) => e.id).toList();
+    } else if (_tabController.index == 2) {
+       final lessons = ref.read(allLessonsStreamProvider).value ?? [];
+       idsToSelect = lessons.where((l) =>
+          l.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          l.category.toLowerCase().contains(_searchQuery.toLowerCase())
+        ).map((e) => e.id).toList();
+    }
+
+    setState(() {
+      // If all are already selected, deselect all. Otherwise, select all filtered items.
+      bool allSelected = idsToSelect.isNotEmpty && idsToSelect.every((id) => _selectedIds.contains(id));
+      if (allSelected) {
+        for (var id in idsToSelect) {
+          _selectedIds.remove(id);
+        }
+        if (_selectedIds.isEmpty) _isSelectionMode = false;
+      } else {
+        _selectedIds.addAll(idsToSelect);
+        _isSelectionMode = true;
+      }
+    });
+  }
+
   Widget _buildBulkActionsBar() {
     return BrandCard(
       theme: BrandCardTheme.gold,
@@ -118,6 +155,11 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
             ),
           ),
           const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.select_all_rounded, color: AppColors.forest900),
+            onPressed: _handleSelectAll,
+            tooltip: 'Select All Filtered',
+          ),
           IconButton(
             icon: const Icon(Icons.check_circle_outline_rounded, color: AppColors.forest900),
             onPressed: _handleBulkApprove,
@@ -143,7 +185,27 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
   void _handleBulkApprove() async {
     final validatorId = ref.read(authServiceProvider).currentUser?.uid ?? 'admin';
     final validatorRole = 'Administrator';
-    
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? AppColors.forest800 : Colors.white,
+        title: Text('Confirm Bulk Approval', style: TextStyle(color: AppColors.gold500)),
+        content: Text('Are you sure you want to approve ${_selectedIds.length} items? This will make them live on the platform.',
+          style: TextStyle(color: isDark ? Colors.white70 : Colors.black87)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticGreen),
+            child: const Text('APPROVE ALL', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
     if (_tabController.index == 0) {
       await ref.read(firebaseServiceProvider).bulkApproveWords(_selectedIds.toList(), validatorId, validatorRole);
     } else if (_tabController.index == 1) {
@@ -887,120 +949,123 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (context) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 48),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.white24 : Colors.black12,
-                  borderRadius: BorderRadius.circular(2),
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : Colors.black12,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'SYSTEM ACTIONS',
-              style: AppTypography.label.copyWith(
-                color: isDark ? Colors.white38 : AppColors.creamText3,
-                letterSpacing: 2,
+              const SizedBox(height: 20),
+              Text(
+                'SYSTEM ACTIONS',
+                style: AppTypography.label.copyWith(
+                  color: isDark ? Colors.white38 : AppColors.creamText3,
+                  letterSpacing: 2,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            _systemAction(
-              icon: Icons.language_rounded,
-              color: AppColors.semanticBlue,
-              title: 'Dialect Settings',
-              subtitle: 'Enable or disable dialects',
-              onTap: () {
-                Navigator.pop(context);
-                _showDialectSettings();
-              },
-            ),
-            Divider(color: isDark ? Colors.white10 : Colors.black12),
-            _systemAction(
-              icon: Icons.download_outlined,
-              color: AppColors.semanticGreen,
-              title: 'Export to CSV',
-              subtitle: 'Copy all entries as CSV',
-              onTap: () {
-                Navigator.pop(context);
-                _exportData('csv');
-              },
-            ),
-            Divider(color: isDark ? Colors.white10 : Colors.black12),
-            _systemAction(
-              icon: Icons.code_outlined,
-              color: AppColors.gold500,
-              title: 'Export to JSON',
-              subtitle: 'Copy all entries as JSON',
-              onTap: () {
-                Navigator.pop(context);
-                _exportData('json');
-              },
-            ),
-            Divider(color: isDark ? Colors.white10 : Colors.black12),
-            _systemAction(
-              icon: Icons.cleaning_services_outlined,
-              color: AppColors.semanticBlue,
-              title: 'Clear App Cache',
-              subtitle: 'Remove locally cached data',
-              onTap: () {
-                Navigator.pop(context);
-                _showConfirmAction(
-                  'Clear Cache',
-                  'This will clear all locally cached content.',
-                  () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Cache cleared'),
-                        backgroundColor: AppColors.semanticGreen,
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-            Divider(color: isDark ? Colors.white10 : Colors.black12),
-            _systemAction(
-              icon: Icons.warning_amber_outlined,
-              color: AppColors.semanticRed,
-              title: 'Reset Platform',
-              subtitle: 'Danger: wipe all pending submissions',
-              onTap: () {
-                Navigator.pop(context);
-                _showConfirmAction(
-                  'Reset Platform',
-                  'This will permanently delete ALL pending submissions.',
-                  () async {
-                    final words = await ref.read(allWordsProvider.future);
-                    final pendingWords = words.where((w) => w.status == ValidationStatus.pending).map((w) => w.id).toList();
-                    if (pendingWords.isNotEmpty) {
-                      await ref.read(firebaseServiceProvider).bulkDeleteWords(pendingWords);
-                    }
-                    
-                    final recordings = await ref.read(allVoiceSubmissionsProvider.future);
-                    final pendingRecs = recordings.where((r) => r.status == VoiceStatus.pending).map((r) => r.id).toList();
-                    if (pendingRecs.isNotEmpty) {
-                      await ref.read(firebaseServiceProvider).bulkDeleteVoiceSubmissions(pendingRecs);
-                    }
+              const SizedBox(height: 20),
+              _systemAction(
+                icon: Icons.language_rounded,
+                color: AppColors.semanticBlue,
+                title: 'Dialect Settings',
+                subtitle: 'Enable or disable dialects',
+                onTap: () {
+                  Navigator.pop(context);
+                  _showDialectSettings();
+                },
+              ),
+              Divider(color: isDark ? Colors.white10 : Colors.black12),
+              _systemAction(
+                icon: Icons.download_outlined,
+                color: AppColors.semanticGreen,
+                title: 'Export to CSV',
+                subtitle: 'Copy all entries as CSV',
+                onTap: () {
+                  Navigator.pop(context);
+                  _exportData('csv');
+                },
+              ),
+              Divider(color: isDark ? Colors.white10 : Colors.black12),
+              _systemAction(
+                icon: Icons.code_outlined,
+                color: AppColors.gold500,
+                title: 'Export to JSON',
+                subtitle: 'Copy all entries as JSON',
+                onTap: () {
+                  Navigator.pop(context);
+                  _exportData('json');
+                },
+              ),
+              Divider(color: isDark ? Colors.white10 : Colors.black12),
+              _systemAction(
+                icon: Icons.cleaning_services_outlined,
+                color: AppColors.semanticBlue,
+                title: 'Clear App Cache',
+                subtitle: 'Remove locally cached data',
+                onTap: () {
+                  Navigator.pop(context);
+                  _showConfirmAction(
+                    'Clear Cache',
+                    'This will clear all locally cached content.',
+                    () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Cache cleared'),
+                          backgroundColor: AppColors.semanticGreen,
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+              Divider(color: isDark ? Colors.white10 : Colors.black12),
+              _systemAction(
+                icon: Icons.warning_amber_outlined,
+                color: AppColors.semanticRed,
+                title: 'Reset Platform',
+                subtitle: 'Danger: wipe all pending submissions',
+                onTap: () {
+                  Navigator.pop(context);
+                  _showConfirmAction(
+                    'Reset Platform',
+                    'This will permanently delete ALL pending submissions.',
+                    () async {
+                      final words = await ref.read(allWordsProvider.future);
+                      final pendingWords = words.where((w) => w.status == ValidationStatus.pending).map((w) => w.id).toList();
+                      if (pendingWords.isNotEmpty) {
+                        await ref.read(firebaseServiceProvider).bulkDeleteWords(pendingWords);
+                      }
 
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Pending submissions cleared'),
-                        backgroundColor: AppColors.semanticRed,
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ],
+                      final recordings = await ref.read(allVoiceSubmissionsProvider.future);
+                      final pendingRecs = recordings.where((r) => r.status == VoiceStatus.pending).map((r) => r.id).toList();
+                      if (pendingRecs.isNotEmpty) {
+                        await ref.read(firebaseServiceProvider).bulkDeleteVoiceSubmissions(pendingRecs);
+                      }
+
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Platform reset successful'),
+                            backgroundColor: AppColors.semanticGreen,
+                          ),
+                        );
+                      }
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1022,31 +1087,36 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                 'Dialect Settings',
                 style: AppTypography.h3.copyWith(color: AppColors.gold500),
               ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: settings.entries
-                    .map(
-                      (e) => SwitchListTile(
-                        title: Text(
-                          e.key,
-                          style: TextStyle(
-                            color: isDark ? Colors.white : AppColors.forest900,
-                            fontWeight: e.value
-                                ? FontWeight.bold
-                                : FontWeight.normal,
+              content: SizedBox(
+                width: double.maxFinite,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: settings.entries
+                        .map(
+                          (e) => SwitchListTile(
+                            title: Text(
+                              e.key,
+                              style: TextStyle(
+                                color: isDark ? Colors.white : AppColors.forest900,
+                                fontWeight: e.value
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                            value: e.value,
+                            activeThumbColor: AppColors.gold500,
+                            onChanged: (v) {
+                              HapticService.light();
+                              final newSettings = Map<String, bool>.from(settings);
+                              newSettings[e.key] = v;
+                              ref.read(firebaseServiceProvider).updateDialectSettings(newSettings);
+                            },
                           ),
-                        ),
-                        value: e.value,
-                        activeThumbColor: AppColors.gold500,
-                        onChanged: (v) {
-                          HapticService.light();
-                          final newSettings = Map<String, bool>.from(settings);
-                          newSettings[e.key] = v;
-                          ref.read(firebaseServiceProvider).updateDialectSettings(newSettings);
-                        },
-                      ),
-                    )
-                    .toList(),
+                        )
+                        .toList(),
+                  ),
+                ),
               ),
               actions: [
                 BrandButton(

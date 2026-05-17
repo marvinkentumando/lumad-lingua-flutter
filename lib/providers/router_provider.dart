@@ -315,7 +315,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/flashcards',
-        builder: (context, state) => const FlashcardsScreen(),
+        builder: (context, state) {
+          final isReview = state.uri.queryParameters['mode'] == 'review';
+          return FlashcardsScreen(isReviewMode: isReview);
+        },
       ),
     ],
   );

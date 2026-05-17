@@ -9,31 +9,7 @@ import '../widgets/brand_background.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../providers/student_provider.dart';
-
-class ScenarioNode {
-// ... existing ScenarioNode and ScenarioChoice classes ...
-  final String text;
-  final String imagePath;
-  final List<ScenarioChoice> choices;
-
-  ScenarioNode({
-    required this.text,
-    required this.imagePath,
-    required this.choices,
-  });
-}
-
-class ScenarioChoice {
-  final String label;
-  final String targetNodeId;
-  final int xpReward;
-
-  ScenarioChoice({
-    required this.label,
-    required this.targetNodeId,
-    this.xpReward = 0,
-  });
-}
+import '../models/scenario_models.dart';
 
 class ScenarioSessionScreen extends ConsumerStatefulWidget {
   final String scenarioId;
@@ -44,71 +20,34 @@ class ScenarioSessionScreen extends ConsumerStatefulWidget {
 }
 
 class _ScenarioSessionScreenState extends ConsumerState<ScenarioSessionScreen> {
-  late String _currentNodeId;
+  Scenario? _scenario;
+  String? _currentNodeId;
   int _totalXp = 0;
   bool _isSaving = false;
-
-  // Hardcoded scenario for demonstration
-  final Map<String, ScenarioNode> _nodes = {
-    'start': ScenarioNode(
-      text:
-          "You arrive at the edge of the forest. An elder approaches you and speaks in Mansaka: 'Madyaw na allaw, kailan. Hain kaw padulong?'",
-      imagePath: 'assets/images/scenario_forest.png',
-      choices: [
-        ScenarioChoice(
-          label: "Padulong ako sa sapa. (I am going to the river.)",
-          targetNodeId: 'river',
-        ),
-        ScenarioChoice(
-          label: "Padulong ako sa bukid. (I am going to the mountain.)",
-          targetNodeId: 'mountain',
-        ),
-      ],
-    ),
-    'river': ScenarioNode(
-      text:
-          "At the river, you see children playing. They ask if you have seen the 'isda'.",
-      imagePath: 'assets/images/scenario_river.png',
-      choices: [
-        ScenarioChoice(
-          label: "Oo, nakita nako. (Yes, I saw it.)",
-          targetNodeId: 'success',
-          xpReward: 20,
-        ),
-        ScenarioChoice(
-          label: "Wala pa nako nakita. (I haven't seen it yet.)",
-          targetNodeId: 'start',
-        ),
-      ],
-    ),
-    'mountain': ScenarioNode(
-      text:
-          "The mountain air is cold. You meet a hunter who needs help tracking a 'langgam'.",
-      imagePath: 'assets/images/scenario_mountain.png',
-      choices: [
-        ScenarioChoice(
-          label: "Tabangan tika. (I will help you.)",
-          targetNodeId: 'success',
-          xpReward: 25,
-        ),
-        ScenarioChoice(
-          label: "Dili ko kabalo. (I don't know how.)",
-          targetNodeId: 'start',
-        ),
-      ],
-    ),
-    'success': ScenarioNode(
-      text:
-          "Excellent! You have successfully navigated the conversation and helped the community. Your understanding of the language grows.",
-      imagePath: 'assets/images/scenario_success.png',
-      choices: [ScenarioChoice(label: "Finish Story", targetNodeId: 'end')],
-    ),
-  };
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _currentNodeId = 'start';
+    _loadScenario();
+  }
+
+  Future<void> _loadScenario() async {
+    try {
+      final scenario = await ref.read(firebaseServiceProvider).getScenarioById(widget.scenarioId);
+      if (mounted) {
+        setState(() {
+          _scenario = scenario;
+          _currentNodeId = scenario?.initialNodeId ?? 'start';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading scenario: $e");
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   Future<void> _handleChoice(ScenarioChoice choice) async {
@@ -120,7 +59,7 @@ class _ScenarioSessionScreenState extends ConsumerState<ScenarioSessionScreen> {
         final user = ref.read(authServiceProvider).currentUser;
         if (user != null) {
           // Add a base reward for completion
-          final completionXp = _totalXp + 20; 
+          final completionXp = _totalXp + (_scenario?.baseReward ?? 20);
           await ref.read(firebaseServiceProvider).completeScenario(
             user.uid, 
             widget.scenarioId, 
@@ -146,7 +85,30 @@ class _ScenarioSessionScreenState extends ConsumerState<ScenarioSessionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final node = _nodes[_currentNodeId] ?? _nodes['start']!;
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: AppColors.forest900,
+        body: Center(child: CircularProgressIndicator(color: AppColors.gold500)),
+      );
+    }
+
+    if (_scenario == null || _currentNodeId == null) {
+      return Scaffold(
+        backgroundColor: AppColors.forest900,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Scenario not found', style: TextStyle(color: Colors.white)),
+              const SizedBox(height: 16),
+              BrandButton(text: 'Go Back', onTap: () => context.pop(), type: BrandButtonType.primary),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final node = _scenario!.nodes[_currentNodeId];
 
     return Scaffold(
       body: Stack(
@@ -161,14 +123,17 @@ class _ScenarioSessionScreenState extends ConsumerState<ScenarioSessionScreen> {
                       padding: const EdgeInsets.all(24),
                       child: Column(
                         children: [
-                          _buildNodeImage(node.imagePath),
-                          const SizedBox(height: 32),
-                          _buildStoryText(node.text),
-                          const SizedBox(height: 48),
-                          if (_isSaving)
-                            const Center(child: CircularProgressIndicator(color: AppColors.gold500))
-                          else
-                            _buildChoices(node.choices),
+                          if (node != null) ...[
+                            _buildNodeImage(node.imagePath ?? ''),
+                            const SizedBox(height: 32),
+                            _buildStoryText(node.text),
+                            const SizedBox(height: 48),
+                            if (_isSaving)
+                              const Center(child: CircularProgressIndicator(color: AppColors.gold500))
+                            else
+                              _buildChoices(node.choices),
+                          ] else
+                            const Center(child: Text('Invalid Story State', style: TextStyle(color: Colors.white))),
                         ],
                       ),
                     ),

@@ -20,7 +20,8 @@ import '../widgets/branded_empty_state.dart';
 
 
 class FlashcardsScreen extends ConsumerStatefulWidget {
-  const FlashcardsScreen({super.key});
+  final bool isReviewMode;
+  const FlashcardsScreen({super.key, this.isReviewMode = false});
 
   @override
   ConsumerState<FlashcardsScreen> createState() => _FlashcardsScreenState();
@@ -245,17 +246,29 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
                 _srsData = {for (var s in srsList) s.wordId: s};
 
                 if (_deck == null) {
-                  final bookmarkedEntries = dictionary
-                      .where((entry) => bookmarks.contains(entry.id))
-                      .toList();
+                  List<DictionaryEntry> deckEntries = [];
 
-                  if (bookmarkedEntries.isEmpty) {
+                  if (widget.isReviewMode) {
+                    // 1. Review Mode: Only cards that are DUE
+                    final now = DateTime.now();
+                    deckEntries = dictionary.where((entry) {
+                      final srs = _srsData[entry.id];
+                      return srs != null && srs.nextReview.isBefore(now);
+                    }).toList();
+                  } else {
+                    // 2. Study Mode: Only bookmarked cards
+                    deckEntries = dictionary
+                        .where((entry) => bookmarks.contains(entry.id))
+                        .toList();
+                  }
+
+                  if (deckEntries.isEmpty) {
                     return _buildEmptyState();
                   }
 
                   // Smart Shuffling (SRS Expansion): Prioritize based on Forgetfulness Curves
                   final now = DateTime.now();
-                  bookmarkedEntries.sort((a, b) {
+                  deckEntries.sort((a, b) {
                     final srsA = _srsData[a.id];
                     final srsB = _srsData[b.id];
 
@@ -298,7 +311,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
                     return scoreB.compareTo(scoreA); // Higher score first
                   });
 
-                  final initialDeck = bookmarkedEntries.take(15).toList();
+                  final initialDeck = deckEntries.take(15).toList();
 
                   // Only set initial deck once to avoid reshuffling on every build
                   WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -762,11 +775,13 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
     return Scaffold(
       backgroundColor: AppColors.forest800,
       body: BrandedEmptyState(
-        title: 'No Flashcards Yet',
-        message: 'Bookmark words from the Dictionary to start building your personal study deck.',
-        emoji: '💫',
+        title: widget.isReviewMode ? 'All Caught Up!' : 'No Flashcards Yet',
+        message: widget.isReviewMode
+            ? 'You have reviewed all your due cards. Come back later for more reinforcement.'
+            : 'Bookmark words from the Dictionary to start building your personal study deck.',
+        emoji: widget.isReviewMode ? '🌿' : '💫',
         action: BrandButton(
-          text: '📖  Go to Dictionary',
+          text: widget.isReviewMode ? '🏠  Back to Dashboard' : '📖  Go to Dictionary',
           type: BrandButtonType.primary,
           onTap: () => Navigator.pop(context),
         ),
