@@ -3,6 +3,7 @@ import 'firebase_service.dart';
 import '../models/srs_models.dart';
 import 'auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:rxdart/rxdart.dart';
 
 enum MasteryLevel { newWord, learning, proficient, mastered }
 
@@ -25,13 +26,16 @@ class SRSService {
   SRSService(this.ref);
 
   Stream<SRSStats> getStatsStream(String userId) {
-    return ref.read(firebaseServiceProvider).db
+    final srsStream = ref.read(firebaseServiceProvider).db
         .collection('users')
         .doc(userId)
         .collection('srs_progress')
-        .snapshots()
-        .map((snapshot) {
-      final List<SRSProgress> progressList = snapshot.docs
+        .snapshots();
+
+    final historyStream = ref.read(firebaseServiceProvider).getMasteryHistoryStream(userId);
+
+    return Rx.combineLatest2(srsStream, historyStream, (srsSnap, history) {
+      final List<SRSProgress> progressList = srsSnap.docs
           .map((doc) => SRSProgress.fromFirestore(doc.data()))
           .toList();
 
@@ -42,6 +46,7 @@ class SRSService {
         MasteryLevel.mastered: 0,
       };
 
+      int masteredTotal = 0;
       for (var p in progressList) {
         if (p.level == 0) {
           counts[MasteryLevel.newWord] = counts[MasteryLevel.newWord]! + 1;
@@ -51,6 +56,7 @@ class SRSService {
           counts[MasteryLevel.proficient] = counts[MasteryLevel.proficient]! + 1;
         } else {
           counts[MasteryLevel.mastered] = counts[MasteryLevel.mastered]! + 1;
+          masteredTotal++;
         }
       }
 
@@ -63,10 +69,16 @@ class SRSService {
         overallMastery = (masteredWeight + proficientWeight + learningWeight) / total;
       }
 
+      // Merge current mastered count into today's history slot if it's more accurate
+      final List<double> polishedHistory = List.from(history);
+      if (polishedHistory.length == 7) {
+        polishedHistory[6] = masteredTotal.toDouble();
+      }
+
       return SRSStats(
         counts: counts,
         overallMastery: overallMastery,
-        weeklyProgress: [2, 3, 5, 5, 8, 10, 12], // TODO: Implement historical tracking
+        weeklyProgress: polishedHistory,
       );
     });
   }
@@ -112,6 +124,16 @@ class SRSService {
     );
 
     await docRef.set(updated.toFirestore());
+
+    // After updating the word, trigger a log of today's total mastered count
+    final masteredSnap = await ref.read(firebaseServiceProvider).db
+        .collection('users')
+        .doc(userId)
+        .collection('srs_progress')
+        .where('level', isEqualTo: 5)
+        .get();
+
+    await ref.read(firebaseServiceProvider).recordMasteryStat(userId, masteredSnap.size);
   }
 }
 

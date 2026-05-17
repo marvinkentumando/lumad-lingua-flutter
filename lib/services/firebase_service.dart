@@ -20,6 +20,7 @@ import 'package:rxdart/rxdart.dart';
 import '../models/gamification_models.dart';
 import '../models/validator_models.dart';
 import '../models/app_config.dart';
+import '../models/scenario_models.dart';
 
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
@@ -596,13 +597,72 @@ class FirebaseService {
   }
 
   Future<void> bulkApproveWords(List<String> ids, String validatorId, String validatorRole) async {
+    return _db.runTransaction((transaction) async {
+      final configDoc = await transaction.get(_db.collection('config').doc('app'));
+      final config = AppConfig.fromFirestore(configDoc.data() ?? {});
+
+      for (var id in ids) {
+        final docRef = _db.collection('words').doc(id);
+        final doc = await transaction.get(docRef);
+        final data = doc.data();
+        if (data == null || data['status'] == 'approved') continue;
+
+        transaction.update(docRef, {
+          'status': 'approved',
+          'isValidated': true,
+          'validatorId': validatorId,
+          'validatorRole': validatorRole,
+          'validatedAt': FieldValue.serverTimestamp(),
+        });
+
+        final contributorId = data['contributorId'];
+        final term = data['term'] ?? 'your entry';
+
+        if (contributorId != null) {
+          final notifRef = _db.collection('users').doc(contributorId).collection('notifications').doc();
+          transaction.set(notifRef, {
+            'title': config.notifications['word_approved_title'] ?? 'Entry Approved! 🌟',
+            'message': config.formatNotification('word_approved_body', {'term': term, 'role': validatorRole}),
+            'type': 'approval',
+            'timestamp': FieldValue.serverTimestamp(),
+            'isRead': false,
+          });
+
+          transaction.update(_db.collection('users').doc(contributorId), {
+            'xp': FieldValue.increment(config.wordApprovalXp),
+            'wordCount': FieldValue.increment(1),
+          });
+        }
+      }
+    });
+  }
+
+  Future<void> bulkRejectWords(List<String> ids, String validatorId, String validatorRole, String feedback) async {
     final batch = _db.batch();
     for (var id in ids) {
       batch.update(_db.collection('words').doc(id), {
-        'status': 'approved',
-        'isValidated': true,
+        'status': 'rejected',
+        'isValidated': false,
         'validatorId': validatorId,
         'validatorRole': validatorRole,
+        'validatorFeedback': feedback,
+        'rejectedAt': FieldValue.serverTimestamp(),
+        'validatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+    await batch.commit();
+  }
+
+  Future<void> bulkFlagWords(List<String> ids, String validatorId, String validatorRole, String feedback) async {
+    final batch = _db.batch();
+    for (var id in ids) {
+      batch.update(_db.collection('words').doc(id), {
+        'status': 'flagged',
+        'isValidated': false,
+        'validatorId': validatorId,
+        'validatorRole': validatorRole,
+        'validatorFeedback': feedback,
+        'flaggedAt': FieldValue.serverTimestamp(),
         'validatedAt': FieldValue.serverTimestamp(),
       });
     }
@@ -1133,6 +1193,61 @@ class FirebaseService {
         };
       },
     );
+  }
+
+  Future<void> recordMasteryStat(String userId, int masteredCount) async {
+    final dateKey = DateTime.now().toIso8601String().split('T')[0]; // YYYY-MM-DD
+    await _db
+        .collection('users')
+        .doc(userId)
+        .collection('mastery_history')
+        .doc(dateKey)
+        .set({
+      'count': masteredCount,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Stream<List<double>> getMasteryHistoryStream(String userId) {
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('mastery_history')
+        .orderBy('timestamp', descending: true)
+        .limit(7)
+        .snapshots()
+        .map((snap) {
+      // Create a map for quick lookup
+      final Map<String, double> historyMap = {};
+      for (var doc in snap.docs) {
+        historyMap[doc.id] = (doc.data()['count'] as num?)?.toDouble() ?? 0.0;
+      }
+
+      // Generate last 7 days including today
+      final now = DateTime.now();
+      final List<double> result = [];
+      for (int i = 6; i >= 0; i--) {
+        final date = now.subtract(Duration(days: i));
+        final dateKey = date.toIso8601String().split('T')[0];
+
+        // If we don't have a log for a specific day, we take the previous day's value
+        // to maintain the cumulative feel, or 0.0 if it's the very first log.
+        if (historyMap.containsKey(dateKey)) {
+          result.add(historyMap[dateKey]!);
+        } else {
+          // Find the most recent previous value
+          double fallback = 0.0;
+          for (var entry in snap.docs) {
+             if (entry.id.compareTo(dateKey) < 0) {
+               fallback = (entry.data()['count'] as num?)?.toDouble() ?? 0.0;
+               break;
+             }
+          }
+          result.add(fallback);
+        }
+      }
+      return result;
+    });
   }
 
   // System Settings / Dialect Toggles
@@ -2740,6 +2855,34 @@ class FirebaseService {
     });
   }
 
+  Future<void> bulkRejectVoiceSubmissions(List<String> ids, String validatorId, String validatorRole, String feedback) async {
+    final batch = _db.batch();
+    for (var id in ids) {
+      batch.update(_db.collection('voice_submissions').doc(id), {
+        'status': 'rejected',
+        'validatorId': validatorId,
+        'validatorRole': validatorRole,
+        'validatorFeedback': feedback,
+        'validatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+    await batch.commit();
+  }
+
+  Future<void> bulkFlagVoiceSubmissions(List<String> ids, String validatorId, String validatorRole, String feedback) async {
+    final batch = _db.batch();
+    for (var id in ids) {
+      batch.update(_db.collection('voice_submissions').doc(id), {
+        'status': 'flagged',
+        'validatorId': validatorId,
+        'validatorRole': validatorRole,
+        'validatorFeedback': feedback,
+        'validatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+    await batch.commit();
+  }
+
   Future<void> bulkDeleteVoiceSubmissions(List<String> ids) async {
     final batch = _db.batch();
     for (var id in ids) {
@@ -2898,6 +3041,22 @@ class FirebaseService {
         'commentCount': FieldValue.increment(1),
       });
     });
+  }
+
+  // ── Scenario Operations ────────────────────────────────────────────────
+
+  Stream<List<Scenario>> getScenarios() {
+    return _db.collection('scenarios').snapshots().map((snapshot) {
+      return snapshot.docs
+          .map((doc) => Scenario.fromFirestore(doc.data(), doc.id))
+          .toList();
+    });
+  }
+
+  Future<Scenario?> getScenarioById(String id) async {
+    final doc = await _db.collection('scenarios').doc(id).get();
+    if (!doc.exists) return null;
+    return Scenario.fromFirestore(doc.data()!, doc.id);
   }
 }
 
@@ -3237,6 +3396,10 @@ final allWordsProvider = StreamProvider<List<DictionaryEntry>>((ref) {
 
 final allVoiceSubmissionsProvider = StreamProvider<List<VoiceSubmission>>((ref) {
   return ref.watch(firebaseServiceProvider).getAllVoiceSubmissions();
+});
+
+final scenariosProvider = StreamProvider<List<Scenario>>((ref) {
+  return ref.watch(firebaseServiceProvider).getScenarios();
 });
 
 final masteredWordsCountProvider = StreamProvider.family<int, String>((ref, userId) {

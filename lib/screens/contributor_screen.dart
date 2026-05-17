@@ -47,6 +47,8 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
   final _municipalityController = TextEditingController();
   final _provinceController = TextEditingController();
   final _barangayController = TextEditingController();
+  final _voiceTitleController = TextEditingController();
+  final _voiceTranscriptController = TextEditingController();
   String? _selectedDistrict;
   PartOfSpeech _selectedPOS = PartOfSpeech.noun;
   String? _selectedLanguage;
@@ -1336,6 +1338,8 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
     _definitionController.clear();
     _usageNativeController.clear();
     _usageTranslationController.clear();
+    _voiceTitleController.clear();
+    _voiceTranscriptController.clear();
 
     if (!keepLocation) {
       _municipalityController.clear();
@@ -1569,6 +1573,8 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
     _municipalityController.dispose();
     _provinceController.dispose();
     _barangayController.dispose();
+    _voiceTitleController.dispose();
+    _voiceTranscriptController.dispose();
     _waveformController.dispose();
     _recorder.dispose();
     _audioPlayer.dispose();
@@ -1609,8 +1615,11 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
       final municipalitySlug = _selectedMunicipality?.toLowerCase().replaceAll(' ', '_') ?? 'unknown';
       final municipalityId = '${provinceSlug}_${municipalitySlug}';
       
+      final title = _voiceTitleController.text.isEmpty ? 'New Pronunciation' : _voiceTitleController.text;
+      final transcript = _voiceTranscriptController.text;
+
       final recordingData = {
-        'title': 'New Pronunciation',
+        'title': title,
         'speakerName': user.displayName ?? 'Tribe Member',
         'speakerRole': _selectedSpeaker,
         'province': _selectedProvince,
@@ -1619,9 +1628,10 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
         'barangay': _barangayController.text,
         'dialect': _selectedLanguage ?? 'Lumad',
         'audioUrl': audioUrl,
+        'transcript': transcript,
         'timestamp': DateTime.now().toIso8601String(),
         'contributorId': user.uid,
-        'status': 'pending', // Added for map filtering
+        'status': 'pending',
       };
 
       final recordingDoc = await ref.read(firebaseServiceProvider).addRecording(municipalityId, recordingData);
@@ -1630,17 +1640,18 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
       await ref.read(firebaseServiceProvider).addVoiceSubmission(
         VoiceSubmission(
           id: '', // Firestore will generate
-          title: 'New Pronunciation - $_selectedMunicipality',
+          title: title,
           dialect: _selectedLanguage ?? 'Lumad',
           contributorId: user.uid,
           contributorName: user.displayName ?? 'Tribe Member',
           audioUrl: audioUrl,
+          transcript: transcript,
           speakerRole: _selectedSpeaker,
           province: _selectedProvince,
           municipality: _selectedMunicipality,
           status: VoiceStatus.pending,
-          municipalityId: municipalityId, // Add reference for approval logic
-          recordingId: recordingDoc.id, // Add reference for approval logic
+          municipalityId: municipalityId,
+          recordingId: recordingDoc.id,
         ),
       );
 
@@ -1771,6 +1782,20 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
                                 ),
                         ),
 
+                        const SizedBox(height: 32),
+
+                        BrandTextField(
+                          controller: _voiceTitleController,
+                          labelText: "Title / Label",
+                          prefixIcon: Icons.title_rounded,
+                        ),
+                        const SizedBox(height: 16),
+                        BrandTextField(
+                          controller: _voiceTranscriptController,
+                          labelText: "Transcript",
+                          prefixIcon: Icons.notes_rounded,
+                          maxLines: 3,
+                        ),
                         const SizedBox(height: 32),
 
                         // Speaker Selector
@@ -2640,78 +2665,102 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.8,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Batch Recording Mode',
-                style: AppTypography.h2ExtraBold.copyWith(
-                  color: AppColors.gold500,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Quickly record voice fragments for multiple words in sequence.',
-                style: AppTypography.body.copyWith(color: AppColors.creamText3),
-              ),
-              const SizedBox(height: 24),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: 5, // Mock data
-                  itemBuilder: (context, index) {
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.forest900,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
+        return Consumer(
+          builder: (context, ref, child) {
+            final wordsAsync = ref.watch(allWordsProvider);
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.8,
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Batch Recording Mode',
+                    style: AppTypography.h2ExtraBold.copyWith(color: AppColors.gold500),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Record voice fragments for words currently missing audio.',
+                    style: AppTypography.body.copyWith(color: AppColors.creamText3),
+                  ),
+                  const SizedBox(height: 24),
+                  Expanded(
+                    child: wordsAsync.when(
+                      data: (words) {
+                        final wordsMissingAudio = words.where((w) => w.audioUrl == null || w.audioUrl!.isEmpty).toList();
+
+                        if (wordsMissingAudio.isEmpty) {
+                          return Center(
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  'Word ${index + 1}',
-                                  style: AppTypography.h3.copyWith(
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                Text(
-                                  'Translation for Word ${index + 1}',
-                                  style: AppTypography.body.copyWith(
-                                    color: Colors.white54,
-                                    fontSize: 12,
-                                  ),
-                                ),
+                                const Icon(Icons.check_circle_outline_rounded, color: AppColors.semanticGreen, size: 48),
+                                const SizedBox(height: 16),
+                                Text('All caught up!', style: AppTypography.h3.copyWith(color: Colors.white)),
+                                Text('Every word in the archive has audio.', style: AppTypography.body.copyWith(color: Colors.white38)),
                               ],
                             ),
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.mic_rounded,
-                              color: AppColors.semanticRed,
-                            ),
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Recording started...'),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                          );
+                        }
+
+                        return ListView.builder(
+                          itemCount: wordsMissingAudio.length,
+                          itemBuilder: (context, index) {
+                            final word = wordsMissingAudio[index];
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppColors.forest900,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          word.indigenousWord,
+                                          style: AppTypography.h3.copyWith(color: Colors.white),
+                                        ),
+                                        Text(
+                                          word.translation,
+                                          style: AppTypography.body.copyWith(color: Colors.white54, fontSize: 12),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.mic_rounded, color: AppColors.semanticRed),
+                                    onPressed: () {
+                                      // Pre-fill controllers and open recording sheet for this specific word
+                                      _wordController.text = word.indigenousWord;
+                                      _englishController.text = word.translation;
+                                      _selectedLanguage = word.language;
+                                      _selectedPOS = word.partOfSpeech;
+
+                                      Navigator.pop(context);
+                                      _showAddEntrySheet(initialLanguage: word.language);
+                                      // In a more advanced implementation, we could have a specialized
+                                      // 'audio only' submission sheet here.
+                                    },
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      },
+                      loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
+                      error: (err, _) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );

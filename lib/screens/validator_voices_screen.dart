@@ -8,6 +8,9 @@ import 'package:audioplayers/audioplayers.dart';
 
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:record/record.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -16,6 +19,7 @@ import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/glass_box.dart';
 import '../widgets/ambient_topo_background.dart';
+import '../widgets/brand_button.dart';
 import '../services/supabase_storage_service.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -45,6 +49,9 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
 
   // ── Real Audio Player state ──
   final AudioPlayer _audioPlayer = AudioPlayer();
+  final AudioRecorder _recorder = AudioRecorder();
+  String? _recordedTipPath;
+  bool _isRecordingTip = false;
   Duration _currentPosition = Duration.zero;
   Duration _totalDuration = Duration.zero;
   StreamSubscription<Duration>? _positionSub;
@@ -78,6 +85,7 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
     _durationSub?.cancel();
     _stateSub?.cancel();
     _audioPlayer.dispose();
+    _recorder.dispose();
     super.dispose();
   }
 
@@ -1470,64 +1478,46 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
 
     if (user == null) return;
 
-    int count = 0;
-    final idsToProcess = List<String>.from(_selectedIds);
+    final ids = _selectedIds.toList();
 
-    for (final id in idsToProcess) {
-      try {
-        if (action == 'approve') {
-          await firebaseService.approveVoiceSubmission(
-            id,
-            user.uid,
-            validatorRole,
-          );
-        } else if (action == 'reject') {
-          await firebaseService.rejectVoiceSubmission(
-            id,
-            user.uid,
-            validatorRole,
-            feedback,
-          );
-        } else if (action == 'flag') {
-          await firebaseService.flagVoiceSubmission(
-            id,
-            user.uid,
-            validatorRole,
-            feedback,
-          );
-        }
-        count++;
-      } catch (e) {
-        debugPrint("Error processing $id: $e");
-      }
-    }
-
-    setState(() {
-      _isProcessing = false;
-      _isSelectionMode = false;
-      _selectedIds.clear();
-    });
-
-    if (mounted) {
-      String message = '';
-      Color bgColor = AppColors.semanticGreen;
-
+    try {
       if (action == 'approve') {
-        message = 'Bulk Approved $count items!';
+        await firebaseService.bulkApproveVoiceSubmissions(
+          ids,
+          user.uid,
+          validatorRole,
+        );
       } else if (action == 'reject') {
-        message = 'Bulk Rejected $count items!';
-        bgColor = AppColors.semanticRed;
+        await firebaseService.bulkRejectVoiceSubmissions(
+          ids,
+          user.uid,
+          validatorRole,
+          feedback,
+        );
       } else if (action == 'flag') {
-        message = 'Bulk Flagged $count items!';
-        bgColor = AppColors.terracotta;
+        await firebaseService.bulkFlagVoiceSubmissions(
+          ids,
+          user.uid,
+          validatorRole,
+          feedback,
+        );
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: bgColor,
-        ),
-      );
+      if (mounted) {
+        String message = 'Bulk ${action.substring(0, 1).toUpperCase() + action.substring(1)}ed ${ids.length} items!';
+        Color bgColor = action == 'approve' ? AppColors.semanticGreen : AppColors.semanticRed;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: bgColor));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Bulk action failed: $e"), backgroundColor: AppColors.semanticRed));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+          _isSelectionMode = false;
+          _selectedIds.clear();
+        });
+      }
     }
   }
 
@@ -1695,6 +1685,8 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
 
   void _showFlagActionSheet(VoiceSubmission submission) {
     final feedbackController = TextEditingController();
+    _recordedTipPath = null;
+    _isRecordingTip = false;
 
     showModalBottomSheet(
       context: context,
@@ -1704,80 +1696,52 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 24,
-            right: 24,
-            top: 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Action Required',
-                style: AppTypography.h2ExtraBold.copyWith(
-                  color: AppColors.gold500,
-                ),
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 24,
+                right: 24,
+                top: 24,
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Decide how to handle "${submission.title}"',
-                style: AppTypography.body.copyWith(
-                  color: AppColors.creamText3,
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 24),
-              TextField(
-                controller: feedbackController,
-                maxLines: 3,
-                style: TextStyle(
-                  color: isDark ? Colors.white : AppColors.creamText,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'e.g., Audio is clipped, please re-record.',
-                  hintStyle: TextStyle(
-                    color: isDark ? Colors.white38 : AppColors.creamText3,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Action Required',
+                    style: AppTypography.h2ExtraBold.copyWith(color: AppColors.gold500),
                   ),
-                  filled: true,
-                  fillColor: isDark
-                      ? AppColors.forest900
-                      : Colors.black.withValues(alpha: 0.05),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
+                  const SizedBox(height: 4),
+                  Text(
+                    'Decide how to handle "${submission.title}"',
+                    style: AppTypography.body.copyWith(color: AppColors.creamText3, fontSize: 12),
                   ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children:
-                    [
-                      'Poor Audio',
-                      'Background Noise',
-                      'Clipped Recording',
-                      'Incorrect Dialect',
-                      'Muffled Speech',
-                      'Other...',
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: feedbackController,
+                    maxLines: 3,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'e.g., Audio is clipped, please re-record.',
+                      hintStyle: const TextStyle(color: Colors.white38),
+                      filled: true,
+                      fillColor: AppColors.forest900,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      'Poor Audio', 'Background Noise', 'Clipped Recording', 'Incorrect Dialect', 'Muffled Speech', 'Other...',
                     ].map((reason) {
                       return ActionChip(
-                        label: Text(
-                          reason,
-                          style: AppTypography.label.copyWith(
-                            color: AppColors.gold500,
-                            fontSize: 10,
-                          ),
-                        ),
-                        backgroundColor: AppColors.gold500.withValues(alpha: 0.1,
-                        ),
-                        side: BorderSide(
-                          color: AppColors.gold500.withValues(alpha: 0.3),
-                        ),
+                        label: Text(reason, style: AppTypography.label.copyWith(color: AppColors.gold500, fontSize: 10)),
+                        backgroundColor: AppColors.gold500.withValues(alpha: 0.1),
+                        side: BorderSide(color: AppColors.gold500.withValues(alpha: 0.3)),
                         onPressed: () {
                           final currentText = feedbackController.text;
                           if (currentText.isEmpty) {
@@ -1788,140 +1752,139 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
                         },
                       );
                     }).toList(),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.terracotta.withValues(
-                          alpha: 0.2,
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(color: AppColors.forest900, borderRadius: BorderRadius.circular(16)),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.mic_rounded, color: AppColors.gold500),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _recordedTipPath != null
+                                ? 'Tip Recorded'
+                                : (_isRecordingTip ? 'Recording...' : 'Add Audio Tip'),
+                            style: AppTypography.body.copyWith(color: AppColors.creamText3, fontSize: 13),
+                          ),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: const BorderSide(color: AppColors.terracotta),
+                        BrandButton(
+                          text: _isRecordingTip ? 'Stop' : (_recordedTipPath != null ? 'Play' : 'Record'),
+                          type: BrandButtonType.secondary,
+                          onTap: () async {
+                            if (_isRecordingTip) {
+                              final path = await _recorder.stop();
+                              setModalState(() {
+                                _isRecordingTip = false;
+                                _recordedTipPath = path;
+                              });
+                            } else if (_recordedTipPath != null) {
+                              await _audioPlayer.play(DeviceFileSource(_recordedTipPath!));
+                            } else {
+                              if (await _recorder.hasPermission()) {
+                                final directory = await getTemporaryDirectory();
+                                final path = '${directory.path}/tip_${DateTime.now().millisecondsSinceEpoch}.m4a';
+                                await _recorder.start(const RecordConfig(), path: path);
+                                setModalState(() => _isRecordingTip = true);
+                              }
+                            }
+                          },
                         ),
-                      ),
-                      onPressed: () async {
-                        final user = ref.read(authStateProvider).value;
-                        final userProfile = ref.read(userProfileProvider).value;
-                        final validatorRole =
-                            userProfile?['role'] ?? 'Validator';
-                        final feedback = feedbackController.text.trim();
-
-                        if (user == null) return;
-                        if (feedback.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Please provide feedback for rejection',
-                              ),
-                              backgroundColor: AppColors.terracotta,
-                            ),
-                          );
-                          return;
-                        }
-
-                        try {
-                          await ref
-                              .read(firebaseServiceProvider)
-                              .rejectVoiceSubmission(
-                                submission.id,
-                                user.uid,
-                                validatorRole,
-                                feedback,
-                              );
-                          if (context.mounted) {
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Voice Recording Rejected'),
-                                backgroundColor: AppColors.semanticRed,
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Error: $e'),
-                                backgroundColor: AppColors.semanticRed,
-                              ),
-                            );
-                          }
-                        }
-                      },
-                      child: Text(
-                        'REJECT',
-                        style: AppTypography.label.copyWith(
-                          color: AppColors.terracotta,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.terracotta,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      onPressed: () async {
-                        final user = ref.read(authStateProvider).value;
-                        final userProfile = ref.read(userProfileProvider).value;
-                        final validatorRole =
-                            userProfile?['role'] ?? 'Validator';
-                        if (user == null) return;
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.terracotta.withValues(alpha: 0.2),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: AppColors.terracotta)),
+                          ),
+                          onPressed: () async {
+                            final user = ref.read(authStateProvider).value;
+                            final userProfile = ref.read(userProfileProvider).value;
+                            final validatorRole = userProfile?['role'] ?? 'Validator';
+                            final feedback = feedbackController.text.trim();
 
-                        try {
-                          await ref
-                              .read(firebaseServiceProvider)
-                              .flagVoiceSubmission(
-                                submission.id,
-                                user.uid,
-                                validatorRole,
-                                feedbackController.text,
-                              );
-                          if (context.mounted) {
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Clarification request sent'),
-                                backgroundColor: AppColors.terracotta,
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Error: $e'),
-                                backgroundColor: AppColors.semanticRed,
-                              ),
-                            );
-                          }
-                        }
-                      },
-                      child: Text(
-                        'SEND REQUEST',
-                        style: AppTypography.label.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
+                            if (user == null) return;
+                            if (feedback.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please provide feedback for rejection'), backgroundColor: AppColors.terracotta));
+                              return;
+                            }
+
+                            try {
+                              // Upload audio tip if exists
+                              if (_recordedTipPath != null) {
+                                setModalState(() => _isProcessing = true);
+                                final fileName = 'tip_${DateTime.now().millisecondsSinceEpoch}.m4a';
+                                await ref.read(supabaseStorageServiceProvider).uploadAudio(File(_recordedTipPath!), fileName);
+                                setModalState(() => _isProcessing = false);
+                              }
+
+                              await ref.read(firebaseServiceProvider).rejectVoiceSubmission(submission.id, user.uid, validatorRole, feedback);
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Voice Recording Rejected'), backgroundColor: AppColors.semanticRed));
+                              }
+                            } catch (e) {
+                              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.semanticRed));
+                            }
+                          },
+                          child: Text('REJECT', style: AppTypography.label.copyWith(color: AppColors.terracotta, fontWeight: FontWeight.w900)),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.terracotta,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          onPressed: () async {
+                            final user = ref.read(authStateProvider).value;
+                            final userProfile = ref.read(userProfileProvider).value;
+                            final validatorRole = userProfile?['role'] ?? 'Validator';
+                            if (user == null) return;
+                            final feedback = feedbackController.text.trim();
+                            if (feedback.isEmpty) {
+                               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feedback required for flag'), backgroundColor: AppColors.terracotta));
+                               return;
+                            }
+
+                            try {
+                              // Upload audio tip if exists
+                              if (_recordedTipPath != null) {
+                                setModalState(() => _isProcessing = true);
+                                final fileName = 'tip_${DateTime.now().millisecondsSinceEpoch}.m4a';
+                                await ref.read(supabaseStorageServiceProvider).uploadAudio(File(_recordedTipPath!), fileName);
+                                setModalState(() => _isProcessing = false);
+                              }
+
+                              await ref.read(firebaseServiceProvider).flagVoiceSubmission(submission.id, user.uid, validatorRole, feedback);
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Clarification request sent'), backgroundColor: AppColors.terracotta));
+                              }
+                            } catch (e) {
+                              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.semanticRed));
+                            }
+                          },
+                          child: Text('SEND REQUEST', style: AppTypography.label.copyWith(color: Colors.white, fontWeight: FontWeight.w900)),
+                        ),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 24),
                 ],
               ),
-              const SizedBox(height: 24),
-            ],
-          ),
+            );
+          },
         );
       },
     );

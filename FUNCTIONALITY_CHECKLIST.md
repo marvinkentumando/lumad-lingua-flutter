@@ -41,8 +41,8 @@ When adding a new item, please use the following format:
 ## 📖 Validator Entries Screen
 - [x] **Search History Management**: Added functionality to clear all search history and delete specific terms from the search history list in the Validator Entries Screen.
 - [x] **Infinite Scroll Indicator**: Added a themed loading spinner at the bottom of the list when fetching more entries to improve user feedback during pagination.
-- [ ] **Bulk Action Variety**: Bulk selection only supports "Approve". No bulk "Reject" or "Flag" options are available.
-- [ ] **Audio Tip Recording**: The "Record" button in the Flagging sheet is a placeholder (only shows a SnackBar) and lacks actual recording/upload functionality.
+- [x] **Bulk Action Variety**: Bulk selection mode now supports "Approve", "Reject", and "Flag" options via a unified bulk action sheet.
+- [x] **Audio Tip Recording**: Validators can now record and upload audio tips during the flagging process to provide oral corrections to contributors.
 - [ ] **Contributor Reputation Accuracy**: Stats like "98% APPROVAL" on entry cards appear to be UI placeholders rather than live data synced with contributor profiles.
 - [x] **Search Existing Logic**: The "Search Existing" button in the term detail view now queries the full dictionary database for duplicates, not just the local list.
 - [x] **Feedback Display Persistence**: In the History view, the feedback is now interactive and can be edited to update decisions (e.g., change from Reject to Approve or update Flag comments).
@@ -83,14 +83,14 @@ When adding a new item, please use the following format:
 - [ ] **Guardian Header Interaction**: The header area showing the contributor's name and rank is currently non-interactive. It should ideally link to a **Profile Settings** or **Rank Progression** detail screen.
 - [ ] **Impact Card Accuracy**: Stats like "Students Helped" and "Total Reach" are global aggregates. These should be filtered to reflect the specific contributor's impact (e.g., how many learners have seen or learned words they contributed).
 - [ ] **Bulk Upload Utility**: The UI for bulk uploading CSV/JSON files is a placeholder. It lacks file picking logic, template validation, and actual backend processing.
-- [ ] **Batch Recording Mode**: The sequencer for recording multiple voice fragments uses mock data ("Word 1", "Word 2"). It should pull real dictionary entries that currently lack audio recordings.
+- [x] **Batch Recording Mode**: The sequencer for recording multiple voice fragments now pulls real dictionary entries that currently lack audio recordings.
 - [ ] **Legacy Tracker Card Interaction**: Contribution cards in the "Legacy Tracker" section (on the Home screen and in the detailed view) are non-interactive. They should navigate to an **Entry Detail** view showing full metadata and any validator feedback.
 - [ ] **Recent Activity Search**: No search bar or filtering by date/keyword within the Legacy Tracker section to find specific past contributions.
 - [ ] **Success Dialog XP Hardcoding**: The success message after an entry is submitted mentions "You earned 100 XP!", which appears to be a static text regardless of the actual XP reward logic.
 - [ ] **Revised Entry State Management**: The "Revise Entry" button pre-fills the form but creates a new entry instead of updating the existing flagged one, leading to potential duplicates in the validation queue.
 - [ ] **Add Entry: Real-time Duplicate Check**: No background check is performed while typing a new indigenous word to warn the contributor if the word already exists in the database (pending or approved).
 - [ ] **Add Entry: Draft Preservation**: Lack of a "Save as Draft" feature for cultural entries; progress is lost if the submission sheet is closed prematurely.
-- [ ] **Record Fragment: Missing Metadata Fields**: The recording sheet lacks fields for "Title" and "Transcription", resulting in generic "New Pronunciation" labels in the database.
+- [x] **Record Fragment: Missing Metadata Fields**: Added fields for "Title" and "Transcription" to the recording sheet, ensuring submissions are properly indexed in the database.
 - [ ] **Record Fragment: Audio Quality Indicator**: No visual feedback on recording quality (e.g., silence detection or background noise warning) before submission.
 
 ## 🏹 Learner Home Screen
@@ -152,9 +152,10 @@ When adding a new item, please use the following format:
 - [ ] **Lesson Lock Explanation**: Tapping a locked lesson card shows a static text hint. It could be improved by explicitly naming which prerequisite lesson needs to be completed.
 - [ ] **Mastery Dashboard Integration**: The "Learning Progress" card links to the Mastery Dashboard, but the dashboard's "Review Ready" action is currently non-interactive.
 - [ ] **Streak Detail Screen**: Tapping the Daily Streak card navigates to a placeholder route (`/streak`). A dedicated screen for streak history and shield management is needed.
-- [ ] **Scenario Hub: Dynamic Content**: Scenario stories are hardcoded in the UI. They should be moved to Firestore to allow educators/admins to add new cultural scenarios.
-- [ ] **Scenario Session Logic**: The navigation to `/scenario-session/:id` is implemented, but the actual interactive story logic (choice-based learning) is missing.
-- [ ] **SRS Weekly Trend Accuracy**: The weekly progress chart in the Mastery Dashboard uses simulated data and needs to be connected to the actual historical learning logs.
+- [x] **Scenario Hub: Dynamic Content**: Moved scenario stories to Firestore, allowing educators/admins to add new cultural scenarios dynamically.
+- [x] **Scenario Session Logic**: Implemented the interactive story engine with choice-based logic and dynamic path resolution.
+- [x] **SRS Review Engine**: Transformed the flashcard system into a full SRS Review Session that automatically picks due cards for reinforcement.
+- [x] **SRS Weekly Trend Accuracy**: The weekly progress chart in the Mastery Dashboard now pulls from a persistent `mastery_history` collection, providing a real 7-day view of learner growth.
 
 ## ⚔️ Challenge Hub
 - [x] **Lingua Duel (Hardcoded Phase)**: P2P battle system with mock matchmaking against bots (e.g., "Datu Matu"). Includes battle loop, HP bars, and win/loss states.
