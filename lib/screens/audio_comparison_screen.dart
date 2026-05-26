@@ -1,18 +1,43 @@
+import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:audio_waveforms/audio_waveforms.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:audioplayers/audioplayers.dart' as ap;
+import 'package:http/http.dart' as http;
+
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/ambient_topo_background.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import '../services/haptic_service.dart';
-import 'package:audio_waveforms/audio_waveforms.dart';
 import '../services/pronunciation_service.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
-import 'dart:math';
-import 'package:flutter/services.dart';
+import '../models/dictionary_entry.dart';
+import '../models/voice_submission.dart';
+import '../services/firebase_service.dart';
+import '../services/supabase_storage_service.dart';
+
+enum PracticeSource { words, phrases }
+
+class ComparisonItem {
+  final String id;
+  final String title;
+  final String subtitle;
+  final String audioUrl;
+  final String language;
+
+  ComparisonItem({
+    required this.id,
+    required this.title,
+    required this.subtitle,
+    required this.audioUrl,
+    required this.language,
+  });
+}
 
 class AudioComparisonScreen extends ConsumerStatefulWidget {
   const AudioComparisonScreen({super.key});
@@ -26,9 +51,16 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   bool _hasResult = false;
   double _score = 0.0;
   PronunciationStrictness _strictness = PronunciationStrictness.normal;
+  PracticeSource _source = PracticeSource.words;
+  int _currentIndex = 0;
+  bool _isShuffled = false;
+  List<ComparisonItem> _gameItems = [];
+  bool _isComparing = false;
+  bool _isLoadingAudio = false;
 
   late final RecorderController _recorderController;
   late final PlayerController _playerController;
+  final ap.AudioPlayer _nativePlayer = ap.AudioPlayer();
   String? _lastRecordingPath;
 
   @override
@@ -42,18 +74,75 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   void dispose() {
     _recorderController.dispose();
     _playerController.dispose();
+    _nativePlayer.dispose();
     super.dispose();
   }
 
-  Future<String> _getAssetPath(String asset) async {
-    final byteData = await rootBundle.load(asset);
-    final directory = await getTemporaryDirectory();
-    final file = File('${directory.path}/${asset.split('/').last}');
-    await file.writeAsBytes(byteData.buffer.asUint8List());
-    return file.path;
+  Future<void> _playNativeAudio(String audioUrl) async {
+    setState(() => _isLoadingAudio = true);
+    try {
+      final resolvedUrl = ref.read(supabaseStorageServiceProvider).getAudioUrl(audioUrl);
+      await _nativePlayer.play(ap.UrlSource(resolvedUrl));
+    } catch (e) {
+      debugPrint('Error playing native audio: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingAudio = false);
+    }
+  }
+
+  void _nextItem() {
+    if (_currentIndex < _gameItems.length - 1) {
+      setState(() {
+        _currentIndex++;
+        _hasResult = false;
+        _score = 0.0;
+      });
+      HapticService.light();
+    }
+  }
+
+  void _previousItem() {
+    if (_currentIndex > 0) {
+      setState(() {
+        _currentIndex--;
+        _hasResult = false;
+        _score = 0.0;
+      });
+      HapticService.light();
+    }
+  }
+
+  void _toggleShuffle() {
+    setState(() {
+      _isShuffled = !_isShuffled;
+      if (_isShuffled) {
+        _gameItems.shuffle();
+      } else {
+        // Simple shuffle again if untoggled, since we don't store original order
+        _gameItems.shuffle();
+      }
+      _currentIndex = 0;
+      _hasResult = false;
+    });
+    HapticService.medium();
+  }
+
+  void _switchSource(PracticeSource newSource) {
+    if (_source == newSource) return;
+    setState(() {
+      _source = newSource;
+      _gameItems = []; // Force reload
+      _currentIndex = 0;
+      _hasResult = false;
+      _score = 0.0;
+    });
+    HapticService.medium();
   }
 
   void _toggleRecording() async {
+    if (_gameItems.isEmpty) return;
+    final currentItem = _gameItems[_currentIndex];
+
     HapticService.selection();
     if (!_isRecording) {
       final directory = await getTemporaryDirectory();
@@ -78,17 +167,27 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           noOfSamples: 100,
         );
 
-        // 2. Simulate Native Waveform (In a real app, this would be pre-extracted or extracted from asset)
-        // For this demo, we'll try to extract it from a real asset if it exists, otherwise use a fallback
+        // 2. Extract Native Waveform from URL
         List<double> nativeWaveform;
         try {
-          final nativePath = await _getAssetPath('assets/audio/madyaw_native.mp3');
+          final resolvedUrl = ref.read(supabaseStorageServiceProvider).getAudioUrl(currentItem.audioUrl);
+
+          // Download to temp file for extraction
+          final directory = await getTemporaryDirectory();
+          final nativeFile = File('${directory.path}/native_temp_${currentItem.id}.mp3');
+
+          if (!await nativeFile.exists()) {
+             final response = await http.get(Uri.parse(resolvedUrl));
+             await nativeFile.writeAsBytes(response.bodyBytes);
+          }
+
           nativeWaveform = await _playerController.waveformExtraction.extractWaveformData(
-            path: nativePath,
+            path: nativeFile.path,
             noOfSamples: 100,
           );
         } catch (e) {
-          // Fallback to a mock "perfect" pattern if asset is missing for now
+          debugPrint('Failed to extract native waveform: $e');
+          // Fallback to a mock pattern if extraction fails
           nativeWaveform = List.generate(100, (i) => (sin(i / 5) * 0.5) + 0.5);
         }
 
@@ -105,10 +204,21 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
             _hasResult = true;
             _score = resultScore;
           });
+
           if (_score > 0.7) {
             HapticService.success();
+            try {
+               await _nativePlayer.play(ap.AssetSource('audio/success.MP3'));
+            } catch (e) {
+               debugPrint('Error playing success sound: $e');
+            }
           } else {
             HapticService.selection();
+            try {
+               await _nativePlayer.play(ap.AssetSource('audio/error.MP3'));
+            } catch (e) {
+               debugPrint('Error playing error sound: $e');
+            }
           }
         }
       } catch (e) {
@@ -120,17 +230,24 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     }
   }
 
-  bool _isComparing = false;
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Fetch data based on source
+    final AsyncValue dataAsync = _source == PracticeSource.words
+        ? ref.watch(allWordsProvider)
+        : ref.watch(allVoiceSubmissionsProvider);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Text(
           'AUDIO COMPARISON',
           style: AppTypography.label.copyWith(
@@ -139,24 +256,140 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
             fontWeight: FontWeight.w900,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              Icons.shuffle_rounded,
+              color: _isShuffled ? AppColors.gold500 : Colors.white70,
+            ),
+            onPressed: _toggleShuffle,
+            tooltip: 'Shuffle Content',
+          ),
+        ],
       ),
       body: AmbientTopoBackground(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildStrictnessSelector(isDark),
-                const SizedBox(height: 24),
-                _buildNativeSpeakerCard(isDark),
-                const SizedBox(height: 32),
-                _buildUserRecordingCard(isDark),
-                const SizedBox(height: 32),
-                if (_hasResult) _buildResultCard(isDark).animate().scale().fadeIn(),
-              ],
+        child: dataAsync.when(
+          data: (items) {
+            // Process and filter items
+            if (_gameItems.isEmpty) {
+              if (_source == PracticeSource.words) {
+                final words = items as List<DictionaryEntry>;
+                _gameItems = words
+                    .where((w) => w.status == ValidationStatus.approved && w.audioUrl != null && w.audioUrl!.isNotEmpty)
+                    .map((w) => ComparisonItem(
+                      id: w.id,
+                      title: w.indigenousWord,
+                      subtitle: w.translation,
+                      audioUrl: w.audioUrl!,
+                      language: w.language,
+                    ))
+                    .toList();
+              } else {
+                final phrases = items as List<VoiceSubmission>;
+                _gameItems = phrases
+                    .where((p) => p.status == VoiceStatus.approved && p.audioUrl.isNotEmpty)
+                    .map((p) => ComparisonItem(
+                      id: p.id,
+                      title: p.title,
+                      subtitle: p.transcript,
+                      audioUrl: p.audioUrl,
+                      language: p.dialect,
+                    ))
+                    .toList();
+              }
+              if (_isShuffled) _gameItems.shuffle();
+            }
+
+            if (_gameItems.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildSourceSelector(isDark),
+                    const SizedBox(height: 40),
+                    Text(
+                      'No approved ${_source.name} available yet.',
+                      style: TextStyle(color: isDark ? Colors.white38 : AppColors.creamText3),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            if (_currentIndex >= _gameItems.length) _currentIndex = 0;
+            final currentItem = _gameItems[_currentIndex];
+
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildSourceSelector(isDark),
+                    const SizedBox(height: 24),
+                    _buildStrictnessSelector(isDark),
+                    const SizedBox(height: 24),
+                    _buildNativeSpeakerCard(isDark, currentItem),
+                    const SizedBox(height: 32),
+                    _buildUserRecordingCard(isDark),
+                    const SizedBox(height: 32),
+                    if (_hasResult) _buildResultCard(isDark).animate().scale().fadeIn(),
+                  ],
+                ),
+              ),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
+          error: (e, _) => Center(child: Text('Error loading content', style: TextStyle(color: Colors.white38))),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSourceSelector(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _sourceButton(PracticeSource.words, 'WORDS', Icons.menu_book_rounded),
+          _sourceButton(PracticeSource.phrases, 'PHRASES', Icons.map_rounded),
+        ],
+      ),
+    );
+  }
+
+  Widget _sourceButton(PracticeSource source, String label, IconData icon) {
+    final isSelected = _source == source;
+    return GestureDetector(
+      onTap: () => _switchSource(source),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.gold500 : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected ? Colors.black : Colors.white54,
             ),
-          ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: AppTypography.label.copyWith(
+                color: isSelected ? Colors.black : Colors.white54,
+                fontWeight: FontWeight.w900,
+                fontSize: 12,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -196,44 +429,77 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     );
   }
 
-  Widget _buildNativeSpeakerCard(bool isDark) {
-    return BrandCard(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          Row(
+  Widget _buildNativeSpeakerCard(bool isDark, ComparisonItem item) {
+    return Column(
+      children: [
+        BrandCard(
+          padding: const EdgeInsets.all(24),
+          child: Column(
             children: [
-              const CircleAvatar(
-                backgroundColor: AppColors.gold500,
-                child: Icon(Icons.person, color: Colors.black),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Native Speaker',
-                      style: AppTypography.label.copyWith(color: AppColors.gold500),
+              Row(
+                children: [
+                  const CircleAvatar(
+                    backgroundColor: AppColors.gold500,
+                    child: Icon(Icons.person, color: Colors.black),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Native Speaker (${item.language})',
+                          style: AppTypography.label.copyWith(color: AppColors.gold500),
+                        ),
+                        Text(
+                          item.title,
+                          style: AppTypography.h3.copyWith(color: Colors.white),
+                        ),
+                        Text(
+                          item.subtitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.body.copyWith(color: Colors.white38, fontSize: 12),
+                        ),
+                      ],
                     ),
-                    Text(
-                      'Madyaw na allaw',
-                      style: AppTypography.h3.copyWith(color: Colors.white),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                onPressed: () {
-                  HapticService.light();
-                  // Mock play native audio
-                },
-                icon: const Icon(Icons.play_circle_fill_rounded, color: AppColors.gold500, size: 40),
+                  ),
+                  _isLoadingAudio
+                    ? const SizedBox(width: 40, height: 40, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.gold500))
+                    : IconButton(
+                        onPressed: () => _playNativeAudio(item.audioUrl),
+                        icon: const Icon(Icons.play_circle_fill_rounded, color: AppColors.gold500, size: 40),
+                      ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            IconButton(
+              onPressed: _currentIndex > 0 ? _previousItem : null,
+              icon: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: _currentIndex > 0 ? AppColors.gold500 : Colors.white10,
+              ),
+            ),
+            Text(
+              'Item ${_currentIndex + 1} of ${_gameItems.length}',
+              style: AppTypography.mono.copyWith(color: Colors.white24, fontSize: 10),
+            ),
+            IconButton(
+              onPressed: _currentIndex < _gameItems.length - 1 ? _nextItem : null,
+              icon: Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: _currentIndex < _gameItems.length - 1 ? AppColors.gold500 : Colors.white10,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
