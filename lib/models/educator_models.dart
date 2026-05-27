@@ -34,14 +34,20 @@ class EducatorLesson {
   }) : createdAt = createdAt ?? DateTime.now();
 
   factory EducatorLesson.fromLesson(Lesson lesson) {
+    String levelLabel = 'Novice';
+    if (lesson.level == 2) {
+      levelLabel = 'Intermediate';
+    } else if (lesson.level >= 3) {
+      levelLabel = 'Expert';
+    }
+
     return EducatorLesson(
       id: lesson.id,
       title: lesson.title,
-      subtitle:
-          '${lesson.level == 1 ? 'Beginner' : 'Advanced'} • ${lesson.language}',
+      subtitle: '$levelLabel • ${lesson.language}',
       status: lesson.status,
       dialect: lesson.language,
-      level: lesson.level == 1 ? 'Beginner' : 'Advanced',
+      level: levelLabel,
       category: lesson.category,
       language: lesson.language,
       unitNumber: lesson.unitNumber,
@@ -60,6 +66,7 @@ class EducatorStudent {
   final int streakDays;
   final bool isStruggling;
   final List<StudentLessonProgress> lessonBreakdown;
+  final Map<String, bool> activityMap;
 
   const EducatorStudent({
     required this.id,
@@ -72,6 +79,7 @@ class EducatorStudent {
     this.streakDays = 0,
     this.isStruggling = false,
     this.lessonBreakdown = const [],
+    this.activityMap = const {},
   });
 }
 

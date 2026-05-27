@@ -33,7 +33,6 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
   final Set<String> _selectedLanguages = {};
   String? _selectedProvince;
   String _searchQuery = '';
-  String _activeSearchQuery = '';
   bool _isSatellite = true;
   LatLng? _userLocation;
   bool _followUser = false;
@@ -618,7 +617,6 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
       onSubmitted: (val) {
         setState(() {
           _searchQuery = val;
-          _activeSearchQuery = val; // Ensure active query updates
         });
         if (val.trim().isNotEmpty) {
           ref.read(searchHistoryProvider.notifier).addTerm(val.trim());
@@ -628,10 +626,6 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
       onChanged: (val) {
         setState(() {
           _searchQuery = val;
-          if (val.isEmpty) {
-            _activeSearchQuery = "";
-          }
-
           // Smart Province Switch: If user types an exact municipality name,
           // find its province and switch the chip automatically.
           if (val.length > 2) {

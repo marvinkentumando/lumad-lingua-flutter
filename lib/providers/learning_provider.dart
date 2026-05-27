@@ -5,6 +5,7 @@ import '../models/lesson.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../providers/artifact_provider.dart';
+import '../services/offline_service.dart';
 
 // ── Lesson Loader Provider (moved here from lesson_session_screen.dart) ──────
 final currentLessonProvider = FutureProvider.family<Lesson?, String>((
@@ -12,6 +13,12 @@ final currentLessonProvider = FutureProvider.family<Lesson?, String>((
   lessonId,
 ) async {
   return ref.read(firebaseServiceProvider).getLessonById(lessonId);
+});
+
+final cachedLessonIdsProvider = StreamProvider<Set<String>>((ref) {
+  return ref.watch(offlineServiceProvider).watchCachedLessons().map((lessons) {
+    return lessons.map((l) => l.id).toSet();
+  });
 });
 
 final latestLessonProvider = Provider<AsyncValue<Map<String, dynamic>>>((ref) {

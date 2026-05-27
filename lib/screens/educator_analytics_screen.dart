@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:csv/csv.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'package:share_plus/share_plus.dart';
+import 'package:go_router/go_router.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
@@ -47,7 +55,13 @@ class _EducatorAnalyticsScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 32),
-                _buildHeader(),
+                _buildHeader(
+                  allUsersAsync.value ?? [],
+                  dialectDistAsync.value ?? {},
+                  analyticsAsync.value ?? {},
+                  totalWordsAsync.value ?? 0,
+                  topLearnersAsync.value ?? [],
+                ),
                 const SizedBox(height: 24),
                 _buildTimeRangeSelector(),
                 const SizedBox(height: 24),
@@ -174,7 +188,13 @@ class _EducatorAnalyticsScreenState
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(
+    List<AdminUser> users,
+    Map<String, double> dialectDist,
+    Map<String, dynamic> analytics,
+    int totalWords,
+    List<Map<String, dynamic>> topLearners,
+  ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -190,7 +210,13 @@ class _EducatorAnalyticsScreenState
         ),
         Row(
           children: [
-            _buildExportButton(),
+            _buildExportButton(
+              users,
+              dialectDist,
+              analytics,
+              totalWords,
+              topLearners,
+            ),
             const SizedBox(width: 8),
             _buildFeedbackBell(),
           ],
@@ -228,31 +254,38 @@ class _EducatorAnalyticsScreenState
   }
 
   Widget _buildActivityChart(List<AdminUser> users) {
-    // Generate activity data based on user creation dates as a proxy for engagement
     final now = DateTime.now();
     final List<Map<String, dynamic>> bars = [];
 
     if (_timeRange == 'Weekly') {
+      // Last 7 days of Daily Active Users (DAU)
       for (int i = 6; i >= 0; i--) {
         final day = now.subtract(Duration(days: i));
-        final count = users
-            .where(
-              (u) => u.joinedAt.day == day.day && u.joinedAt.month == day.month,
-            )
-            .length;
+        final dateKey = "${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}";
+        
+        final count = users.where((u) => u.activityMap[dateKey] == true).length;
+        
         bars.add({
           'label': DateFormat('E').format(day)[0],
-          'value': count + 5,
-        }); // +5 for visualization
+          'value': count,
+        });
       }
     } else {
-      // Mock or simplified monthly
-      bars.addAll([
-        {'label': 'W1', 'value': 12},
-        {'label': 'W2', 'value': 18},
-        {'label': 'W3', 'value': 15},
-        {'label': 'W4', 'value': 22},
-      ]);
+      // Monthly Engagement: Last 6 months
+      for (int i = 5; i >= 0; i--) {
+        final monthDate = DateTime(now.year, now.month - i, 1);
+        final monthPrefix = "${monthDate.year}-${monthDate.month.toString().padLeft(2, '0')}";
+        
+        // Count users active at least once in this month
+        final count = users.where((u) {
+          return u.activityMap.keys.any((k) => k.startsWith(monthPrefix));
+        }).length;
+        
+        bars.add({
+          'label': DateFormat('MMM').format(monthDate),
+          'value': count,
+        });
+      }
     }
 
     final maxVal = bars.fold<int>(
@@ -276,7 +309,7 @@ class _EducatorAnalyticsScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$_timeRange New Learners',
+            _timeRange == 'Weekly' ? 'Daily Active Learners' : 'Monthly Active Learners',
             style: AppTypography.h3.copyWith(
               color: isDark ? Colors.white : AppColors.creamText,
             ),
@@ -434,13 +467,32 @@ class _EducatorAnalyticsScreenState
   }
 
   Widget _buildStudentGrowth(List<AdminUser> users) {
+    final now = DateTime.now();
+    final thirtyDaysAgo = now.subtract(const Duration(days: 30));
+    
     final recentCount = users
-        .where(
-          (u) => u.joinedAt.isAfter(
-            DateTime.now().subtract(const Duration(days: 30)),
-          ),
-        )
+        .where((u) => u.joinedAt.isAfter(thirtyDaysAgo))
         .length;
+
+    // Calculate growth points: cumulative count for each of the last 30 days
+    final List<double> growthPoints = [];
+    final int totalUsersBefore = users.where((u) => u.joinedAt.isBefore(thirtyDaysAgo)).length;
+    
+    int cumulative = totalUsersBefore;
+    for (int i = 29; i >= 0; i--) {
+      final day = now.subtract(Duration(days: i));
+      final joinedThatDay = users.where((u) => 
+        u.joinedAt.year == day.year && 
+        u.joinedAt.month == day.month && 
+        u.joinedAt.day == day.day).length;
+      
+      cumulative += joinedThatDay;
+      growthPoints.add(cumulative.toDouble());
+    }
+
+    // Normalize points to 0.0 - 1.0 range for the painter
+    final maxGrowth = growthPoints.isEmpty ? 1.0 : growthPoints.last;
+    final normalizedPoints = growthPoints.map((p) => maxGrowth > 0 ? p / maxGrowth : 0.0).toList();
 
     return BrandCard(
       padding: const EdgeInsets.all(20),
@@ -464,7 +516,10 @@ class _EducatorAnalyticsScreenState
           const SizedBox(height: 16),
           SizedBox(
             height: 60,
-            child: CustomPaint(painter: _GrowthPainter(), size: Size.infinite),
+            child: CustomPaint(
+              painter: _GrowthPainter(points: normalizedPoints), 
+              size: Size.infinite
+            ),
           ),
         ],
       ),
@@ -503,13 +558,22 @@ class _EducatorAnalyticsScreenState
 
   // --- Static/Helper UI Components ---
 
-  Widget _buildExportButton() {
+  Widget _buildExportButton(
+    List<AdminUser> users,
+    Map<String, double> dialectDist,
+    Map<String, dynamic> analytics,
+    int totalWords,
+    List<Map<String, dynamic>> topLearners,
+  ) {
     return PopupMenuButton<String>(
-      onSelected: (val) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Exported as $val')));
-      },
+      onSelected: (val) => _exportData(
+        val,
+        users,
+        dialectDist,
+        analytics,
+        totalWords,
+        topLearners,
+      ),
       color: isDark ? AppColors.forest800 : Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
@@ -552,22 +616,166 @@ class _EducatorAnalyticsScreenState
     );
   }
 
+  Future<void> _exportData(
+    String format,
+    List<AdminUser> users,
+    Map<String, double> dialectDist,
+    Map<String, dynamic> analytics,
+    int totalWords,
+    List<Map<String, dynamic>> topLearners,
+  ) async {
+    try {
+      final now = DateTime.now();
+      final dateStr = DateFormat('yyyyMMdd_HHmm').format(now);
+      final filename = 'LumadLingua_Report_$dateStr';
+
+      if (format == 'CSV') {
+        final List<List<dynamic>> rows = [];
+        // Header
+        rows.add(['Section', 'Metric', 'Value']);
+        // Overview
+        rows.add(['Overview', 'Total Users', users.length]);
+        rows.add(['Overview', 'Total Words', totalWords]);
+        
+        // Retention
+        final activeCount = users.where((u) => u.xp > 0).length;
+        final retention = users.isEmpty ? 0 : (activeCount / users.length * 100).toInt();
+        rows.add(['Retention', 'Overall Retention %', '$retention%']);
+
+        // Dialects
+        dialectDist.forEach((k, v) {
+          rows.add(['Dialect Mix', k, '${(v * 100).toInt()}%']);
+        });
+
+        // Top Learners
+        rows.add(['Top Learners', 'Rank', 'Username', 'XP']);
+        for (int i = 0; i < topLearners.length; i++) {
+          rows.add(['Top Learners', i + 1, topLearners[i]['username'], topLearners[i]['xp']]);
+        }
+
+        final csvData = ListToCsvConverter().convert(rows);
+        final directory = await getTemporaryDirectory();
+        final file = File('${directory.path}/$filename.csv');
+        await file.writeAsString(csvData);
+
+        await Share.shareXFiles([XFile(file.path)], text: 'Educator Analytics Report (CSV)');
+      } else {
+        // PDF Implementation
+        final pdf = pw.Document();
+        
+        pdf.addPage(
+          pw.MultiPage(
+            pageFormat: PdfPageFormat.a4,
+            build: (context) => [
+              pw.Header(level: 0, child: pw.Text('Lumad Lingua - Educator Analytics Report')),
+              pw.Paragraph(text: 'Generated on: ${DateFormat('MMMM dd, yyyy HH:mm').format(now)}'),
+              
+              pw.Header(level: 1, child: pw.Text('System Overview')),
+              pw.Bullet(text: 'Total Registered Users: ${users.length}'),
+              pw.Bullet(text: 'Total Dictionary Words: $totalWords'),
+              pw.Bullet(text: 'Active Learners (XP > 0): ${users.where((u) => u.xp > 0).length}'),
+              
+              pw.Header(level: 1, child: pw.Text('Dialect Distribution')),
+              pw.TableHelper.fromTextArray(
+                context: context,
+                data: [
+                  ['Dialect', 'Percentage'],
+                  ...dialectDist.entries.map((e) => [e.key, '${(e.value * 100).toInt()}%']),
+                ],
+              ),
+
+              pw.Header(level: 1, child: pw.Text('Quiz Performance')),
+              pw.TableHelper.fromTextArray(
+                context: context,
+                data: [
+                  ['Lesson Name', 'Pass Rate', 'Fail Rate'],
+                  ...List<Map<String, dynamic>>.from(analytics['quizPerformance'] ?? []).map((q) => [
+                    q['name'], '${q['pass']}%', '${q['fail']}%'
+                  ]),
+                ],
+              ),
+
+              pw.Header(level: 1, child: pw.Text('Top Learners')),
+              pw.TableHelper.fromTextArray(
+                context: context,
+                data: [
+                  ['Rank', 'Username', 'Village', 'XP'],
+                  ...topLearners.asMap().entries.map((e) => [
+                    e.key + 1, e.value['username'], e.value['indigenousGroup'] ?? 'Unknown', e.value['xp']
+                  ]),
+                ],
+              ),
+            ],
+          ),
+        );
+
+        final directory = await getTemporaryDirectory();
+        final file = File('${directory.path}/$filename.pdf');
+        await file.writeAsBytes(await pdf.save());
+
+        await Share.shareXFiles([XFile(file.path)], text: 'Educator Analytics Report (PDF)');
+      }
+    } catch (e) {
+      debugPrint('Export Error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to export: $e'), backgroundColor: AppColors.semanticRed),
+        );
+      }
+    }
+  }
+
   Widget _buildFeedbackBell() {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.forestDarkCard : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.05)
-              : AppColors.creamBorder,
-        ),
-      ),
-      child: const Icon(
-        Icons.mark_email_unread_rounded,
-        color: AppColors.gold500,
-        size: 20,
+    final unreadCountAsync = ref.watch(unreadFeedbackCountProvider);
+    final count = unreadCountAsync.value ?? 0;
+
+    return GestureDetector(
+      onTap: () => context.push('/educator/feedback'),
+      child: Stack(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.forestDarkCard : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : AppColors.creamBorder,
+              ),
+            ),
+            child: const Icon(
+              Icons.mark_email_unread_rounded,
+              color: AppColors.gold500,
+              size: 20,
+            ),
+          ),
+          if (count > 0)
+            Positioned(
+              top: -2,
+              right: -2,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: AppColors.semanticRed,
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(
+                  minWidth: 16,
+                  minHeight: 16,
+                ),
+                child: Text(
+                  count > 9 ? '9+' : '$count',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ).animate().scale().shake(),
+            ),
+        ],
       ),
     );
   }
@@ -877,9 +1085,13 @@ class _EducatorAnalyticsScreenState
 }
 
 class _GrowthPainter extends CustomPainter {
+  final List<double> points;
+  _GrowthPainter({required this.points});
+
   @override
   void paint(Canvas canvas, Size size) {
-    final points = [0.2, 0.3, 0.25, 0.45, 0.5, 0.65, 0.7, 0.85, 0.9, 1.0];
+    if (points.isEmpty) return;
+    
     final paint = Paint()
       ..color = AppColors.semanticGreen
       ..strokeWidth = 2
@@ -896,8 +1108,9 @@ class _GrowthPainter extends CustomPainter {
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     final path = Path();
     final fillPath = Path();
+    
     for (int i = 0; i < points.length; i++) {
-      final x = (i / (points.length - 1)) * size.width;
+      final x = (i / (points.length == 1 ? 1 : points.length - 1)) * size.width;
       final y = size.height - (points[i] * size.height);
       if (i == 0) {
         path.moveTo(x, y);
@@ -915,7 +1128,8 @@ class _GrowthPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _GrowthPainter oldDelegate) => 
+      oldDelegate.points != points;
 }
 
 

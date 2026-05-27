@@ -14,7 +14,50 @@ enum PronunciationStrictness {
   const PronunciationStrictness(this.sensitivity);
 }
 
+class PronunciationScore {
+  final double overallScore;
+  final double accuracy;
+  final double fluency;
+  final double clarity;
+  final List<double> nativeWaveform;
+  final List<double> studentWaveform;
+
+  PronunciationScore({
+    required this.overallScore,
+    required this.accuracy,
+    required this.fluency,
+    required this.clarity,
+    required this.nativeWaveform,
+    required this.studentWaveform,
+  });
+}
+
 class PronunciationService {
+  /// Compares two waveforms and returns a detailed analysis score.
+  static PronunciationScore analyzePronunciation(
+    List<double> nativeWave,
+    List<double> userWave, {
+    PronunciationStrictness strictness = PronunciationStrictness.normal,
+  }) {
+    final overallMatch = compareWaveforms(nativeWave, userWave, strictness: strictness);
+
+    // Heuristic-based metrics for the prototype
+    final accuracy = overallMatch;
+    // Fluency based on rhythm (timing alignment)
+    final fluency = (1.0 - (1.0 - (userWave.length / nativeWave.length)).abs()).clamp(0.5, 1.0);
+    // Clarity based on peak distribution
+    final clarity = (userWave.where((v) => v > 0.2).length / (userWave.isEmpty ? 1 : userWave.length)).clamp(0.4, 1.0);
+
+    return PronunciationScore(
+      overallScore: overallMatch * 100,
+      accuracy: accuracy,
+      fluency: fluency,
+      clarity: clarity,
+      nativeWaveform: nativeWave,
+      studentWaveform: userWave,
+    );
+  }
+
   /// Compares two waveforms using Dynamic Time Warping (DTW)
   /// and returns a match score between 0.0 and 1.0.
   static double compareWaveforms(

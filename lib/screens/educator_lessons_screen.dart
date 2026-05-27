@@ -23,6 +23,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
   String _selectedTab = 'All';
   LessonSort _currentSort = LessonSort.newest;
   bool _isGridView = true;
+  bool _isMapView = false;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -32,11 +33,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
     super.dispose();
   }
 
-  List<EducatorLesson> _filterAndSortLessons(List<Lesson> rawLessons) {
-    var allEducatorLessons = rawLessons
-        .map((l) => EducatorLesson.fromLesson(l))
-        .toList();
-
+  List<EducatorLesson> _filterAndSortLessons(List<EducatorLesson> allEducatorLessons) {
     var list = allEducatorLessons.where((lesson) {
       bool matchesTab = false;
       if (_selectedTab == 'All') {
@@ -50,6 +47,10 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
           'Pending': 'PENDING_REVIEW',
         };
         matchesTab = lesson.status.toUpperCase() == statusMap[_selectedTab];
+      } else if (_selectedTab == 'Novice' ||
+          _selectedTab == 'Intermediate' ||
+          _selectedTab == 'Expert') {
+        matchesTab = lesson.level == _selectedTab;
       } else {
         matchesTab = lesson.category == _selectedTab;
       }
@@ -78,14 +79,16 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final lessonsAsync = ref.watch(allLessonsStreamProvider);
+    final educatorLessonsAsync = ref.watch(educatorLessonsProvider);
+    final rawLessonsAsync = ref.watch(allLessonsStreamProvider);
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
       body: SafeArea(
-        child: lessonsAsync.when(
-          data: (rawLessons) {
-            final lessons = _filterAndSortLessons(rawLessons);
+        child: educatorLessonsAsync.when(
+          data: (allEduLessons) {
+            final lessons = _filterAndSortLessons(allEduLessons);
+            final rawLessons = rawLessonsAsync.value ?? [];
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -109,36 +112,43 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '${rawLessons.length} lessons • ${rawLessons.where((l) => l.status == 'PUBLISHED').length} published',
+                                '${allEduLessons.length} lessons • ${allEduLessons.where((l) => l.status == 'PUBLISHED').length} published',
                                 style: AppTypography.body.copyWith(
                                   color: isDark ? Colors.white24 : AppColors.creamText3,
                                 ),
                               ),
                             ],
                           ),
-                          // Grid/List toggle
-                          GestureDetector(
-                            onTap: () =>
-                                setState(() => _isGridView = !_isGridView),
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: isDark ? AppColors.forestDarkCard : Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isDark
-                                      ? Colors.white.withValues(alpha: 0.05)
-                                      : AppColors.creamBorder,
-                                ),
+                          // View Toggles
+                          Row(
+                            children: [
+                              _buildViewToggleBtn(
+                                Icons.grid_view_rounded,
+                                _isGridView && !_isMapView,
+                                () => setState(() {
+                                  _isGridView = true;
+                                  _isMapView = false;
+                                }),
                               ),
-                              child: Icon(
-                                _isGridView
-                                    ? Icons.view_list_rounded
-                                    : Icons.grid_view_rounded,
-                                color: AppColors.gold500,
-                                size: 20,
+                              const SizedBox(width: 8),
+                              _buildViewToggleBtn(
+                                Icons.view_list_rounded,
+                                !_isGridView && !_isMapView,
+                                () => setState(() {
+                                  _isGridView = false;
+                                  _isMapView = false;
+                                }),
                               ),
-                            ),
+                              const SizedBox(width: 8),
+                              _buildViewToggleBtn(
+                                Icons.account_tree_rounded,
+                                _isMapView,
+                                () => setState(() {
+                                  _isMapView = true;
+                                }),
+                                tooltip: 'Curriculum Map',
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -165,6 +175,8 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                 Expanded(
                   child: lessons.isEmpty
                       ? _buildEmptyState()
+                      : _isMapView
+                      ? _CurriculumMapView(lessons: rawLessons)
                       : _isGridView
                       ? GridView.builder(
                           padding: const EdgeInsets.symmetric(
@@ -214,6 +226,48 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
         onPressed: () => context.push('/lesson-editor'),
         backgroundColor: AppColors.gold500,
         child: const Icon(Icons.add_rounded, color: AppColors.forest900),
+      ),
+    );
+  }
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.push('/lesson-editor'),
+        backgroundColor: AppColors.gold500,
+        child: const Icon(Icons.add_rounded, color: AppColors.forest900),
+      ),
+    );
+  }
+
+  Widget _buildViewToggleBtn(
+    IconData icon,
+    bool isActive,
+    VoidCallback onTap, {
+    String? tooltip,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Tooltip(
+        message: tooltip ?? '',
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: isActive
+                ? AppColors.gold500
+                : (isDark ? AppColors.forestDarkCard : Colors.white),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isActive
+                  ? AppColors.gold500
+                  : (isDark
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : AppColors.creamBorder),
+            ),
+          ),
+          child: Icon(
+            icon,
+            color: isActive ? AppColors.forest900 : AppColors.gold500,
+            size: 20,
+          ),
+        ),
       ),
     );
   }
@@ -370,6 +424,9 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
       'Published',
       'Pending',
       'Draft',
+      'Novice',
+      'Intermediate',
+      'Expert',
       'Vocabulary',
       'Oral History',
       'Rituals',
@@ -457,6 +514,16 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                 () {
                   Navigator.pop(ctx);
                   context.push('/lesson-editor', extra: lesson.id);
+                },
+              ),
+              // View Students
+              _buildActionTile(
+                Icons.group_rounded,
+                'View Students',
+                'See who has started or completed this lesson',
+                () {
+                  Navigator.pop(ctx);
+                  _showStudentCompletionSheet(lesson);
                 },
               ),
               // Publish / Unpublish toggle
@@ -621,6 +688,18 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
           ),
         );
       },
+    );
+  }
+
+  void _showStudentCompletionSheet(EducatorLesson lesson) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      builder: (ctx) => _StudentCompletionSheet(lesson: lesson),
     );
   }
 
@@ -983,6 +1062,484 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CurriculumMapView extends StatefulWidget {
+  final List<Lesson> lessons;
+  const _CurriculumMapView({required this.lessons});
+
+  @override
+  State<_CurriculumMapView> createState() => _CurriculumMapViewState();
+}
+
+class _CurriculumMapViewState extends State<_CurriculumMapView> {
+  final Map<String, GlobalKey> _nodeKeys = {};
+  
+  @override
+  void initState() {
+    super.initState();
+    _refreshKeys();
+  }
+
+  void _refreshKeys() {
+    for (var l in widget.lessons) {
+      _nodeKeys[l.id] = GlobalKey();
+    }
+  }
+
+  @override
+  void didUpdateWidget(_CurriculumMapView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.lessons.length != widget.lessons.length) {
+      _refreshKeys();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    // Group lessons by language, then by unit
+    final languages = <String, Map<int, List<Lesson>>>{};
+    for (var l in widget.lessons) {
+      final langMap = languages.putIfAbsent(l.language, () => {});
+      langMap.putIfAbsent(l.unitNumber, () => []).add(l);
+    }
+    final sortedLanguages = languages.keys.toList()..sort();
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.vertical,
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(vertical: 40),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: sortedLanguages.map((lang) {
+          final units = languages[lang]!;
+          final sortedUnits = units.keys.toList()..sort();
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 32, bottom: 16),
+                child: Text(
+                  lang.toUpperCase(),
+                  style: AppTypography.h3.copyWith(
+                    color: AppColors.gold500,
+                    letterSpacing: 2,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(32, 0, 32, 64),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // Lines Layer
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: _CurriculumLinePainter(
+                          lessons: widget.lessons.where((l) => l.language == lang).toList(),
+                          nodeKeys: _nodeKeys,
+                          context: context,
+                        ),
+                      ),
+                    ),
+                    // Nodes Layer
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: sortedUnits.map((uNum) {
+                        final unitLessons = units[uNum]!;
+                        return Container(
+                          width: 200,
+                          margin: const EdgeInsets.only(right: 80),
+                          child: Column(
+                            children: [
+                              // Unit Indicator
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.05),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'UNIT $uNum',
+                                  style: AppTypography.label.copyWith(
+                                    color: isDark ? Colors.white24 : AppColors.creamText3,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              // Lessons
+                              ...unitLessons.map((l) => _buildNode(l, isDark)),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(color: Colors.white10, indent: 32, endIndent: 32),
+              const SizedBox(height: 32),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildNode(Lesson lesson, bool isDark) {
+    return Padding(
+      key: _nodeKeys[lesson.id],
+      padding: const EdgeInsets.only(bottom: 32),
+      child: GestureDetector(
+        onTap: () => context.push('/lesson-editor', extra: lesson.id),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.forestDarkCard : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: lesson.status == 'PUBLISHED'
+                  ? AppColors.gold500.withValues(alpha: 0.3)
+                  : (isDark ? Colors.white10 : AppColors.creamBorder),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                lesson.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.body.copyWith(
+                  color: isDark ? Colors.white : AppColors.forest900,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'LVL ${lesson.level}',
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.gold500,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  if (lesson.prerequisiteId != null && lesson.prerequisiteId!.isNotEmpty)
+                    const Icon(Icons.link_rounded, size: 12, color: AppColors.gold500),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CurriculumLinePainter extends CustomPainter {
+  final List<Lesson> lessons;
+  final Map<String, GlobalKey> nodeKeys;
+  final BuildContext context;
+
+  _CurriculumLinePainter({
+    required this.lessons,
+    required this.nodeKeys,
+    required this.context,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppColors.gold500.withValues(alpha: 0.2)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final arrowPaint = Paint()
+      ..color = AppColors.gold500.withValues(alpha: 0.3)
+      ..style = PaintingStyle.fill;
+
+    for (var l in lessons) {
+      if (l.prerequisiteId != null && l.prerequisiteId!.isNotEmpty) {
+        final startKey = nodeKeys[l.prerequisiteId];
+        final endKey = nodeKeys[l.id];
+
+        if (startKey != null && endKey != null) {
+          final startBox = startKey.currentContext?.findRenderObject() as RenderBox?;
+          final endBox = endKey.currentContext?.findRenderObject() as RenderBox?;
+
+          if (startBox != null && endBox != null) {
+            final startPos = startBox.localToGlobal(
+              Offset(startBox.size.width, startBox.size.height / 2),
+            );
+            final endPos = endBox.localToGlobal(
+              Offset(0, endBox.size.height / 2),
+            );
+
+            final renderBox = context.findRenderObject() as RenderBox;
+            final localStart = renderBox.globalToLocal(startPos);
+            final localEnd = renderBox.globalToLocal(endPos);
+
+            final path = Path();
+            path.moveTo(localStart.dx, localStart.dy);
+            
+            final double midX = localStart.dx + (localEnd.dx - localStart.dx) / 2;
+            
+            path.cubicTo(
+              midX, localStart.dy,
+              midX, localEnd.dy,
+              localEnd.dx, localEnd.dy,
+            );
+
+            canvas.drawPath(path, paint);
+            
+            final arrowPath = Path();
+            arrowPath.moveTo(localEnd.dx, localEnd.dy);
+            arrowPath.lineTo(localEnd.dx - 6, localEnd.dy - 4);
+            arrowPath.lineTo(localEnd.dx - 6, localEnd.dy + 4);
+            arrowPath.close();
+            canvas.drawPath(arrowPath, arrowPaint);
+          }
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _CurriculumLinePainter oldDelegate) => true;
+}
+
+class _StudentCompletionSheet extends ConsumerWidget {
+  final EducatorLesson lesson;
+  const _StudentCompletionSheet({required this.lesson});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final studentsAsync = ref.watch(educatorStudentsProvider);
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.75,
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white24 : AppColors.creamBorder,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Student Progress',
+                      style: AppTypography.h2ExtraBold.copyWith(
+                        color: AppColors.gold500,
+                        fontSize: 20,
+                      ),
+                    ),
+                    Text(
+                      lesson.title,
+                      style: AppTypography.body.copyWith(
+                        color: isDark ? Colors.white38 : AppColors.creamText3,
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: Icon(
+                  Icons.close_rounded,
+                  color: isDark ? Colors.white38 : AppColors.creamText3,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Expanded(
+            child: studentsAsync.when(
+              data: (allStudents) {
+                // Filter students who have interacted with this lesson
+                final activeStudents = allStudents.where((s) {
+                  return s.lessonBreakdown.any((lb) => lb.lessonTitle == lesson.title);
+                }).toList();
+
+                if (activeStudents.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.group_off_rounded,
+                          size: 48,
+                          color: isDark ? Colors.white10 : AppColors.creamBorder,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No students have started this yet.',
+                          style: TextStyle(
+                            color: isDark ? Colors.white24 : AppColors.creamText3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  itemCount: activeStudents.length,
+                  padding: const EdgeInsets.only(bottom: 40),
+                  itemBuilder: (context, index) {
+                    final student = activeStudents[index];
+                    final progress = student.lessonBreakdown.firstWhere(
+                      (lb) => lb.lessonTitle == lesson.title,
+                    );
+
+                    return _buildStudentItem(student, progress, isDark);
+                  },
+                );
+              },
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: AppColors.gold500),
+              ),
+              error: (err, _) => Center(child: Text('Error: $err')),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStudentItem(
+    EducatorStudent student,
+    StudentLessonProgress progress,
+    bool isDark,
+  ) {
+    Color statusColor;
+    IconData statusIcon;
+    switch (progress.status) {
+      case 'Completed':
+        statusColor = AppColors.semanticGreen;
+        statusIcon = Icons.check_circle_rounded;
+        break;
+      case 'In Progress':
+        statusColor = AppColors.gold500;
+        statusIcon = Icons.pending_rounded;
+        break;
+      default:
+        statusColor = isDark ? Colors.white24 : AppColors.creamText3;
+        statusIcon = Icons.not_started_rounded;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.forestDarkCard : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.creamBorder,
+        ),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundImage: student.avatar.startsWith('http')
+                ? NetworkImage(student.avatar) as ImageProvider
+                : AssetImage(student.avatar),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  student.name,
+                  style: AppTypography.body.copyWith(
+                    color: isDark ? Colors.white : AppColors.forest900,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Accuracy: ${(progress.accuracy * 100).toInt()}%',
+                  style: AppTypography.label.copyWith(
+                    color: isDark ? Colors.white24 : AppColors.creamText3,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(statusIcon, size: 12, color: statusColor),
+                  const SizedBox(width: 4),
+                  Text(
+                    progress.status.toUpperCase(),
+                    style: AppTypography.label.copyWith(
+                      color: statusColor,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${(progress.progress * 100).toInt()}% SCORE',
+                style: AppTypography.mono.copyWith(
+                  color: isDark ? Colors.white38 : AppColors.creamText3,
+                  fontSize: 8,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

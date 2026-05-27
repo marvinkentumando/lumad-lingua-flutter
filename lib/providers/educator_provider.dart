@@ -77,9 +77,43 @@ final educatorStudentsProvider = StreamProvider<List<EducatorStudent>>((ref) {
         streakDays: user.streak,
         isStruggling: user.xp < 50 && completedCount < 2, // Sample heuristic
         lessonBreakdown: breakdown,
+        activityMap: user.activityMap,
       ));
     }
 
     return students;
   });
+});
+
+final educatorLessonsProvider = StreamProvider<List<EducatorLesson>>((ref) {
+  final lessonsAsync = ref.watch(allLessonsStreamProvider);
+  final studentsAsync = ref.watch(educatorStudentsProvider);
+
+  return lessonsAsync.when(
+    data: (lessons) {
+      return studentsAsync.when(
+        data: (students) {
+          return Stream.value(lessons.map((l) {
+            final eduLesson = EducatorLesson.fromLesson(l);
+            
+            // Calculate real student count and completion rate
+            final activeStudents = students.where((s) {
+              return s.lessonBreakdown.any((lb) => lb.lessonTitle == l.title);
+            }).toList();
+            
+            final completedStudents = activeStudents.where((s) {
+              return s.lessonBreakdown.any((lb) => lb.lessonTitle == l.title && lb.status == 'Completed');
+            }).toList();
+
+            return eduLesson..studentCount = activeStudents.length
+                           ..completionRate = activeStudents.isEmpty ? 0 : completedStudents.length / activeStudents.length;
+          }).toList());
+        },
+        loading: () => Stream.value(lessons.map((l) => EducatorLesson.fromLesson(l)).toList()),
+        error: (_, __) => Stream.value(lessons.map((l) => EducatorLesson.fromLesson(l)).toList()),
+      );
+    },
+    loading: () => const Stream.empty(),
+    error: (e, st) => Stream.error(e, st),
+  );
 });

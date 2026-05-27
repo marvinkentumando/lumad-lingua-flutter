@@ -14,6 +14,7 @@ import '../widgets/lesson_step_card.dart';
 import '../widgets/skeleton.dart';
 import '../utils/icon_utils.dart';
 import '../providers/student_provider.dart';
+import '../providers/learning_provider.dart';
 import '../providers/user_preferences_provider.dart';
 import '../widgets/ambient_topo_background.dart';
 
@@ -426,6 +427,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
   Widget _buildSliverPathContent(BuildContext context, bool isClassic) {
     final lessonsAsync = ref.watch(lessonsStreamProvider);
     final studentState = ref.watch(studentProvider);
+    final cachedLessonIds = ref.watch(cachedLessonIdsProvider).value ?? {};
 
     // Get lessonId from URL
     final uri = GoRouterState.of(context).uri;
@@ -467,8 +469,8 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
         return SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           sliver: isClassic
-              ? _buildSliverClassicPath(context, grouped, studentState, isSummitUnlocked)
-              : _buildSliverMountainPath(context, grouped, studentState, isSummitUnlocked),
+              ? _buildSliverClassicPath(context, grouped, studentState, cachedLessonIds, isSummitUnlocked)
+              : _buildSliverMountainPath(context, grouped, studentState, cachedLessonIds, isSummitUnlocked),
         );
       },
       loading: () => SliverToBoxAdapter(child: _buildPathSkeleton()),
@@ -498,6 +500,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
     BuildContext context,
     Map<int, List<Lesson>> grouped,
     StudentState studentState,
+    Set<String> cachedLessonIds,
     bool isSummitUnlocked,
   ) {
     final List<Widget> children = [];
@@ -524,6 +527,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
         final progressData = studentState.lessonProgress[lesson.id];
         final isCompleted = progressData?['completed'] == true;
         final bestScore = (progressData?['bestScore'] as num?)?.toInt();
+        final isCached = cachedLessonIds.contains(lesson.id);
 
         LessonStepStatus status = LessonStepStatus.locked;
         bool isLocked = false;
@@ -566,6 +570,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                 bestScore: bestScore,
                 lessonId: lesson.id,
                 isLast: isLast,
+                isCached: isCached,
               ),
             ),
           ),
@@ -664,6 +669,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
     BuildContext context,
     Map<int, List<Lesson>> grouped,
     StudentState studentState,
+    Set<String> cachedLessonIds,
     bool isSummitUnlocked,
   ) {
     final List<Widget> children = [];
@@ -685,6 +691,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
         final lesson = reversedLessons[i];
         final progressData = studentState.lessonProgress[lesson.id];
         final isCompleted = progressData?['completed'] == true;
+        final isCached = cachedLessonIds.contains(lesson.id);
         bool isLocked = false;
         if (lesson.prerequisiteId != null && lesson.prerequisiteId!.isNotEmpty) {
           isLocked = studentState.lessonProgress[lesson.prerequisiteId]?['completed'] != true;
@@ -712,6 +719,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                   : (isCompleted ? Icons.check_rounded : IconUtils.getIconData(lesson.icon)),
               isCompleted: isCompleted,
               isActive: isActive,
+              isCached: isCached,
               label: lesson.title,
               onTap: isLocked
                   ? null
@@ -792,6 +800,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
     required bool isCompleted,
     required bool isActive,
     bool isExam = false,
+    bool isCached = false,
     String? label,
     VoidCallback? onTap,
   }) {
@@ -806,6 +815,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
           children: [
             Stack(
               alignment: Alignment.center,
+              clipBehavior: Clip.none,
               children: [
                 if (isActive)
                   AnimatedBuilder(
@@ -865,6 +875,30 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                     size: isActive ? 34 : 28,
                   ),
                 ),
+                if (isCached)
+                  Positioned(
+                    top: -4,
+                    right: -4,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: AppColors.semanticGreen,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.offline_pin_rounded,
+                        color: Colors.white,
+                        size: 14,
+                      ),
+                    ).animate().scale(duration: 400.ms, curve: Curves.elasticOut),
+                  ),
               ],
             ),
             if (label != null) ...[

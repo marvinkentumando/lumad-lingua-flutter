@@ -14,6 +14,7 @@ class LessonStepCard extends StatelessWidget {
   final int? bestScore;
   final String? lessonId;
   final bool isLast;
+  final bool isCached;
 
   const LessonStepCard({
     super.key,
@@ -24,6 +25,7 @@ class LessonStepCard extends StatelessWidget {
     this.bestScore,
     this.lessonId,
     this.isLast = false,
+    this.isCached = false,
   });
 
   @override
@@ -92,12 +94,27 @@ class LessonStepCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: AppTypography.h3.copyWith(
-                        color: isDark ? Colors.white : Colors.black,
-                        fontSize: 16,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: AppTypography.h3.copyWith(
+                              color: isDark ? Colors.white : Colors.black,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                        if (isCached)
+                          const Padding(
+                            padding: EdgeInsets.only(left: 8),
+                            child: Icon(
+                              Icons.offline_pin_rounded,
+                              color: AppColors.semanticGreen,
+                              size: 16,
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Text(

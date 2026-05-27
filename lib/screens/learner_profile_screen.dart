@@ -9,7 +9,6 @@ import '../widgets/brand_card.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:lumad_lingua/services/firebase_service.dart';
-import 'package:lumad_lingua/services/auth_service.dart';
 import '../providers/role_provider.dart';
 import '../providers/student_provider.dart';
 import '../providers/contributor_request_provider.dart';
@@ -558,6 +557,16 @@ class LearnerProfileScreen extends ConsumerWidget {
           },
         ),
         const SizedBox(height: 12),
+        if (role == UserRole.learner) ...[
+          _buildManagementTile(
+            context,
+            Icons.forum_rounded,
+            'Send Feedback',
+            'Message your educators about your journey',
+            onTap: () => _showFeedbackDialog(context, ref, profile),
+          ),
+          const SizedBox(height: 12),
+        ],
         if (profile?['role']?.toString().toLowerCase() == 'admin') ...[
           _buildManagementTile(
             context,
@@ -1247,6 +1256,80 @@ class LearnerProfileScreen extends ConsumerWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _showFeedbackDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic>? profile,
+  ) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.forestDarkCard,
+        title: const Text('Send Feedback', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Have a question or suggestion? Message your educators directly.',
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              maxLines: 3,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Type your message...',
+                hintStyle: const TextStyle(color: Colors.white24),
+                filled: true,
+                fillColor: AppColors.forest800,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (controller.text.trim().isEmpty) return;
+              final user = ref.read(authStateProvider).value;
+              if (user != null) {
+                await ref.read(firebaseServiceProvider).submitStudentFeedback(
+                      studentId: user.uid,
+                      studentName: profile?['username'] ?? 'Tribe Member',
+                      studentPhotoUrl: profile?['photoURL'],
+                      message: controller.text.trim(),
+                    );
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Feedback sent to educators!'),
+                      backgroundColor: AppColors.semanticGreen,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.gold500,
+              foregroundColor: AppColors.forest900,
+            ),
+            child: const Text('SEND'),
+          ),
+        ],
       ),
     );
   }

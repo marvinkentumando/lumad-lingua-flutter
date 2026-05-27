@@ -13,6 +13,7 @@ class AdminUser {
 
   String? photoURL;
   int streak;
+  Map<String, bool> activityMap;
 
   AdminUser({
     required this.id,
@@ -28,6 +29,7 @@ class AdminUser {
     this.totalContributions = 0,
     this.photoURL,
     this.streak = 0,
+    this.activityMap = const {},
   }) : joinedAt = joinedAt ?? DateTime.now(),
        lastActive = lastActive ?? DateTime.now();
 
@@ -50,6 +52,7 @@ class AdminUser {
       totalContributions: data['wordCount'] ?? 0,
       photoURL: data['photoURL'],
       streak: data['streak'] ?? 0,
+      activityMap: Map<String, bool>.from(data['activityMap'] ?? {}),
     );
   }
 }

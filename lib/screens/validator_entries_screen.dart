@@ -253,7 +253,6 @@ class _ValidatorEntriesScreenState
                   final query = _activeSearchQuery.toLowerCase();
                   filteredList = filteredList.where((item) {
                     final word = item.indigenousWord.toLowerCase();
-                    // Removed dialect and contributor name search as per request
                     return word.contains(query);
                   }).toList();
                 }
@@ -1013,7 +1012,7 @@ class _ValidatorEntriesScreenState
                   });
                 } else {
                   _showFullTermSheet(entry);
-                }
+              }
               },
               child: Padding(
                 padding: const EdgeInsets.only(left: 20, right: 20, top: 20),
@@ -1734,10 +1733,7 @@ class _ValidatorEntriesScreenState
                             }
 
                             await ref.read(firebaseServiceProvider).rejectWord(entry.id, userId, userRole, feedback);
-                            if (audioTipUrl != null) {
-                              // Link audio tip to word if needed (currently not in model, but could be added)
-                            }
-
+                            
                             if (!mounted) return;
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(entry.status == ValidationStatus.pending ? 'Entry Rejected' : 'Decision Updated'), backgroundColor: AppColors.semanticRed));
@@ -1770,7 +1766,6 @@ class _ValidatorEntriesScreenState
                             }
 
                             await ref.read(firebaseServiceProvider).flagWord(entry.id, userId, userRole, feedback);
-                            // Link audioTipUrl if needed
 
                             if (!mounted) return;
                             Navigator.pop(context);
@@ -1932,6 +1927,14 @@ class _ValidatorEntriesScreenState
                   fontSize: 16,
                 ),
               ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  _buildTranslationPill("ENG", entry.translation),
+                  const SizedBox(width: 8),
+                  _buildTranslationPill("FIL", entry.translationFilipino),
+                ],
+              ),
               const SizedBox(height: 32),
               Expanded(
                 child: SingleChildScrollView(
@@ -2020,8 +2023,34 @@ class _ValidatorEntriesScreenState
       },
     );
   }
+
+  Widget _buildTranslationPill(String label, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: RichText(
+        text: TextSpan(
+          style: AppTypography.body.copyWith(fontSize: 14),
+          children: [
+            TextSpan(
+              text: "$label ",
+              style: const TextStyle(
+                color: AppColors.gold500,
+                fontWeight: FontWeight.w900,
+                fontSize: 10,
+              ),
+            ),
+            TextSpan(
+              text: text,
+              style: const TextStyle(color: Colors.white),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
-
-
-
-

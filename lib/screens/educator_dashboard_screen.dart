@@ -8,6 +8,8 @@ import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import '../models/admin_models.dart';
 import '../models/lesson.dart';
+import '../models/dictionary_entry.dart';
+import '../models/community_activity.dart';
 import '../widgets/wotd_widget.dart';
 
 class EducatorDashboardScreen extends ConsumerStatefulWidget {
@@ -16,6 +18,22 @@ class EducatorDashboardScreen extends ConsumerStatefulWidget {
   @override
   ConsumerState<EducatorDashboardScreen> createState() =>
       _EducatorDashboardScreenState();
+}
+
+class _FeedItem {
+  final String text;
+  final DateTime timestamp;
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onTap;
+
+  _FeedItem({
+    required this.text,
+    required this.timestamp,
+    required this.icon,
+    required this.color,
+    this.onTap,
+  });
 }
 
 class _EducatorDashboardScreenState
@@ -39,6 +57,10 @@ class _EducatorDashboardScreenState
     final lessonsAsync = ref.watch(allLessonsStreamProvider);
     final allUsersAsync = ref.watch(allUsersProvider);
     final totalWordsAsync = ref.watch(totalWordsCountProvider);
+    final communityActivitiesAsync = ref.watch(communityFeedProvider);
+    final pendingSubmissionsAsync = ref.watch(
+      pendingDictionaryStreamProvider(const ValidatorQuery('all', 10)),
+    );
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
@@ -48,6 +70,7 @@ class _EducatorDashboardScreenState
             ref.invalidate(allLessonsStreamProvider);
             ref.invalidate(allUsersProvider);
             ref.invalidate(totalWordsCountProvider);
+            ref.invalidate(communityFeedProvider);
             await Future.delayed(const Duration(seconds: 1));
           },
           color: AppColors.gold500,
@@ -65,7 +88,7 @@ class _EducatorDashboardScreenState
                 const SizedBox(height: 32),
                 _buildStatsRow(lessonsAsync, allUsersAsync),
                 const SizedBox(height: 24),
-                _buildQuickActions(allUsersAsync),
+                _buildQuickActions(allUsersAsync, userProfileAsync),
                 const SizedBox(height: 32),
                 _buildStrugglingStudentsAlert(allUsersAsync),
                 const SizedBox(height: 24),
@@ -73,7 +96,11 @@ class _EducatorDashboardScreenState
                 const SizedBox(height: 24),
                 _buildUpcomingDeadlines(lessonsAsync),
                 const SizedBox(height: 24),
-                _buildRecentActivity(allUsersAsync),
+                _buildRecentActivity(
+                  allUsersAsync,
+                  communityActivitiesAsync,
+                  pendingSubmissionsAsync,
+                ),
                 const SizedBox(height: 100),
               ],
             ),
@@ -271,13 +298,16 @@ class _EducatorDashboardScreenState
     );
   }
 
-  Widget _buildQuickActions(AsyncValue<List<AdminUser>> allUsersAsync) {
+  Widget _buildQuickActions(
+    AsyncValue<List<AdminUser>> allUsersAsync,
+    AsyncValue<Map<String, dynamic>?> userProfileAsync,
+  ) {
     return Column(
       children: [
         Row(
           children: [
             _buildQuickActionBtn(Icons.campaign_rounded, 'Broadcast', () {
-              _showBroadcastDialog(allUsersAsync);
+              _showBroadcastDialog(allUsersAsync, userProfileAsync);
             }),
             const SizedBox(width: 12),
             _buildQuickActionBtn(Icons.perm_media_rounded, 'Gallery', () {
@@ -309,17 +339,33 @@ class _EducatorDashboardScreenState
     );
   }
 
-  void _showBroadcastDialog(AsyncValue<List<AdminUser>> allUsersAsync) {
+  void _showBroadcastDialog(
+    AsyncValue<List<AdminUser>> allUsersAsync,
+    AsyncValue<Map<String, dynamic>?> profileAsync,
+  ) {
     final controller = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-          backgroundColor: isDark ? AppColors.forestDarkCard : Colors.white,
-        title: Text(
-          'Village Broadcast',
-          style: AppTypography.h3.copyWith(
-            color: isDark ? Colors.white : AppColors.creamText,
-          ),
+        backgroundColor: isDark ? AppColors.forestDarkCard : Colors.white,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Village Broadcast',
+              style: AppTypography.h3.copyWith(
+                color: isDark ? Colors.white : AppColors.creamText,
+              ),
+            ),
+            IconButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                context.push('/educator/broadcast-history');
+              },
+              icon: const Icon(Icons.history_rounded, color: AppColors.gold500),
+              tooltip: 'Broadcast History',
+            ),
+          ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -377,7 +423,11 @@ class _EducatorDashboardScreenState
               final msg = controller.text.trim();
               Navigator.pop(ctx);
 
-              if (allUsersAsync.hasValue) {
+              if (allUsersAsync.hasValue && profileAsync.hasValue) {
+                final educator = profileAsync.value;
+                final educatorId = educator?['uid'] ?? educator?['id'] ?? '';
+                final educatorName = educator?['username'] ?? 'Educator';
+
                 final studentIds = allUsersAsync.value!
                     .where((u) => u.role == 'learner')
                     .map((u) => u.id)
@@ -386,11 +436,13 @@ class _EducatorDashboardScreenState
                 try {
                   await ref
                       .read(firebaseServiceProvider)
-                      .broadcastNotification(studentIds, {
-                        'title': 'Announcement from Educator',
-                        'message': msg,
-                        'type': 'broadcast',
-                      });
+                      .sendVillageBroadcast(
+                        educatorId: educatorId,
+                        educatorName: educatorName,
+                        title: 'Announcement from Educator',
+                        message: msg,
+                        studentIds: studentIds,
+                      );
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -704,16 +756,61 @@ class _EducatorDashboardScreenState
     return 'Just now';
   }
 
-  Widget _buildRecentActivity(AsyncValue<List<AdminUser>> allUsersAsync) {
-    if (!allUsersAsync.hasValue) return const SizedBox.shrink();
+  Widget _buildRecentActivity(
+    AsyncValue<List<AdminUser>> allUsersAsync,
+    AsyncValue<List<CommunityActivity>> communityActivitiesAsync,
+    AsyncValue<List<DictionaryEntry>> pendingSubmissionsAsync,
+  ) {
+    final List<_FeedItem> feedItems = [];
 
-    // Fetch actual recent learner joins from Firestore
-    final recentLearners =
-        allUsersAsync.value!.where((u) => u.role == 'learner').toList()
-          ..sort((a, b) => b.joinedAt.compareTo(a.joinedAt));
+    // 1. Learner Joins
+    if (allUsersAsync.hasValue) {
+      final learners = allUsersAsync.value!.where((u) => u.role == 'learner');
+      for (var u in learners) {
+        feedItems.add(_FeedItem(
+          text: '${u.name} joined as a new student',
+          timestamp: u.joinedAt,
+          icon: Icons.person_add_rounded,
+          color: AppColors.semanticGreen,
+        ));
+      }
+    }
 
-    final topLearners = recentLearners.take(5).toList();
-    if (topLearners.isEmpty) return const SizedBox.shrink();
+    // 2. Community Activities (Lesson Completions, Achievements)
+    if (communityActivitiesAsync.hasValue) {
+      for (var activity in communityActivitiesAsync.value!) {
+        feedItems.add(_FeedItem(
+          text: '${activity.userName} ${activity.message}',
+          timestamp: activity.createdAt ?? DateTime.now(),
+          icon: activity.type == 'lesson_completed'
+              ? Icons.task_alt_rounded
+              : (activity.type == 'streak'
+                  ? Icons.local_fire_department_rounded
+                  : Icons.emoji_events_rounded),
+          color: activity.type == 'lesson_completed'
+              ? AppColors.semanticBlue
+              : (activity.type == 'streak' ? Colors.orange : AppColors.gold500),
+        ));
+      }
+    }
+
+    // 3. Pending Submissions
+    if (pendingSubmissionsAsync.hasValue) {
+      for (var entry in pendingSubmissionsAsync.value!) {
+        feedItems.add(_FeedItem(
+          text: 'New contribution: "${entry.indigenousWord}" needs review',
+          timestamp: entry.submittedAt ?? DateTime.now(),
+          icon: Icons.rate_review_rounded,
+          color: AppColors.terracotta,
+          onTap: () => context.push('/educator/lessons'),
+        ));
+      }
+    }
+
+    feedItems.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    final displayItems = feedItems.take(8).toList();
+
+    if (displayItems.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -736,12 +833,13 @@ class _EducatorDashboardScreenState
           ],
         ),
         const SizedBox(height: 12),
-        ...topLearners.map((u) {
+        ...displayItems.map((item) {
           return _buildActivityItem(
-            '${u.name} joined as a new student',
-            _timeAgo(u.joinedAt),
-            Icons.person_add_rounded,
-            AppColors.semanticGreen,
+            item.text,
+            _timeAgo(item.timestamp),
+            item.icon,
+            item.color,
+            onTap: item.onTap,
           );
         }),
       ],
@@ -752,38 +850,42 @@ class _EducatorDashboardScreenState
     String text,
     String time,
     IconData icon,
-    Color color,
-  ) {
+    Color color, {
+    VoidCallback? onTap,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 16),
             ),
-            child: Icon(icon, color: color, size: 16),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              text,
-              style: AppTypography.body.copyWith(
-                color: isDark ? Colors.white70 : AppColors.creamText2,
-                fontSize: 13,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                text,
+                style: AppTypography.body.copyWith(
+                  color: isDark ? Colors.white70 : AppColors.creamText2,
+                  fontSize: 13,
+                ),
               ),
             ),
-          ),
-          Text(
-            time,
-            style: AppTypography.label.copyWith(
-              color: isDark ? Colors.white24 : AppColors.creamText3,
-              fontSize: 10,
+            Text(
+              time,
+              style: AppTypography.label.copyWith(
+                color: isDark ? Colors.white24 : AppColors.creamText3,
+                fontSize: 10,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

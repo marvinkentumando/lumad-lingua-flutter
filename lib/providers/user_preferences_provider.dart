@@ -17,14 +17,14 @@ class UserPreferencesNotifier extends Notifier<UserPreferences> {
   }
 
   Future<void> _loadInitial() async {
-    _prefs = await SharedPreferences.getInstance();
-    final jsonStr = _prefs.getString(_prefKey);
-    if (jsonStr != null) {
-      try {
+    try {
+      _prefs = await SharedPreferences.getInstance();
+      final jsonStr = _prefs.getString(_prefKey);
+      if (jsonStr != null) {
         state = UserPreferences.fromJson(jsonDecode(jsonStr));
-      } catch (e) {
-        // Fallback to default if corrupted
       }
+    } catch (e) {
+      // Fallback to default if corrupted or prefs fail
     }
   }
 
@@ -49,7 +49,12 @@ class UserPreferencesNotifier extends Notifier<UserPreferences> {
   }
 
   Future<void> _save() async {
-    await _prefs.setString(_prefKey, jsonEncode(state.toJson()));
+    try {
+      _prefs = await SharedPreferences.getInstance();
+      await _prefs.setString(_prefKey, jsonEncode(state.toJson()));
+    } catch (e) {
+      // Silently fail or log
+    }
   }
 }
 

@@ -249,12 +249,28 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 fontSize: 10,
               ),
             ),
-            Text(
-              'RESET IN ${_getTimeUntilReset()}',
-              style: AppTypography.label.copyWith(
-                color: AppColors.gold500.withValues(alpha: 0.3),
-                fontSize: 9,
-              ),
+            Row(
+              children: [
+                Text(
+                  'RESET IN ${_getTimeUntilReset()}',
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.gold500.withValues(alpha: 0.3),
+                    fontSize: 9,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () {
+                    HapticService.light();
+                    ref.read(questActionProvider.notifier).generateDynamicQuests();
+                  },
+                  icon: const Icon(Icons.refresh_rounded, size: 12),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  visualDensity: VisualDensity.compact,
+                  color: AppColors.gold500.withValues(alpha: 0.3),
+                ),
+              ],
             ),
           ],
         ),

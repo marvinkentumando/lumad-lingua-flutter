@@ -94,7 +94,7 @@ When adding a new item, please use the following format:
 
 ## 🏹 Learner Home Screen
 - [x] **Scenario Hub Improvements**: Added Completion Badges ("Mastered") and Thematic Thumbnails for scenario stories.
-- [ ] **Village Echoes (Social Feed) Live Sync**: The feed is currently hardcoded with static names ("Datu Matu", "Guardian Tala"). It lacks integration with a live activity or notification system.
+- [x] **Village Echoes (Social Feed) Live Sync**: The feed is integrated with live activity from across the platform (contributions, lesson completions, achievements) and synced with Firestore.
 - [x] **Village Echoes Avatar Interaction**: Tapping avatars in the Village Echoes feed now navigates to the corresponding **Member Profile**.
 - [x] **Top Climbers Detail Link**: In the Top Climbers preview list, tapping an individual user now navigates to that user's **Member Profile**.
 - [ ] **Sync Indicator Interaction**: The "Syncing offline changes..." indicator is non-interactive. It could show a progress detail or allow manual retry if a sync hangs.
@@ -149,8 +149,8 @@ When adding a new item, please use the following format:
 - [ ] **Dynamic Language Color Mapping**: The `_getLanguageColor` and `_getCategoryColor` methods are partially hardcoded and may default to a generic color for newer dialects or categories added via the admin panel.
 - [ ] **Learning Hub "Continue Journey" Logic**: The hub calculates the "current" lesson by finding the first one with less than 100% score. It doesn't allow a user to manually pick an earlier lesson from the hub; they must go into the Path view for that.
 - [ ] **Lesson Lock Explanation**: Tapping a locked lesson card shows a static text hint. It could be improved by explicitly naming which prerequisite lesson needs to be completed.
-- [ ] **Mastery Dashboard Integration**: The "Learning Progress" card links to the Mastery Dashboard, but the dashboard's "Review Ready" action is currently non-interactive.
-- [ ] **Streak Detail Screen**: Tapping the Daily Streak card navigates to a placeholder route (`/streak`). A dedicated screen for streak history and shield management is needed.
+- [x] **Mastery Dashboard Integration**: The "Learning Progress" card links to the Mastery Dashboard, and the "Review Ready" action now correctly triggers an SRS Review Session if cards are due.
+- [x] **Streak Detail Screen**: Added a dedicated screen for streak history, activity heatmap, milestone tracking, and shield management.
 - [x] **Scenario Hub: Dynamic Content**: Moved scenario stories to Firestore, allowing educators/admins to add new cultural scenarios dynamically.
 - [x] **Scenario Session Logic**: Implemented the interactive story engine with choice-based logic and dynamic path resolution.
 - [x] **SRS Review Engine**: Transformed the flashcard system into a full SRS Review Session that automatically picks due cards for reinforcement.
@@ -176,33 +176,41 @@ When adding a new item, please use the following format:
 ---
 
 ## 🏛️ Educator Dashboard
-- [ ] **Broadcast History**: The "Village Broadcast" allows sending announcements, but there is no UI to view, edit, or delete previous broadcasts.
+- [x] **Broadcast History**: The "Village Broadcast" allows sending announcements, and now features a dedicated History UI to view, edit, or delete previous broadcasts.
 - [ ] **Struggling Student Heuristics**: The "Attention Needed" alert uses a simple hardcoded XP threshold (< 50) to identify struggling students. This should be replaced with a more dynamic analytics service that considers recent performance trends.
 - [ ] **Dynamic Cultural Milestones**: Milestone targets are hardcoded to the next 100-word increment. Educators cannot set their own community goals or classroom targets.
+- [ ] **Dashboard Activity Filter**: The activity feed shows all types of updates. It should include filters to show only "Struggling Students" or "New Contributions".
+- [ ] **Custom Greeting Logic**: The time-based greeting (Maayong Buntag) could be extended to rotate through all supported dialects to set a cultural tone.
 - [ ] **Task Management Depth**: The "Pending Tasks" section automatically lists all draft lessons. There's no way to manually add specific tasks (e.g., "Review X's request") or set actual due dates.
-- [ ] **Activity Feed Variety**: The recent activity only shows new student joins. It lacks critical updates such as lesson completions, high-score achievements, or pending contributor submissions.
+- [x] **Activity Feed Variety**: The recent activity is now a unified feed including student joins, lesson completions, high-score achievements, and new pending contributor submissions, providing educators with a comprehensive overview of village growth.
 - [ ] **Quick Action Summaries**: Actions like "Manage Units" and "Analytics" are simple navigation buttons. They could be enhanced with "at-a-glance" stats (e.g., "3 Units need review").
-- [ ] **Unread Notification Indicator Sync**: Tapping the notification bell in the hero banner navigates to the notification screen, but the "unread" dot might not immediately sync with the global state until the next build.
+- [x] **Unread Notification Indicator Sync**: Entering the Notification Screen now automatically marks all alerts as read, ensuring the "unread" dot on the dashboard syncs immediately.
 
 ## 👥 Educator Student Hub
 - [x] **Hardcoded Student Data**: The student list and their detailed profiles (XP, Progress, Lessons Completed) are now synced with actual learner accounts in Firestore via the `educatorStudentsProvider`.
 - [x] **Mock Lesson Breakdown**: The detailed "Lesson Breakdown" for individual students now reflects real-time progress and accuracy from the database.
-- [ ] **Attendance Heatmap Realism**: The 30-day activity heatmap is a visual simulation using random opacity and does not pull from the students' actual login or activity history.
-- [ ] **Messaging & Guardian Contact**: The "Message Student" and "Contact Guardian" buttons are placeholders (only show SnackBars) and lack integration with a notification or messaging service.
+- [x] **Attendance Heatmap Realism**: The 30-day activity heatmap now pulls from the students' actual login and activity history stored in Firestore, providing educators with accurate engagement data.
+- [x] **Messaging & Guardian Contact**: The "Message Student" and "Contact Guardian" buttons now integrate with the internal notification system to provide direct feedback and simulated guardian alerts.
 - [x] **Static Village Filters**: Filtering by "Village" now uses dynamic categories derived from the actual student database.
 - [x] **Performance Tracking Accuracy**: The "Struggling" status and accuracy metrics are now backed by performance heuristics in the `educatorStudentsProvider`.
+- [ ] **Direct Message Thread**: Tapping "Message Student" sends a notification, but there is no 1-on-1 chat history or thread UI for educators to see previous conversations.
+- [ ] **Bulk Message to Village**: Add a way for educators to select multiple students or an entire village to send a targeted message without using the global broadcast.
+- [ ] **Report Card Export**: No UI to generate and export an individual student's progress report (PDF) for parents or community leaders.
 
 ## 📈 Educator Analytics Screen
 - [x] **Live Quiz Performance**: The "Quiz Performance" section now reflects actual student pass/fail rates derived from live lesson progress data in Firestore.
 - [x] **Dynamic "Common Hurdles"**: Topics and struggle points are now automatically identified using mistake telemetry from student session logs, identifying exactly where learners are failing most.
-- [ ] **Growth Graph Accuracy**: The student growth visualization uses static points. It should reflect actual historical registration and activity data.
-- [ ] **Export Functionality**: The "Export CSV/PDF" buttons are placeholders (only show SnackBars) and do not generate actual reports.
-- [ ] **Monthly Activity Data**: The monthly view in the activity chart uses mocked weekly buckets instead of querying real monthly engagement stats.
+- [x] **Growth Graph Accuracy**: The student growth visualization now reflects actual historical registration data from Firestore, providing a real-time cumulative view of village expansion.
+- [x] **Export Functionality**: Educators can now export detailed analytics reports in CSV and PDF formats, including student growth, dialect distribution, and performance metrics.
+- [x] **Monthly Activity Data**: The monthly view in the activity chart now queries real monthly engagement stats from the students' activity maps, showing active learner counts over the last 6 months.
 - [ ] **Retention Heuristics**: Retention is calculated using a simple "XP > 0" proxy. It should be replaced with more accurate metrics like Daily Active Users (DAU) or 7-day retention rates.
-- [ ] **Feedback Management**: The unread feedback bell in the header is purely visual and doesn't link to a system for reading or responding to student messages.
+- [x] **Feedback Management**: The unread feedback bell in the header now links to a dedicated Student Feedback screen, allowing educators to read, mark as read, and reply to student messages with live unread indicators.
+- [ ] **Topic Mastery Heatmap**: A visualization showing which specific cultural categories (Rituals, Tools, Greeting) have the lowest accuracy rates across the entire class.
+- [ ] **Engagement Trend Comparison**: No way to compare current weekly activity against the previous week to see if engagement is rising or falling.
+- [ ] **Custom Date Range Search**: Analytics are locked to "Weekly" or "Monthly" views; educators cannot select a custom date range for their reports.
 
 ## 👤 Educator Profile Screen (Staff Profile)
-- [ ] **Hardcoded Profile Stats**: The "RATING" (4.9) and "RANK" (ELITE) displayed in the stats row are currently hardcoded UI placeholders. They should be linked to actual educator performance metrics or rank data.
+- [ ] **Hardcoded Profile Stats**: The "RATING" (4) and "RANK" (ELITE) displayed in the stats row are currently hardcoded UI placeholders. They should be linked to actual educator performance metrics or rank data.
 - [ ] **Impact Card Accuracy**: The "Students Helped" and "Total Reach" metrics in the Impact Card might be using generic formulas; they should be verified to accurately reflect an educator's specific impact (e.g., number of students enrolled in their lessons).
 - [ ] **Artifacts Section for Staff**: Non-learner roles like educators don't see the "Earned Artifacts" section. There is no equivalent staff-specific collection or achievement display.
 - [ ] **Role Transition Logic**: The "Become a Contributor" button logic technically excludes validators but is redundant since they already have higher privileges; however, there's no UI for an educator to "Request Admin" or "Transition Role" if needed.
@@ -217,10 +225,14 @@ When adding a new item, please use the following format:
 ## 🎓 Educator Lessons Screen
 - [ ] **Hardcoded Category Tabs**: The category filters (Vocabulary, Rituals, etc.) are hardcoded in the UI and may not reflect the actual categories present in the lesson database.
 - [ ] **Missing Bulk Management**: No way to perform bulk actions like "Bulk Publish", "Bulk Move to Drafts", or "Bulk Delete" for multiple lessons.
-- [ ] **Student Completion Detail**: The lesson cards show student counts, but there's no way to see a list of specific students who have completed or started a particular lesson.
+- [x] **Student Completion Detail**: Lesson cards now display accurate real-time student counts and completion rates. Educators can also view a detailed list of specific students who have started or completed each lesson, including their accuracy and scores.
 - [ ] **Version Control UI**: The UI displays a version number, but there are no educator-facing tools for managing versions, viewing history, or rolling back changes.
 - [ ] **Search Persistence**: The search query and active tab filter are lost when navigating away from the screen and returning.
-- [ ] **Advanced Filtering**: Lacks the ability to filter lessons by difficulty level (Novice, Intermediate, etc.) despite it being a data field in the `Lesson` model.
+- [x] **Advanced Filtering**: Educators can now filter lessons by difficulty level (Novice, Intermediate, Expert) and status/category through the enhanced tab system.
+- [ ] **Lesson Version Comparison**: No visual way to see what has changed in a lesson since its last published version before committing new edits.
+- [x] **Curriculum Map View**: A visual tree representation of how lessons and units connect, helping educators identify gaps in the learning flow.
+- [ ] **Drag-and-Drop Reordering**: In the unit management screen, educators should be able to drag lesson cards to visually change their sequence within a unit.
+- [ ] **Lesson Cloning**: Add a "Duplicate Lesson" feature to allow educators to quickly create new lessons using an existing structure as a template.
 
 ---
 
@@ -228,7 +240,7 @@ When adding a new item, please use the following format:
 - [ ] **System Health Placeholders**: The System Health grid uses hardcoded "default" values if the Firestore document is missing, which might mislead an admin into thinking the system is fine when it's actually just showing a template.
 - [ ] **Inefficient Data Aggregation**: The "User Growth" and "Contributions" charts are calculated by fetching all users and all words from Firestore and processing them in the UI. This should be replaced with aggregated metrics from a `stats` collection for performance.
 - [ ] **Static System Metrics**: Uptime, API Status, and Storage are currently static strings or mocked values in the database; they are not integrated with real-world infrastructure monitoring.
-- [ ] **Database Seeder Safety**: The "SEED DATABASE" button lacks a confirmation dialog or "Production Lock" to prevent accidental data overwrites in a live environment.
+- [x] **Database Seeder Safety**: Added a confirmation dialog to the "SEED DATABASE" button to prevent accidental data overwrites in a live environment.
 - [x] **Live WOTD Selection**: Added admin tools to manually force a specific "Word of the Day" or trigger an automatic rotation override.
 - [ ] **Platform Activity Refresh Logic**: The manual refresh button invalidates providers but doesn't trigger a server-side re-calculation of stats, which remains client-side and potentially out of sync.
 

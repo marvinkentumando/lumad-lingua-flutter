@@ -67,6 +67,12 @@ class OfflineService {
     return box.values.toList();
   }
 
+  Stream<List<Lesson>> watchCachedLessons() async* {
+    final box = await _getBox<Lesson>(lessonsBoxName);
+    yield box.values.toList();
+    yield* box.watch().map((_) => box.values.toList());
+  }
+
   // Dictionary Methods
   Future<void> saveDictionaryEntries(List<DictionaryEntry> entries) async {
     final box = await _getBox<DictionaryEntry>(dictionaryBoxName);

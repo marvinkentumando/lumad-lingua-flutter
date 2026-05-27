@@ -7,16 +7,19 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
+import '../providers/quest_provider.dart';
+import '../models/quest.dart';
 
-class SakaGameScreen extends StatefulWidget {
+class SakaGameScreen extends ConsumerStatefulWidget {
   const SakaGameScreen({super.key});
 
   @override
-  State<SakaGameScreen> createState() => _SakaGameScreenState();
+  ConsumerState<SakaGameScreen> createState() => _SakaGameScreenState();
 }
 
-class _SakaGameScreenState extends State<SakaGameScreen> with TickerProviderStateMixin {
+class _SakaGameScreenState extends ConsumerState<SakaGameScreen> with TickerProviderStateMixin {
   // Game State
   double playerX = 0;
   double playerY = 348;
@@ -132,6 +135,8 @@ class _SakaGameScreenState extends State<SakaGameScreen> with TickerProviderStat
 
   @override
   void dispose() {
+    _bgPlayer.stop();
+    _sfxPlayer.stop();
     _bgPlayer.dispose();
     _sfxPlayer.dispose();
     _gameLoopController.dispose();
@@ -301,6 +306,15 @@ class _SakaGameScreenState extends State<SakaGameScreen> with TickerProviderStat
     setState(() {
       mistTransition = 1.0;
       transitionColor = color;
+      transitionOpacity = 1.0;
+    });
+    
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (mounted) {
+        setState(() {
+          transitionOpacity = 0.0;
+        });
+      }
     });
   }
 
@@ -407,6 +421,10 @@ class _SakaGameScreenState extends State<SakaGameScreen> with TickerProviderStat
             isQuizActive = false;
             score += 100;
           });
+          
+          // Update Tribal Challenges progress
+          ref.read(questActionProvider.notifier).updateProgress(QuestType.flashcard, 1);
+
           Navigator.pop(context);
           
           HapticFeedback.heavyImpact();

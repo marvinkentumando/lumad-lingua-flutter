@@ -22,6 +22,8 @@ import '../widgets/activity_views/pronunciation_view.dart';
 import '../widgets/activity_views/scenario_view.dart';
 import '../widgets/activity_views/listening_view.dart';
 import '../providers/student_provider.dart';
+import '../providers/quest_provider.dart';
+import '../models/quest.dart';
 import '../services/haptic_service.dart';
 
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -292,6 +294,12 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           currentFeedbackSubtitle = isCorrect
               ? "Captured: \"$_lastWords\" (${(similarity * 100).round()}% match). Great effort!"
               : "Heard: \"$_lastWords\". Try to say \"${task.nativeWord}\" more clearly. (${(similarity * 100).round()}% match)";
+
+          if (isCorrect) {
+            ref
+                .read(questActionProvider.notifier)
+                .updateProgress(QuestType.pronunciation, 1);
+          }
         } else {
           currentFeedbackSubtitle =
               "We couldn't hear you clearly. Please try again.";
@@ -300,6 +308,8 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
       case TaskType.vocabulary:
         isCorrect = true;
         currentFeedbackSubtitle = "Great job reviewing this word!";
+        // Update Tribal Challenges progress for flashcards
+        ref.read(questActionProvider.notifier).updateProgress(QuestType.flashcard, 1);
         break;
       case TaskType.scenario:
         isCorrect = _selectedIndex == task.correctAnswerIndex;
@@ -459,6 +469,9 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
               
               // Increment daily streak on lesson completion
               ref.read(studentProvider.notifier).incrementStreak();
+              
+              // Update Tribal Challenges progress
+              ref.read(questActionProvider.notifier).updateProgress(QuestType.lesson, 1);
             })
             .catchError((error) {
               if (mounted) {

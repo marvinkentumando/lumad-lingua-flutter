@@ -44,6 +44,8 @@ import '../screens/educator_students_screen.dart';
 import '../screens/educator_analytics_screen.dart';
 import '../screens/lesson_editor_screen.dart';
 import '../screens/educator_unit_management_screen.dart';
+import '../screens/educator_broadcast_history_screen.dart';
+import '../screens/educator_feedback_screen.dart';
 import '../screens/member_profile_screen.dart';
 import '../screens/scenario_hub_screen.dart';
 import '../screens/scenario_session_screen.dart';
@@ -243,6 +245,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/educator/unit-management',
             builder: (context, state) => const EducatorUnitManagementScreen(),
+          ),
+          GoRoute(
+            path: '/educator/broadcast-history',
+            builder: (context, state) => const EducatorBroadcastHistoryScreen(),
+          ),
+          GoRoute(
+            path: '/educator/feedback',
+            builder: (context, state) => const EducatorFeedbackScreen(),
           ),
           GoRoute(
             path: '/lesson-editor',

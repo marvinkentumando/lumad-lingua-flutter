@@ -6,11 +6,31 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 
-class NotificationScreen extends ConsumerWidget {
+class NotificationScreen extends ConsumerStatefulWidget {
   const NotificationScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NotificationScreen> createState() => _NotificationScreenState();
+}
+
+class _NotificationScreenState extends ConsumerState<NotificationScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _markAllRead();
+  }
+
+  void _markAllRead() {
+    Future.microtask(() {
+      final user = ref.read(authStateProvider).value;
+      if (user != null) {
+        ref.read(firebaseServiceProvider).markAllNotificationsAsRead(user.uid);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).value;
 
     if (user == null) {

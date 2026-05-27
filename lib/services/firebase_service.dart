@@ -21,6 +21,9 @@ import '../models/gamification_models.dart';
 import '../models/validator_models.dart';
 import '../models/app_config.dart';
 import '../models/scenario_models.dart';
+import '../models/broadcast.dart';
+import '../models/feedback.dart';
+import 'offline_service.dart';
 
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
@@ -770,6 +773,125 @@ class FirebaseService {
         .collection('notifications')
         .doc(notificationId)
         .update({'isRead': true});
+  }
+
+  Future<void> markAllNotificationsAsRead(String userId) async {
+    final snap = await _db
+        .collection('users')
+        .doc(userId)
+        .collection('notifications')
+        .where('isRead', isEqualTo: false)
+        .get();
+
+    if (snap.docs.isEmpty) return;
+
+    final batch = _db.batch();
+    for (var doc in snap.docs) {
+      batch.update(doc.reference, {'isRead': true});
+    }
+    await batch.commit();
+  }
+
+  // ── Village Broadcast Operations ──────────────────────────────────────────
+
+  Future<void> sendVillageBroadcast({
+    required String educatorId,
+    required String educatorName,
+    required String title,
+    required String message,
+    required List<String> studentIds,
+  }) async {
+    // 1. Save the broadcast globally for history
+    final broadcastRef = _db.collection('broadcasts').doc();
+    final broadcast = VillageBroadcast(
+      id: broadcastRef.id,
+      educatorId: educatorId,
+      educatorName: educatorName,
+      title: title,
+      message: message,
+      timestamp: DateTime.now(),
+      recipients: studentIds,
+    );
+    await broadcastRef.set(broadcast.toFirestore());
+
+    // 2. Send notifications to all students
+    await broadcastNotification(studentIds, {
+      'title': title,
+      'message': message,
+      'type': 'broadcast',
+      'senderId': educatorId,
+      'senderName': educatorName,
+      'broadcastId': broadcastRef.id,
+    });
+  }
+
+  Stream<List<VillageBroadcast>> getVillageBroadcasts() {
+    return _db
+        .collection('broadcasts')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((doc) => VillageBroadcast.fromFirestore(doc.data(), doc.id))
+            .toList());
+  }
+
+  Future<void> updateVillageBroadcast(String id, String message) async {
+    await _db.collection('broadcasts').doc(id).update({
+      'message': message,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> deleteVillageBroadcast(String id) async {
+    await _db.collection('broadcasts').doc(id).delete();
+  }
+
+  // ── Student Feedback Operations ───────────────────────────────────────────
+
+  Future<void> submitStudentFeedback({
+    required String studentId,
+    required String studentName,
+    String? studentPhotoUrl,
+    required String message,
+  }) async {
+    await _db.collection('feedback').add({
+      'studentId': studentId,
+      'studentName': studentName,
+      'studentPhotoUrl': studentPhotoUrl,
+      'message': message,
+      'timestamp': FieldValue.serverTimestamp(),
+      'isRead': false,
+    });
+  }
+
+  Stream<List<StudentFeedback>> getStudentFeedback() {
+    return _db
+        .collection('feedback')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((doc) => StudentFeedback.fromFirestore(doc.data(), doc.id))
+            .toList());
+  }
+
+  Future<void> markFeedbackAsRead(String feedbackId) async {
+    await _db.collection('feedback').doc(feedbackId).update({'isRead': true});
+  }
+
+  Future<void> replyToFeedback(String feedbackId, String reply) async {
+    await _db.collection('feedback').doc(feedbackId).update({
+      'educatorReply': reply,
+      'repliedAt': FieldValue.serverTimestamp(),
+      'isRead': true,
+    });
+  }
+
+  Stream<int> getUnreadFeedbackCount() {
+    return _db
+        .collection('feedback')
+        .where('isRead', isEqualTo: false)
+        .snapshots()
+        .map((snap) => snap.size);
   }
 
   // Gamification Operations
@@ -3058,6 +3180,110 @@ class FirebaseService {
     if (!doc.exists) return null;
     return Scenario.fromFirestore(doc.data()!, doc.id);
   }
+
+  Future<void> addScenario(Scenario scenario) async {
+    await _db.collection('scenarios').doc(scenario.id).set(scenario.toFirestore());
+  }
+
+  Future<void> updateScenario(String id, Map<String, dynamic> data) async {
+    await _db.collection('scenarios').doc(id).update(data);
+  }
+
+  Future<void> deleteScenario(String id) async {
+    await _db.collection('scenarios').doc(id).delete();
+  }
+
+  Future<void> seedScenarios() async {
+    final scenarios = [
+      Scenario(
+        id: 'forest_wisdom',
+        title: 'The Forest\'s Whispers',
+        description: 'Learn the secrets of the ancient woods from an elder.',
+        difficulty: 'Beginner',
+        baseReward: 100,
+        iconName: 'auto_stories',
+        initialNodeId: 'start',
+        nodes: {
+          'start': ScenarioNode(
+            id: 'start',
+            text: 'You meet an elder at the edge of the Kagulangan. He gestures for you to follow. Do you go?',
+            choices: [
+              ScenarioChoice(label: 'Follow the Elder', targetNodeId: 'follow', xpReward: 10),
+              ScenarioChoice(label: 'Stay back', targetNodeId: 'stay', xpReward: 0),
+            ],
+          ),
+          'follow': ScenarioNode(
+            id: 'follow',
+            text: 'He points to a rare orchid. "This is the Waling-waling," he says. How do you respond?',
+            choices: [
+              ScenarioChoice(label: 'Ask for its history', targetNodeId: 'history', xpReward: 20),
+              ScenarioChoice(label: 'Just nod respectfully', targetNodeId: 'end', xpReward: 10),
+            ],
+          ),
+          'stay': ScenarioNode(
+            id: 'stay',
+            text: 'The forest remains a mystery to you. Perhaps another time.',
+            choices: [
+              ScenarioChoice(label: 'Finish', targetNodeId: 'end', xpReward: 5),
+            ],
+          ),
+          'history': ScenarioNode(
+            id: 'history',
+            text: 'He smiles and tells you a legend of the first Lumad. You feel enlightened.',
+            choices: [
+              ScenarioChoice(label: 'Gratitude', targetNodeId: 'end', xpReward: 30),
+            ],
+          ),
+        },
+      ),
+      Scenario(
+        id: 'market_day',
+        title: 'Tribal Trade',
+        description: 'Navigate the busy tribal market and trade fairly.',
+        difficulty: 'Intermediate',
+        baseReward: 150,
+        iconName: 'storefront',
+        initialNodeId: 'start',
+        nodes: {
+          'start': ScenarioNode(
+            id: 'start',
+            text: 'The market is loud. A weaver offers you a hand-woven Malong for 50 crystals. It looks high quality.',
+            choices: [
+              ScenarioChoice(label: 'Buy it immediately', targetNodeId: 'buy', xpReward: 5),
+              ScenarioChoice(label: 'Haggle respectfully', targetNodeId: 'haggle', xpReward: 15),
+            ],
+          ),
+          'buy': ScenarioNode(
+            id: 'buy',
+            text: 'She is pleased. "You support our craft well," she says.',
+            choices: [
+              ScenarioChoice(label: 'Complete Trade', targetNodeId: 'end', xpReward: 10),
+            ],
+          ),
+          'haggle': ScenarioNode(
+            id: 'haggle',
+            text: 'She smiles. "A wise trader! How about 45?"',
+            choices: [
+              ScenarioChoice(label: 'Accept 45', targetNodeId: 'end', xpReward: 20),
+              ScenarioChoice(label: 'Insist on 40', targetNodeId: 'greedy', xpReward: 0),
+            ],
+          ),
+          'greedy': ScenarioNode(
+            id: 'greedy',
+            text: 'She looks disappointed. "This takes weeks to weave. 45 is my lowest."',
+            choices: [
+              ScenarioChoice(label: 'Apologize and pay 45', targetNodeId: 'end', xpReward: 5),
+              ScenarioChoice(label: 'Walk away', targetNodeId: 'end', xpReward: 0),
+            ],
+          ),
+        },
+      ),
+    ];
+
+    for (var s in scenarios) {
+      await addScenario(s);
+    }
+  }
 }
 
 
@@ -3228,7 +3454,12 @@ final municipalityRecordingsProvider =
     });
 
 final lessonsStreamProvider = StreamProvider<List<Lesson>>((ref) {
-  return ref.watch(firebaseServiceProvider).getPublishedLessons();
+  final stream = ref.watch(firebaseServiceProvider).getPublishedLessons();
+  return stream.map((lessons) {
+    // Automatically cache lessons for offline use
+    ref.read(offlineServiceProvider).saveLessons(lessons);
+    return lessons;
+  });
 });
 
 final allLessonsStreamProvider = StreamProvider<List<Lesson>>((ref) {
@@ -3400,6 +3631,18 @@ final allVoiceSubmissionsProvider = StreamProvider<List<VoiceSubmission>>((ref) 
 
 final scenariosProvider = StreamProvider<List<Scenario>>((ref) {
   return ref.watch(firebaseServiceProvider).getScenarios();
+});
+
+final broadcastsProvider = StreamProvider<List<VillageBroadcast>>((ref) {
+  return ref.watch(firebaseServiceProvider).getVillageBroadcasts();
+});
+
+final studentFeedbackProvider = StreamProvider<List<StudentFeedback>>((ref) {
+  return ref.watch(firebaseServiceProvider).getStudentFeedback();
+});
+
+final unreadFeedbackCountProvider = StreamProvider<int>((ref) {
+  return ref.watch(firebaseServiceProvider).getUnreadFeedbackCount();
 });
 
 final masteredWordsCountProvider = StreamProvider.family<int, String>((ref, userId) {

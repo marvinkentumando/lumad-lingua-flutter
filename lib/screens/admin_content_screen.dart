@@ -13,6 +13,7 @@ import '../widgets/badges.dart';
 import '../models/voice_submission.dart';
 import '../models/lesson.dart';
 import '../models/dictionary_entry.dart';
+import '../models/scenario_models.dart';
 import '../services/haptic_service.dart';
 import '../services/auth_service.dart';
 
@@ -35,7 +36,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   void _toggleSelection(String id) {
@@ -86,6 +87,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                       _buildDictionaryTab(),
                       _buildRecordingsTab(),
                       _buildLessonsTab(),
+                      _buildScenariosTab(),
                     ],
                   ),
                 ),
@@ -123,6 +125,12 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
        idsToSelect = lessons.where((l) =>
           l.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           l.category.toLowerCase().contains(_searchQuery.toLowerCase())
+        ).map((e) => e.id).toList();
+    } else if (_tabController.index == 3) {
+       final scenarios = ref.read(scenariosProvider).value ?? [];
+       idsToSelect = scenarios.where((s) =>
+          s.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          s.description.toLowerCase().contains(_searchQuery.toLowerCase())
         ).map((e) => e.id).toList();
     }
 
@@ -206,6 +214,8 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
 
     if (confirmed != true) return;
 
+    final messenger = ScaffoldMessenger.of(context);
+
     if (_tabController.index == 0) {
       await ref.read(firebaseServiceProvider).bulkApproveWords(_selectedIds.toList(), validatorId, validatorRole);
     } else if (_tabController.index == 1) {
@@ -214,16 +224,16 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
       await ref.read(firebaseServiceProvider).bulkApproveLessons(_selectedIds.toList(), validatorId, validatorRole);
     }
     
+    if (!mounted) return;
+
     setState(() {
       _selectedIds.clear();
       _isSelectionMode = false;
     });
     
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bulk approval successful'), backgroundColor: AppColors.semanticGreen),
-      );
-    }
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Bulk approval successful'), backgroundColor: AppColors.semanticGreen),
+    );
   }
 
   void _handleBulkDelete() {
@@ -234,6 +244,10 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
         await ref.read(firebaseServiceProvider).bulkDeleteVoiceSubmissions(_selectedIds.toList());
       } else if (_tabController.index == 2) {
         await ref.read(firebaseServiceProvider).bulkDeleteLessons(_selectedIds.toList());
+      } else if (_tabController.index == 3) {
+        for (var id in _selectedIds) {
+          await ref.read(firebaseServiceProvider).deleteScenario(id);
+        }
       }
       
       setState(() {
@@ -392,6 +406,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
           Tab(text: 'DICTIONARY'),
           Tab(text: 'RECORDINGS'),
           Tab(text: 'LESSONS'),
+          Tab(text: 'SCENARIOS'),
         ],
       ),
     );
@@ -459,6 +474,29 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
           itemCount: filtered.length,
           itemBuilder: (context, index) => _lessonCard(filtered[index], index),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error: $e')),
+    );
+  }
+
+  Widget _buildScenariosTab() {
+    final scenariosAsync = ref.watch(scenariosProvider);
+
+    return scenariosAsync.when(
+      data: (scenarios) {
+        final filtered = scenarios.where((s) => 
+          s.title.toLowerCase().contains(_searchQuery.toLowerCase()) || 
+          s.description.toLowerCase().contains(_searchQuery.toLowerCase())
+        ).toList();
+
+        if (filtered.isEmpty) return _buildEmptyState();
+
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+          itemCount: filtered.length,
+          itemBuilder: (context, index) => _scenarioCard(filtered[index], index),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -537,6 +575,22 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
       onEdit: () => _showEditLessonDialog(data),
       onDelete: () => _showDeletePasswordDialog(data.title, () {
         ref.read(firebaseServiceProvider).deleteLesson(data.id);
+      }),
+    );
+  }
+
+  Widget _scenarioCard(Scenario data, int index) {
+    return _baseContentCard(
+      id: data.id,
+      index: index,
+      icon: Icons.auto_stories_rounded,
+      iconColor: AppColors.gold500,
+      title: data.title,
+      subtitle: '${data.difficulty} · ${data.nodes.length} nodes',
+      author: '${data.baseReward} XP Base Reward',
+      status: 'active',
+      onDelete: () => _showDeletePasswordDialog(data.title, () {
+        ref.read(firebaseServiceProvider).deleteScenario(data.id);
       }),
     );
   }
@@ -1030,6 +1084,31 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
               ),
               Divider(color: isDark ? Colors.white10 : Colors.black12),
               _systemAction(
+                icon: Icons.auto_stories_rounded,
+                color: AppColors.gold500,
+                title: 'Seed Scenarios',
+                subtitle: 'Add sample cultural scenarios to database',
+                onTap: () {
+                  Navigator.pop(context);
+                  _showConfirmAction(
+                    'Seed Scenarios',
+                    'This will add sample scenarios to your Firestore collection.',
+                    () async {
+                      await ref.read(firebaseServiceProvider).seedScenarios();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Scenarios seeded successfully'),
+                            backgroundColor: AppColors.semanticGreen,
+                          ),
+                        );
+                      }
+                    },
+                  );
+                },
+              ),
+              Divider(color: isDark ? Colors.white10 : Colors.black12),
+              _systemAction(
                 icon: Icons.warning_amber_outlined,
                 color: AppColors.semanticRed,
                 title: 'Reset Platform',
@@ -1040,6 +1119,8 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                     'Reset Platform',
                     'This will permanently delete ALL pending submissions.',
                     () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      
                       final words = await ref.read(allWordsProvider.future);
                       final pendingWords = words.where((w) => w.status == ValidationStatus.pending).map((w) => w.id).toList();
                       if (pendingWords.isNotEmpty) {
@@ -1053,7 +1134,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                       }
 
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           const SnackBar(
                             content: Text('Platform reset successful'),
                             backgroundColor: AppColors.semanticGreen,
@@ -1227,7 +1308,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
         'contributor': e.contributorName,
         'status': e.status.name,
       }).toList();
-    } else {
+    } else if (_tabController.index == 2) {
       final lessons = await ref.read(allLessonsStreamProvider.future);
       data = lessons.map((e) => {
         'title': e.title,
@@ -1235,11 +1316,21 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
         'category': e.category,
         'status': e.status.toString(),
       }).toList();
+    } else if (_tabController.index == 3) {
+      final scenarios = await ref.read(scenariosProvider.future);
+      data = scenarios.map((e) => {
+        'title': e.title,
+        'difficulty': e.difficulty,
+        'nodes': e.nodes.length.toString(),
+        'reward': e.baseReward.toString(),
+      }).toList();
     }
+
+    final messenger = ScaffoldMessenger.of(context);
 
     if (data.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(content: Text('No data to export'))
         );
       }
@@ -1252,20 +1343,21 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
     } else {
       final headers = data.first.keys.join(',');
       final rows = [headers] +
-          data.map((e) => e.values.join(',')).toList();
+          data.map((e) => e.values.map((v) => '"$v"').join(',')).toList();
       output = rows.join('\n');
     }
+
+    if (!mounted) return;
+    
     Clipboard.setData(ClipboardData(text: output));
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${format.toUpperCase()} copied to clipboard (${data.length} entries)',
-          ),
-          backgroundColor: AppColors.semanticGreen,
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          '${format.toUpperCase()} copied to clipboard (${data.length} entries)',
         ),
-      );
-    }
+        backgroundColor: AppColors.semanticGreen,
+      ),
+    );
   }
 }
 

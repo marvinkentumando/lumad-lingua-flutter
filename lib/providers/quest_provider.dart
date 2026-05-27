@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/quest.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
@@ -18,13 +19,27 @@ class QuestNotifier extends Notifier<void> {
     final user = ref.read(authServiceProvider).currentUser;
     if (user == null) return;
 
-    final quests = ref.read(dailyQuestsProvider).value ?? [];
+    final questsAsync = ref.read(dailyQuestsProvider);
+    final quests = questsAsync.value ?? [];
+    
+    // Use a batch update if possible (though updateQuestProgress is individual)
+    // To minimize awaits, we can trigger all updates and then await them
+    final updateFutures = <Future>[];
+    
     for (final quest in quests) {
-      if (quest.type == type && !quest.isCompleted) {
-        await ref
-            .read(firebaseServiceProvider)
-            .updateQuestProgress(user.uid, quest.id, amount);
+      if (quest.type == type && !quest.isCompleted && !quest.isClaimed) {
+        updateFutures.add(
+          ref.read(firebaseServiceProvider).updateQuestProgress(
+                user.uid,
+                quest.id,
+                amount,
+              ),
+        );
       }
+    }
+    
+    if (updateFutures.isNotEmpty) {
+      await Future.wait(updateFutures);
     }
   }
 
@@ -59,62 +74,103 @@ class QuestNotifier extends Notifier<void> {
     if (user == null) return;
 
     final fbService = ref.read(firebaseServiceProvider);
-    final currentQuests = ref.read(dailyQuestsProvider).value ?? [];
+    final profile = ref.read(userProfileProvider).value;
+
     final now = DateTime.now();
-    final dateStr = "${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}";
-    final types = [QuestType.flashcard, QuestType.pronunciation, QuestType.lesson];
+    final todayDate = DateTime(now.year, now.month, now.day);
+
+    // Check if quests were already generated today to save on Firestore writes
+    final lastGen = (profile?['lastQuestGeneration'] as Timestamp?)?.toDate();
+    if (lastGen != null) {
+      final lastGenDate = DateTime(lastGen.year, lastGen.month, lastGen.day);
+      if (lastGenDate.isAtSameMomentAs(todayDate)) {
+        return;
+      }
+    }
+
+    final dateStr =
+        "${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}";
+    final types = [
+      QuestType.flashcard,
+      QuestType.pronunciation,
+      QuestType.lesson
+    ];
     final todayIds = types.map((t) => 'dyn_${t.name}_$dateStr').toSet();
 
-    // 1. Cleanup old or duplicate quests (Aggressive purge)
+    // 1. Cleanup old dynamic quests
     await fbService.purgeLegacyQuests(user.uid, todayIds);
 
-    // 2. Add new unique quests for today
-    // We want 3 specific types of quests every day
-    
+    // 2. Add new unique quests for today with variety based on day of month
+    final dayOffset = now.day;
     for (final type in types) {
       final questId = 'dyn_${type.name}_$dateStr';
-      
-      // Check if this specific quest already exists in currentQuests
-      final exists = currentQuests.any((q) => q.id == questId);
-      if (exists) continue;
-
       Quest? quest;
-      if (type == QuestType.flashcard) {
-        quest = Quest(
-          id: questId,
-          title: 'Forest Memory',
-          description: 'Review 5 words from the Highlands.',
-          target: 5,
-          reward: 15,
-          type: QuestType.flashcard,
-          isDynamic: true,
-        );
-      } else if (type == QuestType.pronunciation) {
-        quest = Quest(
-          id: questId,
-          title: 'Tribal Voice',
-          description: 'Record 2 phrases to preserve our dialect.',
-          target: 2,
-          reward: 20,
-          type: QuestType.pronunciation,
-          isDynamic: true,
-        );
-      } else if (type == QuestType.lesson) {
-        quest = Quest(
-          id: questId,
-          title: 'Path of Wisdom',
-          description: 'Complete 1 lesson to advance your journey.',
-          target: 1,
-          reward: 30,
-          type: QuestType.lesson,
-          isDynamic: true,
-        );
+
+      switch (type) {
+        case QuestType.flashcard:
+          final varieties = [
+            {'title': 'Forest Memory', 'desc': 'Review 5 words from the Highlands.', 'target': 5, 'reward': 15},
+            {'title': 'Ancient Echoes', 'desc': 'Review 8 words to sharpen your mind.', 'target': 8, 'reward': 25},
+            {'title': 'Quick Recall', 'desc': 'Perfect 3 flashcards in a row.', 'target': 3, 'reward': 10},
+          ];
+          final v = varieties[dayOffset % varieties.length];
+          quest = Quest(
+            id: questId,
+            title: v['title'] as String,
+            description: v['desc'] as String,
+            target: v['target'] as int,
+            reward: v['reward'] as int,
+            type: QuestType.flashcard,
+            isDynamic: true,
+          );
+          break;
+        case QuestType.pronunciation:
+          final varieties = [
+            {'title': 'Tribal Voice', 'desc': 'Record 2 phrases to preserve our dialect.', 'target': 2, 'reward': 20},
+            {'title': 'Oral Tradition', 'desc': 'Share 3 recordings from your region.', 'target': 3, 'reward': 30},
+            {'title': 'Clear Chant', 'desc': 'Record 1 new term with perfect clarity.', 'target': 1, 'reward': 15},
+          ];
+          final v = varieties[dayOffset % varieties.length];
+          quest = Quest(
+            id: questId,
+            title: v['title'] as String,
+            description: v['desc'] as String,
+            target: v['target'] as int,
+            reward: v['reward'] as int,
+            type: QuestType.pronunciation,
+            isDynamic: true,
+          );
+          break;
+        case QuestType.lesson:
+          final varieties = [
+            {'title': 'Path of Wisdom', 'desc': 'Complete 1 lesson to advance your journey.', 'target': 1, 'reward': 30},
+            {'title': 'Scholar\'s Trail', 'desc': 'Complete 2 lessons today.', 'target': 2, 'reward': 50},
+            {'title': 'Ritual Master', 'desc': 'Achieve 3 stars in any lesson.', 'target': 1, 'reward': 40},
+          ];
+          final v = varieties[dayOffset % varieties.length];
+          quest = Quest(
+            id: questId,
+            title: v['title'] as String,
+            description: v['desc'] as String,
+            target: v['target'] as int,
+            reward: v['reward'] as int,
+            type: QuestType.lesson,
+            isDynamic: true,
+          );
+          break;
+        default:
+          break;
       }
 
       if (quest != null) {
         await fbService.addQuest(user.uid, quest);
       }
     }
+
+    // 3. Update the last generation timestamp
+    await fbService.updateUserProfile(user.uid, {
+      'lastQuestGeneration': FieldValue.serverTimestamp(),
+    });
   }
 }
 

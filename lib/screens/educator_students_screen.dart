@@ -5,6 +5,8 @@ import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../models/educator_models.dart';
 import '../providers/educator_provider.dart';
+import '../services/firebase_service.dart';
+import '../services/auth_service.dart';
 
 enum StudentSort { name, progress, level }
 
@@ -601,7 +603,7 @@ class _EducatorStudentsScreenState
               ),
               const SizedBox(height: 24),
               // Heatmap
-              _buildAttendanceHeatmap(),
+              _buildAttendanceHeatmap(student),
               const SizedBox(height: 24),
               // Lesson breakdown
               Text(
@@ -653,14 +655,31 @@ class _EducatorStudentsScreenState
                       ),
                     ),
                     child: IconButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Guardian contacted for ${student.name}.',
-                            ),
-                          ),
-                        );
+                      onPressed: () async {
+                        try {
+                          await ref.read(firebaseServiceProvider).addNotification(student.id, {
+                            'title': 'Guardian Alert 🛡️',
+                            'message': 'Your educator has requested a check-in with your guardian regarding your progress.',
+                            'type': 'broadcast',
+                          });
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Guardian notification sent for ${student.name}.'),
+                                backgroundColor: AppColors.semanticGreen,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to contact guardian: $e'),
+                                backgroundColor: AppColors.semanticRed,
+                              ),
+                            );
+                          }
+                        }
                       },
                       icon: const Icon(
                         Icons.family_restroom_rounded,
@@ -834,14 +853,33 @@ class _EducatorStudentsScreenState
     String text,
   ) {
     return InkWell(
-      onTap: () {
-        Navigator.pop(ctx);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Message sent to ${student.name}'),
-            backgroundColor: AppColors.semanticGreen,
-          ),
-        );
+      onTap: () async {
+        try {
+          await ref.read(firebaseServiceProvider).addNotification(student.id, {
+            'title': 'Message from Educator ✉️',
+            'message': text,
+            'type': 'broadcast',
+          });
+          if (ctx.mounted) {
+            Navigator.pop(ctx);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Message sent to ${student.name}'),
+                backgroundColor: AppColors.semanticGreen,
+              ),
+            );
+          }
+        } catch (e) {
+          if (ctx.mounted) {
+            Navigator.pop(ctx);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to send message: $e'),
+                backgroundColor: AppColors.semanticRed,
+              ),
+            );
+          }
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
@@ -881,35 +919,60 @@ class _EducatorStudentsScreenState
     );
   }
 
-  Widget _buildAttendanceHeatmap() {
+  Widget _buildAttendanceHeatmap(EducatorStudent student) {
+    final now = DateTime.now();
+    final last30Days = List.generate(30, (index) {
+      final date = now.subtract(Duration(days: 29 - index));
+      final dateKey = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+      return dateKey;
+    });
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '30-DAY ACTIVITY HEATMAP',
-          style: AppTypography.label.copyWith(
-            color: AppColors.gold500,
-            letterSpacing: 2,
-            fontWeight: FontWeight.w900,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '30-DAY ACTIVITY HEATMAP',
+              style: AppTypography.label.copyWith(
+                color: AppColors.gold500,
+                letterSpacing: 2,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            Text(
+              'Last 30 days',
+              style: AppTypography.label.copyWith(
+                color: isDark ? Colors.white24 : AppColors.creamText3,
+                fontSize: 8,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         Wrap(
           spacing: 4,
           runSpacing: 4,
-          children: List.generate(30, (index) {
-            final isActive = index % 3 != 0;
-            return Container(
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                color: isActive
-                    ? AppColors.gold500.withValues(alpha: (index % 4 + 1) * 0.2)
-                    : Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(4),
+          children: last30Days.map((dateKey) {
+            final isActive = student.activityMap[dateKey] == true;
+            return Tooltip(
+              message: dateKey,
+              child: Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? AppColors.gold500
+                      : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05)),
+                  borderRadius: BorderRadius.circular(4),
+                  border: isActive 
+                      ? null 
+                      : Border.all(color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+                ),
               ),
             );
-          }),
+          }).toList(),
         ),
       ],
     );

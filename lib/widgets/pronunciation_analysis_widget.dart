@@ -129,19 +129,23 @@ class PronunciationAnalysisWidget extends StatelessWidget {
   }
 
   Widget _buildWaveform(List<double> values, Color color) {
+    if (values.isEmpty) return const SizedBox(height: 40);
+
     return SizedBox(
       height: 40,
       width: double.infinity,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: values.map((v) {
-          return Container(
-            width: 4,
-            height: v * 40,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
+          return Flexible(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 0.5),
+              height: (v * 40).clamp(2.0, 40.0),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(1),
+              ),
             ),
           );
         }).toList(),
