@@ -11,43 +11,22 @@ Lumad Lingua is a premium, cultural language-learning platform. It aims to eleva
 
 ## 🛠️ Architecture & Tech Stack
 - **Framework**: Flutter (Dart)
-- **Backend/Database**: Firebase (Firestore, Authentication, Storage)
+- **Backend/Database**: Firebase (Firestore, Authentication, Storage) Supabase
 - **State Management**: Riverpod (`Notifier` patterns)
 - **Local Storage**: Hive (for offline resilience and caching)
 
-## 🎨 UI/UX Strategy
-- **The "Butter" Update**: Focus on extreme fluidity with Hero transitions, dynamic backgrounds, and particle celebrations.
-- **Glassmorphism & Depth**: Utilize `BackdropFilter` for search bars, modals, and navigation components to create layered depth without harsh borders.
-- **Tactile Feedback**: Heavy reliance on micro-animations, physics-based interactions (spring scaling), and integrated `HapticFeedback` for correct/incorrect answers.
-- **Thematic Consistency**: Implementation of distinct, beautifully crafted themes (e.g., "Cream" and "Forest" modes) with strict contrast and accessibility standards.
-
 ## 🗺️ Roadmap & Upcoming Phases
 
-### Phase 13: Technical Polish & Adaptive Design
-- Global theme transitions (cross-fade animations).
-- Screen Reader/Accessibility support audit.
-- Dynamic layout optimizations for foldable and tablet devices.
+### Phase 1: Research Integrity & Geospatial Visualization
+- [ ] Density-based Heatmap Interface for linguistic documentation (beyond markers).
+- [ ] Contribution Version History & Audit Trail for data integrity and archival.
+- [ ] Formalized Pre-test and Post-test Assessment modules for research evaluation.
 
-### Phase 14: Micro-Interactions & Tactile Feedback
-- Custom splash/ripple effects aligned with brand colors.
-- Interactive physics (scale-down on tap) for primary buttons.
-- Animated, looping empty states (Lottie/Rive).
-
-### Phase 15: Spatial Depth & Glassmorphism
-- Frosted overlays for bottom sheets and modals.
-- Nuanced, multi-layered elevation for cards.
-- Sticky blurred headers for long scrolling lists.
-
-### Phase 16: Fluid Navigation & Gestures
-- Custom, branded pull-to-refresh indicators.
-- Edge-swipe parallax for nested screen navigation.
-- Multi-stage snapping modals for ergonomic one-handed use.
-
-### Phase 17: Quality of Life (QoL) Enhancements
-- Recent searches, bookmarks, and clipboard copy in the dictionary.
-- Offline indicators and explicit data sync management.
-- User reporting/flagging for content issues.
-- Account management (data export, account deletion).
+### Phase 2: Advanced Audio & Linguistic Validation
+- [ ] MFCC-based Pronunciation Analysis (upgrading from basic DTW waveform comparison).
+- [ ] Similarity Score Categorization: Excellent (≥80%), Good (60–79%), Needs Improvement (<60%).
+- [ ] Audio Submission Constraints: Enforcement of 10MB max size and 1.0s minimum duration.
+- [ ] Strict Firestore Security: Update rules to prevent Learners from reading unvalidated vocabulary entries.
 
 ## ✅ Recently Completed Milestones
 - **Interaction Hubs**: Scenario Hub, Lingua Duel, Impact Tracking.
