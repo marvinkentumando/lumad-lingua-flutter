@@ -24,7 +24,9 @@ import '../widgets/activity_views/listening_view.dart';
 import '../providers/student_provider.dart';
 import '../providers/quest_provider.dart';
 import '../models/quest.dart';
+import '../models/assessment.dart';
 import '../services/haptic_service.dart';
+import '../widgets/assessment_overlay.dart';
 
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:audio_waveforms/audio_waveforms.dart';
@@ -472,6 +474,25 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
               
               // Update Tribal Challenges progress
               ref.read(questActionProvider.notifier).updateProgress(QuestType.lesson, 1);
+
+              // 20% chance to show a post-test assessment for data gathering
+              final bool shouldShowPostTest = stars == 3 && (DateTime.now().millisecond % 5 == 0);
+              
+              if (shouldShowPostTest) {
+                _showPostTestAssessment(onFinish: () {
+                  if (droppedArtifact != null) {
+                    _showArtifactDropDialog(droppedArtifact, unlockedBadge);
+                  } else if (unlockedBadge) {
+                    _showBadgeUnlockedDialog();
+                  }
+                });
+              } else {
+                if (droppedArtifact != null) {
+                  _showArtifactDropDialog(droppedArtifact, unlockedBadge);
+                } else if (unlockedBadge) {
+                  _showBadgeUnlockedDialog();
+                }
+              }
             })
             .catchError((error) {
               if (mounted) {
@@ -500,6 +521,58 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
       });
       _isContinuing = false;
     }
+  }
+
+  void _showPostTestAssessment({required VoidCallback onFinish}) {
+    final user = ref.read(authServiceProvider).currentUser;
+    if (user == null) {
+      onFinish();
+      return;
+    }
+
+    final List<AssessmentQuestion> postTestQuestions = [
+      AssessmentQuestion(
+        id: 'confidence',
+        text: 'How confident do you feel about the words you just learned?',
+        options: ['Very confident', 'Somewhat confident', 'A bit confused', 'I need more practice'],
+      ),
+      AssessmentQuestion(
+        id: 'difficulty',
+        text: 'Was the difficulty of this lesson appropriate?',
+        options: ['Too easy', 'Just right', 'Too hard', 'Very challenging'],
+      ),
+      AssessmentQuestion(
+        id: 'utility',
+        text: 'How likely are you to use these words in a conversation?',
+        options: ['Very likely', 'Possibly', 'Not sure', 'Unlikely'],
+      ),
+    ];
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: AssessmentOverlay(
+            type: AssessmentType.postTest,
+            questions: postTestQuestions,
+            onComplete: (answers) async {
+              final result = AssessmentResult(
+                userId: user.uid,
+                type: AssessmentType.postTest,
+                lessonId: GoRouterState.of(context).uri.queryParameters['lessonId'],
+                answers: answers,
+                timestamp: DateTime.now(),
+              );
+              await ref.read(firebaseServiceProvider).saveAssessmentResult(result);
+              if (ctx.mounted) Navigator.pop(ctx);
+              onFinish();
+            },
+          ),
+        ),
+      ),
+    );
   }
 
   void _showQuitConfirmationDialog() {

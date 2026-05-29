@@ -10,6 +10,8 @@ import '../models/admin_models.dart';
 import '../models/lesson.dart';
 import '../models/dictionary_entry.dart';
 import '../models/community_activity.dart';
+import '../widgets/impact_card.dart';
+import '../services/impact_service.dart';
 import '../widgets/wotd_widget.dart';
 
 class EducatorDashboardScreen extends ConsumerStatefulWidget {
@@ -61,6 +63,9 @@ class _EducatorDashboardScreenState
     final pendingSubmissionsAsync = ref.watch(
       pendingDictionaryStreamProvider(const ValidatorQuery('all', 10)),
     );
+    final impactAsync = userAuth != null 
+        ? ref.watch(roleImpactProvider(userAuth.uid)) 
+        : const AsyncValue<ContributionImpact>.loading();
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
@@ -71,6 +76,7 @@ class _EducatorDashboardScreenState
             ref.invalidate(allUsersProvider);
             ref.invalidate(totalWordsCountProvider);
             ref.invalidate(communityFeedProvider);
+            if (userAuth != null) ref.invalidate(roleImpactProvider(userAuth.uid));
             await Future.delayed(const Duration(seconds: 1));
           },
           color: AppColors.gold500,
@@ -83,6 +89,14 @@ class _EducatorDashboardScreenState
               children: [
                 const SizedBox(height: 24),
                 _buildHeroBanner(userProfileAsync, notificationsAsync),
+                const SizedBox(height: 24),
+                
+                impactAsync.when(
+                  data: (impact) => ImpactCard(impact: impact),
+                  loading: () => const SizedBox(height: 100, child: Center(child: CircularProgressIndicator(color: AppColors.gold500))),
+                  error: (e, _) => const SizedBox.shrink(),
+                ),
+
                 const SizedBox(height: 24),
                 const WotdWidget(),
                 const SizedBox(height: 32),

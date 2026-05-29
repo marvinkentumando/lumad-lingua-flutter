@@ -1,20 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../providers/student_provider.dart';
 import '../services/firebase_service.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/ambient_topo_background.dart';
-import '../widgets/vine_progress_bar.dart';
 
 class WisdomProgressionScreen extends ConsumerWidget {
   const WisdomProgressionScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final student = ref.watch(studentProvider);
     final config = ref.watch(appConfigProvider).value;
 
@@ -80,7 +77,6 @@ class WisdomProgressionScreen extends ConsumerWidget {
   }
 
   Widget _buildCurrentStatus(BuildContext context, StudentState student) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return BrandCard(
       theme: BrandCardTheme.gold,
       padding: const EdgeInsets.all(28),

@@ -3,19 +3,14 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import 'brand_card.dart';
+import '../services/impact_service.dart';
 
 class ImpactCard extends StatelessWidget {
-  final int studentsHelped;
-  final int totalEncounters;
-  final double accuracyRate;
-  final int wordsValidated;
+  final ContributionImpact impact;
 
   const ImpactCard({
     super.key,
-    required this.studentsHelped,
-    required this.totalEncounters,
-    required this.accuracyRate,
-    required this.wordsValidated,
+    required this.impact,
   });
 
   @override
@@ -51,29 +46,14 @@ class ImpactCard extends StatelessWidget {
           const Divider(color: Colors.white10, height: 1),
           const SizedBox(height: 24),
           Row(
-            children: [
-              Expanded(
-                child: _buildSecondaryMetric(
-                  label: 'TOTAL REACH',
-                  value: totalEncounters.toString(),
-                  icon: Icons.public_rounded,
-                ),
+            children: impact.stats.map((stat) => Expanded(
+              child: _buildSecondaryMetric(
+                label: stat.label,
+                value: stat.value,
+                icon: stat.icon,
+                color: stat.color,
               ),
-              Expanded(
-                child: _buildSecondaryMetric(
-                  label: 'ACCURACY',
-                  value: '${(accuracyRate * 100).toStringAsFixed(0)}%',
-                  icon: Icons.verified_rounded,
-                ),
-              ),
-              Expanded(
-                child: _buildSecondaryMetric(
-                  label: 'VALIDATED',
-                  value: wordsValidated.toString(),
-                  icon: Icons.menu_book_rounded,
-                ),
-              ),
-            ],
+            )).toList(),
           ),
         ],
       ),
@@ -90,7 +70,7 @@ class ImpactCard extends StatelessWidget {
             shape: BoxShape.circle,
           ),
           child: const Icon(
-            Icons.people_alt_rounded,
+            Icons.auto_awesome_rounded,
             color: AppColors.gold500,
             size: 32,
           ),
@@ -100,7 +80,7 @@ class ImpactCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              studentsHelped.toString(),
+              impact.primaryMetric.toString(),
               style: AppTypography.displayBold.copyWith(
                 color: Colors.white,
                 fontSize: 36,
@@ -108,7 +88,7 @@ class ImpactCard extends StatelessWidget {
               ),
             ),
             Text(
-              'STUDENTS HELPED TODAY',
+              impact.primaryLabel,
               style: AppTypography.label.copyWith(
                 color: Colors.white38,
                 fontSize: 10,
@@ -125,10 +105,11 @@ class ImpactCard extends StatelessWidget {
     required String label,
     required String value,
     required IconData icon,
+    Color? color,
   }) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white24, size: 20),
+        Icon(icon, color: color ?? Colors.white24, size: 20),
         const SizedBox(height: 12),
         Text(
           value,

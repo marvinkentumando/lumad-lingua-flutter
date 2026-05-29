@@ -61,7 +61,7 @@ class EducatorStudent {
   final String level;
   final double progress;
   final String avatar;
-  final String village;
+  final String municipality;
   final int lessonsCompleted;
   final int streakDays;
   final bool isStruggling;
@@ -74,7 +74,7 @@ class EducatorStudent {
     required this.level,
     required this.progress,
     required this.avatar,
-    this.village = 'All Villages',
+    this.municipality = 'All Municipalities',
     this.lessonsCompleted = 0,
     this.streakDays = 0,
     this.isStruggling = false,

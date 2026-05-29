@@ -115,7 +115,7 @@ When adding a new item, please use the following format:
 - [ ] **Contribution CTA in Empty Areas**: Tapping on areas with no markers doesn't offer any interaction. It could suggest "Request a recording for this area" or "Contribute as a speaker".
 - [ ] **Audio Recording Actions**: There is no way to "Save" (offline) or "Share" specific recordings found on the map.
 - [ ] **Contributor: Add Recording from Map**: No way to add a site or recording directly via the map interface for contributor users.
-- [ ] **Contributor: Areas in Need Overlay**: No visual indicator (e.g., heatmaps or markers) showing which regions lack sufficient recordings.
+- [x] **Contributor: Areas in Need Overlay**: Added a density-based heatmap toggle to the Archive Map to visualize linguistic documentation coverage.
 - [ ] **Contributor: My Contributions Filter**: Lacks a filter to show only recordings or markers contributed by the current user.
 - [ ] **Contributor: Validation Status Markers**: Map markers do not visually distinguish between pending, approved, or flagged recordings for contributors.
 - [ ] **Contributor: Quick Recording from Panel**: When viewing a municipality, there's no button for a contributor to quickly start a recording for that specific locale.

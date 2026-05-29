@@ -67,6 +67,8 @@ class DictionaryEntry {
   final DateTime? validatedAt;
   @HiveField(18)
   final DateTime? submittedAt;
+  @HiveField(19)
+  final String? validatorAudioTipUrl;
 
   const DictionaryEntry({
     required this.id,
@@ -88,6 +90,7 @@ class DictionaryEntry {
     this.contributorId,
     this.validatedAt,
     this.submittedAt,
+    this.validatorAudioTipUrl,
   });
 
   bool get isValidated => status == ValidationStatus.approved;
@@ -150,6 +153,7 @@ class DictionaryEntry {
       validatorRole: data['validatorRole'],
       validatorId: data['validatorId'],
       validatorFeedback: data['validatorFeedback'],
+      validatorAudioTipUrl: data['validatorAudioTipUrl'],
       contributorName: data['contributorName'],
       contributorId: data['contributorId'],
       validatedAt: validatedAt,
@@ -175,6 +179,7 @@ class DictionaryEntry {
       'validatorRole': validatorRole,
       'validatorId': validatorId,
       'validatorFeedback': validatorFeedback,
+      'validatorAudioTipUrl': validatorAudioTipUrl,
       'contributorName': contributorName,
       'contributorId': contributorId,
       if (validatedAt != null) 'validatedAt': validatedAt,

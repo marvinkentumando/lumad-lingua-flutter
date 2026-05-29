@@ -243,12 +243,7 @@ class StaffProfileScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 20),
         impactAsync.when(
-          data: (impact) => ImpactCard(
-            studentsHelped: impact.studentsHelpedToday,
-            totalEncounters: impact.totalReach,
-            accuracyRate: impact.accuracyRate,
-            wordsValidated: impact.validatedWords,
-          ),
+          data: (impact) => ImpactCard(impact: impact),
           loading: () => const Skeleton(height: 120, borderRadius: 24),
           error: (_, __) => const SizedBox.shrink(),
         ),
@@ -409,7 +404,7 @@ class StaffProfileScreen extends ConsumerWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppTypography.label.copyWith(
-                  color: isEarned ? Colors.black : Colors.white38,
+                  color: isEarned ? Colors.white : Colors.white38,
                   fontSize: 10,
                   fontWeight: FontWeight.w800,
                 ),
@@ -441,7 +436,7 @@ class StaffProfileScreen extends ConsumerWidget {
                   artifact.tier.name.toUpperCase(),
                   style: AppTypography.label.copyWith(
                     fontSize: 8,
-                    color: Colors.black54,
+                    color: Colors.white70,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1,
                   ),

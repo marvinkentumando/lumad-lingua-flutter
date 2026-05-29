@@ -749,6 +749,21 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard>
                 ],
               ),
             ],
+            if (widget.entry.contributorName != null &&
+                widget.entry.contributorName!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  'Contributed by: ${widget.entry.contributorName}',
+                  style: AppTypography.label.copyWith(
+                    color: isDark ? Colors.white24 : AppColors.creamText3,
+                    fontSize: 10,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

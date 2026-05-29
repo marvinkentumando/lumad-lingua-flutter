@@ -26,7 +26,7 @@ class EducatorAnalyticsScreen extends ConsumerStatefulWidget {
 class _EducatorAnalyticsScreenState
     extends ConsumerState<EducatorAnalyticsScreen> {
   bool get isDark => Theme.of(context).brightness == Brightness.dark;
-  String _timeRange = 'Weekly';
+  String _timeRange = 'Daily';
   int? _tappedBarIndex;
 
   @override
@@ -63,6 +63,14 @@ class _EducatorAnalyticsScreenState
                   topLearnersAsync.value ?? [],
                 ),
                 const SizedBox(height: 24),
+                
+                allUsersAsync.when(
+                  data: (users) => _buildActiveLearnersStats(users),
+                  loading: () => _buildLoadingCard(100),
+                  error: (e, _) => const SizedBox.shrink(),
+                ),
+                const SizedBox(height: 32),
+
                 _buildTimeRangeSelector(),
                 const SizedBox(height: 24),
 
@@ -156,7 +164,7 @@ class _EducatorAnalyticsScreenState
                       return _buildLeaderboardItem(
                         '${i + 1}',
                         l['username'] ?? 'Learner',
-                        l['role'] ?? 'Student',
+                        l['municipality'] ?? l['indigenousGroup'] ?? 'Unknown',
                         l['xp'] ?? 0,
                         i == 0
                             ? AppColors.gold500
@@ -257,16 +265,37 @@ class _EducatorAnalyticsScreenState
     final now = DateTime.now();
     final List<Map<String, dynamic>> bars = [];
 
-    if (_timeRange == 'Weekly') {
+    if (_timeRange == 'Daily') {
       // Last 7 days of Daily Active Users (DAU)
       for (int i = 6; i >= 0; i--) {
         final day = now.subtract(Duration(days: i));
-        final dateKey = "${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}";
-        
+        final dateKey =
+            "${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}";
+
         final count = users.where((u) => u.activityMap[dateKey] == true).length;
-        
+
         bars.add({
           'label': DateFormat('E').format(day)[0],
+          'value': count,
+        });
+      }
+    } else if (_timeRange == 'Weekly') {
+      // Weekly Active Users (WAU) - last 4 weeks
+      for (int i = 3; i >= 0; i--) {
+        final weekEnd = now.subtract(Duration(days: i * 7));
+        final weekStart = weekEnd.subtract(const Duration(days: 6));
+
+        final count = users.where((u) {
+          return u.activityMap.keys.any((k) {
+            final date = DateTime.tryParse(k);
+            if (date == null) return false;
+            return date.isAfter(weekStart.subtract(const Duration(seconds: 1))) &&
+                date.isBefore(weekEnd.add(const Duration(seconds: 1)));
+          });
+        }).length;
+
+        bars.add({
+          'label': 'W${4 - i}',
           'value': count,
         });
       }
@@ -274,13 +303,14 @@ class _EducatorAnalyticsScreenState
       // Monthly Engagement: Last 6 months
       for (int i = 5; i >= 0; i--) {
         final monthDate = DateTime(now.year, now.month - i, 1);
-        final monthPrefix = "${monthDate.year}-${monthDate.month.toString().padLeft(2, '0')}";
-        
+        final monthPrefix =
+            "${monthDate.year}-${monthDate.month.toString().padLeft(2, '0')}";
+
         // Count users active at least once in this month
         final count = users.where((u) {
           return u.activityMap.keys.any((k) => k.startsWith(monthPrefix));
         }).length;
-        
+
         bars.add({
           'label': DateFormat('MMM').format(monthDate),
           'value': count,
@@ -293,8 +323,13 @@ class _EducatorAnalyticsScreenState
       (m, b) => (b['value'] as int) > m ? (b['value'] as int) : m,
     );
 
+    String chartTitle = 'Active Learners';
+    if (_timeRange == 'Daily') chartTitle = 'Daily Active Learners (7d)';
+    if (_timeRange == 'Weekly') chartTitle = 'Weekly Active Learners (4w)';
+    if (_timeRange == 'Monthly') chartTitle = 'Monthly Active Learners (6m)';
+
     return Container(
-      height: 220,
+      height: 240,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: isDark ? AppColors.forestDarkCard : Colors.white,
@@ -309,7 +344,7 @@ class _EducatorAnalyticsScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            _timeRange == 'Weekly' ? 'Daily Active Learners' : 'Monthly Active Learners',
+            chartTitle,
             style: AppTypography.h3.copyWith(
               color: isDark ? Colors.white : AppColors.creamText,
             ),
@@ -323,25 +358,24 @@ class _EducatorAnalyticsScreenState
                 final i = e.key;
                 final b = e.value;
                 final isTapped = _tappedBarIndex == i;
-                final h = maxVal > 0
-                    ? ((b['value'] as int) / maxVal) * 120
-                    : 0.0;
+                final val = b['value'] as int;
+                final h = maxVal > 0 ? (val / maxVal) * 120 : 0.0;
+                
                 return GestureDetector(
                   onTap: () =>
                       setState(() => _tappedBarIndex = isTapped ? null : i),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      if (isTapped)
-                        Text(
-                          '${b['value']}',
-                          style: AppTypography.label.copyWith(
-                            color: AppColors.gold500,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      Text(
+                        '$val',
+                        style: AppTypography.label.copyWith(
+                          color: isTapped ? AppColors.gold500 : (isDark ? Colors.white38 : AppColors.creamText3),
+                          fontSize: 9,
+                          fontWeight: isTapped ? FontWeight.bold : FontWeight.normal,
                         ),
-                      if (isTapped) const SizedBox(height: 4),
+                      ),
+                      const SizedBox(height: 4),
                       AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
                         width: 18,
@@ -653,12 +687,15 @@ class _EducatorAnalyticsScreenState
           rows.add(['Top Learners', i + 1, topLearners[i]['username'], topLearners[i]['xp']]);
         }
 
-        final csvData = ListToCsvConverter().convert(rows);
+        final csvData = const CsvEncoder().convert(rows);
         final directory = await getTemporaryDirectory();
         final file = File('${directory.path}/$filename.csv');
         await file.writeAsString(csvData);
 
-        await Share.shareXFiles([XFile(file.path)], text: 'Educator Analytics Report (CSV)');
+        await SharePlus.instance.share(ShareParams(
+          files: [XFile(file.path)],
+          text: 'Educator Analytics Report (CSV)',
+        ));
       } else {
         // PDF Implementation
         final pdf = pw.Document();
@@ -699,9 +736,9 @@ class _EducatorAnalyticsScreenState
               pw.TableHelper.fromTextArray(
                 context: context,
                 data: [
-                  ['Rank', 'Username', 'Village', 'XP'],
+                  ['Rank', 'Username', 'Municipality', 'XP'],
                   ...topLearners.asMap().entries.map((e) => [
-                    e.key + 1, e.value['username'], e.value['indigenousGroup'] ?? 'Unknown', e.value['xp']
+                    e.key + 1, e.value['username'], e.value['municipality'] ?? 'Unknown', e.value['xp']
                   ]),
                 ],
               ),
@@ -713,7 +750,10 @@ class _EducatorAnalyticsScreenState
         final file = File('${directory.path}/$filename.pdf');
         await file.writeAsBytes(await pdf.save());
 
-        await Share.shareXFiles([XFile(file.path)], text: 'Educator Analytics Report (PDF)');
+        await SharePlus.instance.share(ShareParams(
+          files: [XFile(file.path)],
+          text: 'Educator Analytics Report (PDF)',
+        ));
       }
     } catch (e) {
       debugPrint('Export Error: $e');
@@ -782,7 +822,7 @@ class _EducatorAnalyticsScreenState
 
   Widget _buildTimeRangeSelector() {
     return Row(
-      children: ['Weekly', 'Monthly'].map((range) {
+      children: ['Daily', 'Weekly', 'Monthly'].map((range) {
         final isSelected = _timeRange == range;
         return Padding(
           padding: const EdgeInsets.only(right: 8),
@@ -1017,7 +1057,7 @@ class _EducatorAnalyticsScreenState
   Widget _buildLeaderboardItem(
     String rank,
     String name,
-    String village,
+    String municipality,
     int score,
     Color rankColor,
   ) {
@@ -1062,7 +1102,7 @@ class _EducatorAnalyticsScreenState
                   ),
                 ),
                 Text(
-                  village,
+                  municipality,
                   style: AppTypography.label.copyWith(
                     color: isDark ? Colors.white38 : AppColors.creamText3,
                     fontSize: 10,
@@ -1079,6 +1119,75 @@ class _EducatorAnalyticsScreenState
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildActiveLearnersStats(List<AdminUser> users) {
+    final now = DateTime.now();
+    
+    // DAU (Today)
+    final todayStr = DateFormat('yyyy-MM-dd').format(now);
+    final dau = users.where((u) => u.activityMap[todayStr] == true).length;
+    
+    // WAU (Last 7 days)
+    final last7Days = List.generate(7, (i) => DateFormat('yyyy-MM-dd').format(now.subtract(Duration(days: i))));
+    final wau = users.where((u) => last7Days.any((date) => u.activityMap[date] == true)).length;
+    
+    // MAU (Last 30 days)
+    final last30Days = List.generate(30, (i) => DateFormat('yyyy-MM-dd').format(now.subtract(Duration(days: i))));
+    final mau = users.where((u) => last30Days.any((date) => u.activityMap[date] == true)).length;
+
+    return Row(
+      children: [
+        _buildStatCard('DAU', dau.toString(), 'Today', AppColors.gold500),
+        const SizedBox(width: 12),
+        _buildStatCard('WAU', wau.toString(), '7 Days', AppColors.semanticBlue),
+        const SizedBox(width: 12),
+        _buildStatCard('MAU', mau.toString(), '30 Days', AppColors.semanticGreen),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(String label, String value, String sub, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.forestDarkCard : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.creamBorder,
+          ),
+        ),
+        child: Column(
+          children: [
+            Text(
+              label,
+              style: AppTypography.label.copyWith(
+                color: color,
+                fontWeight: FontWeight.w900,
+                fontSize: 10,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: GoogleFonts.outfit(
+                color: isDark ? Colors.white : AppColors.creamText,
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            Text(
+              sub,
+              style: AppTypography.label.copyWith(
+                color: isDark ? Colors.white24 : AppColors.creamText3,
+                fontSize: 9,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

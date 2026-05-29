@@ -34,6 +34,7 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
   String? _selectedProvince;
   String _searchQuery = '';
   bool _isSatellite = true;
+  bool _showHeatmap = false;
   LatLng? _userLocation;
   bool _followUser = false;
   StreamSubscription<Position>? _positionStream;
@@ -193,6 +194,43 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
             ),
           ),
 
+          // Heatmap Legend
+          if (_showHeatmap)
+            Positioned(
+              left: 20,
+              bottom: _selectedRecording != null ? 380 : 40,
+              child: GlassBox(
+                borderRadius: 12,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'DOCUMENTATION DENSITY',
+                        style: AppTypography.label.copyWith(
+                          color: AppColors.gold500,
+                          fontSize: 8,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          _buildLegendItem('HIGH', Colors.red),
+                          const SizedBox(width: 8),
+                          _buildLegendItem('MED', AppColors.terracotta),
+                          const SizedBox(width: 8),
+                          _buildLegendItem('LOW', AppColors.gold500),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ).animate().fadeIn().slideX(begin: -0.2),
+
           // Floating Map Controls (Right Side)
           Positioned(
             right: 20,
@@ -218,6 +256,12 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
                     _followUser ? Icons.gps_fixed : Icons.gps_not_fixed,
                     () => _toggleFollowMe(),
                     isActive: _followUser,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildMapControl(
+                    _showHeatmap ? Icons.layers_rounded : Icons.layers_outlined,
+                    () => setState(() => _showHeatmap = !_showHeatmap),
+                    isActive: _showHeatmap,
                   ),
                   const SizedBox(height: 12),
                   _buildMapControl(
@@ -306,6 +350,35 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
             subdomains: const ['a', 'b', 'c', 'd'],
             userAgentPackageName: 'com.lumadlingua.app',
             tileProvider: CachedTileProvider(),
+          ),
+
+        if (_showHeatmap)
+          CircleLayer(
+            circles: municipalities.expand((rec) {
+              // Calculate density factor based on supported dialects
+              final double weight = (rec.safeSupportedDialects.length.toDouble().clamp(1.0, 5.0)) / 2.0;
+              
+              return [
+                CircleMarker(
+                  point: rec.location,
+                  radius: 50 * weight,
+                  useRadiusInMeter: false,
+                  color: AppColors.gold500.withValues(alpha: 0.1),
+                ),
+                CircleMarker(
+                  point: rec.location,
+                  radius: 25 * weight,
+                  useRadiusInMeter: false,
+                  color: AppColors.terracotta.withValues(alpha: 0.15),
+                ),
+                CircleMarker(
+                  point: rec.location,
+                  radius: 10 * weight,
+                  useRadiusInMeter: false,
+                  color: Colors.red.withValues(alpha: 0.2),
+                ),
+              ];
+            }).toList(),
           ),
 
         MarkerLayer(
@@ -1018,6 +1091,33 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildLegendItem(String label, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 4),
+            ],
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: AppTypography.label.copyWith(
+            color: Colors.white70,
+            fontSize: 7,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 }

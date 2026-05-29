@@ -48,6 +48,11 @@ class UserPreferencesNotifier extends Notifier<UserPreferences> {
     await _save();
   }
 
+  Future<void> completePreTest() async {
+    state = state.copyWith(hasCompletedPreTest: true);
+    await _save();
+  }
+
   Future<void> _save() async {
     try {
       _prefs = await SharedPreferences.getInstance();

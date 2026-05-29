@@ -14,6 +14,7 @@ import '../models/voice_submission.dart';
 import '../models/lesson.dart';
 import '../models/dictionary_entry.dart';
 import '../models/scenario_models.dart';
+import '../models/admin_models.dart';
 import '../services/haptic_service.dart';
 import '../services/auth_service.dart';
 
@@ -32,11 +33,13 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
 
   final Set<String> _selectedIds = {};
   bool _isSelectionMode = false;
+  late Stream<List<AuditLogEntry>> _auditStream;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
+    _auditStream = ref.read(firebaseServiceProvider).getAuditTrail();
   }
 
   void _toggleSelection(String id) {
@@ -88,6 +91,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                       _buildRecordingsTab(),
                       _buildLessonsTab(),
                       _buildScenariosTab(),
+                      _buildAuditTab(),
                     ],
                   ),
                 ),
@@ -214,8 +218,6 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
 
     if (confirmed != true) return;
 
-    final messenger = ScaffoldMessenger.of(context);
-
     if (_tabController.index == 0) {
       await ref.read(firebaseServiceProvider).bulkApproveWords(_selectedIds.toList(), validatorId, validatorRole);
     } else if (_tabController.index == 1) {
@@ -231,9 +233,11 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
       _isSelectionMode = false;
     });
     
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Bulk approval successful'), backgroundColor: AppColors.semanticGreen),
-    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Bulk approval successful'), backgroundColor: AppColors.semanticGreen),
+      );
+    }
   }
 
   void _handleBulkDelete() {
@@ -407,6 +411,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
           Tab(text: 'RECORDINGS'),
           Tab(text: 'LESSONS'),
           Tab(text: 'SCENARIOS'),
+          Tab(text: 'AUDIT'),
         ],
       ),
     );
@@ -504,6 +509,86 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
     );
   }
 
+  Widget _buildAuditTab() {
+    return StreamBuilder<List<AuditLogEntry>>(
+      stream: _auditStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        final logs = snapshot.data ?? [];
+        if (logs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.history_rounded, color: isDark ? Colors.white10 : Colors.black12, size: 64),
+                const SizedBox(height: 16),
+                Text('No audit logs yet.', style: AppTypography.h3.copyWith(color: isDark ? Colors.white24 : AppColors.creamText3)),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+          itemCount: logs.length,
+          itemBuilder: (context, index) {
+            final log = logs[index];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.forest700.withValues(alpha: 0.3) : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.creamBorder),
+                ),
+                child: ListTile(
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.gold500.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(child: Text(log.icon, style: const TextStyle(fontSize: 18))),
+                  ),
+                  title: Text(
+                    '${log.action}: ${log.targetName}',
+                    style: AppTypography.body.copyWith(
+                      color: isDark ? Colors.white : AppColors.forest900,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'by ${log.actorName} · ${log.timeAgo}',
+                        style: AppTypography.label.copyWith(color: isDark ? Colors.white38 : AppColors.creamText3, fontSize: 11),
+                      ),
+                      if (log.metadata != null)
+                         Text(
+                           log.metadata!.entries.map((e) => '${e.key}: ${e.value}').join(', '),
+                           style: AppTypography.mono.copyWith(color: AppColors.gold500.withValues(alpha: 0.6), fontSize: 9),
+                           maxLines: 1,
+                           overflow: TextOverflow.ellipsis,
+                         ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -537,6 +622,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
       author: 'by ${data.contributorName ?? 'Unknown'}',
       status: data.status.name,
       onEdit: () => _showEditDictionaryDialog(data),
+      onHistory: () => _showVersionHistoryModal(data.id, 'words', data.indigenousWord),
       onDelete: () => _showDeletePasswordDialog(data.indigenousWord, () {
         ref.read(firebaseServiceProvider).deleteWord(data.id);
       }),
@@ -554,6 +640,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
       author: 'by ${data.contributorName}',
       status: data.status.name,
       audioUrl: data.audioUrl,
+      onHistory: () => _showVersionHistoryModal(data.id, 'voice_submissions', data.title),
       onDelete: () => _showDeletePasswordDialog(data.title, () {
          ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Recording deletion requested'))
@@ -573,6 +660,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
       author: 'Level ${data.level} · Unit ${data.unitNumber}',
       status: data.status.toString().split('.').last.toLowerCase(),
       onEdit: () => _showEditLessonDialog(data),
+      onHistory: () => _showVersionHistoryModal(data.id, 'lessons', data.title),
       onDelete: () => _showDeletePasswordDialog(data.title, () {
         ref.read(firebaseServiceProvider).deleteLesson(data.id);
       }),
@@ -606,6 +694,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
     required String status,
     required VoidCallback onDelete,
     VoidCallback? onEdit,
+    VoidCallback? onHistory,
     String? audioUrl,
   }) {
     final isSelected = _selectedIds.contains(id);
@@ -705,6 +794,13 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                     const SizedBox(height: 8),
                     Row(
                       children: [
+                        if (onHistory != null)
+                          _actionIcon(
+                            Icons.history_rounded,
+                            onHistory,
+                            color: AppColors.gold500,
+                          ),
+                        if (onHistory != null) const SizedBox(width: 8),
                         if (onEdit != null)
                           _actionIcon(
                             Icons.edit_outlined,
@@ -727,6 +823,106 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
         ),
       ),
     ).animate().fadeIn(delay: Duration(milliseconds: index * 50)).slideY(begin: 0.1, curve: Curves.easeOutCubic);
+  }
+
+  void _showVersionHistoryModal(String docId, String collection, String title) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (context) => Column(
+        children: [
+          const SizedBox(height: 12),
+          Container(width: 36, height: 4, decoration: BoxDecoration(color: isDark ? Colors.white24 : Colors.black12, borderRadius: BorderRadius.circular(2))),
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              children: [
+                const Icon(Icons.history_rounded, color: AppColors.gold500),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('VERSION HISTORY', style: AppTypography.label.copyWith(color: AppColors.gold500, letterSpacing: 2)),
+                      Text(title, style: AppTypography.h3.copyWith(color: isDark ? Colors.white : AppColors.forest900), overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: ref.read(firebaseServiceProvider).getVersionHistory(collection, docId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                final history = snapshot.data ?? [];
+                if (history.isEmpty) return Center(child: Text('No history found.', style: TextStyle(color: isDark ? Colors.white38 : AppColors.creamText3)));
+
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  itemCount: history.length,
+                  itemBuilder: (context, idx) {
+                    final item = history[idx];
+                    final snapshot = item['snapshot'] as Map<String, dynamic>?;
+                    final timestamp = (item['timestamp'] as dynamic)?.toDate() as DateTime?;
+                    
+                    return Card(
+                      color: isDark ? AppColors.forest800 : Colors.white,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      child: ListTile(
+                        title: Text(
+                          timestamp != null ? timestamp.toString().substring(0, 16) : 'Unknown Date',
+                          style: AppTypography.body.copyWith(color: isDark ? Colors.white : AppColors.forest900, fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          'Modified by: ${item['actorId'] ?? 'System'}',
+                          style: AppTypography.label.copyWith(color: isDark ? Colors.white38 : AppColors.creamText3),
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.visibility_outlined, color: AppColors.gold500),
+                          onPressed: () => _showSnapshotDetails(snapshot ?? {}),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSnapshotDetails(Map<String, dynamic> data) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? AppColors.forest800 : Colors.white,
+        title: const Text('Version Snapshot'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: data.entries.map((e) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: RichText(text: TextSpan(
+                children: [
+                  TextSpan(text: '${e.key}: ', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.gold500)),
+                  TextSpan(text: '${e.value}', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+                ]
+              )),
+            )).toList(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+        ],
+      ),
+    );
   }
 
   void _showEditDictionaryDialog(DictionaryEntry data) {
@@ -1094,15 +1290,14 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                     'Seed Scenarios',
                     'This will add sample scenarios to your Firestore collection.',
                     () async {
+                      final messenger = ScaffoldMessenger.of(context);
                       await ref.read(firebaseServiceProvider).seedScenarios();
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Scenarios seeded successfully'),
-                            backgroundColor: AppColors.semanticGreen,
-                          ),
-                        );
-                      }
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('Scenarios seeded successfully'),
+                          backgroundColor: AppColors.semanticGreen,
+                        ),
+                      );
                     },
                   );
                 },
@@ -1119,8 +1314,6 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                     'Reset Platform',
                     'This will permanently delete ALL pending submissions.',
                     () async {
-                      final messenger = ScaffoldMessenger.of(context);
-                      
                       final words = await ref.read(allWordsProvider.future);
                       final pendingWords = words.where((w) => w.status == ValidationStatus.pending).map((w) => w.id).toList();
                       if (pendingWords.isNotEmpty) {
@@ -1133,14 +1326,13 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                         await ref.read(firebaseServiceProvider).bulkDeleteVoiceSubmissions(pendingRecs);
                       }
 
-                      if (mounted) {
-                        messenger.showSnackBar(
-                          const SnackBar(
-                            content: Text('Platform reset successful'),
-                            backgroundColor: AppColors.semanticGreen,
-                          ),
-                        );
-                      }
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Platform reset successful'),
+                          backgroundColor: AppColors.semanticGreen,
+                        ),
+                      );
                     },
                   );
                 },
@@ -1326,11 +1518,9 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
       }).toList();
     }
 
-    final messenger = ScaffoldMessenger.of(context);
-
     if (data.isEmpty) {
       if (mounted) {
-        messenger.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('No data to export'))
         );
       }
@@ -1350,14 +1540,16 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
     if (!mounted) return;
     
     Clipboard.setData(ClipboardData(text: output));
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          '${format.toUpperCase()} copied to clipboard (${data.length} entries)',
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${format.toUpperCase()} copied to clipboard (${data.length} entries)',
+          ),
+          backgroundColor: AppColors.semanticGreen,
         ),
-        backgroundColor: AppColors.semanticGreen,
-      ),
-    );
+      );
+    }
   }
 }
 

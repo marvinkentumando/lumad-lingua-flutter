@@ -8,7 +8,6 @@ import '../widgets/brand_card.dart';
 import '../widgets/brand_background.dart';
 import '../providers/student_provider.dart';
 import '../services/firebase_service.dart';
-import '../models/scenario_models.dart';
 
 class ScenarioHubScreen extends ConsumerWidget {
   const ScenarioHubScreen({super.key});

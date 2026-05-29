@@ -92,31 +92,6 @@ class _ValidatorEntriesScreenState
     super.dispose();
   }
 
-  Future<void> _startRecordingTip() async {
-    try {
-      if (await _recorder.hasPermission()) {
-        final directory = await getTemporaryDirectory();
-        final path = '${directory.path}/tip_${DateTime.now().millisecondsSinceEpoch}.m4a';
-        await _recorder.start(const RecordConfig(), path: path);
-        setState(() => _isRecordingTip = true);
-      }
-    } catch (e) {
-      debugPrint('Error starting recording: $e');
-    }
-  }
-
-  Future<void> _stopRecordingTip() async {
-    try {
-      final path = await _recorder.stop();
-      setState(() {
-        _isRecordingTip = false;
-        _recordedTipPath = path;
-      });
-    } catch (e) {
-      debugPrint('Error stopping recording: $e');
-    }
-  }
-
   Future<void> _loadSearchHistory() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
@@ -1732,9 +1707,15 @@ class _ValidatorEntriesScreenState
                                setModalState(() => _isProcessing = false);
                             }
 
-                            await ref.read(firebaseServiceProvider).rejectWord(entry.id, userId, userRole, feedback);
+                            await ref.read(firebaseServiceProvider).rejectWord(
+                                  entry.id,
+                                  userId,
+                                  userRole,
+                                  feedback,
+                                  audioTipUrl: audioTipUrl,
+                                );
                             
-                            if (!mounted) return;
+                            if (!context.mounted) return;
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(entry.status == ValidationStatus.pending ? 'Entry Rejected' : 'Decision Updated'), backgroundColor: AppColors.semanticRed));
                           },
@@ -1765,9 +1746,15 @@ class _ValidatorEntriesScreenState
                                setModalState(() => _isProcessing = false);
                             }
 
-                            await ref.read(firebaseServiceProvider).flagWord(entry.id, userId, userRole, feedback);
+                            await ref.read(firebaseServiceProvider).flagWord(
+                                  entry.id,
+                                  userId,
+                                  userRole,
+                                  feedback,
+                                  audioTipUrl: audioTipUrl,
+                                );
 
-                            if (!mounted) return;
+                            if (!context.mounted) return;
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(entry.status == ValidationStatus.pending ? 'Clarification request sent' : 'Decision Updated'), backgroundColor: AppColors.gold500));
                           },
@@ -1806,7 +1793,7 @@ class _ValidatorEntriesScreenState
                           if (confirmed != true) return;
 
                           await ref.read(firebaseServiceProvider).approveWord(entry.id, userId, userRole);
-                          if (!mounted) return;
+                          if (!context.mounted) return;
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Decision Changed: Approved!'), backgroundColor: AppColors.semanticGreen));
                         },

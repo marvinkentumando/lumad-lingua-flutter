@@ -6,7 +6,6 @@ import '../widgets/brand_card.dart';
 import '../models/educator_models.dart';
 import '../providers/educator_provider.dart';
 import '../services/firebase_service.dart';
-import '../services/auth_service.dart';
 
 enum StudentSort { name, progress, level }
 
@@ -22,7 +21,7 @@ class _EducatorStudentsScreenState
     extends ConsumerState<EducatorStudentsScreen> {
   bool get isDark => Theme.of(context).brightness == Brightness.dark;
 
-  String _selectedFilter = 'All Villages';
+  String _selectedFilter = 'All Municipalities';
   StudentSort _currentSort = StudentSort.name;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
@@ -30,7 +29,7 @@ class _EducatorStudentsScreenState
   List<EducatorStudent> _getFilteredStudents(List<EducatorStudent> allStudents) {
     var list = allStudents.where((s) {
       final matchesFilter =
-          _selectedFilter == 'All Villages' || s.village == _selectedFilter;
+          _selectedFilter == 'All Municipalities' || s.municipality == _selectedFilter;
       final matchesSearch =
           _searchQuery.isEmpty ||
           s.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
@@ -69,7 +68,7 @@ class _EducatorStudentsScreenState
       data: (allStudents) {
         final filteredStudents = _getFilteredStudents(allStudents);
         final strugglingCount = allStudents.where((s) => s.isStruggling).length;
-        final villages = ['All Villages', ...allStudents.map((s) => s.village).toSet()];
+        final municipalities = ['All Municipalities', ...allStudents.map((s) => s.municipality).toSet()];
 
         return Scaffold(
           backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
@@ -180,7 +179,7 @@ class _EducatorStudentsScreenState
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Row(
                     children: [
-                      Expanded(child: _buildStudentFilterTabs(villages.toList())),
+                      Expanded(child: _buildStudentFilterTabs(municipalities.toList())),
                       const SizedBox(width: 8),
                       _buildSortDropdown(),
                     ],
@@ -318,11 +317,11 @@ class _EducatorStudentsScreenState
     );
   }
 
-  Widget _buildStudentFilterTabs(List<String> villages) {
+  Widget _buildStudentFilterTabs(List<String> municipalities) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: villages.map((filter) {
+        children: municipalities.map((filter) {
           final isSelected = _selectedFilter == filter;
           return Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -421,7 +420,7 @@ class _EducatorStudentsScreenState
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '• ${student.village}',
+                          '• ${student.municipality}',
                           style: AppTypography.label.copyWith(
                             color: isDark ? Colors.white24 : AppColors.creamText3,
                             fontSize: 9,
@@ -562,7 +561,7 @@ class _EducatorStudentsScreenState
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '• ${student.village}',
+                          '• ${student.municipality}',
                           style: AppTypography.label.copyWith(
                             color: isDark ? Colors.white38 : AppColors.creamText3,
                           ),
@@ -662,23 +661,21 @@ class _EducatorStudentsScreenState
                             'message': 'Your educator has requested a check-in with your guardian regarding your progress.',
                             'type': 'broadcast',
                           });
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Guardian notification sent for ${student.name}.'),
-                                backgroundColor: AppColors.semanticGreen,
-                              ),
-                            );
-                          }
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Guardian notification sent for ${student.name}.'),
+                              backgroundColor: AppColors.semanticGreen,
+                            ),
+                          );
                         } catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Failed to contact guardian: $e'),
-                                backgroundColor: AppColors.semanticRed,
-                              ),
-                            );
-                          }
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to contact guardian: $e'),
+                              backgroundColor: AppColors.semanticRed,
+                            ),
+                          );
                         }
                       },
                       icon: const Icon(
@@ -860,25 +857,23 @@ class _EducatorStudentsScreenState
             'message': text,
             'type': 'broadcast',
           });
-          if (ctx.mounted) {
-            Navigator.pop(ctx);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Message sent to ${student.name}'),
-                backgroundColor: AppColors.semanticGreen,
-              ),
-            );
-          }
+          if (!mounted) return;
+          if (ctx.mounted) Navigator.pop(ctx);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Message sent to ${student.name}'),
+              backgroundColor: AppColors.semanticGreen,
+            ),
+          );
         } catch (e) {
-          if (ctx.mounted) {
-            Navigator.pop(ctx);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Failed to send message: $e'),
-                backgroundColor: AppColors.semanticRed,
-              ),
-            );
-          }
+          if (!mounted) return;
+          if (ctx.mounted) Navigator.pop(ctx);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to send message: $e'),
+              backgroundColor: AppColors.semanticRed,
+            ),
+          );
         }
       },
       child: Container(

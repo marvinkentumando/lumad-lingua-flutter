@@ -286,6 +286,19 @@ class RecordingCard extends StatelessWidget {
                 ],
               ),
             ),
+          const SizedBox(height: 16),
+          if (audio['contributorName'] != null)
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                'Contributed by: ${audio['contributorName']}',
+                style: AppTypography.label.copyWith(
+                  color: isDark ? Colors.white24 : AppColors.creamText3,
+                  fontSize: 10,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
         ],
       ),
     );

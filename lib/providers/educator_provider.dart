@@ -72,7 +72,7 @@ final educatorStudentsProvider = StreamProvider<List<EducatorStudent>>((ref) {
         level: level,
         progress: lessons.isEmpty ? 0 : (totalProgress / lessons.length).clamp(0.0, 1.0),
         avatar: user.photoURL ?? 'assets/images/user1.png',
-        village: user.indigenousGroup ?? 'Unknown',
+        municipality: user.municipality ?? 'Unknown',
         lessonsCompleted: completedCount,
         streakDays: user.streak,
         isStruggling: user.xp < 50 && completedCount < 2, // Sample heuristic

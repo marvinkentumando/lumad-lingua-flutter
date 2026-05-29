@@ -7,6 +7,7 @@ import '../models/lesson.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:confetti/confetti.dart';
+import 'package:share_plus/share_plus.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/unit_header_card.dart';
@@ -17,6 +18,10 @@ import '../providers/student_provider.dart';
 import '../providers/learning_provider.dart';
 import '../providers/user_preferences_provider.dart';
 import '../widgets/ambient_topo_background.dart';
+import '../widgets/assessment_overlay.dart';
+import '../models/assessment.dart';
+import '../services/auth_service.dart';
+import '../services/certificate_service.dart';
 
 class LearningPathScreen extends ConsumerStatefulWidget {
   const LearningPathScreen({super.key});
@@ -32,7 +37,54 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
   late ConfettiController _confettiController;
   bool _hasScrolledToActive = false;
   bool _showCelebration = false;
+  bool _showPostTest = false;
+  bool _isGeneratingCertificate = false;
   final GlobalKey _activeNodeKey = GlobalKey();
+
+  void _triggerSummitCelebration() {
+    HapticFeedback.heavyImpact();
+    setState(() => _showCelebration = true);
+    _confettiController.play();
+  }
+
+  Future<void> _handleClaimCertificate(String language) async {
+    final user = ref.read(authServiceProvider).currentUser;
+    if (user == null) return;
+
+    setState(() => _showPostTest = true);
+  }
+
+  Future<void> _generateAndShareCertificate(String language) async {
+    final user = ref.read(authServiceProvider).currentUser;
+    if (user == null) return;
+
+    setState(() => _isGeneratingCertificate = true);
+
+    try {
+      final certificateService = CertificateService();
+      final file = await certificateService.generateCertificate(
+        userName: user.displayName ?? 'Lumad Learner',
+        language: language,
+      );
+
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          subject: 'My Lumad Lingua Certificate - $language',
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to generate certificate: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isGeneratingCertificate = false);
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -148,7 +200,53 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
             // Glassmorphic Header
             _buildGlassHeader(context, resolvedLanguage),
 
-            if (_showCelebration) _buildCelebrationOverlay(),
+            if (_showCelebration) _buildCelebrationOverlay(resolvedLanguage),
+
+            if (_showPostTest)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.9),
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  alignment: Alignment.center,
+                  child: AssessmentOverlay(
+                    type: AssessmentType.postTest,
+                    questions: [
+                      AssessmentQuestion(
+                        id: 'peak_mastery',
+                        text: 'How would you rate your overall mastery of $resolvedLanguage after completing this path?',
+                        options: ['Mastered', 'Proficient', 'Developing', 'Beginner'],
+                      ),
+                      AssessmentQuestion(
+                        id: 'cultural_connection',
+                        text: 'Do you feel more connected to the Lumad culture after these lessons?',
+                        options: ['Strongly Connected', 'Somewhat Connected', 'A little', 'Not at all'],
+                      ),
+                      AssessmentQuestion(
+                        id: 'app_satisfaction',
+                        text: 'How helpful was Lumad Lingua in your learning journey?',
+                        options: ['Extremely Helpful', 'Helpful', 'Neutral', 'Unhelpful'],
+                      ),
+                    ],
+                    onComplete: (answers) async {
+                      final user = ref.read(authServiceProvider).currentUser;
+                      if (user != null) {
+                        final result = AssessmentResult(
+                          userId: user.uid,
+                          type: AssessmentType.postTest,
+                          answers: answers,
+                          timestamp: DateTime.now(),
+                          lessonId: 'summit_$resolvedLanguage',
+                        );
+                        await ref.read(firebaseServiceProvider).saveAssessmentResult(result);
+                      }
+                      setState(() {
+                        _showPostTest = false;
+                      });
+                      await _generateAndShareCertificate(resolvedLanguage);
+                    },
+                  ),
+                ).animate().fadeIn(),
+              ),
 
             Align(
               alignment: Alignment.topCenter,
@@ -170,7 +268,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
     );
   }
 
-  Widget _buildCelebrationOverlay() {
+  Widget _buildCelebrationOverlay(String language) {
     return GestureDetector(
       onTap: () => setState(() => _showCelebration = false),
       child: Container(
@@ -206,24 +304,36 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                 ),
               ).animate().fadeIn(delay: 500.ms),
               const SizedBox(height: 48),
-              Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [AppColors.gold500, AppColors.terracotta]),
-                  borderRadius: BorderRadius.circular(32),
-                ),
+              GestureDetector(
+                onTap: () => _handleClaimCertificate(language),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(30),
+                    gradient: const LinearGradient(colors: [AppColors.gold500, AppColors.terracotta]),
+                    borderRadius: BorderRadius.circular(32),
                   ),
-                  child: Text(
-                    'CLAIM CERTIFICATE',
-                    style: AppTypography.label.copyWith(
-                      color: AppColors.gold500,
-                      fontWeight: FontWeight.w900,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      borderRadius: BorderRadius.circular(30),
                     ),
+                    child: _isGeneratingCertificate
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: AppColors.gold500,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            'CLAIM CERTIFICATE',
+                            style: AppTypography.label.copyWith(
+                              color: AppColors.gold500,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
                   ),
                 ),
               ).animate().scale(delay: 800.ms, curve: Curves.easeOutBack).shimmer(delay: 2.seconds),
@@ -240,12 +350,6 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
         ),
       ),
     );
-  }
-
-  void _triggerSummitCelebration() {
-    HapticFeedback.heavyImpact();
-    setState(() => _showCelebration = true);
-    _confettiController.play();
   }
 
   Widget _buildGlassHeader(BuildContext context, String language) {

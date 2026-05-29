@@ -608,7 +608,7 @@ class DatabaseSeeder {
       // Consistent ID: province_municipality (handles duplicate names like Santa Maria)
       final provinceSlug = muni['province'].toString().toLowerCase().replaceAll(' ', '_');
       final nameSlug = muni['name'].toString().toLowerCase().replaceAll(' ', '_');
-      final docId = '${provinceSlug}_${nameSlug}';
+      final docId = '${provinceSlug}_$nameSlug';
 
       final docRef = _db.collection('municipalities').doc(docId);
       batch.set(docRef, muni, SetOptions(merge: true));

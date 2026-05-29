@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'firebase_service.dart';
 import '../models/srs_models.dart';
 import 'auth_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:rxdart/rxdart.dart';
 
 enum MasteryLevel { newWord, learning, proficient, mastered }

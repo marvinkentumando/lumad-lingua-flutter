@@ -18,9 +18,9 @@ Lumad Lingua is a premium, cultural language-learning platform. It aims to eleva
 ## 🗺️ Roadmap & Upcoming Phases
 
 ### Phase 1: Research Integrity & Geospatial Visualization
-- [ ] Density-based Heatmap Interface for linguistic documentation (beyond markers).
-- [ ] Contribution Version History & Audit Trail for data integrity and archival.
-- [ ] Formalized Pre-test and Post-test Assessment modules for research evaluation.
+- [x] Density-based Heatmap Interface for linguistic documentation (beyond markers).
+- [x] Contribution Version History & Audit Trail for data integrity and archival.
+- [x] Formalized Pre-test and Post-test Assessment modules for research evaluation.
 
 ### Phase 2: Advanced Audio & Linguistic Validation
 - [ ] MFCC-based Pronunciation Analysis (upgrading from basic DTW waveform comparison).

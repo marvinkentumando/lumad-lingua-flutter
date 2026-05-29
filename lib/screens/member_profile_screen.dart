@@ -484,7 +484,7 @@ class MemberProfileScreen extends ConsumerWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.label.copyWith(
-                color: isEarned ? Colors.black : Colors.white38,
+                color: isEarned ? Colors.white : Colors.white38,
                 fontSize: 10,
                 fontWeight: FontWeight.w800,
               ),
@@ -516,7 +516,7 @@ class MemberProfileScreen extends ConsumerWidget {
                 artifact.tier.name.toUpperCase(),
                 style: AppTypography.label.copyWith(
                   fontSize: 8,
-                  color: Colors.black54,
+                  color: Colors.white70,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1,
                 ),

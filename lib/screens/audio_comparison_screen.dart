@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:audio_waveforms/audio_waveforms.dart';
@@ -61,7 +60,6 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   late final RecorderController _recorderController;
   late final PlayerController _playerController;
   final ap.AudioPlayer _nativePlayer = ap.AudioPlayer();
-  String? _lastRecordingPath;
 
   @override
   void initState() {
@@ -151,7 +149,6 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       setState(() {
         _isRecording = true;
         _hasResult = false;
-        _lastRecordingPath = path;
       });
     } else {
       final path = await _recorderController.stop();

@@ -1,20 +1,53 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../services/haptic_service.dart';
+import '../widgets/assessment_overlay.dart';
+import '../models/assessment.dart';
+import '../providers/user_preferences_provider.dart';
 
-class OnboardingScreen extends StatefulWidget {
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentIndex = 0;
+  bool _preTestCompleted = false;
+
+  final List<AssessmentQuestion> _preTestQuestions = [
+    AssessmentQuestion(
+      id: 'heritage',
+      text: 'What is your connection to the Lumad languages?',
+      options: [
+        'I am a heritage learner (it is my family language)',
+        'I am an L2 learner (learning it as a second language)',
+        'I am a researcher or educator',
+        'I am just curious about the culture'
+      ],
+    ),
+    AssessmentQuestion(
+      id: 'exposure',
+      text: 'How often do you hear or speak your ancestral language?',
+      options: ['Daily', 'Occasionally', 'Rarely', 'Never'],
+    ),
+    AssessmentQuestion(
+      id: 'goal',
+      text: 'What is your main goal for using this app?',
+      options: [
+        'To become fluent',
+        'To understand my elders better',
+        'To preserve the language for the next generation',
+        'To pass an assessment'
+      ],
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +77,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 title: "The Echoes Fade",
                 subtitle: "OUR ANCESTRAL VOICES",
                 description: "The sacred languages of our tribes are fading like mist at dawn. You have been chosen to gather the remaining echoes.",
-                image: 'assets/images/lumad_waves.gif', // Using existing asset for reliability
+                image: 'assets/images/lumad_waves.gif', 
                 accentColor: AppColors.gold500,
               ),
               _buildNarrativePage(
@@ -61,6 +94,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 icon: Icons.fort_rounded,
                 accentColor: Colors.orangeAccent,
               ),
+              _buildPreTestPage(),
             ],
           ),
 
@@ -73,8 +107,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               children: [
                 _buildIndicator(),
                 const SizedBox(height: 40),
-                _currentIndex == 2
-                    ? _buildActionButton("BEGIN THE RITUAL", () => context.go('/login'))
+                _currentIndex == 3
+                    ? _buildActionButton(
+                        _preTestCompleted ? "BEGIN THE RITUAL" : "SKIP SURVEY",
+                        () => context.go('/login'),
+                      )
                     : _buildActionButton("CONTINUE", () {
                         _pageController.nextPage(
                           duration: 600.ms,
@@ -85,6 +122,32 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPreTestPage() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Center(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 60),
+              AssessmentOverlay(
+                type: AssessmentType.preTest,
+                questions: _preTestQuestions,
+                onComplete: (answers) {
+                  setState(() => _preTestCompleted = true);
+                  ref.read(userPreferencesProvider.notifier).completePreTest();
+                  context.go('/login');
+                },
+              ),
+              const SizedBox(height: 120), // Space for button
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -163,7 +226,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(
-        3,
+        4,
         (index) => AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           margin: const EdgeInsets.symmetric(horizontal: 6),

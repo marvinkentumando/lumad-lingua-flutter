@@ -7,6 +7,7 @@ import '../widgets/brand_card.dart';
 import '../models/educator_models.dart';
 import '../models/lesson.dart';
 import '../services/firebase_service.dart';
+import '../providers/educator_provider.dart';
 
 enum LessonSort { newest, oldest, name, views }
 
@@ -222,13 +223,6 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/lesson-editor'),
-        backgroundColor: AppColors.gold500,
-        child: const Icon(Icons.add_rounded, color: AppColors.forest900),
-      ),
-    );
-  }
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/lesson-editor'),
         backgroundColor: AppColors.gold500,

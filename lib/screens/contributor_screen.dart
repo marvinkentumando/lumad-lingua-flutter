@@ -23,6 +23,7 @@ import '../widgets/brand_button.dart';
 import 'legacy_tracker_details_screen.dart';
 import '../models/voice_submission.dart';
 
+import '../widgets/preview_audio_player.dart';
 import '../widgets/impact_card.dart';
 import '../services/impact_service.dart';
 import '../services/supabase_storage_service.dart';
@@ -534,37 +535,103 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
   }
 
   Widget _buildVoiceTrackerCard({required VoiceSubmission voice}) {
+    final status = voice.status.name.toLowerCase();
+    Color statusColor;
+    switch (status) {
+      case 'approved':
+        statusColor = AppColors.semanticGreen;
+        break;
+      case 'pending':
+        statusColor = AppColors.gold500;
+        break;
+      case 'rejected':
+      case 'flagged':
+        statusColor = AppColors.semanticRed;
+        break;
+      default:
+        statusColor = Colors.white24;
+    }
+
     return BrandCard(
       theme: BrandCardTheme.vibrant,
       padding: const EdgeInsets.all(16),
-      borderRadius: 20,
-      child: Row(
+      borderRadius: 24,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.semanticBlue.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.mic_rounded, color: AppColors.semanticBlue, size: 20),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  voice.title,
-                  style: AppTypography.h3.copyWith(color: Colors.white, fontSize: 16),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.semanticBlue.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
                 ),
-                Text(
-                  voice.dialect,
-                  style: AppTypography.body.copyWith(color: Colors.white38, fontSize: 11),
+                child: const Icon(Icons.mic_rounded,
+                    color: AppColors.semanticBlue, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      voice.title,
+                      style: AppTypography.h3
+                          .copyWith(color: Colors.white, fontSize: 16),
+                    ),
+                    Text(
+                      'DIALECT: ${voice.dialect}',
+                      style: AppTypography.label.copyWith(
+                        color: Colors.white38,
+                        fontSize: 9,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              _buildLegacyStatusBadge(voice.status.name),
+            ],
           ),
-          _buildLegacyStatusBadge(voice.status.name),
+          if (voice.validatorFeedback != null &&
+              voice.validatorFeedback!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: statusColor.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.feedback_rounded, color: statusColor, size: 14),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      voice.validatorFeedback!,
+                      style: AppTypography.body.copyWith(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                  if (voice.validatorAudioTipUrl != null &&
+                      voice.validatorAudioTipUrl!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: PreviewAudioPlayer(
+                        audioUrl: voice.validatorAudioTipUrl!,
+                        size: 24,
+                        color: statusColor,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1179,7 +1246,7 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
         ? ref.watch(userVoiceSubmissionsStreamProvider(user.uid))
         : const AsyncValue<List<VoiceSubmission>>.loading();
     final dialectsAsync = ref.watch(dialectsInNeedProvider);
-    final impactAsync = ref.watch(contributionImpactProvider);
+    final impactAsync = ref.watch(roleImpactProvider(user?.uid ?? ''));
 
     final displayName = profile?['username'] ?? 'Tribe Member';
     final totalPoints = profile?['xp'] ?? 0;
@@ -1198,12 +1265,7 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
               _buildGuardianHeader(displayName, totalPoints, photoUrl),
               const SizedBox(height: 24),
               impactAsync.when(
-                data: (impact) => ImpactCard(
-                  studentsHelped: impact.studentsHelpedToday,
-                  totalEncounters: impact.totalReach,
-                  accuracyRate: impact.accuracyRate,
-                  wordsValidated: impact.validatedWords,
-                ),
+                data: (impact) => ImpactCard(impact: impact),
                 loading: () => const Center(
                   child: CircularProgressIndicator(color: AppColors.gold500),
                 ),
@@ -1606,7 +1668,7 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
       // Save Metadata to Firestore
       final provinceSlug = _selectedProvince?.toLowerCase().replaceAll(' ', '_') ?? 'unknown';
       final municipalitySlug = _selectedMunicipality?.toLowerCase().replaceAll(' ', '_') ?? 'unknown';
-      final municipalityId = '${provinceSlug}_${municipalitySlug}';
+      final municipalityId = '${provinceSlug}_$municipalitySlug';
       
       final title = _voiceTitleController.text.isEmpty ? 'New Pronunciation' : _voiceTitleController.text;
       final transcript = _voiceTranscriptController.text;
@@ -2540,6 +2602,16 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
                       ),
                     ),
                   ),
+                  if (entry.validatorAudioTipUrl != null &&
+                      entry.validatorAudioTipUrl!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: PreviewAudioPlayer(
+                        audioUrl: entry.validatorAudioTipUrl!,
+                        size: 24,
+                        color: statusColor,
+                      ),
+                    ),
                 ],
               ),
             ),

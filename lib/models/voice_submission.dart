@@ -25,6 +25,7 @@ class VoiceSubmission {
   final String? validatorId;
   final String? validatorRole;
   final String? validatorFeedback;
+  final String? validatorAudioTipUrl;
   final DateTime? submittedAt;
   final DateTime? validatedAt;
 
@@ -49,6 +50,7 @@ class VoiceSubmission {
     this.validatorId,
     this.validatorRole,
     this.validatorFeedback,
+    this.validatorAudioTipUrl,
     this.submittedAt,
     this.validatedAt,
   });
@@ -76,6 +78,7 @@ class VoiceSubmission {
       validatorId: data['validatorId'],
       validatorRole: data['validatorRole'],
       validatorFeedback: data['validatorFeedback'],
+      validatorAudioTipUrl: data['validatorAudioTipUrl'],
       submittedAt: _parseTimestamp(data['submittedAt'] ?? data['timestamp']),
       validatedAt: _parseTimestamp(data['validatedAt']),
     );
@@ -97,6 +100,8 @@ class VoiceSubmission {
       'duration': duration,
       'priority': priority,
       'status': status.name,
+      'validatorFeedback': validatorFeedback,
+      'validatorAudioTipUrl': validatorAudioTipUrl,
       'municipalityId': municipalityId,
       'recordingId': recordingId,
     };

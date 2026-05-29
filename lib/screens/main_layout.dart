@@ -137,6 +137,11 @@ class MainLayout extends ConsumerWidget {
     String label = '';
     IconData icon = Icons.flash_on;
     final userId = ref.watch(authStateProvider).value?.uid ?? '';
+    final notificationsAsync = userId.isNotEmpty
+        ? ref.watch(userNotificationsStreamProvider(userId))
+        : const AsyncValue<List<Map<String, dynamic>>>.data([]);
+    final unreadCount =
+        notificationsAsync.value?.where((n) => n['isRead'] == false).length ?? 0;
 
     if (role == UserRole.learner) {
       final student = ref.watch(studentProvider);
@@ -222,10 +227,27 @@ class MainLayout extends ConsumerWidget {
                   color: Colors.white.withValues(alpha: 0.05),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.notifications_none_rounded,
-                  color: Colors.white70,
-                  size: 22,
+                child: Stack(
+                  children: [
+                    const Icon(
+                      Icons.notifications_none_rounded,
+                      color: Colors.white70,
+                      size: 22,
+                    ),
+                    if (unreadCount > 0)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: AppColors.semanticRed,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),

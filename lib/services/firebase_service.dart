@@ -23,6 +23,7 @@ import '../models/app_config.dart';
 import '../models/scenario_models.dart';
 import '../models/broadcast.dart';
 import '../models/feedback.dart';
+import '../models/assessment.dart';
 import 'offline_service.dart';
 
 class FirebaseService {
@@ -378,6 +379,23 @@ class FirebaseService {
       final configDoc = await transaction.get(_db.collection('config').doc('app'));
       final config = AppConfig.fromFirestore(configDoc.data() ?? {});
 
+      final validatorRef = _db.collection('users').doc(validatorId);
+      final validatorDoc = await transaction.get(validatorRef);
+      final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
+
+      _saveVersionTransaction(transaction, docRef, data, validatorId);
+
+      _logAuditTransaction(
+        transaction,
+        action: 'APPROVED',
+        actorId: validatorId,
+        actorName: validatorName,
+        targetId: id,
+        targetName: data['title'] ?? 'Unknown Lesson',
+        targetType: 'lesson',
+        icon: '📚',
+      );
+
       transaction.update(docRef, {
         'status': 'approved',
         'isValidated': true,
@@ -443,13 +461,31 @@ class FirebaseService {
     String id,
     String validatorId,
     String validatorRole,
-    String feedback,
-  ) async {
+    String feedback, {
+    String? audioTipUrl,
+  }) async {
     return _db.runTransaction((transaction) async {
       final docRef = _db.collection('words').doc(id);
       final doc = await transaction.get(docRef);
       final data = doc.data();
       if (data == null) return;
+
+      final validatorRef = _db.collection('users').doc(validatorId);
+      final validatorDoc = await transaction.get(validatorRef);
+      final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
+
+      _saveVersionTransaction(transaction, docRef, data, validatorId);
+
+      _logAuditTransaction(
+        transaction,
+        action: 'FLAGGED',
+        actorId: validatorId,
+        actorName: validatorName,
+        targetId: id,
+        targetName: data['term'] ?? data['indigenousWord'] ?? 'Unknown Word',
+        targetType: 'word',
+        icon: '🚩',
+      );
 
       transaction.update(docRef, {
         'status': 'flagged',
@@ -457,6 +493,7 @@ class FirebaseService {
         'validatorId': validatorId,
         'validatorRole': validatorRole,
         'validatorFeedback': feedback,
+        'validatorAudioTipUrl': audioTipUrl,
         'flaggedAt': FieldValue.serverTimestamp(),
         'validatedAt': FieldValue.serverTimestamp(),
       });
@@ -486,13 +523,31 @@ class FirebaseService {
     String id,
     String validatorId,
     String validatorRole,
-    String feedback,
-  ) async {
+    String feedback, {
+    String? audioTipUrl,
+  }) async {
     return _db.runTransaction((transaction) async {
       final docRef = _db.collection('words').doc(id);
       final doc = await transaction.get(docRef);
       final data = doc.data();
       if (data == null) return;
+
+      final validatorRef = _db.collection('users').doc(validatorId);
+      final validatorDoc = await transaction.get(validatorRef);
+      final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
+
+      _saveVersionTransaction(transaction, docRef, data, validatorId);
+
+      _logAuditTransaction(
+        transaction,
+        action: 'REJECTED',
+        actorId: validatorId,
+        actorName: validatorName,
+        targetId: id,
+        targetName: data['term'] ?? data['indigenousWord'] ?? 'Unknown Word',
+        targetType: 'word',
+        icon: '🚫',
+      );
 
       transaction.update(docRef, {
         'status': 'rejected',
@@ -500,6 +555,7 @@ class FirebaseService {
         'validatorId': validatorId,
         'validatorRole': validatorRole,
         'validatorFeedback': feedback,
+        'validatorAudioTipUrl': audioTipUrl,
         'rejectedAt': FieldValue.serverTimestamp(),
         'validatedAt': FieldValue.serverTimestamp(),
       });
@@ -604,11 +660,28 @@ class FirebaseService {
       final configDoc = await transaction.get(_db.collection('config').doc('app'));
       final config = AppConfig.fromFirestore(configDoc.data() ?? {});
 
+      final validatorRef = _db.collection('users').doc(validatorId);
+      final validatorDoc = await transaction.get(validatorRef);
+      final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
+
       for (var id in ids) {
         final docRef = _db.collection('words').doc(id);
         final doc = await transaction.get(docRef);
         final data = doc.data();
         if (data == null || data['status'] == 'approved') continue;
+
+        _saveVersionTransaction(transaction, docRef, data, validatorId);
+
+        _logAuditTransaction(
+          transaction,
+          action: 'APPROVED (BULK)',
+          actorId: validatorId,
+          actorName: validatorName,
+          targetId: id,
+          targetName: data['term'] ?? 'Unknown Word',
+          targetType: 'word',
+          icon: '✨',
+        );
 
         transaction.update(docRef, {
           'status': 'approved',
@@ -641,35 +714,109 @@ class FirebaseService {
   }
 
   Future<void> bulkRejectWords(List<String> ids, String validatorId, String validatorRole, String feedback) async {
-    final batch = _db.batch();
-    for (var id in ids) {
-      batch.update(_db.collection('words').doc(id), {
-        'status': 'rejected',
-        'isValidated': false,
-        'validatorId': validatorId,
-        'validatorRole': validatorRole,
-        'validatorFeedback': feedback,
-        'rejectedAt': FieldValue.serverTimestamp(),
-        'validatedAt': FieldValue.serverTimestamp(),
-      });
-    }
-    await batch.commit();
+    return _db.runTransaction((transaction) async {
+      final validatorRef = _db.collection('users').doc(validatorId);
+      final validatorDoc = await transaction.get(validatorRef);
+      final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
+
+      for (var id in ids) {
+        final docRef = _db.collection('words').doc(id);
+        final doc = await transaction.get(docRef);
+        final data = doc.data();
+        if (data == null) continue;
+
+        _saveVersionTransaction(transaction, docRef, data, validatorId);
+
+        _logAuditTransaction(
+          transaction,
+          action: 'REJECTED (BULK)',
+          actorId: validatorId,
+          actorName: validatorName,
+          targetId: id,
+          targetName: data['term'] ?? data['indigenousWord'] ?? 'Unknown Word',
+          targetType: 'word',
+          icon: '🚫',
+        );
+
+        transaction.update(docRef, {
+          'status': 'rejected',
+          'isValidated': false,
+          'validatorId': validatorId,
+          'validatorRole': validatorRole,
+          'validatorFeedback': feedback,
+          'validatorAudioTipUrl': null,
+          'rejectedAt': FieldValue.serverTimestamp(),
+          'validatedAt': FieldValue.serverTimestamp(),
+        });
+
+        final contributorId = data['contributorId'];
+        final term = data['term'] ?? 'your entry';
+
+        if (contributorId != null) {
+          final notifRef = _db.collection('users').doc(contributorId).collection('notifications').doc();
+          transaction.set(notifRef, {
+            'title': 'Entry Rejected (Bulk) ⚠️',
+            'message': 'Your entry "$term" was not approved: $feedback',
+            'type': 'rejection',
+            'timestamp': FieldValue.serverTimestamp(),
+            'isRead': false,
+          });
+        }
+      }
+    });
   }
 
   Future<void> bulkFlagWords(List<String> ids, String validatorId, String validatorRole, String feedback) async {
-    final batch = _db.batch();
-    for (var id in ids) {
-      batch.update(_db.collection('words').doc(id), {
-        'status': 'flagged',
-        'isValidated': false,
-        'validatorId': validatorId,
-        'validatorRole': validatorRole,
-        'validatorFeedback': feedback,
-        'flaggedAt': FieldValue.serverTimestamp(),
-        'validatedAt': FieldValue.serverTimestamp(),
-      });
-    }
-    await batch.commit();
+    return _db.runTransaction((transaction) async {
+      final validatorRef = _db.collection('users').doc(validatorId);
+      final validatorDoc = await transaction.get(validatorRef);
+      final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
+
+      for (var id in ids) {
+        final docRef = _db.collection('words').doc(id);
+        final doc = await transaction.get(docRef);
+        final data = doc.data();
+        if (data == null) continue;
+
+        _saveVersionTransaction(transaction, docRef, data, validatorId);
+
+        _logAuditTransaction(
+          transaction,
+          action: 'FLAGGED (BULK)',
+          actorId: validatorId,
+          actorName: validatorName,
+          targetId: id,
+          targetName: data['term'] ?? data['indigenousWord'] ?? 'Unknown Word',
+          targetType: 'word',
+          icon: '🚩',
+        );
+
+        transaction.update(docRef, {
+          'status': 'flagged',
+          'isValidated': false,
+          'validatorId': validatorId,
+          'validatorRole': validatorRole,
+          'validatorFeedback': feedback,
+          'validatorAudioTipUrl': null,
+          'flaggedAt': FieldValue.serverTimestamp(),
+          'validatedAt': FieldValue.serverTimestamp(),
+        });
+
+        final contributorId = data['contributorId'];
+        final term = data['term'] ?? 'your entry';
+
+        if (contributorId != null) {
+          final notifRef = _db.collection('users').doc(contributorId).collection('notifications').doc();
+          transaction.set(notifRef, {
+            'title': 'Clarification Needed (Bulk) 📝',
+            'message': 'A $validatorRole has requested more info for "$term": $feedback',
+            'type': 'flagged',
+            'timestamp': FieldValue.serverTimestamp(),
+            'isRead': false,
+          });
+        }
+      }
+    });
   }
 
   Future<void> bulkDeleteWords(List<String> ids) async {
@@ -1453,6 +1600,23 @@ class FirebaseService {
       final configDoc = await transaction.get(_db.collection('config').doc('app'));
       final config = AppConfig.fromFirestore(configDoc.data() ?? {});
 
+      final validatorRef = _db.collection('users').doc(validatorId);
+      final validatorDoc = await transaction.get(validatorRef);
+      final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
+
+      _saveVersionTransaction(transaction, docRef, data, validatorId);
+
+      _logAuditTransaction(
+        transaction,
+        action: 'APPROVED',
+        actorId: validatorId,
+        actorName: validatorName,
+        targetId: id,
+        targetName: data['title'] ?? 'Unknown Lesson',
+        targetType: 'lesson',
+        icon: '📚',
+      );
+
       transaction.update(docRef, {
         'status': 'PUBLISHED',
         'isValidated': true,
@@ -1501,29 +1665,51 @@ class FirebaseService {
     String validatorRole,
     String feedback,
   ) async {
-    final doc = await _db.collection('lessons').doc(id).get();
-    final data = doc.data();
-    if (data == null) return;
+    return _db.runTransaction((transaction) async {
+      final docRef = _db.collection('lessons').doc(id);
+      final doc = await transaction.get(docRef);
+      final data = doc.data();
+      if (data == null) return;
 
-    await _db.collection('lessons').doc(id).update({
-      'status': 'FLAGGED',
-      'isValidated': false,
-      'validatorId': validatorId,
-      'validatorRole': validatorRole,
-      'validatorFeedback': feedback,
-      'flaggedAt': FieldValue.serverTimestamp(),
-      'validatedAt': FieldValue.serverTimestamp(),
-    });
+      final validatorRef = _db.collection('users').doc(validatorId);
+      final validatorDoc = await transaction.get(validatorRef);
+      final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
 
-    final contributorId = data['contributorId'];
-    if (contributorId != null) {
-      await addNotification(contributorId, {
-        'title': 'Lesson Feedback 📝',
-        'message':
-            'A $validatorRole suggested changes for "${data['title']}": $feedback',
-        'type': 'flagged',
+      _saveVersionTransaction(transaction, docRef, data, validatorId);
+
+      _logAuditTransaction(
+        transaction,
+        action: 'FLAGGED',
+        actorId: validatorId,
+        actorName: validatorName,
+        targetId: id,
+        targetName: data['title'] ?? 'Unknown Lesson',
+        targetType: 'lesson',
+        icon: '🚩',
+      );
+
+      transaction.update(docRef, {
+        'status': 'FLAGGED',
+        'isValidated': false,
+        'validatorId': validatorId,
+        'validatorRole': validatorRole,
+        'validatorFeedback': feedback,
+        'flaggedAt': FieldValue.serverTimestamp(),
+        'validatedAt': FieldValue.serverTimestamp(),
       });
-    }
+
+      final contributorId = data['contributorId'];
+      if (contributorId != null) {
+        final notifRef = _db.collection('users').doc(contributorId).collection('notifications').doc();
+        transaction.set(notifRef, {
+          'title': 'Lesson Feedback 📝',
+          'message': 'A $validatorRole suggested changes for "${data['title']}": $feedback',
+          'type': 'flagged',
+          'timestamp': FieldValue.serverTimestamp(),
+          'isRead': false,
+        });
+      }
+    });
   }
 
   Stream<List<Lesson>> getPendingLessons({String? dialect}) {
@@ -1668,17 +1854,58 @@ class FirebaseService {
   }
 
   Future<void> bulkApproveLessons(List<String> ids, String validatorId, String validatorRole) async {
-    final batch = _db.batch();
-    for (var id in ids) {
-      batch.update(_db.collection('lessons').doc(id), {
-        'status': 'PUBLISHED',
-        'isValidated': true,
-        'validatorId': validatorId,
-        'validatorRole': validatorRole,
-        'validatedAt': FieldValue.serverTimestamp(),
-      });
-    }
-    await batch.commit();
+    return _db.runTransaction((transaction) async {
+      final configDoc = await transaction.get(_db.collection('config').doc('app'));
+      final config = AppConfig.fromFirestore(configDoc.data() ?? {});
+
+      final validatorRef = _db.collection('users').doc(validatorId);
+      final validatorDoc = await transaction.get(validatorRef);
+      final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
+
+      for (var id in ids) {
+        final docRef = _db.collection('lessons').doc(id);
+        final doc = await transaction.get(docRef);
+        final data = doc.data();
+        if (data == null || data['status'] == 'PUBLISHED') continue;
+
+        _saveVersionTransaction(transaction, docRef, data, validatorId);
+
+        _logAuditTransaction(
+          transaction,
+          action: 'APPROVED (BULK)',
+          actorId: validatorId,
+          actorName: validatorName,
+          targetId: id,
+          targetName: data['title'] ?? 'Unknown Lesson',
+          targetType: 'lesson',
+          icon: '📚',
+        );
+
+        transaction.update(docRef, {
+          'status': 'PUBLISHED',
+          'isValidated': true,
+          'validatorId': validatorId,
+          'validatorRole': validatorRole,
+          'validatedAt': FieldValue.serverTimestamp(),
+        });
+        
+        final contributorId = data['contributorId'];
+        if (contributorId != null) {
+          final notifRef = _db.collection('users').doc(contributorId).collection('notifications').doc();
+          transaction.set(notifRef, {
+            'title': 'Lesson Published! 📚',
+            'message': 'Your lesson "${data['title']}" is now live.',
+            'type': 'approval',
+            'timestamp': FieldValue.serverTimestamp(),
+            'isRead': false,
+          });
+
+          transaction.update(_db.collection('users').doc(contributorId), {
+            'xp': FieldValue.increment(config.lessonApprovalXp),
+          });
+        }
+      }
+    });
   }
 
   Future<void> bulkDeleteLessons(List<String> ids) async {
@@ -2260,6 +2487,19 @@ class FirebaseService {
         .delete();
   }
 
+  // Assessment Operations
+  Future<void> saveAssessmentResult(AssessmentResult result) async {
+    await _db.collection('assessments').add(result.toFirestore());
+    
+    // If it's a pre-test or post-test, we might want to reward the user
+    if (result.type == AssessmentType.preTest) {
+      await addXp(result.userId, 50); // Small reward for onboarding survey
+    } else if (result.type == AssessmentType.postTest) {
+      await addXp(result.userId, 100); // Larger reward for milestone post-test
+      await addMistCrystals(result.userId, 25);
+    }
+  }
+
   Future<void> incrementStreak(String userId) async {
     try {
       final userRef = _db.collection('users').doc(userId);
@@ -2786,7 +3026,7 @@ class FirebaseService {
       if (data['municipality'] != null && data['province'] != null) {
         final pSlug = data['province'].toString().toLowerCase().replaceAll(' ', '_');
         final mSlug = data['municipality'].toString().toLowerCase().replaceAll(' ', '_');
-        final reconstructedId = '${pSlug}_${mSlug}';
+        final reconstructedId = '${pSlug}_$mSlug';
 
         // Use reconstructed ID if missing or potentially in old format (no underscore prefix)
         if (municipalityId == null || !municipalityId.startsWith(pSlug)) {
@@ -2804,6 +3044,23 @@ class FirebaseService {
       if (contributorId != null) {
         userDoc = await transaction.get(_db.collection('users').doc(contributorId));
       }
+
+      final validatorRef = _db.collection('users').doc(validatorId);
+      final validatorDoc = await transaction.get(validatorRef);
+      final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
+
+      _saveVersionTransaction(transaction, docRef, data, validatorId);
+
+      _logAuditTransaction(
+        transaction,
+        action: 'APPROVED',
+        actorId: validatorId,
+        actorName: validatorName,
+        targetId: id,
+        targetName: data['title'] ?? 'Voice Recording',
+        targetType: 'voice',
+        icon: '🎙️',
+      );
 
       // 2. ALL WRITES
       transaction.update(docRef, {
@@ -2866,8 +3123,8 @@ class FirebaseService {
         final feedRef = _db.collection('community_feed').doc();
         transaction.set(feedRef, {
           'userId': contributorId,
-          'userName': (userDoc?.data() as Map<String, dynamic>?)?['username'] ?? data['speakerName'] ?? data['contributorName'] ?? 'A tribe member',
-          'userPhotoUrl': (userDoc?.data() as Map<String, dynamic>?)?['photoURL'],
+          'userName': userDoc.get('username') ?? data['speakerName'] ?? data['contributorName'] ?? 'A tribe member',
+          'userPhotoUrl': userDoc.get('photoURL'),
           'type': 'contribution',
           'message': 'shared a new voice recording: "${data['title'] ?? 'untitled'}"!',
           'emoji': '🎤',
@@ -2887,9 +3144,16 @@ class FirebaseService {
   ) async {
     return _db.runTransaction((transaction) async {
       // 1. ALL READS
+      final configDoc = await transaction.get(_db.collection('config').doc('app'));
+      final config = AppConfig.fromFirestore(configDoc.data() ?? {});
+
+      final validatorRef = _db.collection('users').doc(validatorId);
+      final validatorDoc = await transaction.get(validatorRef);
+      final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
+
       final List<DocumentSnapshot<Map<String, dynamic>>> submissionSnaps = [];
       for (var id in ids) {
-        final snap = await transaction.get(_db.collection('voice_submissions').doc(id)) as DocumentSnapshot<Map<String, dynamic>>;
+        final snap = await transaction.get(_db.collection('voice_submissions').doc(id));
         if (snap.exists) submissionSnaps.add(snap);
       }
 
@@ -2902,7 +3166,7 @@ class FirebaseService {
         if (data?['province'] != null && data?['municipality'] != null) {
           final pSlug = data!['province'].toString().toLowerCase().replaceAll(' ', '_');
           final mSlug = data['municipality'].toString().toLowerCase().replaceAll(' ', '_');
-          final reconstructedId = '${pSlug}_${mSlug}';
+          final reconstructedId = '${pSlug}_$mSlug';
 
           if (mId == null || !mId.startsWith(pSlug)) {
             mId = reconstructedId;
@@ -2914,7 +3178,7 @@ class FirebaseService {
 
       final Map<String, List<String>> muniDialects = {};
       for (var mId in municipalityIds) {
-        final mSnap = await transaction.get(_db.collection('municipalities').doc(mId)) as DocumentSnapshot<Map<String, dynamic>>;
+        final mSnap = await transaction.get(_db.collection('municipalities').doc(mId));
         if (mSnap.exists) {
           muniDialects[mId] = List<String>.from(mSnap.data()?['supportedDialects'] ?? []);
         } else {
@@ -2927,6 +3191,21 @@ class FirebaseService {
 
       for (var snap in submissionSnaps) {
         final data = snap.data()!;
+        final id = snap.id;
+
+        _saveVersionTransaction(transaction, snap.reference, data, validatorId);
+
+        _logAuditTransaction(
+          transaction,
+          action: 'APPROVED (BULK)',
+          actorId: validatorId,
+          actorName: validatorName,
+          targetId: id,
+          targetName: data['title'] ?? 'Voice Recording',
+          targetType: 'voice',
+          icon: '🎙️',
+        );
+
         transaction.update(snap.reference, {
           'status': 'approved',
           'validatorId': validatorId,
@@ -2944,7 +3223,7 @@ class FirebaseService {
         if (province != null && municipality != null) {
           final pSlug = province.toLowerCase().replaceAll(' ', '_');
           final mSlug = municipality.toLowerCase().replaceAll(' ', '_');
-          final reconstructedId = '${pSlug}_${mSlug}';
+          final reconstructedId = '${pSlug}_$mSlug';
           if (mId == null || !mId.startsWith(pSlug)) {
             mId = reconstructedId;
           }
@@ -2966,6 +3245,23 @@ class FirebaseService {
             }
           }
         }
+
+        // Notify contributor
+        final contributorId = data['contributorId'];
+        if (contributorId != null) {
+          final notifRef = _db.collection('users').doc(contributorId).collection('notifications').doc();
+          transaction.set(notifRef, {
+            'title': config.notifications['voice_approved_title'] ?? 'Voice Recording Approved! 🎙️',
+            'message': config.formatNotification('voice_approved_body', {'title': data['title'] ?? 'your recording'}),
+            'type': 'approval',
+            'timestamp': FieldValue.serverTimestamp(),
+            'isRead': false,
+          });
+
+          transaction.update(_db.collection('users').doc(contributorId), {
+            'xp': FieldValue.increment(config.voiceApprovalXp),
+          });
+        }
       }
 
       // Update supportedDialects for all affected municipalities
@@ -2978,31 +3274,101 @@ class FirebaseService {
   }
 
   Future<void> bulkRejectVoiceSubmissions(List<String> ids, String validatorId, String validatorRole, String feedback) async {
-    final batch = _db.batch();
-    for (var id in ids) {
-      batch.update(_db.collection('voice_submissions').doc(id), {
-        'status': 'rejected',
-        'validatorId': validatorId,
-        'validatorRole': validatorRole,
-        'validatorFeedback': feedback,
-        'validatedAt': FieldValue.serverTimestamp(),
-      });
-    }
-    await batch.commit();
+    return _db.runTransaction((transaction) async {
+      final validatorRef = _db.collection('users').doc(validatorId);
+      final validatorDoc = await transaction.get(validatorRef);
+      final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
+
+      for (var id in ids) {
+        final docRef = _db.collection('voice_submissions').doc(id);
+        final doc = await transaction.get(docRef);
+        final data = doc.data();
+        if (data == null) continue;
+
+        _saveVersionTransaction(transaction, docRef, data, validatorId);
+
+        _logAuditTransaction(
+          transaction,
+          action: 'REJECTED (BULK)',
+          actorId: validatorId,
+          actorName: validatorName,
+          targetId: id,
+          targetName: data['title'] ?? 'Voice Recording',
+          targetType: 'voice',
+          icon: '🚫',
+        );
+
+        transaction.update(docRef, {
+          'status': 'rejected',
+          'validatorId': validatorId,
+          'validatorRole': validatorRole,
+          'validatorFeedback': feedback,
+          'validatedAt': FieldValue.serverTimestamp(),
+        });
+
+        final contributorId = data['contributorId'];
+        final title = data['title'] ?? 'your voice recording';
+        if (contributorId != null) {
+          final notifRef = _db.collection('users').doc(contributorId).collection('notifications').doc();
+          transaction.set(notifRef, {
+            'title': 'Voice Recording Rejected (Bulk) ⚠️',
+            'message': 'Your recording "$title" was not approved: $feedback',
+            'type': 'rejection',
+            'timestamp': FieldValue.serverTimestamp(),
+            'isRead': false,
+          });
+        }
+      }
+    });
   }
 
   Future<void> bulkFlagVoiceSubmissions(List<String> ids, String validatorId, String validatorRole, String feedback) async {
-    final batch = _db.batch();
-    for (var id in ids) {
-      batch.update(_db.collection('voice_submissions').doc(id), {
-        'status': 'flagged',
-        'validatorId': validatorId,
-        'validatorRole': validatorRole,
-        'validatorFeedback': feedback,
-        'validatedAt': FieldValue.serverTimestamp(),
-      });
-    }
-    await batch.commit();
+    return _db.runTransaction((transaction) async {
+      final validatorRef = _db.collection('users').doc(validatorId);
+      final validatorDoc = await transaction.get(validatorRef);
+      final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
+
+      for (var id in ids) {
+        final docRef = _db.collection('voice_submissions').doc(id);
+        final doc = await transaction.get(docRef);
+        final data = doc.data();
+        if (data == null) continue;
+
+        _saveVersionTransaction(transaction, docRef, data, validatorId);
+
+        _logAuditTransaction(
+          transaction,
+          action: 'FLAGGED (BULK)',
+          actorId: validatorId,
+          actorName: validatorName,
+          targetId: id,
+          targetName: data['title'] ?? 'Voice Recording',
+          targetType: 'voice',
+          icon: '🚩',
+        );
+
+        transaction.update(docRef, {
+          'status': 'flagged',
+          'validatorId': validatorId,
+          'validatorRole': validatorRole,
+          'validatorFeedback': feedback,
+          'validatedAt': FieldValue.serverTimestamp(),
+        });
+
+        final contributorId = data['contributorId'];
+        final title = data['title'] ?? 'your voice recording';
+        if (contributorId != null) {
+          final notifRef = _db.collection('users').doc(contributorId).collection('notifications').doc();
+          transaction.set(notifRef, {
+            'title': 'Voice Recording Feedback (Bulk) 🎤',
+            'message': 'A $validatorRole requested changes for "$title": $feedback',
+            'type': 'flagged',
+            'timestamp': FieldValue.serverTimestamp(),
+            'isRead': false,
+          });
+        }
+      }
+    });
   }
 
   Future<void> bulkDeleteVoiceSubmissions(List<String> ids) async {
@@ -3020,28 +3386,51 @@ class FirebaseService {
     String validatorRole,
     String feedback,
   ) async {
-    final doc = await _db.collection('voice_submissions').doc(id).get();
-    final data = doc.data();
-    if (data == null) return;
+    return _db.runTransaction((transaction) async {
+      final docRef = _db.collection('voice_submissions').doc(id);
+      final doc = await transaction.get(docRef);
+      final data = doc.data();
+      if (data == null) return;
 
-    await _db.collection('voice_submissions').doc(id).update({
-      'status': 'flagged',
-      'validatorId': validatorId,
-      'validatorRole': validatorRole,
-      'validatorFeedback': feedback,
-      'validatedAt': FieldValue.serverTimestamp(),
-    });
+      final validatorRef = _db.collection('users').doc(validatorId);
+      final validatorDoc = await transaction.get(validatorRef);
+      final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
 
-    final contributorId = data['contributorId'];
-    final title = data['title'] ?? 'your voice recording';
+      _saveVersionTransaction(transaction, docRef, data, validatorId);
 
-    if (contributorId != null) {
-      await addNotification(contributorId, {
-        'title': 'Voice Recording Feedback 🎤',
-        'message': 'A $validatorRole requested changes for "$title": $feedback',
-        'type': 'flagged',
+      _logAuditTransaction(
+        transaction,
+        action: 'FLAGGED',
+        actorId: validatorId,
+        actorName: validatorName,
+        targetId: id,
+        targetName: data['title'] ?? 'Voice Recording',
+        targetType: 'voice',
+        icon: '🚩',
+      );
+
+      transaction.update(docRef, {
+        'status': 'flagged',
+        'validatorId': validatorId,
+        'validatorRole': validatorRole,
+        'validatorFeedback': feedback,
+        'validatedAt': FieldValue.serverTimestamp(),
       });
-    }
+
+      final contributorId = data['contributorId'];
+      final title = data['title'] ?? 'your voice recording';
+
+      if (contributorId != null) {
+        final notifRef = _db.collection('users').doc(contributorId).collection('notifications').doc();
+        transaction.set(notifRef, {
+          'title': 'Voice Recording Feedback 🎤',
+          'message': 'A $validatorRole requested changes for "$title": $feedback',
+          'type': 'flagged',
+          'timestamp': FieldValue.serverTimestamp(),
+          'isRead': false,
+        });
+      }
+    });
   }
 
   /// Rejects a voice submission and notifies the contributor.
@@ -3051,28 +3440,51 @@ class FirebaseService {
     String validatorRole,
     String feedback,
   ) async {
-    final doc = await _db.collection('voice_submissions').doc(id).get();
-    final data = doc.data();
-    if (data == null) return;
+    return _db.runTransaction((transaction) async {
+      final docRef = _db.collection('voice_submissions').doc(id);
+      final doc = await transaction.get(docRef);
+      final data = doc.data();
+      if (data == null) return;
 
-    await _db.collection('voice_submissions').doc(id).update({
-      'status': 'rejected',
-      'validatorId': validatorId,
-      'validatorRole': validatorRole,
-      'validatorFeedback': feedback,
-      'validatedAt': FieldValue.serverTimestamp(),
-    });
+      final validatorRef = _db.collection('users').doc(validatorId);
+      final validatorDoc = await transaction.get(validatorRef);
+      final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
 
-    final contributorId = data['contributorId'];
-    final title = data['title'] ?? 'your voice recording';
+      _saveVersionTransaction(transaction, docRef, data, validatorId);
 
-    if (contributorId != null) {
-      await addNotification(contributorId, {
-        'title': 'Voice Recording Rejected ⚠️',
-        'message': 'Your recording "$title" was not approved: $feedback',
-        'type': 'rejection',
+      _logAuditTransaction(
+        transaction,
+        action: 'REJECTED',
+        actorId: validatorId,
+        actorName: validatorName,
+        targetId: id,
+        targetName: data['title'] ?? 'Voice Recording',
+        targetType: 'voice',
+        icon: '🚫',
+      );
+
+      transaction.update(docRef, {
+        'status': 'rejected',
+        'validatorId': validatorId,
+        'validatorRole': validatorRole,
+        'validatorFeedback': feedback,
+        'validatedAt': FieldValue.serverTimestamp(),
       });
-    }
+
+      final contributorId = data['contributorId'];
+      final title = data['title'] ?? 'your voice recording';
+
+      if (contributorId != null) {
+        final notifRef = _db.collection('users').doc(contributorId).collection('notifications').doc();
+        transaction.set(notifRef, {
+          'title': 'Voice Recording Rejected ⚠️',
+          'message': 'Your recording "$title" was not approved: $feedback',
+          'type': 'rejection',
+          'timestamp': FieldValue.serverTimestamp(),
+          'isRead': false,
+        });
+      }
+    });
   }
 
   /// Count of pending voice submissions.
@@ -3283,6 +3695,73 @@ class FirebaseService {
     for (var s in scenarios) {
       await addScenario(s);
     }
+  }
+
+  // ── Audit Trail & Versioning ──────────────────────────────────────────
+
+  /// Internal helper to log an action to the global audit trail within a transaction.
+  void _logAuditTransaction(
+    Transaction transaction, {
+    required String action,
+    required String actorId,
+    required String actorName,
+    required String targetId,
+    required String targetName,
+    required String targetType,
+    String icon = '🔧',
+    Map<String, dynamic>? metadata,
+  }) {
+    final docRef = _db.collection('audit_trail').doc();
+    transaction.set(docRef, {
+      'action': action,
+      'actorId': actorId,
+      'actorName': actorName,
+      'targetId': targetId,
+      'targetName': targetName,
+      'targetType': targetType,
+      'timestamp': FieldValue.serverTimestamp(),
+      'icon': icon,
+      if (metadata != null) 'metadata': metadata,
+    });
+  }
+
+  /// Internal helper to save a version snapshot of a document within a transaction.
+  void _saveVersionTransaction(
+    Transaction transaction,
+    DocumentReference targetRef,
+    Map<String, dynamic> previousData,
+    String actorId,
+  ) {
+    final historyRef = targetRef.collection('version_history').doc();
+    transaction.set(historyRef, {
+      'snapshot': previousData,
+      'timestamp': FieldValue.serverTimestamp(),
+      'actorId': actorId,
+    });
+  }
+
+  Stream<List<AuditLogEntry>> getAuditTrail({int limit = 50}) {
+    return _db
+        .collection('audit_trail')
+        .orderBy('timestamp', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((doc) => AuditLogEntry.fromFirestore(doc.data(), doc.id))
+            .toList());
+  }
+
+  Stream<List<Map<String, dynamic>>> getVersionHistory(
+    String collectionPath,
+    String documentId,
+  ) {
+    return _db
+        .collection(collectionPath)
+        .doc(documentId)
+        .collection('version_history')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs.map((doc) => doc.data()).toList());
   }
 }
 
