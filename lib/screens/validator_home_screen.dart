@@ -194,6 +194,147 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
   );
 }
 
+  Widget _buildHeader(String name, String rank) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Mabuhay,',
+                  style: AppTypography.body.copyWith(
+                    color: isDark ? Colors.white70 : AppColors.forest500,
+                  ),
+                ),
+                Text(
+                  name,
+                  style: AppTypography.h1ExtraBold.copyWith(
+                    color: isDark ? AppColors.gold500 : AppColors.forest700,
+                  ),
+                ),
+              ],
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.gold500.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.gold500.withValues(alpha: 0.5)),
+              ),
+              child: Text(
+                rank.toUpperCase(),
+                style: AppTypography.label.copyWith(
+                  color: AppColors.gold500,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVerificationOverview({
+    required int entries,
+    required int voices,
+    required int lessons,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'VERIFICATION OVERVIEW',
+          style: AppTypography.label.copyWith(
+            color: AppColors.gold500,
+            letterSpacing: 2,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                'Vocabulary',
+                entries.toString(),
+                Icons.list_alt_rounded,
+                AppColors.semanticGreen,
+                () => context.push('/validator/entries'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                'Voice',
+                voices.toString(),
+                Icons.record_voice_over_rounded,
+                AppColors.semanticBlue,
+                () => context.push('/validator/voices'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                'Lessons',
+                lessons.toString(),
+                Icons.menu_book_rounded,
+                AppColors.terracotta,
+                () => context.push('/validator/lessons'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(
+    String label,
+    String count,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.forest800 : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isDark ? Colors.white10 : AppColors.forest100,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 12),
+            Text(
+              count,
+              style: AppTypography.h2.copyWith(
+                color: isDark ? Colors.white : AppColors.forest500,
+              ),
+            ),
+            Text(
+              label,
+              style: AppTypography.label.copyWith(
+                color: isDark ? Colors.white38 : AppColors.creamText3,
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildUrgentCard(ValidationItem item) {
     IconData itemIcon;
     Color iconColor;

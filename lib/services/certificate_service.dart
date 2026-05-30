@@ -36,7 +36,7 @@ class CertificateService {
                     style: pw.TextStyle(
                       fontSize: 40,
                       fontWeight: pw.FontWeight.bold,
-                      color: PdfColors.darkGreen,
+                      color: PdfColors.green900,
                     ),
                   ),
                   pw.SizedBox(height: 10),
@@ -88,7 +88,9 @@ class CertificateService {
                         children: [
                           pw.Container(
                             width: 150,
-                            border: const pw.Border(bottom: pw.BorderSide(color: PdfColors.black)),
+                            decoration: const pw.BoxDecoration(
+                              border: pw.Border(bottom: pw.BorderSide(color: PdfColors.black)),
+                            ),
                           ),
                           pw.Text('Tribal Council Advisor'),
                         ],
@@ -98,7 +100,9 @@ class CertificateService {
                           pw.Text(dateStr),
                           pw.Container(
                             width: 150,
-                            border: const pw.Border(bottom: pw.BorderSide(color: PdfColors.black)),
+                            decoration: const pw.BoxDecoration(
+                              border: pw.Border(bottom: pw.BorderSide(color: PdfColors.black)),
+                            ),
                           ),
                           pw.Text('Date Issued'),
                         ],
