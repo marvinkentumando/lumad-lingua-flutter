@@ -439,7 +439,7 @@ class _EducatorDashboardScreenState
 
               if (allUsersAsync.hasValue && profileAsync.hasValue) {
                 final educator = profileAsync.value;
-                final educatorId = educator?['uid'] ?? educator?['id'] ?? '';
+                final educatorId = ref.read(authStateProvider).value?.uid ?? '';
                 final educatorName = educator?['username'] ?? 'Educator';
 
                 final studentIds = allUsersAsync.value!

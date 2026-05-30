@@ -4,14 +4,12 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/ambient_topo_background.dart';
-import '../widgets/brand_button.dart';
 
 class OfflineWisdomScreen extends ConsumerWidget {
   const OfflineWisdomScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -190,7 +188,7 @@ class OfflineWisdomScreen extends ConsumerWidget {
         color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isDark ? Colors.white10 : Colors.black10,
+          color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.1),
         ),
       ),
       child: Row(

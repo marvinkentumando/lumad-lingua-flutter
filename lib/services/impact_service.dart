@@ -42,7 +42,6 @@ final roleImpactProvider = StreamProvider.family<ContributionImpact, String>((re
     final data = userDoc.data()!;
     final role = data['role'] ?? 'learner';
     final xp = data['xp'] ?? 0;
-    final municipality = data['municipality'];
 
     if (role == 'educator') {
       // Educator Logic
@@ -94,8 +93,11 @@ final roleImpactProvider = StreamProvider.family<ContributionImpact, String>((re
           int rejected = 0;
           for (var doc in wordsSnap.docs) {
             final status = doc.data()['status']?.toString().toLowerCase();
-            if (status == 'approved') approved++;
-            else if (status == 'rejected') rejected++;
+            if (status == 'approved') {
+              approved++;
+            } else if (status == 'rejected') {
+              rejected++;
+            }
           }
           
           final accuracy = (approved + rejected) > 0 ? (approved / (approved + rejected)) : 0.0;
@@ -106,9 +108,13 @@ final roleImpactProvider = StreamProvider.family<ContributionImpact, String>((re
           final percentile = totalUsers > 0 ? (1.0 - (higherXp / totalUsers)) : 0.0;
           
           String rank;
-          if (percentile >= 0.95) rank = 'Top 5%';
-          else if (percentile >= 0.80) rank = 'Top 20%';
-          else rank = 'Active';
+          if (percentile >= 0.95) {
+            rank = 'Top 5%';
+          } else if (percentile >= 0.80) {
+            rank = 'Top 20%';
+          } else {
+            rank = 'Active';
+          }
 
           return ContributionImpact(
             primaryMetric: (accuracy * 100).toInt(),
@@ -125,19 +131,27 @@ final roleImpactProvider = StreamProvider.family<ContributionImpact, String>((re
   });
 });
 
-final contributionImpactProvider = StreamProvider<ContributionImpact>((ref) {
+final contributionImpactProvider = Provider<AsyncValue<ContributionImpact>>((ref) {
   final auth = ref.watch(authStateProvider).value;
   if (auth == null) {
-    return Stream.value(ContributionImpact(primaryMetric: 0, primaryLabel: 'IMPACT', stats: []));
+    return AsyncValue.data(ContributionImpact(primaryMetric: 0, primaryLabel: 'IMPACT', stats: []));
   }
-  return ref.watch(roleImpactProvider(auth.uid).stream);
+  return ref.watch(roleImpactProvider(auth.uid));
 });
 
 String _getSpiritTitle(int xp) {
-  if (xp >= 5000) return 'Legend';
-  if (xp >= 2000) return 'Elder';
-  if (xp >= 1000) return 'Guardian';
-  if (xp >= 500) return 'Seeker';
+  if (xp >= 5000) {
+    return 'Legend';
+  }
+  if (xp >= 2000) {
+    return 'Elder';
+  }
+  if (xp >= 1000) {
+    return 'Guardian';
+  }
+  if (xp >= 500) {
+    return 'Seeker';
+  }
   return 'Novice';
 }
 

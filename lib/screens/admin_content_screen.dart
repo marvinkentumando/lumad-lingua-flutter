@@ -621,7 +621,6 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
       subtitle: '${data.language} · ${data.partOfSpeechLabel}',
       author: 'by ${data.contributorName ?? 'Unknown'}',
       status: data.status.name,
-      onEdit: () => _showEditDictionaryDialog(data),
       onHistory: () => _showVersionHistoryModal(data.id, 'words', data.indigenousWord),
       onDelete: () => _showDeletePasswordDialog(data.indigenousWord, () {
         ref.read(firebaseServiceProvider).deleteWord(data.id);
@@ -659,7 +658,6 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
       subtitle: '${data.language} · ${data.category}',
       author: 'Level ${data.level} · Unit ${data.unitNumber}',
       status: data.status.toString().split('.').last.toLowerCase(),
-      onEdit: () => _showEditLessonDialog(data),
       onHistory: () => _showVersionHistoryModal(data.id, 'lessons', data.title),
       onDelete: () => _showDeletePasswordDialog(data.title, () {
         ref.read(firebaseServiceProvider).deleteLesson(data.id);
@@ -693,7 +691,6 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
     required String author,
     required String status,
     required VoidCallback onDelete,
-    VoidCallback? onEdit,
     VoidCallback? onHistory,
     String? audioUrl,
   }) {
@@ -801,13 +798,6 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                             color: AppColors.gold500,
                           ),
                         if (onHistory != null) const SizedBox(width: 8),
-                        if (onEdit != null)
-                          _actionIcon(
-                            Icons.edit_outlined,
-                            onEdit,
-                            color: AppColors.gold500,
-                          ),
-                        if (onEdit != null) const SizedBox(width: 8),
                         _actionIcon(
                           Icons.delete_outline_rounded,
                           onDelete,
@@ -920,164 +910,6 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
-        ],
-      ),
-    );
-  }
-
-  void _showEditDictionaryDialog(DictionaryEntry data) {
-    final wordCtrl = TextEditingController(text: data.indigenousWord);
-    final translationCtrl = TextEditingController(text: data.translation);
-    final translationFilipinoCtrl = TextEditingController(text: data.translationFilipino);
-    final phoneticCtrl = TextEditingController(text: data.phonetic ?? '');
-    final contextCtrl = TextEditingController(text: data.usageContext);
-    PartOfSpeech selectedPOS = data.partOfSpeech;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: isDark ? AppColors.forest800 : Colors.white,
-          title: Text('Edit Dictionary Entry', style: AppTypography.h3.copyWith(color: AppColors.gold500)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: wordCtrl,
-                  decoration: const InputDecoration(labelText: 'Indigenous Word'),
-                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                ),
-                TextField(
-                  controller: phoneticCtrl,
-                  decoration: const InputDecoration(labelText: 'Phonetic (Optional)'),
-                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                ),
-                TextField(
-                  controller: translationCtrl,
-                  decoration: const InputDecoration(labelText: 'English Translation'),
-                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                ),
-                TextField(
-                  controller: translationFilipinoCtrl,
-                  decoration: const InputDecoration(labelText: 'Filipino Translation'),
-                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<PartOfSpeech>(
-                  initialValue: selectedPOS,
-                  items: PartOfSpeech.values.map((pos) => DropdownMenuItem(
-                    value: pos,
-                    child: Text(pos.name.toUpperCase()),
-                  )).toList(),
-                  onChanged: (val) => setDialogState(() => selectedPOS = val!),
-                  decoration: const InputDecoration(labelText: 'Part of Speech'),
-                  dropdownColor: isDark ? AppColors.forest800 : Colors.white,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: contextCtrl,
-                  decoration: const InputDecoration(labelText: 'Usage Context / Definition'),
-                  maxLines: 2,
-                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            BrandButton(
-              text: 'Save',
-              type: BrandButtonType.primary,
-              onTap: () async {
-                final updatedEntry = DictionaryEntry(
-                  id: data.id,
-                  indigenousWord: wordCtrl.text,
-                  phonetic: phoneticCtrl.text.isEmpty ? null : phoneticCtrl.text,
-                  translation: translationCtrl.text,
-                  translationFilipino: translationFilipinoCtrl.text,
-                  partOfSpeech: selectedPOS,
-                  language: data.language,
-                  usageContext: contextCtrl.text,
-                  usageExampleNative: data.usageExampleNative,
-                  usageExampleTranslation: data.usageExampleTranslation,
-                  audioUrl: data.audioUrl,
-                  status: data.status,
-                  contributorId: data.contributorId,
-                  contributorName: data.contributorName,
-                  validatorId: data.validatorId,
-                  validatorRole: data.validatorRole,
-                  validatedAt: data.validatedAt,
-                  validatorFeedback: data.validatorFeedback,
-                );
-                await ref.read(firebaseServiceProvider).updateWord(data.id, updatedEntry.toFirestore());
-                if (ctx.mounted) Navigator.pop(ctx);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showEditLessonDialog(Lesson data) {
-    final titleCtrl = TextEditingController(text: data.title);
-    final descCtrl = TextEditingController(text: data.description);
-    final categoryCtrl = TextEditingController(text: data.category);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: isDark ? AppColors.forest800 : Colors.white,
-        title: Text('Edit Lesson', style: AppTypography.h3.copyWith(color: AppColors.gold500)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleCtrl,
-                decoration: const InputDecoration(labelText: 'Title'),
-                style: TextStyle(color: isDark ? Colors.white : Colors.black),
-              ),
-              TextField(
-                controller: descCtrl,
-                decoration: const InputDecoration(labelText: 'Description'),
-                maxLines: 2,
-                style: TextStyle(color: isDark ? Colors.white : Colors.black),
-              ),
-              TextField(
-                controller: categoryCtrl,
-                decoration: const InputDecoration(labelText: 'Category'),
-                style: TextStyle(color: isDark ? Colors.white : Colors.black),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          BrandButton(
-            text: 'Save',
-            type: BrandButtonType.primary,
-            onTap: () async {
-              final newLesson = Lesson(
-                id: data.id,
-                title: titleCtrl.text,
-                description: descCtrl.text,
-                category: categoryCtrl.text,
-                language: data.language,
-                level: data.level,
-                unitNumber: data.unitNumber,
-                tasks: data.tasks,
-                isPremium: data.isPremium,
-                icon: data.icon,
-                status: data.status,
-                prerequisiteId: data.prerequisiteId,
-                isMistUnit: data.isMistUnit,
-              );
-              await ref.read(firebaseServiceProvider).saveLesson(newLesson);
-              if (ctx.mounted) Navigator.pop(ctx);
-            },
-          ),
         ],
       ),
     );

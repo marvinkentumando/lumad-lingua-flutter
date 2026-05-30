@@ -51,6 +51,7 @@ class AuthService {
     String? avatar,
     String? nativeLanguage,
     String? learningGoal,
+    Map<String, dynamic>? assessment,
   }) async {
     try {
       // 1. Check for invitation - simplify to email only query to avoid composite index
@@ -81,26 +82,32 @@ class AuthService {
         try {
           await userCredential.user!.updateDisplayName(username);
 
+          final profileData = {
+            'username': username,
+            'email': email,
+            'location': location ?? 'Unknown',
+            'tribe': tribe ?? 'General Learner',
+            'avatar': avatar ?? '👤',
+            'nativeLanguage': nativeLanguage ?? 'English',
+            'learningGoal': learningGoal ?? 'Culture',
+            'role': assignedRole,
+            'indigenousGroup': assignedDialect,
+            'xp': 0,
+            'mistCrystals': 0,
+            'streak': 0,
+            'wordCount': 0,
+            'createdAt': FieldValue.serverTimestamp(),
+            'lastLogin': FieldValue.serverTimestamp(),
+          };
+
+          if (assessment != null) {
+            profileData['onboardingAssessment'] = assessment;
+          }
+
           await firestore
               .collection('users')
               .doc(userCredential.user!.uid)
-              .set({
-                'username': username,
-                'email': email,
-                'location': location ?? 'Unknown',
-                'tribe': tribe ?? 'General Learner',
-                'avatar': avatar ?? '👤',
-                'nativeLanguage': nativeLanguage ?? 'English',
-                'learningGoal': learningGoal ?? 'Culture',
-                'role': assignedRole,
-                'indigenousGroup': assignedDialect,
-                'xp': 0,
-                'mistCrystals': 0,
-                'streak': 0,
-                'wordCount': 0,
-                'createdAt': FieldValue.serverTimestamp(),
-                'lastLogin': FieldValue.serverTimestamp(),
-              }, SetOptions(merge: true));
+              .set(profileData, SetOptions(merge: true));
 
           // 2. Mark invite as successful
           if (pendingInvites.isNotEmpty) {

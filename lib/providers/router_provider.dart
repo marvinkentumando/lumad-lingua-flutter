@@ -56,6 +56,8 @@ import '../screens/streak_history_screen.dart';
 import '../screens/saka_game_screen.dart';
 import '../screens/audio_comparison_screen.dart';
 import '../screens/wisdom_progression_screen.dart';
+import '../screens/data_privacy_screen.dart';
+import '../screens/offline_wisdom_screen.dart';
 import '../models/artifact.dart';
 
 class RouterNotifier extends ChangeNotifier {
@@ -322,6 +324,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/wisdom-progression',
         builder: (context, state) => const WisdomProgressionScreen(),
+      ),
+      GoRoute(
+        path: '/privacy-settings',
+        builder: (context, state) => const DataPrivacyScreen(),
+      ),
+      GoRoute(
+        path: '/offline-wisdom',
+        builder: (context, state) => const OfflineWisdomScreen(),
       ),
       GoRoute(
         path: '/flashcards',

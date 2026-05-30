@@ -11,6 +11,9 @@ import '../widgets/brand_text_field.dart';
 import '../services/auth_service.dart';
 import '../widgets/parallax_background.dart';
 
+import '../widgets/assessment_overlay.dart';
+import '../models/assessment.dart';
+
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
 
@@ -21,6 +24,35 @@ class SignupScreen extends ConsumerStatefulWidget {
 class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
   int _currentStep = 0;
+  Map<String, dynamic> _assessmentAnswers = {};
+
+  final List<AssessmentQuestion> _preTestQuestions = [
+    AssessmentQuestion(
+      id: 'heritage',
+      text: 'What is your connection to the Lumad languages?',
+      options: [
+        'I am a heritage learner (it is my family language)',
+        'I am an L2 learner (learning it as a second language)',
+        'I am a researcher or educator',
+        'I am just curious about the culture'
+      ],
+    ),
+    AssessmentQuestion(
+      id: 'exposure',
+      text: 'How often do you hear or speak your ancestral language?',
+      options: ['Daily', 'Occasionally', 'Rarely', 'Never'],
+    ),
+    AssessmentQuestion(
+      id: 'goal',
+      text: 'What is your main goal for using this app?',
+      options: [
+        'To become fluent',
+        'To understand my elders better',
+        'To preserve the language for the next generation',
+        'To pass an assessment'
+      ],
+    ),
+  ];
 
   // Step 0: Identity
   final _emailController = TextEditingController();
@@ -115,7 +147,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   ];
 
   bool _acceptedTerms = false;
-  bool _isLoading = false;
   String? _errorMessage;
   Map<String, dynamic>? _detectedInvite;
 
@@ -167,6 +198,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   bool get _isValidatorInvite => _detectedInvite?['role'] == 'validator';
 
+  int get _totalSteps => _isValidatorInvite ? 3 : 4;
+  int get _assessmentStepIndex => _isValidatorInvite ? 2 : 3;
+
   bool _validateStep() {
     if (_formKey.currentState == null || !_formKey.currentState!.validate()) {
       return false;
@@ -184,7 +218,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         return baseValid && _acceptedTerms;
       }
       return baseValid;
-    } else if (_currentStep == 2) {
+    } else if (_currentStep == 2 && !_isValidatorInvite) {
       return _selectedNativeLanguage != null && _acceptedTerms;
     }
     return true;
@@ -215,7 +249,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     }
 
     setState(() {
-      _isLoading = true;
       _errorMessage = null;
     });
 
@@ -231,15 +264,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             avatar: "👤", // Defaulting since totem was removed
             nativeLanguage: _selectedNativeLanguage ?? "Unknown",
             learningGoal: _learningGoal,
+            assessment: _assessmentAnswers,
           );
       if (mounted) {
-        setState(() => _isLoading = false);
         context.go('/');
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _isLoading = false;
           _errorMessage = e.toString().replaceAll('Exception: ', '');
         });
       }
@@ -395,6 +427,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   String _getStepTitle() {
+    if (_currentStep == _assessmentStepIndex) return "Ritual";
     switch (_currentStep) {
       case 0:
         return "Identity";
@@ -408,10 +441,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   Widget _buildStepIndicator() {
-    final totalSteps = _isValidatorInvite ? 2 : 3;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(totalSteps, (index) {
+      children: List.generate(_totalSteps, (index) {
         final isActive = index <= _currentStep;
         return AnimatedContainer(
           duration: 300.ms,
@@ -447,6 +479,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   Widget _buildStepContent() {
+    if (_currentStep == _assessmentStepIndex) return _buildAssessmentStep();
     switch (_currentStep) {
       case 0:
         return _buildIdentityStep();
@@ -457,6 +490,23 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       default:
         return const SizedBox.shrink();
     }
+  }
+
+  Widget _buildAssessmentStep() {
+    return Column(
+      children: [
+        AssessmentOverlay(
+          type: AssessmentType.preTest,
+          questions: _preTestQuestions,
+          onComplete: (answers) {
+            setState(() {
+              _assessmentAnswers = answers;
+            });
+            _handleSignup();
+          },
+        ),
+      ],
+    ).animate().fadeIn();
   }
 
   Widget _buildIdentityStep() {
@@ -806,7 +856,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   Widget _buildNavigationButtons() {
-    final isLastStep = _isValidatorInvite ? _currentStep == 1 : _currentStep == 2;
+    final isFormLastStep = _isValidatorInvite ? _currentStep == 1 : _currentStep == 2;
+    final isAssessmentStep = _currentStep == _assessmentStepIndex;
+
+    if (isAssessmentStep) return const SizedBox.shrink();
+
     return Row(
       children: [
         if (_currentStep > 0)
@@ -822,13 +876,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           ),
         Expanded(
           child: BrandButton(
-            text: !isLastStep
-                ? "Continue"
-                : (_isLoading ? "Creating..." : "Finish"),
+            text: !isFormLastStep ? "Continue" : "Next: The Ritual",
             type: BrandButtonType.primary,
-            onTap: !isLastStep
-                ? _nextStep
-                : (_isLoading ? null : _handleSignup),
+            onTap: _nextStep,
           ),
         ),
       ],

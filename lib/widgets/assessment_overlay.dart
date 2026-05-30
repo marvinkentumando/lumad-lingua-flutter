@@ -24,7 +24,7 @@ class AssessmentOverlay extends StatefulWidget {
 class _AssessmentOverlayState extends State<AssessmentOverlay> {
   final Map<String, dynamic> _answers = {};
   int _currentQuestionIndex = 0;
-  bool _isSubmitting = false;
+  final bool _isSubmitting = false;
   bool _isFinished = false;
 
   void _handleOptionSelected(String questionId, dynamic value) {

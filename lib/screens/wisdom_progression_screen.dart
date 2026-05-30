@@ -7,6 +7,8 @@ import '../services/firebase_service.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/ambient_topo_background.dart';
 
+import '../providers/role_provider.dart';
+
 class WisdomProgressionScreen extends ConsumerWidget {
   const WisdomProgressionScreen({super.key});
 
@@ -14,6 +16,7 @@ class WisdomProgressionScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final student = ref.watch(studentProvider);
     final config = ref.watch(appConfigProvider).value;
+    final role = ref.watch(roleProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -29,11 +32,11 @@ class WisdomProgressionScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildCurrentStatus(context, student),
+                      _buildCurrentStatus(context, student, role),
                       const SizedBox(height: 40),
-                      _sectionLabel('THE ASCENT OF WISDOM'),
+                      _sectionLabel(role == UserRole.learner ? 'THE ASCENT OF WISDOM' : 'THE PATH OF LEADERSHIP'),
                       const SizedBox(height: 24),
-                      _buildProgressionPath(context, student, config),
+                      _buildProgressionPath(context, student, config, role),
                       const SizedBox(height: 40),
                     ],
                   ),
@@ -76,7 +79,23 @@ class WisdomProgressionScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildCurrentStatus(BuildContext context, StudentState student) {
+  Widget _buildCurrentStatus(BuildContext context, StudentState student, UserRole role) {
+    String currentRank;
+    if (role == UserRole.learner) {
+      currentRank = student.levelTitle;
+    } else {
+      // Logic from _StaffStatsRow
+      if (student.xp < 500) {
+        currentRank = 'Novice';
+      } else if (student.xp < 2000) {
+        currentRank = 'Guardian';
+      } else if (student.xp < 5000) {
+        currentRank = 'Elder';
+      } else {
+        currentRank = 'Elite';
+      }
+    }
+
     return BrandCard(
       theme: BrandCardTheme.gold,
       padding: const EdgeInsets.all(28),
@@ -105,7 +124,7 @@ class WisdomProgressionScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      student.levelTitle.toUpperCase(),
+                      currentRank.toUpperCase(),
                       style: AppTypography.h3.copyWith(
                         color: Colors.black,
                         fontWeight: FontWeight.w900,
@@ -175,9 +194,10 @@ class WisdomProgressionScreen extends ConsumerWidget {
     BuildContext context,
     StudentState student,
     dynamic config,
+    UserRole role,
   ) {
-    // Determine the ranks to display
-    final List<Map<String, dynamic>> ranks = [
+    // Determine the ranks to display based on role
+    final List<Map<String, dynamic>> learnerRanks = [
       {'title': 'Novice Shaman', 'minLevel': 1, 'icon': Icons.eco_rounded},
       {'title': 'Spiritual Seeker', 'minLevel': 5, 'icon': Icons.search_rounded},
       {'title': 'Tribal Guardian', 'minLevel': 10, 'icon': Icons.security_rounded},
@@ -185,34 +205,66 @@ class WisdomProgressionScreen extends ConsumerWidget {
       {'title': 'Elder Guardian', 'minLevel': 40, 'icon': Icons.castle_rounded},
     ];
 
-    return Column(
-      children: ranks.asMap().entries.map((entry) {
-        final index = entry.key;
-        final rank = entry.value;
-        final isLast = index == ranks.length - 1;
-        final minLevel = rank['minLevel'] as int;
-        final isUnlocked = student.level >= minLevel;
-        final isCurrent = index < ranks.length - 1
-            ? (student.level >= minLevel && student.level < ranks[index + 1]['minLevel'])
-            : student.level >= minLevel;
+    final List<Map<String, dynamic>> staffRanks = [
+      {'title': 'Novice Seeker', 'minXp': 0, 'icon': Icons.person_search_rounded},
+      {'title': 'Guardian of Lore', 'minXp': 500, 'icon': Icons.shield_rounded},
+      {'title': 'Village Elder', 'minXp': 2000, 'icon': Icons.elderly_rounded},
+      {'title': 'Elite Architect', 'minXp': 5000, 'icon': Icons.auto_awesome_rounded},
+    ];
 
-        return _buildRankItem(
-          context,
-          title: rank['title'],
-          minLevel: minLevel,
-          icon: rank['icon'],
-          isUnlocked: isUnlocked,
-          isCurrent: isCurrent,
-          isLast: isLast,
-        );
-      }).toList(),
-    );
+    if (role == UserRole.learner) {
+      return Column(
+        children: learnerRanks.asMap().entries.map((entry) {
+          final index = entry.key;
+          final rank = entry.value;
+          final isLast = index == learnerRanks.length - 1;
+          final minLevel = rank['minLevel'] as int;
+          final isUnlocked = student.level >= minLevel;
+          final isCurrent = index < learnerRanks.length - 1
+              ? (student.level >= minLevel && student.level < learnerRanks[index + 1]['minLevel'])
+              : student.level >= minLevel;
+
+          return _buildRankItem(
+            context,
+            title: rank['title'],
+            requirement: 'Requires Level $minLevel',
+            icon: rank['icon'],
+            isUnlocked: isUnlocked,
+            isCurrent: isCurrent,
+            isLast: isLast,
+          );
+        }).toList(),
+      );
+    } else {
+      return Column(
+        children: staffRanks.asMap().entries.map((entry) {
+          final index = entry.key;
+          final rank = entry.value;
+          final isLast = index == staffRanks.length - 1;
+          final minXp = rank['minXp'] as int;
+          final isUnlocked = student.xp >= minXp;
+          final isCurrent = index < staffRanks.length - 1
+              ? (student.xp >= minXp && student.xp < staffRanks[index + 1]['minXp'])
+              : student.xp >= minXp;
+
+          return _buildRankItem(
+            context,
+            title: rank['title'],
+            requirement: 'Requires $minXp XP',
+            icon: rank['icon'],
+            isUnlocked: isUnlocked,
+            isCurrent: isCurrent,
+            isLast: isLast,
+          );
+        }).toList(),
+      );
+    }
   }
 
   Widget _buildRankItem(
     BuildContext context, {
     required String title,
-    required int minLevel,
+    required String requirement,
     required IconData icon,
     required bool isUnlocked,
     required bool isCurrent,
@@ -275,7 +327,7 @@ class WisdomProgressionScreen extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  'Requires Level $minLevel',
+                  requirement,
                   style: AppTypography.label.copyWith(
                     color: isCurrent ? AppColors.gold500 : (isDark ? Colors.white24 : Colors.black26),
                     fontSize: 10,

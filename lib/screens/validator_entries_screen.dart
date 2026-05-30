@@ -147,7 +147,8 @@ class _ValidatorEntriesScreenState
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(userProfileProvider);
-    final userId = userAsync.value?['uid'] ?? userAsync.value?['id'] ?? '';
+    final authUser = ref.watch(authStateProvider).value;
+    final userId = authUser?.uid ?? '';
     final userRole = userAsync.value?['role'] ?? 'VALIDATOR';
     final userDialect = userAsync.value?['indigenousGroup'] ?? 'Mansaka';
 
@@ -1175,9 +1176,10 @@ class _ValidatorEntriesScreenState
 
   Widget _buildActionButtons({required DictionaryEntry entry}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final userAsync = ref.read(userProfileProvider);
-    final userId = userAsync.value?['uid'] ?? userAsync.value?['id'] ?? '';
-    final userRole = userAsync.value?['role'] ?? 'VALIDATOR';
+    final authUser = ref.read(authStateProvider).value;
+    final userId = authUser?.uid ?? '';
+    final userProfile = ref.read(userProfileProvider).value;
+    final userRole = userProfile?['role'] ?? 'VALIDATOR';
 
     if (entry.status != ValidationStatus.pending) {
       final canEdit = entry.validatorId == userId;
@@ -1550,9 +1552,10 @@ class _ValidatorEntriesScreenState
     _feedbackController.text = entry.validatorFeedback ?? "";
     _recordedTipPath = null;
     _isRecordingTip = false;
-    final userAsync = ref.read(userProfileProvider);
-    final userId = userAsync.value?['uid'] ?? userAsync.value?['id'] ?? '';
-    final userRole = userAsync.value?['role'] ?? 'VALIDATOR';
+    final authUser = ref.read(authStateProvider).value;
+    final userId = authUser?.uid ?? '';
+    final userProfile = ref.read(userProfileProvider).value;
+    final userRole = userProfile?['role'] ?? 'VALIDATOR';
 
     showModalBottomSheet(
       context: context,

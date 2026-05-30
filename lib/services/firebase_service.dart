@@ -391,9 +391,9 @@ class FirebaseService {
         actorId: validatorId,
         actorName: validatorName,
         targetId: id,
-        targetName: data['title'] ?? 'Unknown Lesson',
-        targetType: 'lesson',
-        icon: '📚',
+        targetName: data['term'] ?? 'Unknown Word',
+        targetType: 'word',
+        icon: '🌿',
       );
 
       transaction.update(docRef, {
@@ -855,12 +855,18 @@ class FirebaseService {
   }
 
   // Notification Operations
-  Stream<List<Map<String, dynamic>>> getNotifications(String userId) {
-    return _db
+  Stream<List<Map<String, dynamic>>> getNotifications(String userId, {int? limit}) {
+    var query = _db
         .collection('users')
         .doc(userId)
         .collection('notifications')
-        .orderBy('timestamp', descending: true)
+        .orderBy('timestamp', descending: true);
+    
+    if (limit != null) {
+      query = query.limit(limit);
+    }
+
+    return query
         .snapshots()
         .map((snapshot) {
           return snapshot.docs
@@ -1552,36 +1558,27 @@ class FirebaseService {
 
   // Leaderboard Operations
   Stream<List<Map<String, dynamic>>> getLeaderboardLearners() {
-    // Fetch all or high-XP users and sort/filter client-side
     return _db
         .collection('users')
-        .limit(100)
+        .where('role', isEqualTo: 'learner')
+        .orderBy('xp', descending: true)
+        .limit(20)
         .snapshots()
-        .map((snap) {
-      final list = snap.docs
-          .map((doc) => {'uid': doc.id, ...doc.data()})
-          .where((u) => u['role'] == 'learner')
-          .toList();
-
-      list.sort((a, b) => (b['xp'] ?? 0).compareTo(a['xp'] ?? 0));
-      return list.take(20).toList();
-    });
+        .map((snap) =>
+            snap.docs.map((doc) => {'uid': doc.id, ...doc.data()}).toList());
   }
 
   Stream<List<Map<String, dynamic>>> getLeaderboardContributors() {
+    // Show anyone with contributions, regardless of role
+    // Using wordCount > 0 ensures we only see active contributors
     return _db
         .collection('users')
-        .limit(100)
+        .where('wordCount', isGreaterThan: 0)
+        .orderBy('wordCount', descending: true)
+        .limit(20)
         .snapshots()
-        .map((snap) {
-      final list = snap.docs
-          .map((doc) => {'uid': doc.id, ...doc.data()})
-          .where((u) => u['role'] == 'contributor')
-          .toList();
-
-      list.sort((a, b) => (b['wordCount'] ?? 0).compareTo(a['wordCount'] ?? 0));
-      return list.take(20).toList();
-    });
+        .map((snap) =>
+            snap.docs.map((doc) => {'uid': doc.id, ...doc.data()}).toList());
   }
 
   // Learning Hub Operations
@@ -1612,9 +1609,9 @@ class FirebaseService {
         actorId: validatorId,
         actorName: validatorName,
         targetId: id,
-        targetName: data['title'] ?? 'Unknown Lesson',
-        targetType: 'lesson',
-        icon: '📚',
+        targetName: data['term'] ?? 'Unknown Word',
+        targetType: 'word',
+        icon: '🌿',
       );
 
       transaction.update(docRef, {
@@ -3807,6 +3804,32 @@ final userNotificationsStreamProvider =
     StreamProvider.family<List<Map<String, dynamic>>, String>((ref, userId) {
       return ref.watch(firebaseServiceProvider).getNotifications(userId);
     });
+
+class NotificationQuery {
+  final String userId;
+  final int limit;
+  const NotificationQuery(this.userId, this.limit);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NotificationQuery &&
+          other.userId == userId &&
+          other.limit == limit;
+
+  @override
+  int get hashCode => userId.hashCode ^ limit.hashCode;
+}
+
+final paginatedNotificationsProvider =
+    StreamProvider.family<List<Map<String, dynamic>>, NotificationQuery>((
+  ref,
+  query,
+) {
+  return ref
+      .watch(firebaseServiceProvider)
+      .getNotifications(query.userId, limit: query.limit);
+});
 
 final userContributionsStreamProvider =
     StreamProvider.family<List<DictionaryEntry>, String>((ref, userId) {

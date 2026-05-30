@@ -37,9 +37,8 @@ class _ValidatorLessonsScreenState
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(userProfileProvider);
-    final userId = userAsync.value?['uid'] ??
-        userAsync.value?['id'] ??
-        'unknown_validator';
+    final authUser = ref.watch(authStateProvider).value;
+    final userId = authUser?.uid ?? '';
     final profile = userAsync.value;
     final userRole = profile?['role'] ?? 'VALIDATOR';
     final userDialect = profile?['indigenousGroup'] ?? 'Mansaka';

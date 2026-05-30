@@ -5,9 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../services/haptic_service.dart';
-import '../widgets/assessment_overlay.dart';
-import '../models/assessment.dart';
-import '../providers/user_preferences_provider.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -19,35 +16,6 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentIndex = 0;
-  bool _preTestCompleted = false;
-
-  final List<AssessmentQuestion> _preTestQuestions = [
-    AssessmentQuestion(
-      id: 'heritage',
-      text: 'What is your connection to the Lumad languages?',
-      options: [
-        'I am a heritage learner (it is my family language)',
-        'I am an L2 learner (learning it as a second language)',
-        'I am a researcher or educator',
-        'I am just curious about the culture'
-      ],
-    ),
-    AssessmentQuestion(
-      id: 'exposure',
-      text: 'How often do you hear or speak your ancestral language?',
-      options: ['Daily', 'Occasionally', 'Rarely', 'Never'],
-    ),
-    AssessmentQuestion(
-      id: 'goal',
-      text: 'What is your main goal for using this app?',
-      options: [
-        'To become fluent',
-        'To understand my elders better',
-        'To preserve the language for the next generation',
-        'To pass an assessment'
-      ],
-    ),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -76,25 +44,27 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               _buildNarrativePage(
                 title: "The Echoes Fade",
                 subtitle: "OUR ANCESTRAL VOICES",
-                description: "The sacred languages of our tribes are fading like mist at dawn. You have been chosen to gather the remaining echoes.",
-                image: 'assets/images/lumad_waves.gif', 
+                description:
+                    "The sacred languages of our tribes are fading like mist at dawn. You have been chosen to gather the remaining echoes.",
+                image: 'assets/images/lumad_waves.gif',
                 accentColor: AppColors.gold500,
               ),
               _buildNarrativePage(
                 title: "The Ancestral Vault",
                 subtitle: "SACRED KNOWLEDGE",
-                description: "Every word you learn restores a piece of our history. Unlock ancient artifacts and rebuild the legacy of our people.",
+                description:
+                    "Every word you learn restores a piece of our history. Unlock ancient artifacts and rebuild the legacy of our people.",
                 icon: Icons.auto_awesome,
                 accentColor: Colors.cyanAccent,
               ),
               _buildNarrativePage(
                 title: "Your Tribal Journey",
                 subtitle: "WISDOM AWAITS",
-                description: "Join the Warriors' Circle and compete in ritual duels. The path to mastery is long, but the elders walk with you.",
+                description:
+                    "Join the Warriors' Circle and compete in ritual duels. The path to mastery is long, but the elders walk with you.",
                 icon: Icons.fort_rounded,
                 accentColor: Colors.orangeAccent,
               ),
-              _buildPreTestPage(),
             ],
           ),
 
@@ -107,47 +77,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               children: [
                 _buildIndicator(),
                 const SizedBox(height: 40),
-                _currentIndex == 3
-                    ? _buildActionButton(
-                        _preTestCompleted ? "BEGIN THE RITUAL" : "SKIP SURVEY",
-                        () => context.go('/login'),
-                      )
-                    : _buildActionButton("CONTINUE", () {
-                        _pageController.nextPage(
-                          duration: 600.ms,
-                          curve: Curves.easeOutQuart,
-                        );
-                      }),
+                _buildActionButton(
+                  _currentIndex == 2 ? "BEGIN THE RITUAL" : "CONTINUE",
+                  () {
+                    if (_currentIndex == 2) {
+                      context.go('/login');
+                    } else {
+                      _pageController.nextPage(
+                        duration: 600.ms,
+                        curve: Curves.easeOutQuart,
+                      );
+                    }
+                  },
+                ),
               ],
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildPreTestPage() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Center(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(height: 60),
-              AssessmentOverlay(
-                type: AssessmentType.preTest,
-                questions: _preTestQuestions,
-                onComplete: (answers) {
-                  setState(() => _preTestCompleted = true);
-                  ref.read(userPreferencesProvider.notifier).completePreTest();
-                  context.go('/login');
-                },
-              ),
-              const SizedBox(height: 120), // Space for button
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -177,14 +123,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               decoration: BoxDecoration(
                 color: accentColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
-                border: Border.all(color: accentColor.withValues(alpha: 0.3), width: 2),
+                border: Border.all(
+                    color: accentColor.withValues(alpha: 0.3), width: 2),
                 boxShadow: [
-                  BoxShadow(color: accentColor.withValues(alpha: 0.1), blurRadius: 40, spreadRadius: 10),
+                  BoxShadow(
+                      color: accentColor.withValues(alpha: 0.1),
+                      blurRadius: 40,
+                      spreadRadius: 10),
                 ],
               ),
               child: Icon(icon, size: 100, color: accentColor),
             ).animate().fadeIn(duration: 800.ms).scale(begin: const Offset(0.5, 0.5)),
-          
+
           const SizedBox(height: 60),
           Text(
             subtitle,
@@ -195,7 +145,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               fontWeight: FontWeight.w900,
             ),
           ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2),
-          
+
           const SizedBox(height: 12),
           Text(
             title,
@@ -206,7 +156,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               height: 1.1,
             ),
           ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
-          
+
           const SizedBox(height: 24),
           Text(
             description,
@@ -226,7 +176,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(
-        4,
+        3,
         (index) => AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           margin: const EdgeInsets.symmetric(horizontal: 6),

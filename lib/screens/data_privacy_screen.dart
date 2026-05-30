@@ -11,7 +11,6 @@ class DataPrivacyScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -177,7 +176,7 @@ class DataPrivacyScreen extends ConsumerWidget {
     String sub, {
     VoidCallback? onTap,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return BrandCard(
       onTap: onTap,
       theme: BrandCardTheme.vibrant,
@@ -227,7 +226,7 @@ class DataPrivacyScreen extends ConsumerWidget {
         color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isDark ? Colors.white10 : Colors.black10,
+          color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.1),
         ),
       ),
       child: Row(
@@ -256,7 +255,7 @@ class DataPrivacyScreen extends ConsumerWidget {
           Switch(
             value: initialValue,
             onChanged: (v) => _showComingSoon(context, 'Privacy Toggles'),
-            activeColor: AppColors.gold500,
+            activeThumbColor: AppColors.gold500,
           ),
         ],
       ),

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
-import '../widgets/brand_card.dart';
 import '../models/validator_models.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../services/auth_service.dart';
@@ -46,7 +45,8 @@ class _ValidatorHomeScreenState extends ConsumerState<ValidatorHomeScreen> {
     final pendingLessons =
         ref.watch(pendingLessonsCountProvider(activeDialect)).value ?? 0;
 
-    final uid = profile?['uid'] ?? profile?['id'] ?? '';
+    final authUser = ref.watch(authStateProvider).value;
+    final uid = authUser?.uid ?? '';
     final impactAsync = ref.watch(roleImpactProvider(uid));
 
     return Scaffold(

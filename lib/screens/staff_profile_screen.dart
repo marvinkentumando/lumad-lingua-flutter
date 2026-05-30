@@ -502,14 +502,7 @@ class StaffProfileScreen extends ConsumerWidget {
           Icons.trending_up_rounded,
           'Wisdom Progression',
           'View requirements for your next rank and titles',
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Rank Progression details coming soon.'),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          },
+          onTap: () => context.push('/wisdom-progression'),
         ),
         const SizedBox(height: 12),
         _buildManagementTile(
@@ -525,14 +518,7 @@ class StaffProfileScreen extends ConsumerWidget {
           Icons.security_rounded,
           'Data & Privacy',
           'Export your contributions or manage account security',
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Privacy settings and Data Export coming soon.'),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          },
+          onTap: () => context.push('/privacy-settings'),
         ),
         const SizedBox(height: 12),
         _buildManagementTile(
@@ -540,14 +526,7 @@ class StaffProfileScreen extends ConsumerWidget {
           Icons.cloud_download_rounded,
           'Offline Wisdom',
           'Manage cached lessons and audio files for offline use',
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Offline Sync Manager coming soon.'),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          },
+          onTap: () => context.push('/offline-wisdom'),
         ),
         const SizedBox(height: 12),
         if (role == UserRole.admin) ...[
