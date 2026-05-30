@@ -125,15 +125,6 @@ class FirebaseService {
       final defaultDialects = [
         'Mandaya',
         'Mansaka',
-        'Tagakaulo',
-        'B\'laan',
-        'Bagobo',
-        'Kalagan',
-        'Matigsalug',
-        'Ata',
-        'Dibabawon',
-        'Mangguangan',
-        'Tagabawa',
       ];
 
       if (!doc.exists || doc.data() == null) {
@@ -1211,8 +1202,11 @@ class FirebaseService {
       for (var doc in progressSnap.docs) {
         final lessonId = doc.id;
         final userId = doc.reference.parent.parent?.id;
-        if (userId != null) {
-          final lessonDoc = lessonsSnap.docs.firstWhere((d) => d.id == lessonId, orElse: () => lessonsSnap.docs.first);
+        if (userId != null && lessonsSnap.docs.isNotEmpty) {
+          final lessonDoc = lessonsSnap.docs.firstWhere(
+            (d) => d.id == lessonId,
+            orElse: () => lessonsSnap.docs.first,
+          );
           final lang = lessonDoc.data()['language'] ?? 'Lumad';
           if (!dialectUsers.containsKey(lang)) dialectUsers[lang] = {};
           dialectUsers[lang]!.add(userId);
@@ -1245,9 +1239,19 @@ class FirebaseService {
           'totalCards': srsSnap.size,
         }
       };
-    } catch (e) {
+    } catch (e, stack) {
       debugPrint('Advanced Analytics Error: $e');
-      return {};
+      debugPrint(stack.toString());
+      return {
+        'lessonStruggles': <String, Map<String, int>>{},
+        'lessonNames': <String, String>{},
+        'dialectPopularity': <String, int>{},
+        'srsHealth': {
+          'retentionRate': 0.0,
+          'masteryDistribution': {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
+          'totalCards': 0,
+        }
+      };
     }
   }
 
@@ -1288,6 +1292,29 @@ class FirebaseService {
 
   Future<void> updateUserDetails(String userId, Map<String, dynamic> data) async {
     await _db.collection('users').doc(userId).update(data);
+  }
+
+  Future<void> updatePrivacySettings(String userId, {bool? isPublic, bool? shareAnalytics}) async {
+    final Map<String, dynamic> updates = {};
+    if (isPublic != null) updates['isPublicProfile'] = isPublic;
+    if (shareAnalytics != null) updates['shareAnalytics'] = shareAnalytics;
+    
+    if (updates.isNotEmpty) {
+      await _db.collection('users').doc(userId).update(updates);
+    }
+  }
+
+  Future<Map<String, dynamic>> exportUserData(String userId) async {
+    final userDoc = await _db.collection('users').doc(userId).get();
+    final wordsSnap = await _db.collection('words').where('contributorId', isEqualTo: userId).get();
+    final voiceSnap = await _db.collection('voice_submissions').where('contributorId', isEqualTo: userId).get();
+    
+    return {
+      'profile': userDoc.data(),
+      'contributed_words': wordsSnap.docs.map((d) => d.data()).toList(),
+      'voice_submissions': voiceSnap.docs.map((d) => d.data()).toList(),
+      'exportedAt': DateTime.now().toIso8601String(),
+    };
   }
 
   Future<void> createInvitation(String email, String role, {String? indigenousGroup}) async {
@@ -4165,6 +4192,14 @@ final dueSRSCountProvider = StreamProvider.family<int, String>((ref, userId) {
       .where('nextReview', isLessThanOrEqualTo: DateTime.now())
       .snapshots()
       .map((snap) => snap.size);
+});
+
+final versionHistoryProvider =
+    StreamProvider.family<List<Map<String, dynamic>>, ({String path, String id})>((
+  ref,
+  arg,
+) {
+  return ref.watch(firebaseServiceProvider).getVersionHistory(arg.path, arg.id);
 });
 
 final userImpactMetricsProvider = StreamProvider.family<Map<String, dynamic>, String>((ref, userId) {

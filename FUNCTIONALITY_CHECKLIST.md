@@ -33,7 +33,7 @@ When adding a new item, please use the following format:
 - [x] **Urgent Queue Management**:
     - [x] **Skip/Snooze Function**: Urgent items cannot be dismissed or snoozed if a validator is unable to process them immediately.
     - [x] **Empty State Action**: The "All caught up!" state is static. It could include a "Check History" or "Browse All" button.
-- [ ] **Hardcoded Dialect Assignment**: Assignment of validators to specific dialects (e.g., Mansaka, Mandaya) is partially hardcoded based on email in the build logic. This should be moved to a proper User Management system.
+- [x] **Hardcoded Dialect Assignment**: Assignment of validators to specific dialects (e.g., Mansaka, Mandaya) is now managed through the **Invitations System**, moving away from build-logic hardcoding.
 
 ## 📱 Global Layout (Validator)
 - [x] **Top Bar "Validations" Stat Interaction**: The pill showing the number of validations in the top bar is non-interactive. It could link to a detailed **Validator Activity Log** or **History** page.
@@ -67,7 +67,7 @@ When adding a new item, please use the following format:
 ## 👤 Contributor Profile Screen (Staff Profile)
 - [ ] **Hardcoded Profile Stats**: The "RATING" (4.9) and "RANK" (ELITE) displayed in the stats row are currently hardcoded UI placeholders. They should be linked to actual contributor performance metrics or rank data.
 - [ ] **Contribution Count Completeness**: The "CONTRIBUTIONS" metric in the stats row only counts words; it should also include voice fragment submissions.
-- [ ] **Impact Card Personalization**: The "Students Helped" and "Total Reach" metrics are global platform aggregates. They should be filtered to reflect the specific contributor's personal impact.
+- [x] **Impact Card Personalization**: The "Students Helped" and "Total Reach" metrics are global platform aggregates. They should be filtered to reflect the specific contributor's personal impact.
 - [ ] **Artifacts Section for Staff**: Contributors who transition from being learners lose visibility of their "Earned Artifacts". There should be a way for them to view their collection or a staff-equivalent achievement system.
 - [ ] **Role Transition UI**: No UI for a contributor to "Request Validator" or "Transition to Educator" if they wish to increase their responsibilities.
 - [ ] **Location Edit Restriction**: Location is locked for contributors with a "Location is locked" hint. It should be editable or linked to their primary cultural region.
@@ -75,7 +75,7 @@ When adding a new item, please use the following format:
 
 ## 👤 Validator Profile Screen (Staff Profile)
 - [ ] **Hardcoded Profile Stats**: The "RATING" (4.9) and "RANK" (ELITE) displayed in the stats row are currently hardcoded UI placeholders. They should be linked to actual validator performance metrics or rank data.
-- [ ] **Impact Card Accuracy**: The "Students Helped" and "Total Reach" metrics in the Impact Card might be using generic contributor formulas; they should be verified to accurately reflect a validator's specific impact (e.g., number of learners using words they validated).
+- [x] **Impact Card Accuracy**: The "Students Helped" and "Total Reach" metrics in the Impact Card might be using generic contributor formulas; they should be verified to accurately reflect a validator's specific impact (e.g., number of learners using words they validated).
 - [ ] **Artifacts Section for Staff**: Non-learner roles like validators don't see the "Earned Artifacts" section. There is no equivalent staff-specific collection or achievement display.
 - [ ] **Role Transition Logic**: The "Become a Contributor" button logic in `Journey Management` technically excludes validators but is redundant since they already have higher privileges; however, there's no UI for a validator to "Request Admin" or "Transition Role" if needed.
 
@@ -83,7 +83,7 @@ When adding a new item, please use the following format:
 - [ ] **Guardian Header Interaction**: The header area showing the contributor's name and rank is currently non-interactive. It should ideally link to a **Profile Settings** or **Rank Progression** detail screen.
 - [ ] **Impact Card Accuracy**: Stats like "Students Helped" and "Total Reach" are global aggregates. These should be filtered to reflect the specific contributor's impact (e.g., how many learners have seen or learned words they contributed).
 - [x] **Batch Recording Mode**: The sequencer for recording multiple voice fragments now pulls real dictionary entries that currently lack audio recordings.
-- [ ] **Legacy Tracker Card Interaction**: Contribution cards in the "Legacy Tracker" section (on the Home screen and in the detailed view) are non-interactive. They should navigate to an **Entry Detail** view showing full metadata and any validator feedback.
+- [x] **Legacy Tracker Card Interaction**: Contribution cards in the "Legacy Tracker" section (specifically in the **Legacy Details** screen) now navigate to an **Entry Detail** view showing full metadata and allow editing.
 - [ ] **Recent Activity Search**: No search bar or filtering by date/keyword within the Legacy Tracker section to find specific past contributions.
 - [ ] **Success Dialog XP Hardcoding**: The success message after an entry is submitted mentions "You earned 100 XP!", which appears to be a static text regardless of the actual XP reward logic.
 - [ ] **Revised Entry State Management**: The "Revise Entry" button pre-fills the form but creates a new entry instead of updating the existing flagged one, leading to potential duplicates in the validation queue.
@@ -123,7 +123,7 @@ When adding a new item, please use the following format:
 ## 🏔️ Learning Path Screen (The Ascent)
 - [x] **Summit Interaction**: Reaching "The Peak of Wisdom" (the sun icon) now triggers a celebration with confetti, a "Summit Reached" overlay, and a certificate claim prompt when all lessons are completed.
 - [x] **Path Background Interactivity**: The topographic background is static. It could be enhanced with subtle animations or parallax effects that respond to scrolling or device tilt.
-- [ ] **Offline Lesson Indicators**: Although there's a sync indicator on the dashboard, the Learning Path doesn't clearly show which lessons are cached and available for offline use.
+- [x] **Offline Lesson Indicators**: Added visual markers (cloud-check icons) to lesson nodes that are cached and available for offline use.
 - [x] **Visual Progress Continuity**: In "Mountain" mode, the lines between nodes only turn gold when a lesson is completed. There's no "in-progress" state for a path segment that a user is currently working on.
 - [x] **View Preference Persistence**: The toggle between "CLASSIC" and "MOUNTAIN" views is now saved using shared preferences and persists across app sessions.
 - [x] **Auto-Scroll to Active Node**: On opening the path, the screen should automatically scroll to the user's first uncompleted lesson.
@@ -170,7 +170,7 @@ When adding a new item, please use the following format:
 - [x] **Artifact Spotlight Consistency**: The profile view now sorts artifacts by tier and date, ensuring the most significant discoveries are featured.
 - [x] **Role Transition Feedback**: Added a detailed view for pending contributor requests showing submission date and status.
 - [ ] **Avatar Customization Options**: The "Ancestral Totem" picker is functional but limited to static assets. It could include unlocks based on achievements or levels.
-- [ ] **Impact Card for Staff**: Non-learner roles see an "Impact Card" that appears to use a generic template; it should be verified if it pulls live analytics for contributors and educators.
+- [x] **Impact Card for Staff**: Educators, Validators, and Contributors now see a personalized **Impact Card** pulling live analytics specific to their role.
 - [ ] **Location "Locked" Logic**: In the edit profile dialog, the location field is hardcoded to be disabled with the hint "Location is locked". It should ideally be editable or linked to GPS/Map locales.
 
 ---
@@ -211,13 +211,12 @@ When adding a new item, please use the following format:
 
 ## 👤 Educator Profile Screen (Staff Profile)
 - [ ] **Hardcoded Profile Stats**: The "RATING" (4) and "RANK" (ELITE) displayed in the stats row are currently hardcoded UI placeholders. They should be linked to actual educator performance metrics or rank data.
-- [ ] **Impact Card Accuracy**: The "Students Helped" and "Total Reach" metrics in the Impact Card might be using generic formulas; they should be verified to accurately reflect an educator's specific impact (e.g., number of students enrolled in their lessons).
+- [x] **Impact Card Accuracy**: The "Students Helped" and "Total Reach" metrics in the Impact Card now accurately reflect an educator's specific impact (e.g., number of students enrolled in their lessons).
 - [ ] **Artifacts Section for Staff**: Non-learner roles like educators don't see the "Earned Artifacts" section. There is no equivalent staff-specific collection or achievement display.
 - [ ] **Role Transition Logic**: The "Become a Contributor" button logic technically excludes validators but is redundant since they already have higher privileges; however, there's no UI for an educator to "Request Admin" or "Transition Role" if needed.
 
 ## 👤 Admin Profile Screen (Staff Profile)
 - [ ] **Admin-Specific Metrics**: The stats row lacks metrics relevant to administrators, such as "Total Moderated Items" or "System Actions." It currently only shows hardcoded rating/rank placeholders.
-- [ ] **Impact Card Focus**: The Impact Card shows global stats; it could be tailored for admins to show system health, user growth trends, or moderation throughput.
 - [ ] **Artifacts Section for Staff**: Non-learner roles like admins don't see the "Earned Artifacts" section. There is no equivalent staff-specific collection or achievement display.
 - [ ] **Simulation Mode Toggle**: No UI for an admin to "View as Learner" or "Test Role" directly from their profile to verify UX changes without permanent role switches.
 - [ ] **Quick Config Access**: The profile lacks a "System Settings" shortcut for global platform toggles (e.g., maintenance mode, registration lock) that may be needed urgently.

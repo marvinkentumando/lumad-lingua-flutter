@@ -27,6 +27,7 @@ import '../widgets/preview_audio_player.dart';
 import '../widgets/impact_card.dart';
 import '../services/impact_service.dart';
 import '../services/supabase_storage_service.dart';
+import '../utils/audio_validator.dart';
 
 class ContributorScreen extends ConsumerStatefulWidget {
   const ContributorScreen({super.key});
@@ -694,15 +695,6 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
             final List<String> defaultDialects = [
               'Mandaya',
               'Mansaka',
-              'Tagakaulo',
-              'B\'laan',
-              'Bagobo',
-              'Kalagan',
-              'Matigsalug',
-              'Ata',
-              'Dibabawon',
-              'Mangguangan',
-              'Tagabawa',
             ];
             final List<String> existingDialects = dialectsAsync.value
                     ?.where((d) => d != "All")
@@ -1049,6 +1041,20 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
 
                               String? audioUrl;
                               if (_recordedAudioPath != null) {
+                                // Enforce size and duration constraints
+                                final audioError = await AudioValidator.validate(_recordedAudioPath!);
+                                if (audioError != null) {
+                                  if (sheetContext.mounted) {
+                                    ScaffoldMessenger.of(sheetContext).showSnackBar(
+                                      SnackBar(
+                                        content: Text(audioError),
+                                        backgroundColor: AppColors.semanticRed,
+                                      ),
+                                    );
+                                  }
+                                  return;
+                                }
+
                                 setModalState(() => _isUploading = true);
                                 try {
                                   final fileName =
@@ -1534,6 +1540,7 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
         await _recorder.start(config, path: path);
 
         _isRecordingNotifier.value = true;
+        _isRecording = true;
 
         // Start amplitude tracking for visual feedback
         _amplitudeTimer = Timer.periodic(const Duration(milliseconds: 50), (
@@ -1571,6 +1578,7 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
     _amplitudeNotifier.value = -160.0;
     final path = await _recorder.stop();
     _isRecordingNotifier.value = false;
+    _isRecording = false;
     return path;
   }
 
@@ -1608,8 +1616,24 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
     );
 
     if (result != null && result.files.single.path != null) {
+      final path = result.files.single.path!;
+      
+      // Immediate validation for picked files
+      final audioError = await AudioValidator.validate(path);
+      if (audioError != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(audioError),
+              backgroundColor: AppColors.semanticRed,
+            ),
+          );
+        }
+        return;
+      }
+
       setModalState(() {
-        _recordedAudioPath = result.files.single.path;
+        _recordedAudioPath = path;
       });
     }
   }
@@ -1638,7 +1662,22 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
   }
 
   Future<void> _submitVoiceFragment(BuildContext context, String path) async {
+    // Enforce size and duration constraints
+    final audioError = await AudioValidator.validate(path);
+    if (audioError != null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(audioError),
+            backgroundColor: AppColors.semanticRed,
+          ),
+        );
+      }
+      return;
+    }
+
     // Show Loading
+    if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Preparing voice fragment...")),
     );
@@ -1956,15 +1995,6 @@ class _ContributorScreenState extends ConsumerState<ContributorScreen>
                             final List<String> defaultDialects = [
                               'Mandaya',
                               'Mansaka',
-                              'Tagakaulo',
-                              'B\'laan',
-                              'Bagobo',
-                              'Kalagan',
-                              'Matigsalug',
-                              'Ata',
-                              'Dibabawon',
-                              'Mangguangan',
-                              'Tagabawa',
                             ];
                             final existingDialects = dialectsAsync.value
                                     ?.where((d) => d != "All")

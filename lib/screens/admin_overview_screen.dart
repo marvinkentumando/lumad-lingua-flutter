@@ -1006,12 +1006,6 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
         return AppColors.gold500;
       case 'mandaya':
         return AppColors.semanticBlue;
-      case 'manobo':
-        return AppColors.semanticGreen;
-      case 'bagobo':
-        return AppColors.semanticRed;
-      case 'kagan':
-        return AppColors.gold700;
       default:
         return AppColors.forest700;
     }

@@ -840,7 +840,7 @@ class _ArchiveMapScreenState extends ConsumerState<ArchiveMapScreen> {
             final dialects = dialectsAsync.value
                     ?.where((d) => d != "All")
                     .toList() ??
-                ['Mandaya', 'Mansaka', 'Lumad', 'Manobo'];
+                ['Mandaya', 'Mansaka'];
 
             return Container(
               padding: const EdgeInsets.all(24),

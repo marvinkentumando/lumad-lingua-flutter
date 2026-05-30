@@ -8,6 +8,7 @@ import 'package:audioplayers/audioplayers.dart';
 
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
@@ -21,6 +22,7 @@ import '../widgets/glass_box.dart';
 import '../widgets/ambient_topo_background.dart';
 import '../widgets/brand_button.dart';
 import '../services/supabase_storage_service.dart';
+import '../utils/audio_validator.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -1638,11 +1640,101 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
                   isDark,
                 ),
               ],
+              const Divider(color: Colors.white10, height: 48),
+              _buildVersionHistorySection('voice_submissions', submission.id),
               const SizedBox(height: 32),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildVersionHistorySection(String collection, String id) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final historyAsync = ref.watch(versionHistoryProvider((path: collection, id: id)));
+
+        return historyAsync.when(
+          data: (history) {
+            if (history.isEmpty) {
+              return Text(
+                'No version history available.',
+                style: AppTypography.label.copyWith(color: Colors.white24),
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.history_rounded, color: AppColors.gold500, size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      'VERSION HISTORY',
+                      style: AppTypography.label.copyWith(color: AppColors.gold500, fontSize: 10),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ...history.map((version) => _buildVersionItem(version)),
+              ],
+            );
+          },
+          loading: () => const Center(child: Padding(
+            padding: EdgeInsets.all(8.0),
+            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.gold500),
+          )),
+          error: (_, __) => const SizedBox.shrink(),
+        );
+      },
+    );
+  }
+
+  Widget _buildVersionItem(Map<String, dynamic> version) {
+    final timestamp = (version['timestamp'] as Timestamp?)?.toDate();
+    final snapshot = version['snapshot'] as Map<String, dynamic>?;
+    final status = (snapshot?['status'] ?? 'unknown').toString().toUpperCase();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                timestamp != null ? DateFormat('MMM dd, yyyy • hh:mm a').format(timestamp) : 'Unknown Date',
+                style: AppTypography.label.copyWith(color: Colors.white38, fontSize: 10),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.white10,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  status,
+                  style: AppTypography.label.copyWith(color: Colors.white70, fontSize: 8, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Archived state before update',
+            style: AppTypography.body.copyWith(color: Colors.white60, fontSize: 11),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1856,6 +1948,17 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
                             try {
                               // Upload audio tip if exists
                               if (_recordedTipPath != null) {
+                                // Validate constraints
+                                final audioError = await AudioValidator.validate(_recordedTipPath!);
+                                if (audioError != null) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(audioError), backgroundColor: AppColors.semanticRed),
+                                    );
+                                  }
+                                  return;
+                                }
+
                                 setModalState(() => _isProcessing = true);
                                 final fileName = 'tip_${DateTime.now().millisecondsSinceEpoch}.m4a';
                                 await ref.read(supabaseStorageServiceProvider).uploadAudio(File(_recordedTipPath!), fileName);
@@ -1896,6 +1999,17 @@ class _ValidatorVoicesScreenState extends ConsumerState<ValidatorVoicesScreen> {
                             try {
                               // Upload audio tip if exists
                               if (_recordedTipPath != null) {
+                                // Validate constraints
+                                final audioError = await AudioValidator.validate(_recordedTipPath!);
+                                if (audioError != null) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(audioError), backgroundColor: AppColors.semanticRed),
+                                    );
+                                  }
+                                  return;
+                                }
+
                                 setModalState(() => _isProcessing = true);
                                 final fileName = 'tip_${DateTime.now().millisecondsSinceEpoch}.m4a';
                                 await ref.read(supabaseStorageServiceProvider).uploadAudio(File(_recordedTipPath!), fileName);

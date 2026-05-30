@@ -4,12 +4,25 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/ambient_topo_background.dart';
+import '../services/offline_service.dart';
+import '../services/firebase_service.dart';
+import 'dart:async';
 
-class OfflineWisdomScreen extends ConsumerWidget {
+class OfflineWisdomScreen extends ConsumerStatefulWidget {
   const OfflineWisdomScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<OfflineWisdomScreen> createState() => _OfflineWisdomScreenState();
+}
+
+class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
+  bool _isSyncing = false;
+  double _syncProgress = 0.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final lessonCountAsync = ref.watch(offlineLessonCountProvider);
+    final dictionaryCountAsync = ref.watch(offlineDictionaryCountProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -18,6 +31,27 @@ class OfflineWisdomScreen extends ConsumerWidget {
           child: Column(
             children: [
               _buildHeader(context),
+              if (_isSyncing)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  child: Column(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: _syncProgress,
+                          backgroundColor: Colors.white10,
+                          valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold500),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Syncing Ancestral Knowledge... ${(_syncProgress * 100).toInt()}%',
+                        style: AppTypography.label.copyWith(color: AppColors.gold500, fontSize: 10),
+                      ),
+                    ],
+                  ),
+                ),
               Expanded(
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
@@ -25,32 +59,24 @@ class OfflineWisdomScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildStorageOverview(context),
+                      _buildStorageOverview(context, lessonCountAsync.value ?? 0, dictionaryCountAsync.value ?? 0),
                       const SizedBox(height: 32),
                       _sectionLabel('OFFLINE MODULES'),
                       const SizedBox(height: 16),
                       _buildSyncTile(
                         context,
                         'Dictionary Core',
-                        'All approved words and translations',
-                        '4.2 MB',
-                        true,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildSyncTile(
-                        context,
-                        'Audio Pronunciations',
-                        'Recorded fragments for offline listening',
-                        '128.5 MB',
-                        false,
+                        '${dictionaryCountAsync.value ?? 0} approved words cached',
+                        '${((dictionaryCountAsync.value ?? 0) * 0.01).toStringAsFixed(1)} MB',
+                        (dictionaryCountAsync.value ?? 0) > 0,
                       ),
                       const SizedBox(height: 12),
                       _buildSyncTile(
                         context,
                         'Lesson Archive',
-                        'Interactive lessons and quiz assets',
-                        '15.8 MB',
-                        true,
+                        '${lessonCountAsync.value ?? 0} modules available offline',
+                        '${((lessonCountAsync.value ?? 0) * 0.5).toStringAsFixed(1)} MB',
+                        (lessonCountAsync.value ?? 0) > 0,
                       ),
                       const SizedBox(height: 32),
                       _sectionLabel('MANAGEMENT'),
@@ -60,7 +86,7 @@ class OfflineWisdomScreen extends ConsumerWidget {
                         Icons.sync_rounded,
                         'Sync All Wisdom',
                         'Update all offline data to the latest versions',
-                        onTap: () => _showComingSoon(context, 'Global Sync'),
+                        onTap: _isSyncing ? null : () => _handleSyncAll(),
                       ),
                       const SizedBox(height: 12),
                       _buildActionCard(
@@ -69,7 +95,7 @@ class OfflineWisdomScreen extends ConsumerWidget {
                         'Clear Cache',
                         'Remove all downloaded assets to free up space',
                         isDanger: true,
-                        onTap: () => _showComingSoon(context, 'Cache Clear'),
+                        onTap: _isSyncing ? null : () => _showClearConfirmation(),
                       ),
                       const SizedBox(height: 40),
                     ],
@@ -123,7 +149,11 @@ class OfflineWisdomScreen extends ConsumerWidget {
         ),
       );
 
-  Widget _buildStorageOverview(BuildContext context) {
+  Widget _buildStorageOverview(BuildContext context, int lessons, int words) {
+    // Estimating 10KB per word and 500KB per lesson
+    double mbUsed = (words * 0.01) + (lessons * 0.5);
+    double pct = (mbUsed / 200).clamp(0.05, 1.0); // 200MB as a theoretical "full" cache limit
+
     return BrandCard(
       theme: BrandCardTheme.gold,
       padding: const EdgeInsets.all(24),
@@ -142,7 +172,7 @@ class OfflineWisdomScreen extends ConsumerWidget {
                 ),
               ),
               Text(
-                '148.5 MB USED',
+                '${mbUsed.toStringAsFixed(1)} MB USED',
                 style: AppTypography.mono.copyWith(
                   color: Colors.black,
                   fontWeight: FontWeight.bold,
@@ -154,16 +184,16 @@ class OfflineWisdomScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: const LinearProgressIndicator(
-              value: 0.15,
+            child: LinearProgressIndicator(
+              value: pct,
               backgroundColor: Colors.black12,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.black),
               minHeight: 8,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Approximately 1.2 GB available on device',
+            'Capacity managed by village protocols.',
             style: AppTypography.body.copyWith(
               color: Colors.black54,
               fontSize: 11,
@@ -227,13 +257,14 @@ class OfflineWisdomScreen extends ConsumerWidget {
               ],
             ),
           ),
-          IconButton(
-            onPressed: () => _showComingSoon(context, 'Module Sync'),
-            icon: Icon(
-              Icons.sync_rounded,
-              color: isSynced ? Colors.white24 : AppColors.gold500,
+          if (!isSynced)
+            IconButton(
+              onPressed: _handleSyncAll,
+              icon: const Icon(
+                Icons.download_rounded,
+                color: AppColors.gold500,
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -241,9 +272,7 @@ class OfflineWisdomScreen extends ConsumerWidget {
 
   Widget _buildActionCard(
     BuildContext context,
-    IconData icon,
-    String title,
-    String sub, {
+    IconData icon, String title, String sub, {
     bool isDanger = false,
     VoidCallback? onTap,
   }) {
@@ -267,31 +296,92 @@ class OfflineWisdomScreen extends ConsumerWidget {
                 Text(
                   title,
                   style: AppTypography.h3.copyWith(
-                    color: Colors.white,
+                    color: isDanger ? Colors.white : AppColors.forest900,
                     fontSize: 16,
                   ),
                 ),
                 Text(
                   sub,
                   style: AppTypography.body.copyWith(
-                    color: Colors.white38,
+                    color: isDanger ? Colors.white60 : AppColors.forest700,
                     fontSize: 11,
                   ),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right_rounded, color: Colors.white24),
+          Icon(Icons.chevron_right_rounded, color: isDanger ? Colors.white24 : AppColors.forest200),
         ],
       ),
     );
   }
 
-  void _showComingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature is being prepared by the village elders.'),
-        behavior: SnackBarBehavior.floating,
+  Future<void> _handleSyncAll() async {
+    setState(() {
+      _isSyncing = true;
+      _syncProgress = 0.1;
+    });
+
+    try {
+      // 1. Sync Dictionary
+      setState(() => _syncProgress = 0.2);
+      final words = await ref.read(firebaseServiceProvider).getAllDictionaryWords().first;
+      await ref.read(offlineServiceProvider).saveDictionaryEntries(words);
+      
+      setState(() => _syncProgress = 0.6);
+      
+      // 2. Sync Lessons
+      final lessons = await ref.read(firebaseServiceProvider).getPublishedLessons().first;
+      await ref.read(offlineServiceProvider).saveLessons(lessons);
+
+      setState(() => _syncProgress = 1.0);
+      
+      // Refresh providers
+      ref.invalidate(offlineLessonCountProvider);
+      ref.invalidate(offlineDictionaryCountProvider);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ancestral knowledge successfully cached!'), backgroundColor: AppColors.semanticGreen),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sync failed: $e'), backgroundColor: AppColors.semanticRed),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSyncing = false);
+    }
+  }
+
+  void _showClearConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.forest800,
+        title: const Text('Clear Wisdom Cache?', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'All offline lessons and dictionary terms will be removed from this device. You will need a connection to access them again.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
+          ElevatedButton(
+            onPressed: () async {
+              await ref.read(offlineServiceProvider).clearCache();
+              ref.invalidate(offlineLessonCountProvider);
+              ref.invalidate(offlineDictionaryCountProvider);
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cache cleared.')));
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticRed),
+            child: const Text('CLEAR ALL'),
+          ),
+        ],
       ),
     );
   }

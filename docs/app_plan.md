@@ -23,8 +23,8 @@ Lumad Lingua is a premium, cultural language-learning platform. It aims to eleva
 - [x] Formalized Pre-test and Post-test Assessment modules for research evaluation.
 
 ### Phase 2: Advanced Audio & Linguistic Validation
-- [ ] MFCC-based Pronunciation Analysis (upgrading from basic DTW waveform comparison).
-- [ ] Similarity Score Categorization: Excellent (≥80%), Good (60–79%), Needs Improvement (<60%).
+- [x] MFCC-based Pronunciation Analysis (upgrading from basic DTW waveform comparison).
+- [x] Similarity Score Categorization: Excellent (≥80%), Good (60–79%), Needs Improvement (<60%).
 - [ ] Audio Submission Constraints: Enforcement of 10MB max size and 1.0s minimum duration.
 - [ ] Strict Firestore Security: Update rules to prevent Learners from reading unvalidated vocabulary entries.
 

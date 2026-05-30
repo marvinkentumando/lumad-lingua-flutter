@@ -109,9 +109,27 @@ class OfflineService {
     await lessonBox.clear();
     await dictionaryBox.clear();
   }
+
+  Future<int> getLessonCount() async {
+    final box = await _getBox<Lesson>(lessonsBoxName);
+    return box.length;
+  }
+
+  Future<int> getDictionaryCount() async {
+    final box = await _getBox<DictionaryEntry>(dictionaryBoxName);
+    return box.length;
+  }
 }
 
 final offlineServiceProvider = Provider((ref) => OfflineService());
+
+final offlineLessonCountProvider = FutureProvider<int>((ref) {
+  return ref.watch(offlineServiceProvider).getLessonCount();
+});
+
+final offlineDictionaryCountProvider = FutureProvider<int>((ref) {
+  return ref.watch(offlineServiceProvider).getDictionaryCount();
+});
 
 
 

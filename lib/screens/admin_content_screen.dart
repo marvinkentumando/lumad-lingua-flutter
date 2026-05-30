@@ -843,41 +843,46 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
             ),
           ),
           Expanded(
-            child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: ref.read(firebaseServiceProvider).getVersionHistory(collection, docId),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-                final history = snapshot.data ?? [];
-                if (history.isEmpty) return Center(child: Text('No history found.', style: TextStyle(color: isDark ? Colors.white38 : AppColors.creamText3)));
+            child: Consumer(
+              builder: (context, ref, child) {
+                final historyAsync = ref.watch(versionHistoryProvider((path: collection, id: docId)));
+                
+                return historyAsync.when(
+                  data: (history) {
+                    if (history.isEmpty) return Center(child: Text('No history found.', style: TextStyle(color: isDark ? Colors.white38 : AppColors.creamText3)));
 
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  itemCount: history.length,
-                  itemBuilder: (context, idx) {
-                    final item = history[idx];
-                    final snapshot = item['snapshot'] as Map<String, dynamic>?;
-                    final timestamp = (item['timestamp'] as dynamic)?.toDate() as DateTime?;
-                    
-                    return Card(
-                      color: isDark ? AppColors.forest800 : Colors.white,
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      child: ListTile(
-                        title: Text(
-                          timestamp != null ? timestamp.toString().substring(0, 16) : 'Unknown Date',
-                          style: AppTypography.body.copyWith(color: isDark ? Colors.white : AppColors.forest900, fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text(
-                          'Modified by: ${item['actorId'] ?? 'System'}',
-                          style: AppTypography.label.copyWith(color: isDark ? Colors.white38 : AppColors.creamText3),
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.visibility_outlined, color: AppColors.gold500),
-                          onPressed: () => _showSnapshotDetails(snapshot ?? {}),
-                        ),
-                      ),
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      itemCount: history.length,
+                      itemBuilder: (context, idx) {
+                        final item = history[idx];
+                        final snapshot = item['snapshot'] as Map<String, dynamic>?;
+                        final timestamp = (item['timestamp'] as dynamic)?.toDate() as DateTime?;
+                        
+                        return Card(
+                          color: isDark ? AppColors.forest800 : Colors.white,
+                          margin: const EdgeInsets.only(bottom: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          child: ListTile(
+                            title: Text(
+                              timestamp != null ? timestamp.toString().substring(0, 16) : 'Unknown Date',
+                              style: AppTypography.body.copyWith(color: isDark ? Colors.white : AppColors.forest900, fontWeight: FontWeight.bold),
+                            ),
+                            subtitle: Text(
+                              'Modified by: ${item['actorId'] ?? 'System'}',
+                              style: AppTypography.label.copyWith(color: isDark ? Colors.white38 : AppColors.creamText3),
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.visibility_outlined, color: AppColors.gold500),
+                              onPressed: () => _showSnapshotDetails(snapshot ?? {}),
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (err, _) => Center(child: Text('Error loading history: $err')),
                 );
               },
             ),

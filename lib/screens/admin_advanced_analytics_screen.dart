@@ -28,17 +28,24 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
             children: [
               _sectionLabel('LESSON HEATMAPS (Struggle Points)'),
               const SizedBox(height: 16),
-              _buildLessonHeatmaps(data['lessonStruggles'], data['lessonNames']),
+              _buildLessonHeatmaps(
+                data['lessonStruggles'] as Map<String, dynamic>? ?? {},
+                data['lessonNames'] as Map<String, dynamic>? ?? {},
+              ),
               
               const SizedBox(height: 32),
               _sectionLabel('DIALECT POPULARITY (Active Learners)'),
               const SizedBox(height: 16),
-              _buildDialectPopularity(data['dialectPopularity']),
+              _buildDialectPopularity(data['dialectPopularity'] as Map<String, dynamic>? ?? {}),
               
               const SizedBox(height: 32),
               _sectionLabel('SRS ECOSYSTEM HEALTH'),
               const SizedBox(height: 16),
-              _buildSRSHealth(data['srsHealth']),
+              _buildSRSHealth(data['srsHealth'] as Map<String, dynamic>? ?? {
+                'retentionRate': 0.0,
+                'masteryDistribution': {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
+                'totalCards': 0,
+              }),
               
               const SizedBox(height: 100),
             ],
@@ -60,15 +67,15 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
 
     final sortedLessons = struggles.entries.toList()
       ..sort((a, b) {
-        final sumA = (a.value as Map).values.fold(0, (prev, curr) => prev + (curr as int));
-        final sumB = (b.value as Map).values.fold(0, (prev, curr) => prev + (curr as int));
+        final sumA = (a.value as Map).values.fold(0, (prev, curr) => prev + (curr as num).toInt());
+        final sumB = (b.value as Map).values.fold(0, (prev, curr) => prev + (curr as num).toInt());
         return sumB.compareTo(sumA);
       });
 
     return Column(
       children: sortedLessons.take(5).map((entry) {
         final lessonId = entry.key;
-        final taskStruggles = entry.value as Map<String, int>;
+        final taskStruggles = Map<String, int>.from(entry.value as Map);
         final lessonName = names[lessonId] ?? 'Unknown Lesson';
         
         return BrandCard(
@@ -118,8 +125,8 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
         child: Column(
           children: popularity.entries.map((e) {
             final dialect = e.key;
-            final count = e.value as int;
-            final max = popularity.values.fold(0, (p, c) => (c as int) > p ? c : p);
+            final count = (e.value as num).toInt();
+            final max = popularity.values.fold(0, (p, c) => (c as num).toInt() > p ? (c as num).toInt() : p);
             final pct = max > 0 ? count / max : 0.0;
 
             return Padding(
@@ -159,9 +166,9 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
   }
 
   Widget _buildSRSHealth(Map<String, dynamic> health) {
-    final rate = (health['retentionRate'] as double) * 100;
-    final dist = health['masteryDistribution'] as Map<int, int>;
-    final total = health['totalCards'] as int;
+    final rate = (health['retentionRate'] as num).toDouble() * 100;
+    final dist = Map<int, int>.from(health['masteryDistribution'] as Map);
+    final total = (health['totalCards'] as num).toInt();
 
     return Column(
       children: [

@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:convert';
+import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/ambient_topo_background.dart';
 import '../widgets/brand_button.dart';
+import '../services/auth_service.dart';
+import '../services/firebase_service.dart';
 
 class DataPrivacyScreen extends ConsumerWidget {
   const DataPrivacyScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(userProfileProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -20,59 +25,74 @@ class DataPrivacyScreen extends ConsumerWidget {
             children: [
               _buildHeader(context),
               Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _sectionLabel('ACCOUNT SECURITY'),
-                      const SizedBox(height: 16),
-                      _buildSecurityCard(context),
-                      const SizedBox(height: 32),
-                      _sectionLabel('DATA MANAGEMENT'),
-                      const SizedBox(height: 16),
-                      _buildManagementTile(
-                        context,
-                        Icons.download_rounded,
-                        'Export My Data',
-                        'Download a copy of your contributions and activity history',
-                        onTap: () => _showComingSoon(context, 'Data Export'),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildManagementTile(
-                        context,
-                        Icons.history_rounded,
-                        'Activity Logs',
-                        'Review your recent sign-in and security activity',
-                        onTap: () => _showComingSoon(context, 'Activity Logs'),
-                      ),
-                      const SizedBox(height: 32),
-                      _sectionLabel('PRIVACY CONTROLS'),
-                      const SizedBox(height: 16),
-                      _buildPrivacyToggle(
-                        context,
-                        'Public Profile',
-                        'Allow other tribe members to see your achievements and rank',
-                        true,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildPrivacyToggle(
-                        context,
-                        'Usage Analytics',
-                        'Share anonymous data to help improve the platform',
-                        false,
-                      ),
-                      const SizedBox(height: 40),
-                      _buildDangerZone(context),
-                      const SizedBox(height: 40),
-                    ],
-                  ),
+                child: profileAsync.when(
+                  data: (profile) => _buildContent(context, ref, profile),
+                  loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
+                  error: (err, _) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, WidgetRef ref, Map<String, dynamic>? profile) {
+    final bool isPublic = profile?['isPublicProfile'] ?? true;
+    final bool shareAnalytics = profile?['shareAnalytics'] ?? false;
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionLabel('ACCOUNT SECURITY'),
+          const SizedBox(height: 16),
+          _buildSecurityCard(context, ref),
+          const SizedBox(height: 32),
+          _sectionLabel('DATA MANAGEMENT'),
+          const SizedBox(height: 16),
+          _buildManagementTile(
+            context,
+            Icons.download_rounded,
+            'Export My Data',
+            'Copy a JSON version of your contributions and activity',
+            onTap: () => _exportData(context, ref),
+          ),
+          const SizedBox(height: 12),
+          _buildManagementTile(
+            context,
+            Icons.history_rounded,
+            'Activity Logs',
+            'Review your recent sign-in and security activity',
+            onTap: () => _showComingSoon(context, 'Activity Logs'),
+          ),
+          const SizedBox(height: 32),
+          _sectionLabel('PRIVACY CONTROLS'),
+          const SizedBox(height: 16),
+          _buildPrivacyToggle(
+            context,
+            ref,
+            'Public Profile',
+            'Allow other tribe members to see your achievements and rank',
+            isPublic,
+            (v) => _togglePrivacy(ref, isPublic: v),
+          ),
+          const SizedBox(height: 12),
+          _buildPrivacyToggle(
+            context,
+            ref,
+            'Usage Analytics',
+            'Share anonymous data to help improve the platform',
+            shareAnalytics,
+            (v) => _togglePrivacy(ref, shareAnalytics: v),
+          ),
+          const SizedBox(height: 40),
+          _buildDangerZone(context, ref),
+          const SizedBox(height: 40),
+        ],
       ),
     );
   }
@@ -117,7 +137,7 @@ class DataPrivacyScreen extends ConsumerWidget {
         ),
       );
 
-  Widget _buildSecurityCard(BuildContext context) {
+  Widget _buildSecurityCard(BuildContext context, WidgetRef ref) {
     return BrandCard(
       theme: BrandCardTheme.gold,
       padding: const EdgeInsets.all(24),
@@ -162,7 +182,7 @@ class DataPrivacyScreen extends ConsumerWidget {
           BrandButton(
             text: 'UPDATE PASSWORD',
             type: BrandButtonType.secondary,
-            onTap: () => _showComingSoon(context, 'Password Update'),
+            onTap: () => _showUpdatePasswordDialog(context, ref),
           ),
         ],
       ),
@@ -176,7 +196,6 @@ class DataPrivacyScreen extends ConsumerWidget {
     String sub, {
     VoidCallback? onTap,
   }) {
-
     return BrandCard(
       onTap: onTap,
       theme: BrandCardTheme.vibrant,
@@ -215,9 +234,11 @@ class DataPrivacyScreen extends ConsumerWidget {
 
   Widget _buildPrivacyToggle(
     BuildContext context,
+    WidgetRef ref,
     String title,
     String sub,
-    bool initialValue,
+    bool value,
+    Function(bool) onChanged,
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
@@ -253,8 +274,8 @@ class DataPrivacyScreen extends ConsumerWidget {
             ),
           ),
           Switch(
-            value: initialValue,
-            onChanged: (v) => _showComingSoon(context, 'Privacy Toggles'),
+            value: value,
+            onChanged: onChanged,
             activeThumbColor: AppColors.gold500,
           ),
         ],
@@ -262,7 +283,7 @@ class DataPrivacyScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDangerZone(BuildContext context) {
+  Widget _buildDangerZone(BuildContext context, WidgetRef ref) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -296,7 +317,7 @@ class DataPrivacyScreen extends ConsumerWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () => _showDeleteConfirmation(context),
+              onPressed: () => _showDeleteConfirmation(context, ref),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.semanticRed,
                 foregroundColor: Colors.white,
@@ -325,15 +346,72 @@ class DataPrivacyScreen extends ConsumerWidget {
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context) {
+  void _togglePrivacy(WidgetRef ref, {bool? isPublic, bool? shareAnalytics}) async {
+    final user = ref.read(authServiceProvider).currentUser;
+    if (user != null) {
+      await ref.read(firebaseServiceProvider).updatePrivacySettings(
+        user.uid,
+        isPublic: isPublic,
+        shareAnalytics: shareAnalytics,
+      );
+    }
+  }
+
+  void _exportData(BuildContext context, WidgetRef ref) async {
+    final user = ref.read(authServiceProvider).currentUser;
+    if (user == null) return;
+
+    try {
+      final data = await ref.read(firebaseServiceProvider).exportUserData(user.uid);
+      final jsonStr = const JsonEncoder.withIndent('  ').convert(data);
+      
+      await Clipboard.setData(ClipboardData(text: jsonStr));
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Data exported and copied to clipboard!')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    }
+  }
+
+  void _showUpdatePasswordDialog(BuildContext context, WidgetRef ref) {
+    final oldPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.forest800,
-        title: const Text('Sacrifice Account?', style: TextStyle(color: Colors.white)),
-        content: const Text(
-          'This action is irreversible. All your progress, XP, and contributions will be lost to the shadows. Are you sure?',
-          style: TextStyle(color: Colors.white70),
+        title: Text('Update Password', style: AppTypography.h3.copyWith(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: oldPasswordController,
+              obscureText: true,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'Current Password',
+                labelStyle: TextStyle(color: Colors.white60),
+              ),
+            ),
+            TextField(
+              controller: newPasswordController,
+              obscureText: true,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'New Password',
+                labelStyle: TextStyle(color: Colors.white60),
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -341,9 +419,96 @@ class DataPrivacyScreen extends ConsumerWidget {
             child: const Text('CANCEL'),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showComingSoon(context, 'Account Deletion');
+            onPressed: () async {
+              try {
+                final verified = await ref.read(authServiceProvider).verifyPassword(oldPasswordController.text);
+                if (verified) {
+                  await ref.read(authServiceProvider).updatePassword(newPasswordController.text);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Password updated successfully!')),
+                    );
+                  }
+                } else {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Incorrect current password.'), backgroundColor: AppColors.semanticRed),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Update failed: $e'), backgroundColor: AppColors.semanticRed),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500),
+            child: const Text('UPDATE', style: TextStyle(color: Colors.black)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context, WidgetRef ref) {
+    final passwordController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.forest800,
+        title: const Text('Sacrifice Account?', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'This action is irreversible. All your progress, XP, and contributions will be lost. Please enter your password to confirm.',
+              style: TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                labelStyle: TextStyle(color: Colors.white60),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                final verified = await ref.read(authServiceProvider).verifyPassword(passwordController.text);
+                if (verified) {
+                  await ref.read(authServiceProvider).deleteUserAccount();
+                  if (context.mounted) {
+                    Navigator.pop(context); // Close dialog
+                    // Auth state change will handle navigation to login
+                  }
+                } else {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Incorrect password.'), backgroundColor: AppColors.semanticRed),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Deletion failed: $e'), backgroundColor: AppColors.semanticRed),
+                  );
+                }
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticRed),
             child: const Text('DELETE'),

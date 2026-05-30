@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../models/dictionary_entry.dart';
@@ -13,6 +15,7 @@ import '../widgets/ambient_topo_background.dart';
 import '../widgets/glass_box.dart';
 import '../widgets/preview_audio_player.dart';
 import '../services/supabase_storage_service.dart';
+import '../utils/audio_validator.dart';
 import 'package:flutter/services.dart';
 import 'package:confetti/confetti.dart';
 import 'package:record/record.dart';
@@ -1704,9 +1707,24 @@ class _ValidatorEntriesScreenState
                             // Upload audio tip if exists
                             String? audioTipUrl;
                             if (_recordedTipPath != null) {
+                               // Validate constraints
+                               final audioError = await AudioValidator.validate(_recordedTipPath!);
+                               if (audioError != null) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(audioError), backgroundColor: AppColors.semanticRed),
+                                    );
+                                  }
+                                  return;
+                                }
+
                                setModalState(() => _isProcessing = true);
                                final fileName = 'tip_${DateTime.now().millisecondsSinceEpoch}.m4a';
-                               audioTipUrl = await ref.read(supabaseStorageServiceProvider).uploadAudio(File(_recordedTipPath!), fileName);
+                               try {
+                                 audioTipUrl = await ref.read(supabaseStorageServiceProvider).uploadAudio(File(_recordedTipPath!), fileName);
+                               } catch (e) {
+                                 debugPrint('Upload error: $e');
+                               }
                                setModalState(() => _isProcessing = false);
                             }
 
@@ -1743,9 +1761,24 @@ class _ValidatorEntriesScreenState
                             // Upload audio tip if exists
                             String? audioTipUrl;
                             if (_recordedTipPath != null) {
+                               // Validate constraints
+                               final audioError = await AudioValidator.validate(_recordedTipPath!);
+                               if (audioError != null) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(audioError), backgroundColor: AppColors.semanticRed),
+                                    );
+                                  }
+                                  return;
+                                }
+
                                setModalState(() => _isProcessing = true);
                                final fileName = 'tip_${DateTime.now().millisecondsSinceEpoch}.m4a';
-                               audioTipUrl = await ref.read(supabaseStorageServiceProvider).uploadAudio(File(_recordedTipPath!), fileName);
+                               try {
+                                 audioTipUrl = await ref.read(supabaseStorageServiceProvider).uploadAudio(File(_recordedTipPath!), fileName);
+                               } catch (e) {
+                                 debugPrint('Upload error: $e');
+                               }
                                setModalState(() => _isProcessing = false);
                             }
 
@@ -1910,6 +1943,38 @@ class _ValidatorEntriesScreenState
                     ),
                 ],
               ),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () => _showSubmissionAuditLog(entry),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.forest900.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        "Submission ID: #ANC-${entry.id.substring(0, 4)}",
+                        style: AppTypography.mono.copyWith(
+                          color: AppColors.gold500,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.history_rounded,
+                        size: 14,
+                        color: AppColors.gold500,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               Text(
                 '${entry.phonetic ?? ''} • ${entry.partOfSpeechLabel}',
                 style: AppTypography.mono.copyWith(
@@ -2040,6 +2105,239 @@ class _ValidatorEntriesScreenState
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showSubmissionAuditLog(DictionaryEntry entry) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.forest800,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final dateFormat = DateFormat('MMM dd, yyyy • hh:mm a');
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Audit Trail',
+                    style: AppTypography.h2ExtraBold.copyWith(
+                      color: AppColors.gold500,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, color: AppColors.creamText3),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildAuditItem(
+                'Full Submission ID',
+                entry.id,
+                Icons.fingerprint_rounded,
+                isDark,
+                showCopy: true,
+              ),
+              const Divider(color: Colors.white10, height: 32),
+              _buildAuditItem(
+                'Contributor',
+                '${entry.contributorName ?? 'Anonymous'} (${(entry.contributorId ?? 'unknown').substring(0, 6)}...)',
+                Icons.person_outline_rounded,
+                isDark,
+              ),
+              const SizedBox(height: 16),
+              _buildAuditItem(
+                'Submitted On',
+                entry.submittedAt != null
+                    ? dateFormat.format(entry.submittedAt!)
+                    : 'Unknown',
+                Icons.calendar_today_rounded,
+                isDark,
+              ),
+              const SizedBox(height: 16),
+              _buildAuditItem(
+                'Current Status',
+                entry.status.name.toUpperCase(),
+                Icons.info_outline_rounded,
+                isDark,
+                valueColor: entry.status == ValidationStatus.approved
+                    ? AppColors.semanticGreen
+                    : (entry.status == ValidationStatus.rejected
+                        ? AppColors.semanticRed
+                        : AppColors.gold500),
+              ),
+              if (entry.validatedAt != null) ...[
+                const SizedBox(height: 16),
+                _buildAuditItem(
+                  'Validated On',
+                  dateFormat.format(entry.validatedAt!),
+                  Icons.verified_user_outlined,
+                  isDark,
+                ),
+                const SizedBox(height: 16),
+                _buildAuditItem(
+                  'Validator Role',
+                  entry.validatorRole ?? 'Unknown',
+                  Icons.shield_outlined,
+                  isDark,
+                ),
+              ],
+              const Divider(color: Colors.white10, height: 48),
+              _buildVersionHistorySection('words', entry.id),
+              const SizedBox(height: 32),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAuditItem(
+    String label,
+    String value,
+    IconData icon,
+    bool isDark, {
+    bool showCopy = false,
+    Color? valueColor,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, color: AppColors.gold500, size: 20),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label.toUpperCase(),
+                style: AppTypography.label.copyWith(
+                  color: AppColors.creamText3,
+                  fontSize: 10,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: AppTypography.body.copyWith(
+                  color: valueColor ?? (isDark ? Colors.white : AppColors.forest900),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (showCopy)
+          IconButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: value));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('ID copied to clipboard')),
+              );
+            },
+            icon: const Icon(Icons.copy_rounded, color: Colors.white24, size: 18),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildVersionHistorySection(String collection, String id) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final historyAsync = ref.watch(versionHistoryProvider((path: collection, id: id)));
+
+        return historyAsync.when(
+          data: (history) {
+            if (history.isEmpty) {
+              return Text(
+                'No version history available.',
+                style: AppTypography.label.copyWith(color: Colors.white24),
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.history_rounded, color: AppColors.gold500, size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      'VERSION HISTORY',
+                      style: AppTypography.label.copyWith(color: AppColors.gold500, fontSize: 10),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ...history.map((version) => _buildVersionItem(version)),
+              ],
+            );
+          },
+          loading: () => const Center(child: Padding(
+            padding: EdgeInsets.all(8.0),
+            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.gold500),
+          )),
+          error: (_, __) => const SizedBox.shrink(),
+        );
+      },
+    );
+  }
+
+  Widget _buildVersionItem(Map<String, dynamic> version) {
+    final timestamp = (version['timestamp'] as Timestamp?)?.toDate();
+    final snapshot = version['snapshot'] as Map<String, dynamic>?;
+    final status = (snapshot?['status'] ?? 'unknown').toString().toUpperCase();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                timestamp != null ? DateFormat('MMM dd, yyyy • hh:mm a').format(timestamp) : 'Unknown Date',
+                style: AppTypography.label.copyWith(color: Colors.white38, fontSize: 10),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.white10,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  status,
+                  style: AppTypography.label.copyWith(color: Colors.white70, fontSize: 8, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Archived state before update',
+            style: AppTypography.body.copyWith(color: Colors.white60, fontSize: 11),
+          ),
+        ],
       ),
     );
   }

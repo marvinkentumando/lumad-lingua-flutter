@@ -49,7 +49,6 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   bool _isRecording = false;
   bool _hasResult = false;
   double _score = 0.0;
-  PronunciationStrictness _strictness = PronunciationStrictness.normal;
   PracticeSource _source = PracticeSource.words;
   int _currentIndex = 0;
   bool _isShuffled = false;
@@ -159,9 +158,10 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
 
       try {
         // 1. Extract waveform from User recording
+        // Increased samples for better MFCC spectral analysis
         final userWaveform = await _playerController.waveformExtraction.extractWaveformData(
           path: path!,
-          noOfSamples: 100,
+          noOfSamples: 1024,
         );
 
         // 2. Extract Native Waveform from URL
@@ -180,19 +180,19 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
 
           nativeWaveform = await _playerController.waveformExtraction.extractWaveformData(
             path: nativeFile.path,
-            noOfSamples: 100,
+            noOfSamples: 1024,
           );
         } catch (e) {
           debugPrint('Failed to extract native waveform: $e');
           // Fallback to a mock pattern if extraction fails
-          nativeWaveform = List.generate(100, (i) => (sin(i / 5) * 0.5) + 0.5);
+          nativeWaveform = List.generate(1024, (i) => (sin(i / 5) * 0.5) + 0.5);
         }
 
         // 3. Compare using the real DTW algorithm
         final resultScore = PronunciationService.compareWaveforms(
           nativeWaveform,
           userWaveform,
-          strictness: _strictness,
+          strictness: PronunciationStrictness.normal,
         );
 
         if (mounted) {
@@ -324,8 +324,6 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
                   children: [
                     _buildSourceSelector(isDark),
                     const SizedBox(height: 24),
-                    _buildStrictnessSelector(isDark),
-                    const SizedBox(height: 24),
                     _buildNativeSpeakerCard(isDark, currentItem),
                     const SizedBox(height: 32),
                     _buildUserRecordingCard(isDark),
@@ -388,40 +386,6 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildStrictnessSelector(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: PronunciationStrictness.values.map((s) {
-          final isSelected = _strictness == s;
-          return GestureDetector(
-            onTap: () => setState(() => _strictness = s),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.gold500 : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                s.name.toUpperCase(),
-                style: AppTypography.label.copyWith(
-                  color: isSelected ? Colors.black : (isDark ? Colors.white38 : AppColors.creamText3),
-                  fontWeight: FontWeight.w900,
-                  fontSize: 10,
-                ),
-              ),
-            ),
-          );
-        }).toList(),
       ),
     );
   }
@@ -542,13 +506,26 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
 
   Widget _buildResultCard(bool isDark) {
     final percentage = (_score * 100).toInt();
+    
+    // Determine color and feedback based on MFCC similarity
+    Color scoreColor = AppColors.gold500;
+    String feedback = 'Good effort! Focus on the vowel length.';
+    
+    if (_score >= 0.8) {
+      scoreColor = Colors.greenAccent;
+      feedback = 'Excellent! Your tones are true.';
+    } else if (_score < 0.6) {
+      scoreColor = Colors.orangeAccent;
+      feedback = 'Needs work. Try matching the elder\'s rhythm.';
+    }
+
     return BrandCard(
       theme: BrandCardTheme.gold,
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
           Text(
-            'MATCH SCORE',
+            'MATCH SCORE (MFCC)',
             style: AppTypography.label.copyWith(color: Colors.black54, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
@@ -558,7 +535,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            _score > 0.8 ? 'Excellent! Your tones are true.' : 'Good effort! Focus on the vowel length.',
+            feedback,
             textAlign: TextAlign.center,
             style: AppTypography.body.copyWith(color: Colors.black87),
           ),

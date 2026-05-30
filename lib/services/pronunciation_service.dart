@@ -1,14 +1,15 @@
 import 'dart:math';
+import 'mfcc_service.dart';
 
 enum PronunciationStrictness {
   /// Very forgiving, good for absolute beginners.
-  easy(2.5),
+  easy(1.5), // Adjusted for MFCC distance scales
 
   /// Balanced, the default setting.
-  normal(5.0),
+  normal(3.0),
 
   /// Strict, requires high precision in rhythm and tone.
-  hard(8.5);
+  hard(5.5);
 
   final double sensitivity;
   const PronunciationStrictness(this.sensitivity);
@@ -21,6 +22,7 @@ class PronunciationScore {
   final double clarity;
   final List<double> nativeWaveform;
   final List<double> studentWaveform;
+  final String feedback;
 
   PronunciationScore({
     required this.overallScore,
@@ -29,101 +31,67 @@ class PronunciationScore {
     required this.clarity,
     required this.nativeWaveform,
     required this.studentWaveform,
+    this.feedback = "",
   });
 }
 
 class PronunciationService {
   /// Compares two waveforms and returns a detailed analysis score.
   static PronunciationScore analyzePronunciation(
-    List<double> nativeWave,
-    List<double> userWave, {
+    List<double> nativeSamples,
+    List<double> userSamples, {
     PronunciationStrictness strictness = PronunciationStrictness.normal,
   }) {
-    final overallMatch = compareWaveforms(nativeWave, userWave, strictness: strictness);
+    // 1. MFCC Analysis
+    final nativeMFCC = MFCCService.extractMFCC(nativeSamples);
+    final userMFCC = MFCCService.extractMFCC(userSamples);
 
-    // Heuristic-based metrics for the prototype
+    final mfccDistance = MFCCService.calculateMFCCDistance(nativeMFCC, userMFCC);
+
+    // 2. Convert MFCC distance to 0.0 - 1.0 score
+    // MFCC distance is usually higher than raw waveform distance, so we adjust mapping
+    final overallMatch = exp(-strictness.sensitivity * mfccDistance).clamp(0.0, 1.0);
+
+    // 3. Heuristic-based metrics
     final accuracy = overallMatch;
-    // Fluency based on rhythm (timing alignment)
-    final fluency = (1.0 - (1.0 - (userWave.length / nativeWave.length)).abs()).clamp(0.5, 1.0);
-    // Clarity based on peak distribution
-    final clarity = (userWave.where((v) => v > 0.2).length / (userWave.isEmpty ? 1 : userWave.length)).clamp(0.4, 1.0);
+    
+    // Fluency: Compare relative duration and MFCC stability
+    final durationRatio = min(nativeSamples.length, userSamples.length) / max(nativeSamples.length, userSamples.length);
+    final fluency = (durationRatio * 0.7 + (1.0 - min(mfccDistance, 1.0)) * 0.3).clamp(0.0, 1.0);
+    
+    // Clarity: Based on spectral energy distribution (simplified)
+    final clarity = (userSamples.where((v) => v.abs() > 0.1).length / (userSamples.isEmpty ? 1 : userSamples.length)).clamp(0.4, 1.0);
+
+    // 4. Generate Feedback
+    String feedback = _generateFeedback(overallMatch);
 
     return PronunciationScore(
       overallScore: overallMatch * 100,
       accuracy: accuracy,
       fluency: fluency,
       clarity: clarity,
-      nativeWaveform: nativeWave,
-      studentWaveform: userWave,
+      nativeWaveform: nativeSamples,
+      studentWaveform: userSamples,
+      feedback: feedback,
     );
   }
 
-  /// Compares two waveforms using Dynamic Time Warping (DTW)
-  /// and returns a match score between 0.0 and 1.0.
+  /// Compatibility method for existing waveform comparison, now upgraded to MFCC.
   static double compareWaveforms(
     List<double> nativeWave,
     List<double> userWave, {
     PronunciationStrictness strictness = PronunciationStrictness.normal,
   }) {
     if (nativeWave.isEmpty || userWave.isEmpty) return 0.0;
-
-    // 1. Normalize both waveforms to 0.0 - 1.0 range
-    final normalizedNative = _normalize(nativeWave);
-    final normalizedUser = _normalize(userWave);
-
-    // 2. Perform Dynamic Time Warping
-    // DTW calculates the "distance" between two time-series patterns.
-    // A distance of 0 means they are identical.
-    final distance = _calculateDTW(normalizedNative, normalizedUser);
-
-    // 3. Convert distance to a percentage score
-    // We normalize the distance by the length of the paths to make it comparable.
-    final normalizedDistance = distance / (normalizedNative.length + normalizedUser.length);
-
-    // 4. Map distance to score using the strictness multiplier
-    // exp(-S * d) ensures that 0 distance is always 100%.
-    // Higher sensitivity (S) makes the score drop faster as distance increases.
-    final score = exp(-strictness.sensitivity * normalizedDistance);
-
-    return score.clamp(0.0, 1.0);
+    
+    final result = analyzePronunciation(nativeWave, userWave, strictness: strictness);
+    return result.overallScore / 100;
   }
 
-  static List<double> _normalize(List<double> wave) {
-    if (wave.isEmpty) return [];
-
-    double maxVal = wave.map((e) => e.abs()).reduce(max);
-    if (maxVal == 0) return List.filled(wave.length, 0.0);
-
-    return wave.map((e) => e.abs() / maxVal).toList();
-  }
-
-  static double _calculateDTW(List<double> s, List<double> t) {
-    final n = s.length;
-    final m = t.length;
-
-    // Create a cost matrix
-    List<List<double>> dtw = List.generate(
-      n + 1,
-      (_) => List.filled(m + 1, double.infinity),
-    );
-
-    dtw[0][0] = 0;
-
-    for (int i = 1; i <= n; i++) {
-      for (int j = 1; j <= m; j++) {
-        double cost = (s[i - 1] - t[j - 1]).abs();
-        dtw[i][j] = cost + _min3(
-          dtw[i - 1][j],     // insertion
-          dtw[i][j - 1],     // deletion
-          dtw[i - 1][j - 1], // match
-        );
-      }
-    }
-
-    return dtw[n][m];
-  }
-
-  static double _min3(double a, double b, double c) {
-    return min(a, min(b, c));
+  static String _generateFeedback(double score) {
+    if (score >= 0.8) return "Excellent! Your pronunciation is very close to the native speaker.";
+    if (score >= 0.6) return "Good job! You're understandable, but watch your vowel clarity.";
+    if (score >= 0.4) return "Fair. Try listening to the native speaker again and focus on the rhythm.";
+    return "Needs improvement. Keep practicing the specific sounds of this word.";
   }
 }

@@ -11,6 +11,7 @@ import '../models/voice_submission.dart';
 import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import '../services/supabase_storage_service.dart';
+import '../utils/audio_validator.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/ambient_topo_background.dart';
@@ -502,6 +503,8 @@ class _LegacyTrackerDetailsScreenState extends ConsumerState<LegacyTrackerDetail
               ],
               if (entry.validatorFeedback != null && entry.validatorFeedback!.isNotEmpty)
                 _buildFeedbackSection(entry.validatorFeedback!),
+              const SizedBox(height: 24),
+              _buildVersionHistorySection('words', entry.id),
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
@@ -573,6 +576,8 @@ class _LegacyTrackerDetailsScreenState extends ConsumerState<LegacyTrackerDetail
               ],
               if (voice.validatorFeedback != null && voice.validatorFeedback!.isNotEmpty)
                 _buildFeedbackSection(voice.validatorFeedback!),
+              const SizedBox(height: 24),
+              _buildVersionHistorySection('voice_submissions', voice.id),
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
@@ -630,6 +635,83 @@ class _LegacyTrackerDetailsScreenState extends ConsumerState<LegacyTrackerDetail
         ],
       ),
     );
+  }
+
+  Widget _buildVersionHistorySection(String collection, String id) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final historyAsync = ref.watch(versionHistoryProvider((path: collection, id: id)));
+
+        return historyAsync.when(
+          data: (history) {
+            if (history.isEmpty) return const SizedBox.shrink();
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.history_rounded, color: AppColors.gold500, size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      'VERSION HISTORY',
+                      style: AppTypography.label.copyWith(color: AppColors.gold500, fontSize: 10),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ...history.map((version) => _buildVersionItem(version)),
+              ],
+            );
+          },
+          loading: () => const Center(child: Padding(
+            padding: EdgeInsets.all(8.0),
+            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.gold500),
+          )),
+          error: (_, __) => const SizedBox.shrink(),
+        );
+      },
+    );
+  }
+
+  Widget _buildVersionItem(Map<String, dynamic> version) {
+    final timestamp = (version['timestamp'] as Timestamp?)?.toDate();
+    final snapshot = version['snapshot'] as Map<String, dynamic>?;
+    final status = snapshot?['status'] ?? 'unknown';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                timestamp != null ? _formatDateTime(timestamp) : 'Unknown Date',
+                style: AppTypography.label.copyWith(color: Colors.white38, fontSize: 10),
+              ),
+              _buildStatusBadge(status),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Archived state before update',
+            style: AppTypography.body.copyWith(color: Colors.white60, fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDateTime(DateTime dt) {
+    return "${dt.day}/${dt.month}/${dt.year} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}";
   }
 
   void _showEditEntrySheet(DictionaryEntry entry) {
@@ -764,6 +846,17 @@ class _LegacyTrackerDetailsScreenState extends ConsumerState<LegacyTrackerDetail
 
                               String? audioUrl = localAudioPath;
                               if (localAudioPath != null && !localAudioPath!.startsWith('http')) {
+                                // Validate constraints
+                                final audioError = await AudioValidator.validate(localAudioPath!);
+                                if (audioError != null) {
+                                  if (sheetContext.mounted) {
+                                    ScaffoldMessenger.of(sheetContext).showSnackBar(
+                                      SnackBar(content: Text(audioError), backgroundColor: AppColors.semanticRed),
+                                    );
+                                  }
+                                  return;
+                                }
+
                                 setModalState(() => isUploading = true);
                                 try {
                                   final fileName = 'word_edit_${DateTime.now().millisecondsSinceEpoch}.m4a';
@@ -914,6 +1007,17 @@ class _LegacyTrackerDetailsScreenState extends ConsumerState<LegacyTrackerDetail
 
                               String? audioUrl = localAudioPath;
                               if (localAudioPath != null && !localAudioPath!.startsWith('http')) {
+                                // Validate constraints
+                                final audioError = await AudioValidator.validate(localAudioPath!);
+                                if (audioError != null) {
+                                  if (sheetContext.mounted) {
+                                    ScaffoldMessenger.of(sheetContext).showSnackBar(
+                                      SnackBar(content: Text(audioError), backgroundColor: AppColors.semanticRed),
+                                    );
+                                  }
+                                  return;
+                                }
+
                                 setModalState(() => isUploading = true);
                                 try {
                                   final fileName = 'voice_edit_${DateTime.now().millisecondsSinceEpoch}.m4a';

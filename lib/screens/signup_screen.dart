@@ -125,15 +125,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final List<String> _nativeLanguages = [
     'Mandaya',
     'Mansaka',
-    'Tagakaulo',
-    'B\'laan',
-    'Bagobo',
-    'Kalagan',
-    'Matigsalug',
-    'Ata',
-    'Dibabawon',
-    'Mangguangan',
-    'Tagabawa',
     'Other'
   ];
 
