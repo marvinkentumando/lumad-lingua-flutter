@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -124,6 +123,22 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     HapticService.medium();
   }
 
+  List<double> _trimSilence(List<double> waveform, {double threshold = 0.05}) {
+    if (waveform.isEmpty) return waveform;
+    
+    int start = 0;
+    while (start < waveform.length && waveform[start].abs() < threshold) {
+      start++;
+    }
+
+    int end = waveform.length - 1;
+    while (end > start && waveform[end].abs() < threshold) {
+      end--;
+    }
+
+    return waveform.sublist(start, end + 1);
+  }
+
   void _switchSource(PracticeSource newSource) {
     if (_source == newSource) return;
     setState(() {
@@ -151,6 +166,11 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       });
     } else {
       final path = await _recorderController.stop();
+      if (path == null) {
+        setState(() => _isRecording = false);
+        return;
+      }
+
       setState(() {
         _isRecording = false;
         _isComparing = true;
@@ -158,37 +178,106 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
 
       try {
         // 1. Extract waveform from User recording
-        // Increased samples for better MFCC spectral analysis
-        final userWaveform = await _playerController.waveformExtraction.extractWaveformData(
-          path: path!,
-          noOfSamples: 1024,
+        var userWaveform = await _playerController.waveformExtraction.extractWaveformData(
+          path: path,
+          noOfSamples: 256, // Reduced for better compatibility
         );
+
+        if (userWaveform.isEmpty) {
+          // Fallback if 256 samples fails
+          userWaveform = await _playerController.waveformExtraction.extractWaveformData(
+            path: path,
+            noOfSamples: 128,
+          );
+        }
+
+        // Trim Silence from User
+        userWaveform = _trimSilence(userWaveform);
 
         // 2. Extract Native Waveform from URL
         List<double> nativeWaveform;
         try {
           final resolvedUrl = ref.read(supabaseStorageServiceProvider).getAudioUrl(currentItem.audioUrl);
+          
+          if (resolvedUrl.isEmpty) {
+            throw Exception('Resolved audio URL is empty');
+          }
 
-          // Download to temp file for extraction
           final directory = await getTemporaryDirectory();
-          final nativeFile = File('${directory.path}/native_temp_${currentItem.id}.mp3');
+          
+          // Improved extension detection
+          String extension = 'mp3';
+          if (currentItem.audioUrl.contains('.')) {
+            final parts = currentItem.audioUrl.split('?').first.split('.');
+            if (parts.length > 1) {
+              extension = parts.last.toLowerCase();
+            }
+          }
+          
+          // Sanitize ID for filename to avoid FileSystemExceptions
+          final sanitizedId = currentItem.id.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+          final nativeFile = File('${directory.path}/native_temp_$sanitizedId.$extension');
 
+          // Robust check for existing file
+          bool needsDownload = true;
+          if (await nativeFile.exists()) {
+            final size = await nativeFile.length();
+            if (size > 100) { 
+              needsDownload = false;
+            } else {
+              await nativeFile.delete();
+            }
+          }
+
+          if (needsDownload) {
+             final response = await http.get(Uri.parse(resolvedUrl)).timeout(const Duration(seconds: 10));
+             if (response.statusCode == 200) {
+               await nativeFile.writeAsBytes(response.bodyBytes);
+               debugPrint('Downloaded native audio to: ${nativeFile.path}');
+             } else {
+               throw Exception('HTTP ${response.statusCode}: Failed to download audio');
+             }
+          }
+
+          // Ensure the file exists before extraction
           if (!await nativeFile.exists()) {
-             final response = await http.get(Uri.parse(resolvedUrl));
-             await nativeFile.writeAsBytes(response.bodyBytes);
+            throw Exception('Native audio file could not be saved');
           }
 
           nativeWaveform = await _playerController.waveformExtraction.extractWaveformData(
             path: nativeFile.path,
-            noOfSamples: 1024,
+            noOfSamples: 256,
           );
+
+          if (nativeWaveform.isEmpty) {
+             // Fallback attempt
+             nativeWaveform = await _playerController.waveformExtraction.extractWaveformData(
+               path: nativeFile.path,
+               noOfSamples: 128,
+             );
+          }
+
+          if (nativeWaveform.isEmpty) {
+            throw Exception('Could not extract waveform from native audio');
+          }
+
+          // Trim Silence from Native
+          nativeWaveform = _trimSilence(nativeWaveform);
         } catch (e) {
           debugPrint('Failed to extract native waveform: $e');
-          // Fallback to a mock pattern if extraction fails
-          nativeWaveform = List.generate(1024, (i) => (sin(i / 5) * 0.5) + 0.5);
+          if (mounted) {
+            setState(() => _isComparing = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Native audio processing failed: ${e.toString().split(':').last.trim()}"),
+                backgroundColor: Colors.redAccent,
+              ),
+            );
+          }
+          return;
         }
 
-        // 3. Compare using the real DTW algorithm
+        // 3. Compare using the upgraded PronunciationService
         final resultScore = PronunciationService.compareWaveforms(
           nativeWaveform,
           userWaveform,
@@ -201,6 +290,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
             _hasResult = true;
             _score = resultScore;
           });
+          // ... Rest of haptic/audio logic
 
           if (_score > 0.7) {
             HapticService.success();
@@ -531,7 +621,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           const SizedBox(height: 8),
           Text(
             '$percentage%',
-            style: AppTypography.displayBold.copyWith(color: Colors.black, fontSize: 48),
+            style: AppTypography.displayBold.copyWith(color: scoreColor, fontSize: 48),
           ),
           const SizedBox(height: 12),
           Text(

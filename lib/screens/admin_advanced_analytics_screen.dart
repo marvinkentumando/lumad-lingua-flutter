@@ -118,6 +118,11 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
   Widget _buildDialectPopularity(Map<String, dynamic> popularity) {
     if (popularity.isEmpty) return _emptyState('No dialect data available.');
 
+    final maxVal = popularity.values.fold<int>(0, (p, c) {
+      final v = (c as num).toInt();
+      return v > p ? v : p;
+    });
+
     return BrandCard(
       theme: BrandCardTheme.cream,
       child: Padding(
@@ -126,8 +131,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
           children: popularity.entries.map((e) {
             final dialect = e.key;
             final count = (e.value as num).toInt();
-            final max = popularity.values.fold(0, (p, c) => (c as num).toInt() > p ? (c as num).toInt() : p);
-            final pct = max > 0 ? count / max : 0.0;
+            final pct = maxVal > 0 ? count / maxVal : 0.0;
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
