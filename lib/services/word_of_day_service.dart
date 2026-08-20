@@ -82,7 +82,6 @@ class WordOfDayService {
       
       var approvedWords = await _db
           .collection('words')
-          .where('status', isEqualTo: 'approved')
           .where(FieldPath.documentId, isGreaterThanOrEqualTo: randomId)
           .limit(1)
           .get();
@@ -91,7 +90,6 @@ class WordOfDayService {
       if (approvedWords.docs.isEmpty) {
         approvedWords = await _db
             .collection('words')
-            .where('status', isEqualTo: 'approved')
             .where(FieldPath.documentId, isLessThan: randomId)
             .limit(1)
             .get();

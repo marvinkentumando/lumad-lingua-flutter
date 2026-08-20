@@ -11,24 +11,14 @@ import 'package:file_picker/file_picker.dart';
 import 'package:lumad_lingua/services/firebase_service.dart';
 import '../providers/role_provider.dart';
 import '../providers/student_provider.dart';
-import '../providers/contributor_request_provider.dart';
-import '../providers/artifact_provider.dart';
-import '../models/artifact.dart';
-import '../models/contributor_request.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
-import '../widgets/impact_card.dart';
-import '../widgets/brand_button.dart';
-import '../services/impact_service.dart';
 import '../services/supabase_storage_service.dart';
 import '../widgets/daily_check_in_board.dart';
 import '../widgets/level_up_modal.dart';
 import '../widgets/skeleton.dart';
-import '../widgets/graceful_image.dart';
-import '../widgets/branded_empty_state.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/ambient_topo_background.dart';
-
+import '../widgets/artifacts/artifact_inventory_section.dart';
 
 class LearnerProfileScreen extends ConsumerWidget {
   const LearnerProfileScreen({super.key});
@@ -84,14 +74,7 @@ class LearnerProfileScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 40),
                     if (currentRole == UserRole.learner)
-                      _buildArtifactsSection(context, ref)
-                    else
-                      _unusedImpact(
-                        context,
-                        ref,
-                        currentRole,
-                        user?.uid ?? '',
-                      ),
+                      const ArtifactInventorySection(),
                     const SizedBox(height: 40),
                     _buildJourneyManagement(
                       context,
@@ -116,12 +99,10 @@ class LearnerProfileScreen extends ConsumerWidget {
     switch (role) {
       case UserRole.admin:
         return 'SYSTEM OVERSEER  \u2022  $location';
-      case UserRole.validator:
-        return 'ELDER VALIDATOR  \u2022  $location';
+      case UserRole.staff:
+        return 'RESEARCHER STAFF  \u2022  $location';
       case UserRole.educator:
         return 'WISDOM GUIDE  \u2022  $location';
-      case UserRole.contributor:
-        return 'CULTURAL KEEPER  \u2022  $location';
       case UserRole.learner:
         final student = ref.watch(studentProvider);
         return '${student.levelTitle.toUpperCase()}  \u2022  $location';
@@ -231,250 +212,6 @@ class LearnerProfileScreen extends ConsumerWidget {
     return _StaffStatsRow(role: role, userId: userId, xp: xp);
   }
 
-  Widget _unusedImpact(
-    BuildContext context,
-    WidgetRef ref,
-    UserRole role,
-    String userId,
-  ) {
-    final impactAsync = ref.watch(contributionImpactProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Contribution Impact',
-          style: AppTypography.h3.copyWith(
-            color: isDark ? AppColors.gold500 : AppColors.forest500,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 20),
-        impactAsync.when(
-          data: (impact) => ImpactCard(impact: impact),
-          loading: () => const Skeleton(height: 120, borderRadius: 24),
-          error: (_, __) => const SizedBox.shrink(),
-        ),
-      ],
-    ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1);
-  }
-
-  Widget _buildArtifactsSection(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final artifactsAsync = ref.watch(userArtifactsProvider);
-    final stats = ref.watch(artifactStatsProvider);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Earned Artifacts',
-                  style: AppTypography.h3.copyWith(
-                    color: isDark ? AppColors.gold500 : AppColors.forest500,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  '${stats['earned']} of ${stats['total']} recovered',
-                  style: AppTypography.body.copyWith(
-                    color: isDark ? Colors.white38 : AppColors.creamText2,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-            GestureDetector(
-              onTap: () => context.push('/achievements'),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: AppColors.gold500.withValues(alpha: 0.3),
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'VIEW ALL',
-                  style: AppTypography.label.copyWith(
-                    color: AppColors.gold500,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 10,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        artifactsAsync.when(
-          data: (artifacts) {
-            if (artifacts.isEmpty) {
-              return const BrandedEmptyState(
-                title: 'No Artifacts',
-                message: 'You haven\'t earned any ancestral artifacts yet. Continue your journey to recover lost cultural treasures.',
-                icon: Icons.lock_outline,
-              );
-            }
-            return SizedBox(
-              height: 160,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemCount: artifacts.length > 3 ? 3 : artifacts.length,
-                separatorBuilder: (context, _) => const SizedBox(width: 16),
-                itemBuilder: (context, index) {
-                  return _buildArtifactCard(context, artifacts[index]);
-                },
-              ),
-            );
-          },
-          loading: () => _buildArtifactScrollSkeleton(),
-          error: (e, _) => const Text(
-            'Error loading artifacts',
-            style: TextStyle(color: AppColors.semanticRed),
-          ),
-        ),
-      ],
-    ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1);
-  }
-
-  Widget _buildArtifactCard(BuildContext context, Artifact artifact) {
-    final isEarned = artifact.isEarned;
-    final tierColor = _getTierColor(artifact.tier);
-
-    return GestureDetector(
-      onTap: () => context.push('/artifact-detail', extra: artifact),
-      child: Hero(
-        tag: 'artifact_${artifact.id}',
-        child: BrandCard(
-        theme: isEarned ? BrandCardTheme.cream : BrandCardTheme.vibrant,
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-        borderRadius: 24,
-        child: SizedBox(
-          width: 110,
-          child: Column(
-            children: [
-              // Emoji/Image badge
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isEarned
-                      ? tierColor.withValues(alpha: 0.1)
-                      : Colors.black26,
-                  border: Border.all(
-                    color: isEarned
-                        ? tierColor.withValues(alpha: 0.5)
-                        : Colors.white10,
-                    width: 2,
-                  ),
-                  boxShadow: isEarned
-                      ? [
-                          BoxShadow(
-                            color: tierColor.withValues(alpha: 0.2),
-                            blurRadius: 10,
-                            spreadRadius: 2,
-                          ),
-                        ]
-                      : null,
-                ),
-                alignment: Alignment.center,
-                child: Opacity(
-                  opacity: isEarned ? 1.0 : 0.3,
-                  child: artifact.imageUrl.isNotEmpty
-                      ? GracefulImage(
-                          imageUrl: artifact.imageUrl,
-                          width: 52,
-                          height: 52,
-                          borderRadius: 26,
-                        )
-                      : Text(
-                          artifact.emoji,
-                          style: const TextStyle(fontSize: 26),
-                        ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                artifact.title,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.label.copyWith(
-                  color: isEarned ? Colors.white : Colors.white38,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 8),
-              if (!isEarned) ...[
-                // Progress Bar for in-progress artifacts
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: artifact.progress,
-                    minHeight: 4,
-                    backgroundColor: Colors.white10,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      tierColor.withValues(alpha: 0.5),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${artifact.currentProgress}/${artifact.targetValue}',
-                  style: AppTypography.label.copyWith(
-                    fontSize: 8,
-                    color: Colors.white24,
-                  ),
-                ),
-              ] else
-                Text(
-                  artifact.tier.name.toUpperCase(),
-                  style: AppTypography.label.copyWith(
-                    fontSize: 8,
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1,
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-      ),
-    );
-  }
-
-  Color _getTierColor(ArtifactTier tier) {
-    switch (tier) {
-      case ArtifactTier.ancient:
-        return AppColors.gold500;
-      case ArtifactTier.sacred:
-        return Colors.purpleAccent;
-      case ArtifactTier.legendary:
-        return Colors.orangeAccent;
-      case ArtifactTier.epic:
-        return Colors.deepPurpleAccent;
-      case ArtifactTier.rare:
-        return Colors.blueAccent;
-      case ArtifactTier.common:
-        return Colors.greenAccent;
-    }
-  }
-
   Widget _buildJourneyManagement(
     BuildContext context,
     WidgetRef ref,
@@ -506,22 +243,24 @@ class LearnerProfileScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 12),
-        _buildManagementTile(
-          context,
-          Icons.trending_up_rounded,
-          'Wisdom Progression',
-          'View requirements for your next rank and titles',
-          onTap: () => context.push('/wisdom-progression'),
-        ),
-        const SizedBox(height: 12),
-        _buildManagementTile(
-          context,
-          Icons.notifications_active_rounded,
-          'Notification Sanctuary',
-          'Manage alerts for daily goals and community messages',
-          onTap: () => context.push('/notifications'),
-        ),
-        const SizedBox(height: 12),
+        if (profile?['role']?.toString().toLowerCase() != 'admin') ...[
+          _buildManagementTile(
+            context,
+            Icons.trending_up_rounded,
+            'Wisdom Progression',
+            'View requirements for your next rank and titles',
+            onTap: () => context.push('/wisdom-progression'),
+          ),
+          const SizedBox(height: 12),
+          _buildManagementTile(
+            context,
+            Icons.notifications_active_rounded,
+            'Notification Sanctuary',
+            'Manage alerts for daily goals and community messages',
+            onTap: () => context.push('/notifications'),
+          ),
+          const SizedBox(height: 12),
+        ],
         _buildManagementTile(
           context,
           Icons.security_rounded,
@@ -539,6 +278,16 @@ class LearnerProfileScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
         if (role == UserRole.learner) ...[
+          if (profile?['educatorId'] == null) ...[
+            _buildManagementTile(
+              context,
+              Icons.fort_rounded,
+              'Join a Village',
+              'Enter a code to connect with your local educator',
+              onTap: () => _showJoinVillageDialog(context, ref, user?.uid ?? ''),
+            ),
+            const SizedBox(height: 12),
+          ],
           _buildManagementTile(
             context,
             Icons.forum_rounded,
@@ -564,40 +313,6 @@ class LearnerProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
         ],
-        if (role == UserRole.learner || role == UserRole.educator)
-          ref
-              .watch(pendingContributorRequestProvider)
-              .when(
-                data: (pendingRequest) {
-                  if (pendingRequest != null) {
-                    if (pendingRequest.status == 'rejected') {
-                      return _buildManagementTile(
-                        context,
-                        Icons.error_outline_rounded,
-                        'Request Denied',
-                        'Your application was not approved',
-                        onTap: () => _showDeniedDialog(context, pendingRequest.message ?? 'No additional details provided.'),
-                      );
-                    }
-                    return _buildManagementTile(
-                      context,
-                      Icons.hourglass_empty_rounded,
-                      'Request Pending',
-                      'Tap to view status or cancel',
-                      onTap: () => _showRequestDetailsDialog(context, ref, pendingRequest),
-                    );
-                  }
-                  return _buildManagementTile(
-                    context,
-                    Icons.edit_note_rounded,
-                    'Become a Contributor',
-                    'Help expand the language core',
-                    onTap: () => _requestContributorRole(context, ref, profile),
-                  );
-                },
-                loading: () => const Skeleton(height: 80, borderRadius: 35),
-                error: (e, _) => const SizedBox.shrink(),
-              ),
         const SizedBox(height: 40),
         _buildLogOut(context, ref),
         const SizedBox(height: 40),
@@ -653,221 +368,6 @@ class LearnerProfileScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _requestContributorRole(
-    BuildContext context,
-    WidgetRef ref,
-    Map<String, dynamic>? profile,
-  ) async {
-    final user = ref.read(authStateProvider).value;
-    if (user != null) {
-      final confirm = await showModalBottomSheet<bool>(
-        context: context,
-        backgroundColor: Colors.transparent,
-        builder: (ctx) => Container(
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: AppColors.forest900.withValues(alpha: 0.95),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
-              const SizedBox(height: 24),
-              Text(
-                'Become a Contributor',
-                style: AppTypography.h2.copyWith(color: AppColors.gold500),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Would you like to request contributor status? An administrator will review your profile and history before granting access.',
-                textAlign: TextAlign.center,
-                style: AppTypography.body.copyWith(color: Colors.white70),
-              ),
-              const SizedBox(height: 32),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('CANCEL', style: TextStyle(color: Colors.white38)),
-                    ),
-                  ),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500),
-                      onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('SUBMIT', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      );
-
-      if (confirm == true) {
-        try {
-          await ref
-              .read(firebaseServiceProvider)
-              .submitContributorRequest(
-                user.uid,
-                profile?['username'] ?? user.displayName ?? 'Tribe Member',
-                user.email ?? '',
-              );
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Request submitted successfully!'),
-                backgroundColor: AppColors.semanticGreen,
-              ),
-            );
-          }
-        } catch (e) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Submission failed: $e'),
-                backgroundColor: AppColors.semanticRed,
-              ),
-            );
-          }
-        }
-      }
-    }
-  }
-
-  void _showRequestDetailsDialog(BuildContext context, WidgetRef ref, ContributorRequest request) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: AppColors.forest900.withValues(alpha: 0.95),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)))),
-            const SizedBox(height: 24),
-            Text(
-              'Application Details',
-              style: AppTypography.h2.copyWith(color: AppColors.gold500),
-            ),
-            const SizedBox(height: 24),
-            _buildDetailRow('Status', request.status.toUpperCase(), isStatus: true),
-            const SizedBox(height: 12),
-            _buildDetailRow('Submitted', DateFormat('MMM dd, yyyy').format(request.createdAt)),
-            const SizedBox(height: 32),
-            Text(
-              'Your request is being reviewed by the community elders. This process usually takes 2-3 sun cycles.',
-              style: AppTypography.body.copyWith(color: Colors.white70, fontSize: 13),
-            ),
-            const SizedBox(height: 40),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.semanticRed.withValues(alpha: 0.2),
-                      foregroundColor: AppColors.semanticRed,
-                      side: const BorderSide(color: AppColors.semanticRed),
-                    ),
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      _cancelContributorRequest(context, ref, request.id);
-                    },
-                    child: const Text('CANCEL REQUEST', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: BrandButton(
-                    text: 'CLOSE',
-                    onTap: () => Navigator.pop(ctx),
-                    type: BrandButtonType.primary,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value, {bool isStatus = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: AppTypography.label.copyWith(color: Colors.white38),
-        ),
-        Text(
-          value,
-          style: AppTypography.mono.copyWith(
-            color: isStatus ? AppColors.gold500 : Colors.white70,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _cancelContributorRequest(BuildContext context, WidgetRef ref, String requestId) async {
-    try {
-      await ref.read(firebaseServiceProvider).cancelContributorRequest(requestId);
-      if (context.mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request cancelled.'), backgroundColor: AppColors.semanticGreen));
-      }
-    } catch (e) {
-      if (context.mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.semanticRed));
-      }
-    }
-  }
-
-  void _showDeniedDialog(BuildContext context, String message) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: AppColors.forest900.withValues(alpha: 0.95),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          border: Border.all(color: AppColors.semanticRed.withValues(alpha: 0.3)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 24),
-            Text('Request Denied', style: AppTypography.h2.copyWith(color: AppColors.semanticRed)),
-            const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center, style: AppTypography.body.copyWith(color: Colors.white70)),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticRed),
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('OK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildProfileSkeleton() {
     return const SafeArea(
       child: SingleChildScrollView(
@@ -897,19 +397,6 @@ class LearnerProfileScreen extends ConsumerWidget {
             Skeleton(height: 80, borderRadius: 35),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildArtifactScrollSkeleton() {
-    return SizedBox(
-      height: 160,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: 3,
-        separatorBuilder: (context, _) => const SizedBox(width: 16),
-        itemBuilder: (context, index) => const Skeleton(width: 110, height: 160, borderRadius: 24),
       ),
     );
   }
@@ -1137,6 +624,98 @@ class LearnerProfileScreen extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _showJoinVillageDialog(BuildContext context, WidgetRef ref, String userId) {
+    final controller = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: AppColors.forest900.withValues(alpha: 0.95),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 24),
+              const Icon(Icons.fort_rounded, color: AppColors.gold500, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                'Join a community village',
+                style: AppTypography.h2.copyWith(color: AppColors.gold500),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Enter the 6-character code provided by your educator to join their community.',
+                textAlign: TextAlign.center,
+                style: AppTypography.body.copyWith(color: Colors.white70, fontSize: 13),
+              ),
+              const SizedBox(height: 24),
+              TextField(
+                controller: controller,
+                maxLength: 6,
+                textAlign: TextAlign.center,
+                style: AppTypography.displayBold.copyWith(color: Colors.white, letterSpacing: 8),
+                decoration: InputDecoration(
+                  hintText: 'CODE',
+                  hintStyle: const TextStyle(color: Colors.white10),
+                  filled: true,
+                  fillColor: Colors.black.withValues(alpha: 0.2),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                  counterText: '',
+                ),
+              ),
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('CANCEL', style: TextStyle(color: Colors.white38)),
+                    ),
+                  ),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500),
+                      onPressed: () async {
+                        if (controller.text.length < 6) return;
+                        try {
+                          await ref.read(firebaseServiceProvider).joinVillage(userId, controller.text);
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Welcome to the village! 🌿'),
+                                backgroundColor: AppColors.semanticGreen,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.semanticRed),
+                            );
+                          }
+                        }
+                      },
+                      child: const Text('JOIN', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1581,29 +1160,23 @@ class _StaffStatsRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Fetch stats based on role
-    final validationCount = role == UserRole.validator
-        ? ref.watch(validatorActivityCountProvider(userId)).value ?? 0
-        : 0;
-
     final studentCount = role == UserRole.educator
         ? ref.watch(totalUsersCountProvider).value ?? 0
         : 0;
 
-    final contributionCount = role == UserRole.contributor
-        ? ref.watch(contributorWordCountProvider(userId)).value ?? 0
-        : 0;
-
     final impactAsync = ref.watch(userImpactMetricsProvider(userId));
+
+    if (role == UserRole.admin) return const SizedBox.shrink();
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        if (role == UserRole.validator)
+        if (role == UserRole.staff)
           _buildMetricCircle(
             context,
-            Icons.verified_user_rounded,
-            validationCount.toString(),
-            'TOTAL VALIDATIONS',
+            Icons.insights_rounded,
+            'VITALITY',
+            'MONITOR',
           )
         else if (role == UserRole.educator)
           _buildMetricCircle(
@@ -1611,13 +1184,6 @@ class _StaffStatsRow extends ConsumerWidget {
             Icons.people_rounded,
             studentCount.toString(),
             'STUDENTS',
-          )
-        else if (role == UserRole.contributor)
-          _buildMetricCircle(
-            context,
-            Icons.menu_book_rounded,
-            contributionCount.toString(),
-            'CONTRIBUTIONS',
           ),
 
         impactAsync.when(

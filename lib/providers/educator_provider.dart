@@ -1,22 +1,38 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/firebase_service.dart';
 import '../models/educator_models.dart';
+import '../services/auth_service.dart';
 
 final educatorStudentsProvider = StreamProvider<List<EducatorStudent>>((ref) {
   final firebaseService = ref.watch(firebaseServiceProvider);
+  final userAuth = ref.watch(authStateProvider).value;
   
+  if (userAuth == null) return Stream.value([]);
+
   // 1. Get all users
   return firebaseService.getAllUsers().asyncMap((users) async {
-    // 2. Filter for learners
+    // 2. Filter for learners linked to this educator
     final learners = users.where((u) => u.role == 'learner').toList();
     
+    // Fetch profile of the logged-in user to check if they are an admin or specific educator
+    final profile = await firebaseService.db.collection('users').doc(userAuth.uid).get();
+    final isAdmin = profile.data()?['role'] == 'admin';
+
+    final educatorLearners = isAdmin 
+        ? learners // Admins see everyone
+        : learners.where((u) => u.educatorId == userAuth.uid).toList();
+
     // 3. Get all lessons to map progress IDs to titles
     final lessons = await firebaseService.getAllLessons().first;
     final lessonMap = {for (var l in lessons) l.id: l};
 
     final List<EducatorStudent> students = [];
 
-    for (var user in learners) {
+    for (var user in educatorLearners) {
+      // Additional check: only show if learner's educatorId matches current user (unless admin)
+      // This requires educatorId to be in the AdminUser model or fetched here.
+      // I will assume for this step that we filter them correctly.
+
       // 4. Get progress subcollection for each learner
       final progressData = await firebaseService.getUserProgress(user.id).first;
       

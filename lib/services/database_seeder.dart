@@ -5,7 +5,6 @@ class DatabaseSeeder {
 
   static Future<void> seedAll() async {
     await seedDictionary();
-    await seedMunicipalities();
     await seedLessons();
     await seedArtifacts();
     await seedBadges();
@@ -43,48 +42,239 @@ class DatabaseSeeder {
 
   static Future<void> seedArtifacts() async {
     final List<Map<String, dynamic>> sampleArtifacts = [
+      // --- Ritual and Sacred Objects ---
       {
-        'title': 'Mansaka Binallog',
-        'description':
-            'A traditional hand-woven textile featuring intricate geometric patterns representing the spirit of the mountains.',
-        'imageUrl': 'assets/images/artifact_weave.png',
-        'type': 'clothing',
-        'culturalNote': 'Used in ceremonies to signify tribal leadership.',
-        'tier': 'Sacred',
+        'title': 'Manaog',
+        'description': 'Pair of male and female ancestral wooden figures used to host household protector spirits.',
+        'imageUrl': '',
+        'emoji': '🗿',
+        'type': 'Sacred Object',
+        'tier': 'ancient',
         'rarity': 5,
+        'requirementType': 'xp',
+        'targetValue': 5000,
       },
       {
-        'title': 'Mandaya Dagmay',
-        'description':
-            'A sacred cloth made from abaca fibers, dyed using organic pigments from the forest.',
+        'title': 'Parangka',
+        'description': 'Carved wooden display platform serving as the formal pedestal for the manaog figures.',
         'imageUrl': '',
+        'emoji': '⛩️',
+        'type': 'Sacred Object',
+        'tier': 'sacred',
+        'rarity': 15,
+        'requirementType': 'lessons',
+        'targetValue': 50,
+      },
+      {
+        'title': 'Tungkaring',
+        'description': 'Strung set of brass bells shaken during spiritual dances by a balian (shaman) to summon spirits.',
+        'imageUrl': '',
+        'emoji': '🔔',
+        'type': 'Sacred Object',
+        'tier': 'epic',
+        'rarity': 25,
+        'requirementType': 'words',
+        'targetValue': 200,
+      },
+
+      // --- Traditional Dress and Textiles ---
+      {
+        'title': 'Dagmay',
+        'description': 'Sacred abaca textile hand-woven with mud-dyed fibers forming structural folklore motifs.',
+        'imageUrl': '',
+        'emoji': '🧶',
+        'type': 'Clothing',
+        'tier': 'ancient',
+        'rarity': 5,
+        'requirementType': 'streak',
+        'targetValue': 30,
+      },
+      {
+        'title': 'Saragboy',
+        'description': 'Soft shirt fabric made from processed native shrub cotton, specific to regional everyday attire.',
+        'imageUrl': '',
+        'emoji': '👕',
+        'type': 'Clothing',
+        'tier': 'common',
+        'rarity': 80,
+        'requirementType': 'lessons',
+        'targetValue': 5,
+      },
+      {
+        'title': 'Yatikup na Dagum',
+        'description': 'Women’s traditional collarless blouse styled with direct Chinese-style half-open cuts.',
+        'imageUrl': '',
+        'emoji': '👚',
+        'type': 'Clothing',
+        'tier': 'rare',
+        'rarity': 50,
+        'requirementType': 'words',
+        'targetValue': 50,
+      },
+      {
+        'title': 'Limbotong',
+        'description': 'Ceremonial inner tunic reserved strictly for women born into high-ranking nobility.',
+        'imageUrl': '',
+        'emoji': '✨',
+        'type': 'Clothing',
+        'tier': 'sacred',
+        'rarity': 15,
+        'requirementType': 'xp',
+        'targetValue': 2000,
+      },
+      {
+        'title': 'Binawid',
+        'description': 'Highly prized heirloom over-blouse featuring intricate, symmetrical red or white striping patterns.',
+        'imageUrl': '',
+        'emoji': '🧣',
+        'type': 'Clothing',
+        'tier': 'legendary',
+        'rarity': 10,
+        'requirementType': 'streak',
+        'targetValue': 15,
+      },
+
+      // --- Ornaments and Fine Jewelry ---
+      {
+        'title': 'Paratina',
+        'description': 'Wide, circular hammered-silver breastplate (around 15cm wide) denoting high social wealth.',
+        'imageUrl': '',
+        'emoji': '🥈',
+        'type': 'Jewelry',
+        'tier': 'legendary',
+        'rarity': 10,
+        'requirementType': 'xp',
+        'targetValue': 3500,
+      },
+      {
+        'title': 'Barikog',
+        'description': 'Large cylindrical earplugs crafted from gold-plated rubber or polished bone discs.',
+        'imageUrl': '',
+        'emoji': '👂',
+        'type': 'Jewelry',
+        'tier': 'sacred',
+        'rarity': 15,
+        'requirementType': 'words',
+        'targetValue': 150,
+      },
+      {
+        'title': 'Balyog / Liaog',
+        'description': 'Layered multi-colored bead strands draped heavily over the collarbone and shoulders.',
+        'imageUrl': '',
+        'emoji': '📿',
+        'type': 'Jewelry',
+        'tier': 'common',
+        'rarity': 80,
+        'requirementType': 'words',
+        'targetValue': 20,
+      },
+      {
+        'title': 'Pamurang',
+        'description': 'Suite of four polished white marble bracelets worn simultaneously on the arm.',
+        'imageUrl': '',
+        'emoji': '⚪',
+        'type': 'Jewelry',
+        'tier': 'epic',
+        'rarity': 25,
+        'requirementType': 'streak',
+        'targetValue': 7,
+      },
+
+      // --- Combat and Hunting Weaponry ---
+      {
+        'title': 'Budjak',
+        'description': 'Classic heavy combat spear fitted with an elongated, symmetrical leaf-like iron blade.',
+        'imageUrl': '',
+        'emoji': '🔱',
+        'type': 'Weapon',
+        'tier': 'epic',
+        'rarity': 25,
+        'requirementType': 'xp',
+        'targetValue': 1500,
+      },
+      {
+        'title': 'Sumpitan',
+        'description': 'Hollowed bamboo blowgun chambered for long, poison-tipped dart ammunition.',
+        'imageUrl': '',
+        'emoji': '🎋',
+        'type': 'Weapon',
+        'tier': 'epic',
+        'rarity': 25,
+        'requirementType': 'lessons',
+        'targetValue': 25,
+      },
+
+      // --- Storage Vessels and Baskets ---
+      {
+        'title': 'Mamaan / Patakia',
+        'description': 'Portable brass boxes or waist-tied cases designed to securely store betel nut chewing supplies.',
+        'imageUrl': '',
+        'emoji': '📦',
+        'type': 'Vessel',
+        'tier': 'sacred',
+        'rarity': 15,
+        'requirementType': 'xp',
+        'targetValue': 2500,
+      },
+      {
+        'title': 'Tibud',
+        'description': 'Bulbous earthenware jar used primarily for brewing and aging sugarcane or rice wine.',
+        'imageUrl': '',
+        'emoji': '🏺',
+        'type': 'Vessel',
+        'tier': 'rare',
+        'rarity': 50,
+        'requirementType': 'words',
+        'targetValue': 100,
+      },
+      {
+        'title': 'Kampipi',
+        'description': 'Compact pocket wallet woven from durable, overlapping baroy palm strips.',
+        'imageUrl': '',
+        'emoji': '👛',
+        'type': 'Vessel',
+        'tier': 'common',
+        'rarity': 80,
+        'requirementType': 'words',
+        'targetValue': 10,
+      },
+
+      // --- Original / Additional ---
+      {
+        'title': 'Mansaka Binallog',
+        'description': 'A traditional hand-woven textile featuring intricate geometric patterns representing the spirit of the mountains.',
+        'imageUrl': 'assets/images/artifact_weave.png',
+        'emoji': '🧵',
         'type': 'clothing',
-        'culturalNote':
-            'The patterns are said to be revealed in dreams by the ancestors.',
-        'tier': 'Sacred',
-        'rarity': 4,
+        'culturalNote': 'Used in ceremonies to signify tribal leadership.',
+        'tier': 'sacred',
+        'rarity': 15,
+        'requirementType': 'lessons',
+        'targetValue': 10,
       },
       {
         'title': 'Kudlung',
-        'description':
-            'A two-stringed boat lute used in traditional storytelling and community gatherings.',
+        'description': 'A two-stringed boat lute used in traditional storytelling and community gatherings.',
         'imageUrl': '',
+        'emoji': '🎸',
         'type': 'instrument',
-        'culturalNote':
-            'One string plays the melody while the other provides a constant drone.',
-        'tier': 'Rare',
-        'rarity': 3,
+        'culturalNote': 'One string plays the melody while the other provides a constant drone.',
+        'tier': 'rare',
+        'rarity': 50,
+        'requirementType': 'xp',
+        'targetValue': 1000,
       },
       {
         'title': 'Sanggot',
-        'description':
-            'A curved tool used for harvesting and clearing brush in the ancestral highlands.',
+        'description': 'A curved tool used for harvesting and clearing brush in the ancestral highlands.',
         'imageUrl': '',
+        'emoji': '🔪',
         'type': 'tool',
-        'culturalNote':
-            'Symbolizes the hardworking nature of the Lumad people.',
-        'tier': 'Common',
-        'rarity': 1,
+        'culturalNote': 'Symbolizes the hardworking nature of the Lumad people.',
+        'tier': 'common',
+        'rarity': 80,
+        'requirementType': 'words',
+        'targetValue': 5,
       },
     ];
 
@@ -126,26 +316,7 @@ class DatabaseSeeder {
           },
         ],
       },
-      {
-        'title': 'Rivers of Life',
-        'description': 'Master terms related to nature and water.',
-        'category': 'Nature',
-        'language': 'Mandaya',
-        'level': 2,
-        'unitNumber': 1,
-        'icon': 'local_florist',
-        'isPremium': false,
-        'tasks': [
-          {
-            'id': 't3',
-            'type': 'multipleChoice',
-            'questionText': 'What is "River" in Mandaya?',
-            'options': ['Suba', 'Sapa', 'Wahig'],
-            'correctAnswerIndex': 2,
-            'hintMetadata': 'Commonly used in Mandaya river names.',
-          },
-        ],
-      },
+
     ];
 
     final batch = _db.batch();
@@ -172,20 +343,7 @@ class DatabaseSeeder {
         'status': 'approved',
         'isValidated': true,
       },
-      {
-        'term': 'Pyagpukan',
-        'phonetic': '/pyag-pu-kan/',
-        'translation': 'Ancestral Land',
-        'translationFilipino': 'Lupang Ninuno',
-        'pos': 'noun',
-        'dialect': 'Mandaya',
-        'definition': 'The sacred territory inherited from ancestors.',
-        'usageExampleNative': 'Mahalaga ang pyagpukan para sa tribo.',
-        'usageExampleTranslation':
-            'The ancestral land is important for the tribe.',
-        'status': 'approved',
-        'isValidated': true,
-      },
+
       {
         'term': 'Panayday',
         'phonetic': '/pa-nay-day/',
@@ -212,19 +370,7 @@ class DatabaseSeeder {
         'status': 'approved',
         'isValidated': true,
       },
-      {
-        'term': 'Buntag',
-        'phonetic': '/bun-tag/',
-        'translation': 'Morning',
-        'translationFilipino': 'Umaga',
-        'pos': 'noun',
-        'dialect': 'Mandaya',
-        'definition': 'The early part of the day.',
-        'usageExampleNative': 'Madyaw na buntag.',
-        'usageExampleTranslation': 'Good morning.',
-        'status': 'approved',
-        'isValidated': true,
-      },
+
     ];
 
     final batch = _db.batch();

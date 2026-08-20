@@ -84,8 +84,13 @@ class XpNotifier extends Notifier<int> {
       for (var artifact in artifacts) {
         if (artifact.isEarned &&
             artifact.passiveBonus != null &&
-            artifact.passiveBonus!.contains('+5% XP')) {
-          finalPoints = (finalPoints * 1.05).round();
+            artifact.passiveBonus!.toLowerCase().contains('xp')) {
+          // Check for specific percentage. Default to 5% if not specified but "xp" present
+          double multiplier = 1.05;
+          if (artifact.passiveBonus!.contains('10%')) multiplier = 1.10;
+          if (artifact.passiveBonus!.contains('20%')) multiplier = 1.20;
+          
+          finalPoints = (finalPoints * multiplier).round();
         }
       }
 

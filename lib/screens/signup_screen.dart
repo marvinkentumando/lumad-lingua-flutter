@@ -61,6 +61,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   // Step 1: Roots
   final _usernameController = TextEditingController();
+  final _villageCodeController = TextEditingController();
   String? _selectedProvince;
   String? _selectedMunicipality;
 
@@ -123,7 +124,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   // Step 2: Path
   String? _selectedNativeLanguage;
   final List<String> _nativeLanguages = [
-    'Mandaya',
     'Mansaka',
     'Other'
   ];
@@ -151,6 +151,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   void dispose() {
     _emailController.removeListener(_checkForInvitation);
     _usernameController.dispose();
+    _villageCodeController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -256,6 +257,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             nativeLanguage: _selectedNativeLanguage ?? "Unknown",
             learningGoal: _learningGoal,
             assessment: _assessmentAnswers,
+            villageCode: _villageCodeController.text.trim(),
           );
       if (mounted) {
         context.go('/');
@@ -633,6 +635,20 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               _selectedMunicipality = val;
             });
           },
+        ),
+        const SizedBox(height: 24),
+        BrandTextField(
+          controller: _villageCodeController,
+          labelText: "Village Code (Optional)",
+          prefixIcon: Icons.fort_rounded,
+          onChanged: (_) => setState(() {}),
+        ),
+        Text(
+          "Enter a code from your educator to join their specific community village.",
+          style: AppTypography.label.copyWith(
+            color: Colors.white24,
+            fontSize: 9,
+          ),
         ),
         if (_isValidatorInvite) ...[
           const SizedBox(height: 24),

@@ -17,15 +17,12 @@ import '../widgets/crystal_burst_animation.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/branded_empty_state.dart';
 import '../widgets/ambient_topo_background.dart';
-
-
 import '../services/upload_queue_service.dart';
 import '../providers/student_provider.dart';
 import '../providers/quest_provider.dart';
+import '../providers/artifact_provider.dart';
 import '../models/quest.dart';
 import '../services/haptic_service.dart';
-
-
 import '../providers/learning_provider.dart';
 import '../models/app_config.dart';
 
@@ -48,6 +45,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     });
     Future.microtask(() {
       ref.read(questActionProvider.notifier).generateDynamicQuests();
+      ref.read(artifactProgressProvider.notifier).syncArtifactProgress();
     });
   }
 
@@ -98,10 +96,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       _buildChallengeHub(context),
                       const SizedBox(height: 24),
                     ],
-                    _buildMapCard(context),
-                    const SizedBox(height: 32),
-                    _buildVillageEchoes(context),
-                    const SizedBox(height: 32),
                     _buildLeaderboardHeader(context),
                     const SizedBox(height: 16),
                     _buildClimbersList(context, ref),
@@ -441,7 +435,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      '+${quest.reward} \ud83d\udc8e',
+                      '+${quest.reward} ✨',
                       style: AppTypography.label.copyWith(
                         color: AppColors.gold500,
                         fontSize: 8,
@@ -741,234 +735,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ),
     );
   }
-
-  Widget _buildMapCard(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: 230,
-      decoration: BoxDecoration(
-        color: AppColors.forest700,
-        borderRadius: BorderRadius.circular(32),
-        image: const DecorationImage(
-          image: AssetImage('assets/images/topo_map.png'),
-          fit: BoxFit.cover,
-          opacity: 0.6,
-        ),
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(32),
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.black.withValues(alpha: 0.1),
-              Colors.black.withValues(alpha: 0.8),
-            ],
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Align(
-              alignment: Alignment.topRight,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.gold500,
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: Text(
-                  '3 NEW LOCALES',
-                  style: AppTypography.label.copyWith(
-                    color: Colors.black,
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            const Spacer(),
-            Text(
-              'Explore the Map',
-              style: AppTypography.h1ExtraBold.copyWith(
-                color: AppColors.gold500,
-                fontSize: 26,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Discover language\ndialects across the\narchipelago.',
-                    style: AppTypography.body.copyWith(
-                      color: Colors.white70,
-                      height: 1.3,
-                    ),
-                  ),
-                ),
-                BrandButton(
-                  text: 'OPEN MAP',
-                  onTap: () => context.go('/map'),
-                  type: BrandButtonType.primary,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildVillageEchoes(BuildContext context) {
-    final echoesAsync = ref.watch(communityFeedProvider);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'VILLAGE ECHOES',
-          style: AppTypography.label.copyWith(
-            color: Colors.white24,
-            letterSpacing: 2,
-            fontWeight: FontWeight.w900,
-            fontSize: 10,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.02),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-          ),
-          child: echoesAsync.when(
-            data: (echoes) {
-              if (echoes.isEmpty) {
-                return Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Center(
-                    child: Text(
-                      'The village is quiet today...',
-                      style: AppTypography.body.copyWith(
-                        color: Colors.white24,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                );
-              }
-              return ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: echoes.length.clamp(0, 5), // Limit to 5 on dashboard
-                separatorBuilder: (_, __) => const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Divider(color: Colors.white10, height: 1),
-                ),
-                itemBuilder: (context, index) {
-                  final echo = echoes[index];
-                  return _buildEchoItem(
-                    avatar: echo.userPhotoUrl,
-                    userName: echo.userName,
-                    text: echo.message,
-                    time: echo.relativeTime,
-                    emoji: echo.emoji,
-                    userId: echo.userId,
-                  );
-                },
-              );
-            },
-            loading: () => const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: CircularProgressIndicator(color: AppColors.gold500),
-              ),
-            ),
-            error: (err, _) => Center(child: Text('Error: $err')),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEchoItem({
-    String? avatar,
-    required String userName,
-    required String text,
-    required String time,
-    required String emoji,
-    required String userId,
-  }) {
-    return InkWell(
-      onTap: () => context.push('/member/$userId'),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: AppColors.forest700,
-            backgroundImage: avatar != null
-                ? (avatar.startsWith('http')
-                    ? NetworkImage(avatar) as ImageProvider
-                    : AssetImage(avatar))
-                : null,
-            child: avatar == null
-                ? Text(
-                    userName.isNotEmpty ? userName[0].toUpperCase() : '?',
-                    style: const TextStyle(color: Colors.white24, fontSize: 12),
-                  )
-                : null,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RichText(
-                  text: TextSpan(
-                    style: AppTypography.body.copyWith(
-                      color: Colors.white70,
-                      fontSize: 13,
-                    ),
-                    children: [
-                      TextSpan(
-                        text: userName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const TextSpan(text: ' '),
-                      TextSpan(text: text),
-                    ],
-                  ),
-                ),
-                Text(
-                  time,
-                  style: AppTypography.label.copyWith(
-                    color: Colors.white12,
-                    fontSize: 9,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            emoji,
-            style: const TextStyle(fontSize: 18),
-          ),
-        ],
-      ),
-    );
-  }
-
 
   Widget _buildLeaderboardHeader(BuildContext context) {
     return Row(

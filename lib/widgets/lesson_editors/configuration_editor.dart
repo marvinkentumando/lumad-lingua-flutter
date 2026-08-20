@@ -190,7 +190,7 @@ class ConfigurationEditor extends ConsumerWidget {
         const SizedBox(height: 16),
         _buildDropdown(
           'Dialect',
-          ['Mansaka', 'Mandaya'],
+          ['Mansaka'],
           dialect,
           onDialectChanged,
           isDark,

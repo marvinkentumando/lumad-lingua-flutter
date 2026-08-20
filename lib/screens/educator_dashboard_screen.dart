@@ -10,9 +10,9 @@ import '../models/admin_models.dart';
 import '../models/lesson.dart';
 import '../models/dictionary_entry.dart';
 import '../models/community_activity.dart';
-import '../widgets/impact_card.dart';
-import '../services/impact_service.dart';
 import '../widgets/wotd_widget.dart';
+import '../providers/educator_provider.dart';
+import '../models/educator_models.dart';
 
 class EducatorDashboardScreen extends ConsumerStatefulWidget {
   const EducatorDashboardScreen({super.key});
@@ -57,15 +57,12 @@ class _EducatorDashboardScreenState
         ? ref.watch(userNotificationsStreamProvider(userAuth.uid))
         : const AsyncValue<List<Map<String, dynamic>>>.data([]);
     final lessonsAsync = ref.watch(allLessonsStreamProvider);
-    final allUsersAsync = ref.watch(allUsersProvider);
+    final educatorStudentsAsync = ref.watch(educatorStudentsProvider);
     final totalWordsAsync = ref.watch(totalWordsCountProvider);
     final communityActivitiesAsync = ref.watch(communityFeedProvider);
     final pendingSubmissionsAsync = ref.watch(
       pendingDictionaryStreamProvider(const ValidatorQuery('all', 10)),
     );
-    final impactAsync = userAuth != null 
-        ? ref.watch(roleImpactProvider(userAuth.uid)) 
-        : const AsyncValue<ContributionImpact>.loading();
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
@@ -73,10 +70,9 @@ class _EducatorDashboardScreenState
         child: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(allLessonsStreamProvider);
-            ref.invalidate(allUsersProvider);
+            ref.invalidate(educatorStudentsProvider);
             ref.invalidate(totalWordsCountProvider);
             ref.invalidate(communityFeedProvider);
-            if (userAuth != null) ref.invalidate(roleImpactProvider(userAuth.uid));
             await Future.delayed(const Duration(seconds: 1));
           },
           color: AppColors.gold500,
@@ -90,28 +86,21 @@ class _EducatorDashboardScreenState
                 const SizedBox(height: 24),
                 _buildHeroBanner(userProfileAsync, notificationsAsync),
                 const SizedBox(height: 24),
-                
-                impactAsync.when(
-                  data: (impact) => ImpactCard(impact: impact),
-                  loading: () => const SizedBox(height: 100, child: Center(child: CircularProgressIndicator(color: AppColors.gold500))),
-                  error: (e, _) => const SizedBox.shrink(),
-                ),
 
-                const SizedBox(height: 24),
                 const WotdWidget(),
                 const SizedBox(height: 32),
-                _buildStatsRow(lessonsAsync, allUsersAsync),
+                _buildStatsRow(lessonsAsync, educatorStudentsAsync),
                 const SizedBox(height: 24),
-                _buildQuickActions(allUsersAsync, userProfileAsync),
+                _buildQuickActions(educatorStudentsAsync, userProfileAsync),
                 const SizedBox(height: 32),
-                _buildStrugglingStudentsAlert(allUsersAsync),
+                _buildStrugglingStudentsAlert(educatorStudentsAsync),
                 const SizedBox(height: 24),
                 _buildCulturalMilestone(totalWordsAsync),
                 const SizedBox(height: 24),
                 _buildUpcomingDeadlines(lessonsAsync),
                 const SizedBox(height: 24),
                 _buildRecentActivity(
-                  allUsersAsync,
+                  educatorStudentsAsync,
                   communityActivitiesAsync,
                   pendingSubmissionsAsync,
                 ),
@@ -120,11 +109,6 @@ class _EducatorDashboardScreenState
             ),
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/lesson-editor'),
-        backgroundColor: AppColors.gold500,
-        child: const Icon(Icons.add_rounded, color: AppColors.forest900),
       ),
     );
   }
@@ -159,24 +143,65 @@ class _EducatorDashboardScreenState
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'WISDOM GUIDE  •  ELDER EDUCATOR',
-                        style: AppTypography.label.copyWith(
-                          color: Colors.black87,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 9,
-                          letterSpacing: 1,
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'WISDOM GUIDE  •  ELDER EDUCATOR',
+                            style: AppTypography.label.copyWith(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 9,
+                              letterSpacing: 1,
+                            ),
+                          ),
                         ),
-                      ),
+                        if (profile?['villageCode'] != null) ...[
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () {
+                              final code = profile?['villageCode'] as String;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Village Code $code copied!')),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.gold500.withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.fort_rounded, size: 10, color: Colors.black),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'CODE: ${profile!['villageCode']}',
+                                    style: AppTypography.label.copyWith(
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 9,
+                                      letterSpacing: 1,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -231,7 +256,7 @@ class _EducatorDashboardScreenState
 
   Widget _buildStatsRow(
     AsyncValue<List<Lesson>> lessonsAsync,
-    AsyncValue<List<AdminUser>> usersAsync,
+    AsyncValue<List<EducatorStudent>> studentsAsync,
   ) {
     int total = 0;
     int live = 0;
@@ -245,10 +270,8 @@ class _EducatorDashboardScreenState
     }
 
     String studentsCount = '0';
-    if (usersAsync.hasValue) {
-      final students = usersAsync.value!
-          .where((u) => u.role == 'learner')
-          .length;
+    if (studentsAsync.hasValue) {
+      final students = studentsAsync.value!.length;
       studentsCount = students >= 1000
           ? '${(students / 1000).toStringAsFixed(1)}k'
           : students.toString();
@@ -313,7 +336,7 @@ class _EducatorDashboardScreenState
   }
 
   Widget _buildQuickActions(
-    AsyncValue<List<AdminUser>> allUsersAsync,
+    AsyncValue<List<EducatorStudent>> studentsAsync,
     AsyncValue<Map<String, dynamic>?> userProfileAsync,
   ) {
     return Column(
@@ -321,7 +344,7 @@ class _EducatorDashboardScreenState
         Row(
           children: [
             _buildQuickActionBtn(Icons.campaign_rounded, 'Broadcast', () {
-              _showBroadcastDialog(allUsersAsync, userProfileAsync);
+              _showBroadcastDialog(studentsAsync, userProfileAsync);
             }),
             const SizedBox(width: 12),
             _buildQuickActionBtn(Icons.perm_media_rounded, 'Gallery', () {
@@ -333,28 +356,12 @@ class _EducatorDashboardScreenState
             }),
           ],
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            _buildQuickActionBtn(Icons.swap_vert_rounded, 'Manage Units', () {
-              context.push('/educator/unit-management');
-            }),
-            const SizedBox(width: 12),
-            _buildQuickActionBtn(
-              Icons.add_circle_outline_rounded,
-              'Create Lesson',
-              () {
-                context.push('/lesson-editor');
-              },
-            ),
-          ],
-        ),
       ],
     );
   }
 
   void _showBroadcastDialog(
-    AsyncValue<List<AdminUser>> allUsersAsync,
+    AsyncValue<List<EducatorStudent>> studentsAsync,
     AsyncValue<Map<String, dynamic>?> profileAsync,
   ) {
     final controller = TextEditingController();
@@ -437,15 +444,12 @@ class _EducatorDashboardScreenState
               final msg = controller.text.trim();
               Navigator.pop(ctx);
 
-              if (allUsersAsync.hasValue && profileAsync.hasValue) {
+              if (studentsAsync.hasValue && profileAsync.hasValue) {
                 final educator = profileAsync.value;
                 final educatorId = ref.read(authStateProvider).value?.uid ?? '';
                 final educatorName = educator?['username'] ?? 'Educator';
 
-                final studentIds = allUsersAsync.value!
-                    .where((u) => u.role == 'learner')
-                    .map((u) => u.id)
-                    .toList();
+                final studentIds = studentsAsync.value!.map((u) => u.id).toList();
 
                 try {
                   await ref
@@ -524,13 +528,12 @@ class _EducatorDashboardScreenState
   }
 
   Widget _buildStrugglingStudentsAlert(
-    AsyncValue<List<AdminUser>> allUsersAsync,
+    AsyncValue<List<EducatorStudent>> studentsAsync,
   ) {
-    if (!allUsersAsync.hasValue) return const SizedBox.shrink();
+    if (!studentsAsync.hasValue) return const SizedBox.shrink();
 
-    // Simple heuristic for struggling students: zero XP or hasn't logged in recently, just an example proxy
-    final struggling = allUsersAsync.value!
-        .where((u) => u.role == 'learner' && u.xp < 50)
+    final struggling = studentsAsync.value!
+        .where((u) => u.isStruggling)
         .toList();
 
     if (struggling.isEmpty) return const SizedBox.shrink();
@@ -599,7 +602,6 @@ class _EducatorDashboardScreenState
 
   Widget _buildCulturalMilestone(AsyncValue<int> totalWordsAsync) {
     final wordsCount = totalWordsAsync.value ?? 0;
-    // Assume milestone goal is next multiple of 100
     final target = ((wordsCount / 100).floor() + 1) * 100;
     final progress = (wordsCount % 100) / 100.0;
     final remaining = target - wordsCount;
@@ -661,7 +663,6 @@ class _EducatorDashboardScreenState
   Widget _buildUpcomingDeadlines(AsyncValue<List<Lesson>> lessonsAsync) {
     if (!lessonsAsync.hasValue) return const SizedBox.shrink();
 
-    // Fetch actual drafts or pending lessons from Firestore
     final drafts = lessonsAsync.value!
         .where((l) => l.status == 'DRAFT')
         .take(3)
@@ -691,7 +692,7 @@ class _EducatorDashboardScreenState
       padding: const EdgeInsets.only(bottom: 10),
       child: GestureDetector(
         onTap: () {
-          context.push('/educator/lessons');
+          context.push('/admin/lessons');
         },
         child: Container(
           padding: const EdgeInsets.all(14),
@@ -771,26 +772,23 @@ class _EducatorDashboardScreenState
   }
 
   Widget _buildRecentActivity(
-    AsyncValue<List<AdminUser>> allUsersAsync,
+    AsyncValue<List<EducatorStudent>> studentsAsync,
     AsyncValue<List<CommunityActivity>> communityActivitiesAsync,
     AsyncValue<List<DictionaryEntry>> pendingSubmissionsAsync,
   ) {
     final List<_FeedItem> feedItems = [];
 
-    // 1. Learner Joins
-    if (allUsersAsync.hasValue) {
-      final learners = allUsersAsync.value!.where((u) => u.role == 'learner');
-      for (var u in learners) {
+    if (studentsAsync.hasValue) {
+      for (var u in studentsAsync.value!) {
         feedItems.add(_FeedItem(
-          text: '${u.name} joined as a new student',
-          timestamp: u.joinedAt,
+          text: '${u.name} joined your village',
+          timestamp: DateTime.now(), // Fallback
           icon: Icons.person_add_rounded,
           color: AppColors.semanticGreen,
         ));
       }
     }
 
-    // 2. Community Activities (Lesson Completions, Achievements)
     if (communityActivitiesAsync.hasValue) {
       for (var activity in communityActivitiesAsync.value!) {
         feedItems.add(_FeedItem(
@@ -808,7 +806,6 @@ class _EducatorDashboardScreenState
       }
     }
 
-    // 3. Pending Submissions
     if (pendingSubmissionsAsync.hasValue) {
       for (var entry in pendingSubmissionsAsync.value!) {
         feedItems.add(_FeedItem(
@@ -816,7 +813,7 @@ class _EducatorDashboardScreenState
           timestamp: entry.submittedAt ?? DateTime.now(),
           icon: Icons.rate_review_rounded,
           color: AppColors.terracotta,
-          onTap: () => context.push('/educator/lessons'),
+          onTap: () => context.push('/admin/lessons'),
         ));
       }
     }
@@ -915,6 +912,3 @@ class _EducatorDashboardScreenState
     );
   }
 }
-
-
-

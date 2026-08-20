@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_service.dart';
 
-enum UserRole { learner, contributor, validator, educator, admin }
+enum UserRole { learner, staff, educator, admin }
 
 final isSimulatingProvider = StateProvider<bool>((ref) => false);
 
@@ -18,9 +18,10 @@ class RoleNotifier extends Notifier<UserRole> {
       case 'admin':
         return UserRole.admin;
       case 'validator':
-        return UserRole.validator;
       case 'contributor':
-        return UserRole.contributor;
+      case 'staff':
+      case 'researcher':
+        return UserRole.staff;
       case 'educator':
         return UserRole.educator;
       default:

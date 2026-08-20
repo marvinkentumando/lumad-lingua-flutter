@@ -11,32 +11,19 @@ class NavItem {
 List<NavItem> getNavItemsForRole(UserRole role) {
   // Common tabs everyone gets
   const home = NavItem(Icons.home_rounded, 'HOME', '/');
-  const map = NavItem(Icons.map_rounded, 'MAP', '/map');
   const words = NavItem(Icons.menu_book_rounded, 'WORDS', '/dictionary');
   const profile = NavItem(Icons.person_rounded, 'YOU', '/profile');
   const learn = NavItem(Icons.school_rounded, 'LEARN', '/learning');
+  const sentiment = NavItem(Icons.insights_rounded, 'VITALITY', '/sentiment'); // Added sentiment placeholder
 
   switch (role) {
     case UserRole.learner:
-      return [home, map, words, learn, profile];
-    case UserRole.contributor:
+      return [home, words, learn, sentiment, profile];
+    case UserRole.staff:
       return [
         home,
-        map,
         words,
-        const NavItem(Icons.add_circle_rounded, 'ADD', '/contribute'),
-        profile,
-      ];
-    case UserRole.validator:
-      return [
-        const NavItem(Icons.home_rounded, 'HOME', '/validator/home'),
-        const NavItem(Icons.list_alt_rounded, 'ENTRIES', '/validator/entries'),
-        const NavItem(
-          Icons.record_voice_over_rounded,
-          'VOICES',
-          '/validator/voices',
-        ),
-        const NavItem(Icons.menu_book_rounded, 'LESSONS', '/validator/lessons'),
+        sentiment,
         profile,
       ];
     case UserRole.educator:
@@ -45,11 +32,6 @@ List<NavItem> getNavItemsForRole(UserRole role) {
           Icons.grid_view_rounded,
           'DASHBOARD',
           '/educator/dashboard',
-        ),
-        const NavItem(
-          Icons.library_books_rounded,
-          'LESSONS',
-          '/educator/lessons',
         ),
         const NavItem(Icons.group_rounded, 'STUDENTS', '/educator/students'),
         const NavItem(
@@ -63,7 +45,13 @@ List<NavItem> getNavItemsForRole(UserRole role) {
       return [
         const NavItem(Icons.dashboard_rounded, 'OVERVIEW', '/admin/overview'),
         const NavItem(Icons.people_rounded, 'USERS', '/admin/users'),
-        const NavItem(Icons.library_books_rounded, 'CONTENT', '/admin/content'),
+        const NavItem(
+          Icons.library_books_rounded,
+          'LESSONS',
+          '/admin/lessons',
+        ),
+        const NavItem(Icons.insights_rounded, 'VITALITY', '/sentiment'),
+        const NavItem(Icons.book_rounded, 'ARCHIVE', '/admin/dictionary'),
         profile,
       ];
   }

@@ -41,35 +41,30 @@ class LeaderboardScreen extends ConsumerStatefulWidget {
   ConsumerState<LeaderboardScreen> createState() => _LeaderboardScreenState();
 }
 
-class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
   String _timeFilter = 'all';
   String _searchQuery = '';
-  final Set<int> _celebratedTabs = {};
+  bool _hasCelebrated = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() => setState(() {}));
   }
 
   Future<void> _checkRankImprovement(List<LeaderboardEntry> entries, String? userId) async {
-    final tabIndex = _tabController.index;
-    if (_celebratedTabs.contains(tabIndex) || userId == null) return;
+    if (_hasCelebrated || userId == null) return;
 
     final myEntry = entries.where((e) => e.uid == userId).firstOrNull;
     if (myEntry == null) return;
 
     final prefs = await SharedPreferences.getInstance();
-    final key = 'last_rank_${tabIndex}_$userId';
+    final key = 'last_rank_learner_$userId';
     final lastRank = prefs.getInt(key);
 
     if (lastRank != null && myEntry.rank < lastRank) {
       // Improved! (Smaller number is better rank)
       if (mounted) {
-        _celebratedTabs.add(tabIndex);
+        _hasCelebrated = true;
         showSpiritParticles(context, duration: const Duration(seconds: 4));
         HapticService.celebration();
 
@@ -92,7 +87,6 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
 
   @override
   void dispose() {
-    _tabController.dispose();
     super.dispose();
   }
 
@@ -118,18 +112,14 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).value;
-    final isLearnerTab = _tabController.index == 0;
 
-    final leaderboardData = (isLearnerTab
-            ? ref.watch(topLearnersProvider)
-            : ref.watch(topContributorsProvider))
-        .value;
+    final leaderboardData = ref.watch(topLearnersProvider).value;
 
     LeaderboardEntry? myEntry;
     LeaderboardEntry? nextEntry;
 
     if (leaderboardData != null && user != null) {
-      final allEntries = _mapToEntries(leaderboardData, isLearnerTab);
+      final allEntries = _mapToEntries(leaderboardData, true);
       final foundMe = allEntries.where((e) => e.uid == user.uid).firstOrNull;
       if (foundMe != null) {
         myEntry = foundMe;
@@ -212,15 +202,11 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                       // The Podium
                       Padding(
                         padding: const EdgeInsets.only(top: 180),
-                        child:
-                            (isLearnerTab
-                                    ? ref.watch(topLearnersProvider)
-                                    : ref.watch(topContributorsProvider))
-                                .when(
+                        child: ref.watch(topLearnersProvider).when(
                                   data: (data) {
                                     final entries = _mapToEntries(
                                       data,
-                                      isLearnerTab,
+                                      true,
                                     );
 
                                     // Trigger celebration if rank improved
@@ -233,7 +219,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                                     }
                                     return _buildPodium(
                                       entries.take(3).toList(),
-                                      isLearnerTab ? 'XP' : 'words',
+                                      'XP',
                                     );
                                   },
                                   loading: () => Center(child: _buildPodiumSkeleton()),
@@ -242,34 +228,6 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                                 ),
                       ),
                     ],
-                  ),
-                ),
-                bottom: PreferredSize(
-                  preferredSize: const Size.fromHeight(60),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: const BoxDecoration(
-                      color: AppColors.forest900,
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(24),
-                      ),
-                    ),
-                    child: TabBar(
-                      controller: _tabController,
-                      indicatorColor: AppColors.gold500,
-                      labelColor: AppColors.gold500,
-                      unselectedLabelColor: Colors.white38,
-                      dividerColor: Colors.transparent,
-                      indicatorWeight: 3,
-                      indicatorSize: TabBarIndicatorSize.label,
-                      tabs: const [
-                        Tab(text: 'LEARNERS'),
-                        Tab(text: 'CONTRIBUTORS'),
-                      ],
-                    ),
                   ),
                 ),
               ),
@@ -290,14 +248,10 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                   horizontal: 16,
                   vertical: 8,
                 ),
-                sliver:
-                    (isLearnerTab
-                            ? ref.watch(topLearnersProvider)
-                            : ref.watch(topContributorsProvider))
-                        .when(
+                sliver: ref.watch(topLearnersProvider).when(
                           data: (data) {
                             final entries = _applyFilter(
-                              _mapToEntries(data, isLearnerTab),
+                              _mapToEntries(data, true),
                             );
 
                             if (entries.isEmpty && _searchQuery.isNotEmpty) {
@@ -325,7 +279,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                                 final entry = displayEntries[index];
                                 return _buildRankRow(
                                       entry,
-                                      isLearnerTab ? 'XP' : 'words',
+                                      'XP',
                                       entry.uid == user?.uid,
                                     )
                                     .animate()
@@ -358,11 +312,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
               right: 0,
               child: _buildMyRankCard(
                 user.displayName,
-                ref.watch(userProfileProvider).value?[isLearnerTab
-                    ? 'xp'
-                    : 'wordCount'],
+                ref.watch(userProfileProvider).value?['xp'],
                 user.uid,
-                isLearnerTab,
+                true,
                 user.photoURL,
                 myEntry,
                 nextEntry,

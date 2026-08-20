@@ -362,7 +362,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
               if (_source == PracticeSource.words) {
                 final words = items as List<DictionaryEntry>;
                 _gameItems = words
-                    .where((w) => w.status == ValidationStatus.approved && w.audioUrl != null && w.audioUrl!.isNotEmpty)
+                    .where((w) => w.audioUrl != null && w.audioUrl!.isNotEmpty)
                     .map((w) => ComparisonItem(
                       id: w.id,
                       title: w.indigenousWord,
@@ -374,7 +374,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
               } else {
                 final phrases = items as List<VoiceSubmission>;
                 _gameItems = phrases
-                    .where((p) => p.status == VoiceStatus.approved && p.audioUrl.isNotEmpty)
+                    .where((p) => p.audioUrl.isNotEmpty)
                     .map((p) => ComparisonItem(
                       id: p.id,
                       title: p.title,
@@ -395,7 +395,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
                     _buildSourceSelector(isDark),
                     const SizedBox(height: 40),
                     Text(
-                      'No approved ${_source.name} available yet.',
+                      'No ${_source.name} available yet.',
                       style: TextStyle(color: isDark ? Colors.white38 : AppColors.creamText3),
                     ),
                   ],

@@ -40,12 +40,10 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
       if (_selectedTab == 'All') {
         matchesTab = true;
       } else if (_selectedTab == 'Published' ||
-          _selectedTab == 'Draft' ||
-          _selectedTab == 'Pending') {
+          _selectedTab == 'Draft') {
         final statusMap = {
           'Published': 'PUBLISHED',
           'Draft': 'DRAFT',
-          'Pending': 'PENDING_REVIEW',
         };
         matchesTab = lesson.status.toUpperCase() == statusMap[_selectedTab];
       } else if (_selectedTab == 'Novice' ||
@@ -416,7 +414,6 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
     final tabs = [
       'All',
       'Published',
-      'Pending',
       'Draft',
       'Novice',
       'Intermediate',

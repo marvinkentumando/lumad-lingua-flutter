@@ -37,9 +37,6 @@ dependencies:
   go_router: ^17.2.3
   google_fonts: ^8.1.0
   flutter_riverpod: ^2.6.1
-  flutter_map: ^8.3.0
-  latlong2: ^0.9.1
-  flutter_map_marker_cluster: ^8.2.2
   firebase_core: ^4.7.0
   cloud_firestore: ^6.3.0
   firebase_auth: ^6.4.0

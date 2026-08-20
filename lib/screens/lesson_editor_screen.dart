@@ -429,7 +429,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         icon: _steps.any((s) => s.type == ActivityType.vocabulary)
             ? 'local_florist'
             : 'psychology',
-        status: isDraft ? 'DRAFT' : 'PENDING_REVIEW',
+        status: isDraft ? 'DRAFT' : 'PUBLISHED',
         prerequisiteId: _prerequisiteId,
         tasks: _steps
             .where((s) => s.type != ActivityType.configuration)
@@ -459,7 +459,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         // Online: Save to Firebase
         final savedId = await firebaseService.saveLesson(
           lesson,
-          status: isDraft ? 'DRAFT' : 'PENDING_REVIEW',
+          status: isDraft ? 'DRAFT' : 'PUBLISHED',
         );
 
         if (mounted) {
@@ -490,7 +490,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                   content: Text(
                     isDraft
                         ? 'Lesson saved to drafts!'
-                        : 'Lesson submitted for review!',
+                        : 'Lesson published successfully!',
                   ),
                 ),
               );
@@ -602,7 +602,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                 TextButton(
                   onPressed: () => _saveLesson(isDraft: false),
                   child: Text(
-                    'SUBMIT FOR REVIEW',
+                    'PUBLISH LESSON',
                     style: AppTypography.label.copyWith(
                       color: AppColors.gold500,
                       fontWeight: FontWeight.w900,

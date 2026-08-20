@@ -880,7 +880,7 @@ class _LegacyTrackerDetailsScreenState extends ConsumerState<LegacyTrackerDetail
                                 usageExampleNative: usageNativeController.text,
                                 usageExampleTranslation: usageTranslationController.text,
                                 audioUrl: audioUrl,
-                                status: ValidationStatus.pending,
+                                status: ValidationStatus.approved,
                                 contributorId: entry.contributorId,
                                 contributorName: entry.contributorName,
                                 submittedAt: DateTime.now(),
@@ -1035,7 +1035,7 @@ class _LegacyTrackerDetailsScreenState extends ConsumerState<LegacyTrackerDetail
                                 'transcript': transcriptController.text,
                                 'culturalNote': noteController.text,
                                 'audioUrl': audioUrl,
-                                'status': 'pending',
+                                'status': 'approved',
                                 'submittedAt': FieldValue.serverTimestamp(),
                               };
 

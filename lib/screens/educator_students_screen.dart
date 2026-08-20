@@ -21,20 +21,17 @@ class _EducatorStudentsScreenState
     extends ConsumerState<EducatorStudentsScreen> {
   bool get isDark => Theme.of(context).brightness == Brightness.dark;
 
-  String _selectedFilter = 'All Municipalities';
   StudentSort _currentSort = StudentSort.name;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
   List<EducatorStudent> _getFilteredStudents(List<EducatorStudent> allStudents) {
     var list = allStudents.where((s) {
-      final matchesFilter =
-          _selectedFilter == 'All Municipalities' || s.municipality == _selectedFilter;
       final matchesSearch =
           _searchQuery.isEmpty ||
           s.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           s.level.toLowerCase().contains(_searchQuery.toLowerCase());
-      return matchesFilter && matchesSearch;
+      return matchesSearch;
     }).toList();
 
     switch (_currentSort) {
@@ -68,7 +65,6 @@ class _EducatorStudentsScreenState
       data: (allStudents) {
         final filteredStudents = _getFilteredStudents(allStudents);
         final strugglingCount = allStudents.where((s) => s.isStruggling).length;
-        final municipalities = ['All Municipalities', ...allStudents.map((s) => s.municipality).toSet()];
 
         return Scaffold(
           backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
@@ -178,9 +174,8 @@ class _EducatorStudentsScreenState
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      Expanded(child: _buildStudentFilterTabs(municipalities.toList())),
-                      const SizedBox(width: 8),
                       _buildSortDropdown(),
                     ],
                   ),
@@ -317,37 +312,6 @@ class _EducatorStudentsScreenState
     );
   }
 
-  Widget _buildStudentFilterTabs(List<String> municipalities) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: municipalities.map((filter) {
-          final isSelected = _selectedFilter == filter;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: GestureDetector(
-              onTap: () => setState(() => _selectedFilter = filter),
-              child: Chip(
-                label: Text(filter),
-                backgroundColor: isSelected
-                    ? AppColors.gold500
-                    : Colors.white.withValues(alpha: 0.05),
-                labelStyle: TextStyle(
-                  color: isSelected
-                      ? AppColors.forest900
-                      : (isDark ? Colors.white70 : AppColors.creamText2),
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 12,
-                ),
-                side: BorderSide.none,
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
   Widget _buildStudentCard(EducatorStudent student) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -415,14 +379,6 @@ class _EducatorStudentsScreenState
                           student.level.toUpperCase(),
                           style: AppTypography.label.copyWith(
                             color: AppColors.gold500,
-                            fontSize: 9,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '• ${student.municipality}',
-                          style: AppTypography.label.copyWith(
-                            color: isDark ? Colors.white24 : AppColors.creamText3,
                             fontSize: 9,
                           ),
                         ),
@@ -557,13 +513,6 @@ class _EducatorStudentsScreenState
                           student.level.toUpperCase(),
                           style: AppTypography.label.copyWith(
                             color: AppColors.gold500,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '• ${student.municipality}',
-                          style: AppTypography.label.copyWith(
-                            color: isDark ? Colors.white38 : AppColors.creamText3,
                           ),
                         ),
                       ],

@@ -147,18 +147,16 @@ class MainLayout extends ConsumerWidget {
       final student = ref.watch(studentProvider);
       label = '${student.xp} XP';
       icon = Icons.flash_on_rounded;
-    } else if (role == UserRole.validator) {
-      final count = ref.watch(validatorActivityCountProvider(userId)).value ?? 0;
-      label = '$count VALIDATIONS';
-      icon = Icons.verified_user_rounded;
+    } else if (role == UserRole.staff) {
+      label = 'STAFF';
+      icon = Icons.admin_panel_settings_rounded;
     } else if (role == UserRole.educator) {
       final count = ref.watch(totalUsersCountProvider).value ?? 0;
       label = '$count STUDENTS';
       icon = Icons.people_rounded;
-    } else if (role == UserRole.contributor) {
-      final count = ref.watch(contributorWordCountProvider(userId)).value ?? 0;
-      label = '$count CONTRIBUTIONS';
-      icon = Icons.menu_book_rounded;
+    } else if (role == UserRole.admin) {
+      label = 'SYSTEM OVERSEER';
+      icon = Icons.admin_panel_settings_rounded;
     } else {
       final xp = ref.watch(xpProvider);
       label = '$xp XP';
@@ -184,13 +182,10 @@ class MainLayout extends ConsumerWidget {
             GestureDetector(
               onTap: () {
                 HapticService.selection();
-                if (role == UserRole.validator) {
-                  context.push('/validator/entries?history=true');
-                } else if (role == UserRole.contributor) {
-                  // Link to contributor profile or history if available
-                  context.push('/profile');
-                } else if (role == UserRole.learner) {
+                if (role == UserRole.learner) {
                   context.push('/mastery-dashboard');
+                } else {
+                  context.push('/profile');
                 }
               },
               child: Container(

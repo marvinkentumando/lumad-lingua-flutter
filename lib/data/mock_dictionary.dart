@@ -16,17 +16,8 @@ final List<DictionaryEntry> mockDictionary = [
     translation: 'Thank you',
     translationFilipino: 'Salamat',
     partOfSpeech: PartOfSpeech.phrase,
-    language: 'Mansaka / Mandaya',
+    language: 'Mansaka',
     usageContext: 'Universal expression of gratitude in Mindanao.',
-  ),
-  const DictionaryEntry(
-    id: '3',
-    indigenousWord: 'Kalog',
-    translation: 'Friend / Companion',
-    translationFilipino: 'Kaibigan',
-    partOfSpeech: PartOfSpeech.noun,
-    language: 'Mandaya',
-    usageContext: 'Used to address someone you share a close bond with.',
   ),
   const DictionaryEntry(
     id: '4',
@@ -38,6 +29,3 @@ final List<DictionaryEntry> mockDictionary = [
     usageContext: 'Refers to climbing a mountain or stairs.',
   ),
 ];
-
-
-

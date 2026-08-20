@@ -7,17 +7,11 @@ import '../services/auth_service.dart';
 
 // Screens
 import '../screens/dashboard_screen.dart';
-import '../screens/archive_map_screen.dart';
 import '../screens/dictionary_screen.dart';
 import '../screens/learning_hub_screen.dart';
 import '../screens/learning_path_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/main_layout.dart';
-import '../screens/contributor_screen.dart';
-import '../screens/validator_home_screen.dart';
-import '../screens/validator_entries_screen.dart';
-import '../screens/validator_voices_screen.dart';
-import '../screens/validator_lessons_screen.dart';
 import '../screens/leaderboard_screen.dart';
 import '../screens/notification_screen.dart';
 import '../screens/community_feed_screen.dart';
@@ -31,7 +25,6 @@ import '../screens/admin_overview_screen.dart';
 import '../screens/admin_users_screen.dart';
 import '../screens/admin_content_screen.dart';
 import '../screens/admin_requests_screen.dart';
-import '../screens/admin_map_architect_screen.dart';
 import '../screens/admin_gamification_screen.dart';
 import '../screens/admin_advanced_analytics_screen.dart';
 import '../screens/achievements_screen.dart';
@@ -56,8 +49,10 @@ import '../screens/streak_history_screen.dart';
 import '../screens/saka_game_screen.dart';
 import '../screens/audio_comparison_screen.dart';
 import '../screens/wisdom_progression_screen.dart';
+import '../screens/sentiment_dashboard_screen.dart';
 import '../screens/data_privacy_screen.dart';
 import '../screens/offline_wisdom_screen.dart';
+import '../screens/admin_dictionary_screen.dart';
 import '../models/artifact.dart';
 
 class RouterNotifier extends ChangeNotifier {
@@ -76,7 +71,6 @@ class RouterNotifier extends ChangeNotifier {
     if (isLoggedIn &&
         (loc == '/' || loc == '/onboarding' || loc == '/login' || loc == '/signup')) {
       if (role == UserRole.admin) return '/admin/overview';
-      if (role == UserRole.validator) return '/validator/home';
       if (role == UserRole.educator) return '/educator/dashboard';
       return '/';
     }
@@ -85,19 +79,15 @@ class RouterNotifier extends ChangeNotifier {
     if (loc.startsWith('/admin') && role != UserRole.admin) {
       return '/';
     }
-    if ((loc.startsWith('/validate') || loc.startsWith('/validator')) &&
-        role != UserRole.validator &&
-        role != UserRole.admin) {
-      return '/';
-    }
-    if (loc.startsWith('/contribute') &&
-        role != UserRole.contributor &&
-        role != UserRole.admin) {
-      return '/';
-    }
     if (loc.startsWith('/educator') &&
         role != UserRole.educator &&
         role != UserRole.admin) {
+      return '/';
+    }
+    if (loc.startsWith('/admin/lessons') && role != UserRole.admin) {
+      return '/';
+    }
+    if (loc == '/lesson-editor' && role != UserRole.admin) {
       return '/';
     }
 
@@ -125,10 +115,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/',
             builder: (context, state) => const DashboardScreen(),
-          ),
-          GoRoute(
-            path: '/map',
-            builder: (context, state) => const ArchiveMapScreen(),
           ),
           GoRoute(
             path: '/dictionary',
@@ -174,29 +160,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const LeaderboardScreen(),
           ),
           GoRoute(
-            path: '/contribute',
-            builder: (context, state) => const ContributorScreen(),
-          ),
-          GoRoute(
-            path: '/validator/home',
-            builder: (context, state) => const ValidatorHomeScreen(),
-          ),
-          GoRoute(
-            path: '/validator/entries',
-            builder: (context, state) {
-              final showHistory = state.uri.queryParameters['history'] == 'true';
-              return ValidatorEntriesScreen(showHistory: showHistory);
-            },
-          ),
-          GoRoute(
-            path: '/validator/voices',
-            builder: (context, state) => const ValidatorVoicesScreen(),
-          ),
-          GoRoute(
-            path: '/validator/lessons',
-            builder: (context, state) => const ValidatorLessonsScreen(),
-          ),
-          GoRoute(
             path: '/admin',
             redirect: (context, state) => '/admin/overview',
           ),
@@ -217,10 +180,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const AdminRequestsScreen(),
           ),
           GoRoute(
-            path: '/admin/map-architect',
-            builder: (context, state) => const AdminMapArchitectScreen(),
-          ),
-          GoRoute(
             path: '/admin/gamification',
             builder: (context, state) => const AdminGamificationScreen(),
           ),
@@ -229,11 +188,15 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const AdminAdvancedAnalyticsScreen(),
           ),
           GoRoute(
+            path: '/admin/dictionary',
+            builder: (context, state) => const AdminDictionaryScreen(),
+          ),
+          GoRoute(
             path: '/educator/dashboard',
             builder: (context, state) => const EducatorDashboardScreen(),
           ),
           GoRoute(
-            path: '/educator/lessons',
+            path: '/admin/lessons',
             builder: (context, state) => const EducatorLessonsScreen(),
           ),
           GoRoute(
@@ -245,7 +208,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const EducatorAnalyticsScreen(),
           ),
           GoRoute(
-            path: '/educator/unit-management',
+            path: '/admin/unit-management',
             builder: (context, state) => const EducatorUnitManagementScreen(),
           ),
           GoRoute(
@@ -316,6 +279,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/audio-comparison',
             builder: (context, state) => const AudioComparisonScreen(),
+          ),
+          GoRoute(
+            path: '/sentiment',
+            builder: (context, state) => const SentimentDashboardScreen(),
           ),
         ],
       ),

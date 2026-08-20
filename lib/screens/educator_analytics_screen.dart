@@ -69,6 +69,36 @@ class _EducatorAnalyticsScreenState
                   loading: () => _buildLoadingCard(100),
                   error: (e, _) => const SizedBox.shrink(),
                 ),
+                const SizedBox(height: 24),
+
+                analyticsAsync.when(
+                  data: (analytics) => Row(
+                    children: [
+                      _buildStatCard(
+                        'Total XP',
+                        '${analytics['totalXP'] ?? 0}',
+                        'Across Village',
+                        AppColors.gold500,
+                      ),
+                      const SizedBox(width: 12),
+                      _buildStatCard(
+                        'Progress',
+                        (analytics['avgLessonsCompleted'] as double? ?? 0).toStringAsFixed(1),
+                        'Avg Lessons',
+                        AppColors.semanticBlue,
+                      ),
+                      const SizedBox(width: 12),
+                      _buildStatCard(
+                        'Accuracy',
+                        '${((analytics['pronunciationAccuracy'] as double? ?? 0) * 100).toInt()}%',
+                        'Pronunciation',
+                        AppColors.semanticGreen,
+                      ),
+                    ],
+                  ),
+                  loading: () => _buildLoadingCard(80),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
                 const SizedBox(height: 32),
 
                 _buildTimeRangeSelector(),
@@ -78,14 +108,6 @@ class _EducatorAnalyticsScreenState
                   data: (users) => _buildActivityChart(users),
                   loading: () => _buildLoadingCard(220),
                   error: (e, _) => _buildErrorCard(e),
-                ),
-
-                const SizedBox(height: 32),
-
-                dialectDistAsync.when(
-                  data: (dist) => _buildDialectDistributionChart(dist),
-                  loading: () => _buildLoadingCard(150),
-                  error: (e, _) => const SizedBox.shrink(),
                 ),
 
                 const SizedBox(height: 32),
@@ -407,99 +429,6 @@ class _EducatorAnalyticsScreenState
     );
   }
 
-  Widget _buildDialectDistributionChart(Map<String, double> dist) {
-    if (dist.isEmpty) return const SizedBox.shrink();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final sorted = dist.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final main = sorted.first;
-    final other = sorted.length > 1 ? sorted[1] : null;
-
-    return BrandCard(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Dictionary Dialect Mix',
-            style: AppTypography.h3.copyWith(
-              color: isDark ? Colors.white : AppColors.creamText,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                flex: (main.value * 100).toInt(),
-                child: Container(
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: AppColors.gold500,
-                    borderRadius: BorderRadius.horizontal(
-                      left: const Radius.circular(10),
-                      right: other == null
-                          ? const Radius.circular(10)
-                          : Radius.zero,
-                    ),
-                  ),
-                ),
-              ),
-              if (other != null)
-                Expanded(
-                  flex: (other.value * 100).toInt(),
-                  child: Container(
-                    height: 20,
-                    decoration: const BoxDecoration(
-                      color: AppColors.semanticBlue,
-                      borderRadius: BorderRadius.horizontal(
-                        right: Radius.circular(10),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(width: 10, height: 10, color: AppColors.gold500),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${main.key} (${(main.value * 100).toInt()}%)',
-                    style: TextStyle(
-                      color: isDark ? Colors.white70 : AppColors.creamText2,
-                    ),
-                  ),
-                ],
-              ),
-              if (other != null)
-                Row(
-                  children: [
-                    Container(
-                      width: 10,
-                      height: 10,
-                      color: AppColors.semanticBlue,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${other.key} (${(other.value * 100).toInt()}%)',
-                      style: TextStyle(
-                        color: isDark ? Colors.white70 : AppColors.creamText2,
-                      ),
-                    ),
-                  ],
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildStudentGrowth(List<AdminUser> users) {
     final now = DateTime.now();
     final thirtyDaysAgo = now.subtract(const Duration(days: 30));
@@ -670,6 +599,9 @@ class _EducatorAnalyticsScreenState
         // Overview
         rows.add(['Overview', 'Total Users', users.length]);
         rows.add(['Overview', 'Total Words', totalWords]);
+        rows.add(['Overview', 'Total XP', analytics['totalXP'] ?? 0]);
+        rows.add(['Overview', 'Avg Lessons Completed', analytics['avgLessonsCompleted'] ?? 0]);
+        rows.add(['Overview', 'Pronunciation Accuracy', '${((analytics['pronunciationAccuracy'] ?? 0) * 100).toInt()}%']);
         
         // Retention
         final activeCount = users.where((u) => u.xp > 0).length;
@@ -710,6 +642,9 @@ class _EducatorAnalyticsScreenState
               pw.Header(level: 1, child: pw.Text('System Overview')),
               pw.Bullet(text: 'Total Registered Users: ${users.length}'),
               pw.Bullet(text: 'Total Dictionary Words: $totalWords'),
+              pw.Bullet(text: 'Total XP Earned: ${analytics['totalXP'] ?? 0}'),
+              pw.Bullet(text: 'Avg Lessons per Student: ${(analytics['avgLessonsCompleted'] ?? 0.0).toStringAsFixed(1)}'),
+              pw.Bullet(text: 'Pronunciation Accuracy: ${((analytics['pronunciationAccuracy'] ?? 0.0) * 100).toInt()}%'),
               pw.Bullet(text: 'Active Learners (XP > 0): ${users.where((u) => u.xp > 0).length}'),
               
               pw.Header(level: 1, child: pw.Text('Dialect Distribution')),

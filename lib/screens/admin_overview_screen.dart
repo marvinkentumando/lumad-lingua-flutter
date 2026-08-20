@@ -8,7 +8,6 @@ import '../widgets/brand_button.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/firebase_service.dart';
 import 'package:go_router/go_router.dart';
-import '../providers/contributor_request_provider.dart';
 import '../widgets/wotd_widget.dart';
 import '../services/auth_service.dart';
 import '../services/database_seeder.dart';
@@ -25,7 +24,6 @@ class AdminOverviewScreen extends ConsumerStatefulWidget {
 class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
   bool get isDark => Theme.of(context).brightness == Brightness.dark;
   int? _tappedGrowthBar;
-  int? _tappedContribBar;
 
   final List<Map<String, dynamic>> _defaultHealth = [
     {
@@ -138,18 +136,6 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                                       ),
                                       _statCard(
                                         ref
-                                            .watch(pendingWordsCountProvider(null))
-                                            .when(
-                                              data: (count) => count.toString(),
-                                              loading: () => '...',
-                                              error: (_, __) => '!',
-                                            ),
-                                        'Pending Review',
-                                        Icons.pending_outlined,
-                                        AppColors.gold500,
-                                      ),
-                                      _statCard(
-                                        ref
                                             .watch(totalAudioClipsCountProvider)
                                             .when(
                                               data: (count) => count.toString(),
@@ -162,21 +148,22 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                                       ),
                                       GestureDetector(
                                         onTap: () =>
-                                            context.push('/admin/requests'),
+                                            context.push('/admin/dictionary'),
                                         child: _statCard(
-                                          ref
-                                              .watch(
-                                                pendingRequestsCountProvider,
-                                              )
-                                              .when(
-                                                data: (count) =>
-                                                    count.toString(),
-                                                loading: () => '...',
-                                                error: (_, __) => '!',
-                                              ),
-                                          'Role Requests',
-                                          Icons.person_add_rounded,
+                                          'MANAGE',
+                                          'Dictionary',
+                                          Icons.book_rounded,
                                           AppColors.gold500,
+                                        ),
+                                      ),
+                                      GestureDetector(
+                                        onTap: () =>
+                                            context.push('/admin/lessons'),
+                                        child: _statCard(
+                                          'MANAGE',
+                                          'Lessons',
+                                          Icons.library_books_rounded,
+                                          AppColors.semanticBlue,
                                         ),
                                       ),
                                     ]
@@ -218,139 +205,6 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                             ).animate().fadeIn(delay: 400.ms),
                             loading: () => const Center(child: CircularProgressIndicator()),
                             error: (_, __) => const Text('Error loading growth data'),
-                          ),
-                          const SizedBox(height: 24),
-                          _sectionLabel('CONTRIBUTIONS (last 7 days)'),
-                          const SizedBox(height: 16),
-                          activityAsync.when(
-                            data: (data) => BrandCard(
-                              theme: BrandCardTheme.vibrant,
-                              child: _buildInteractiveBarChart(
-                                values: data['contributions'] ?? [0,0,0,0,0,0,0],
-                                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                                color: AppColors.semanticGreen,
-                                tappedIndex: _tappedContribBar,
-                                onTap: (i) => setState(() => _tappedContribBar = _tappedContribBar == i ? null : i),
-                              ),
-                            ).animate().fadeIn(delay: 500.ms),
-                            loading: () => const Center(child: CircularProgressIndicator()),
-                            error: (_, __) => const Text('Error loading contribution data'),
-                          ),
-                          const SizedBox(height: 24),
-                          _sectionLabel('DIALECT DISTRIBUTION'),
-                          const SizedBox(height: 16),
-                          BrandCard(
-                            theme: BrandCardTheme.cream,
-                            child: ref
-                                .watch(dialectDistributionProvider)
-                                .when(
-                                  data: (distribution) {
-                                    if (distribution.isEmpty) {
-                                      return Padding(
-                                        padding: const EdgeInsets.all(20.0),
-                                        child: Center(
-                                          child: Text(
-                                            'No data available',
-                                            style: AppTypography.body.copyWith(
-                                              color: AppColors.forest900,
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                    return Column(
-                                      children: distribution.entries.map((e) {
-                                        return _dialectRow(
-                                          context,
-                                          e.key,
-                                          e.value,
-                                          _getDialectColor(e.key),
-                                        );
-                                      }).toList(),
-                                    );
-                                  },
-                                  loading: () => const Center(
-                                    child: Padding(
-                                      padding: EdgeInsets.all(20.0),
-                                      child: CircularProgressIndicator(
-                                        color: AppColors.forest900,
-                                      ),
-                                    ),
-                                  ),
-                                  error: (err, _) =>
-                                      Center(child: Text('Error: $err')),
-                                ),
-                          ).animate().fadeIn(delay: 600.ms),
-                          const SizedBox(height: 32),
-                          _sectionLabel('SPATIAL ASSETS'),
-                          const SizedBox(height: 16),
-                          BrandCard(
-                            theme: BrandCardTheme.vibrant,
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                children: [
-                                  Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.map_rounded,
-                                        color: AppColors.gold500,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'ANCESTRAL MAP ARCHITECT',
-                                              style: AppTypography.h3.copyWith(
-                                                color: Colors.white,
-                                                fontSize: 16,
-                                              ),
-                                            ),
-                                            Text(
-                                              'Manage coordinates for cultural sites and municipalities.',
-                                              style: AppTypography.body
-                                                  .copyWith(
-                                                    color: Colors.white60,
-                                                    fontSize: 12,
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 20),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton(
-                                      onPressed: () => context.push('/admin/map-architect'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.gold500,
-                                        foregroundColor: AppColors.forest900,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 16,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                      ),
-                                      child: const Text(
-                                        'OPEN MAP EDITOR',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w900,
-                                          letterSpacing: 1.2,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
                           ),
                           const SizedBox(height: 32),
                           _sectionLabel('GAMIFICATION & ECONOMICS'),
@@ -451,7 +305,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Reset or initialize core platform data (Municipalities, Lessons, Dictionary). Use with caution.',
+                                    'Reset or initialize core platform data (Lessons, Dictionary). Use with caution.',
                                     style: AppTypography.body.copyWith(
                                       color: Colors.white60,
                                       fontSize: 12,
@@ -932,83 +786,6 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
         }),
       ),
     );
-  }
-
-  Widget _dialectRow(
-    BuildContext context,
-    String name,
-    double pct,
-    Color color,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                name.toUpperCase(),
-                style: AppTypography.label.copyWith(
-                  color: AppColors.creamText2,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              Text(
-                '${(pct * 100).toInt()}%',
-                style: AppTypography.mono.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Stack(
-            children: [
-              Container(
-                height: 8,
-                decoration: BoxDecoration(
-                  color: AppColors.creamBorder,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              AnimatedContainer(
-                duration: const Duration(seconds: 1),
-                curve: Curves.easeOutCubic,
-                height: 8,
-                width: MediaQuery.of(context).size.width * 0.7 * pct,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [color, color.withValues(alpha: 0.6)],
-                  ),
-                  borderRadius: BorderRadius.circular(4),
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withValues(alpha: 0.3),
-                      blurRadius: 6,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color _getDialectColor(String dialect) {
-    switch (dialect.toLowerCase()) {
-      case 'mansaka':
-        return AppColors.gold500;
-      case 'mandaya':
-        return AppColors.semanticBlue;
-      default:
-        return AppColors.forest700;
-    }
   }
 }
 

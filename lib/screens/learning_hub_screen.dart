@@ -679,8 +679,6 @@ class LearningHubScreen extends ConsumerWidget {
     switch (language.toLowerCase()) {
       case 'mansaka':
         return AppColors.gold500;
-      case 'mandaya':
-        return const Color(0xFF65A870);
       default:
         return AppColors.semanticBlue;
     }

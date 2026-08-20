@@ -1,6 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum ArtifactTier { common, rare, sacred, epic, ancient, legendary }
+enum ArtifactTier { common, rare, epic, legendary, sacred, ancient }
+
+enum ArtifactRequirementType {
+  xp,
+  lessons,
+  words,
+  streak,
+  mistCrystals,
+}
 
 class Artifact {
   final String id;
@@ -11,7 +19,8 @@ class Artifact {
   final String type;
   final String? culturalNote;
   final ArtifactTier tier;
-  final int rarity;
+  final int rarity; // 1-100, used for weighted drops
+  final ArtifactRequirementType requirementType;
   final int currentProgress;
   final int targetValue;
   final bool isEarned;
@@ -20,7 +29,6 @@ class Artifact {
   final bool isAvailableInShop;
   final DateTime? earnedAt;
   final String? legend;
-
 
   Artifact({
     required this.id,
@@ -31,9 +39,10 @@ class Artifact {
     this.type = 'artifact',
     this.culturalNote,
     this.tier = ArtifactTier.common,
-    this.rarity = 1,
+    this.rarity = 50,
+    this.requirementType = ArtifactRequirementType.xp,
     this.currentProgress = 0,
-    this.targetValue = 1,
+    this.targetValue = 100,
     this.isEarned = false,
     this.crystalCost = 0,
     this.passiveBonus,
@@ -43,12 +52,20 @@ class Artifact {
   });
 
   factory Artifact.fromFirestore(Map<String, dynamic> data, String id) {
-    // Handle tier mapping from string
     ArtifactTier mappedTier = ArtifactTier.common;
     final tierStr = (data['tier'] ?? 'common').toString().toLowerCase();
     for (var value in ArtifactTier.values) {
       if (value.name.toLowerCase() == tierStr) {
         mappedTier = value;
+        break;
+      }
+    }
+
+    ArtifactRequirementType mappedReq = ArtifactRequirementType.xp;
+    final reqStr = (data['requirementType'] ?? 'xp').toString().toLowerCase();
+    for (var value in ArtifactRequirementType.values) {
+      if (value.name.toLowerCase() == reqStr) {
+        mappedReq = value;
         break;
       }
     }
@@ -62,9 +79,10 @@ class Artifact {
       type: data['type'] ?? 'artifact',
       culturalNote: data['culturalNote'],
       tier: mappedTier,
-      rarity: data['rarity'] ?? 1,
+      rarity: data['rarity'] ?? 50,
+      requirementType: mappedReq,
       currentProgress: data['currentProgress'] ?? 0,
-      targetValue: data['targetValue'] ?? 1,
+      targetValue: data['targetValue'] ?? 100,
       isEarned: data['isEarned'] ?? false,
       crystalCost: data['crystalCost'] ?? 0,
       passiveBonus: data['passiveBonus'],
@@ -74,7 +92,6 @@ class Artifact {
           : null,
       legend: data['legend'],
     );
-
   }
 
   Map<String, dynamic> toFirestore() {
@@ -87,6 +104,7 @@ class Artifact {
       'culturalNote': culturalNote,
       'tier': tier.name,
       'rarity': rarity,
+      'requirementType': requirementType.name,
       'currentProgress': currentProgress,
       'targetValue': targetValue,
       'isEarned': isEarned,
@@ -96,7 +114,33 @@ class Artifact {
       'earnedAt': earnedAt != null ? Timestamp.fromDate(earnedAt!) : null,
       'legend': legend,
     };
+  }
 
+  Artifact copyWith({
+    int? currentProgress,
+    bool? isEarned,
+    DateTime? earnedAt,
+  }) {
+    return Artifact(
+      id: id,
+      title: title,
+      description: description,
+      emoji: emoji,
+      imageUrl: imageUrl,
+      type: type,
+      culturalNote: culturalNote,
+      tier: tier,
+      rarity: rarity,
+      requirementType: requirementType,
+      currentProgress: currentProgress ?? this.currentProgress,
+      targetValue: targetValue,
+      isEarned: isEarned ?? this.isEarned,
+      crystalCost: crystalCost,
+      passiveBonus: passiveBonus,
+      isAvailableInShop: isAvailableInShop,
+      earnedAt: earnedAt ?? this.earnedAt,
+      legend: legend,
+    );
   }
 
   double get progress =>

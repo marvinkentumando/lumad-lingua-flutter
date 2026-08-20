@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:math' as math;
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -51,10 +52,11 @@ class AuthService {
     String? avatar,
     String? nativeLanguage,
     String? learningGoal,
+    String? villageCode,
     Map<String, dynamic>? assessment,
   }) async {
     try {
-      // 1. Check for invitation - simplify to email only query to avoid composite index
+      // 1. Check for invitation
       String assignedRole = 'learner';
       String? assignedDialect;
 
@@ -69,8 +71,6 @@ class AuthService {
         final inviteData = pendingInvites.first.data();
         assignedRole = inviteData['role'] ?? 'learner';
         assignedDialect = inviteData['indigenousGroup'];
-
-        // Mark invitation as consumed (optional, or just leave as 'pending' until success)
       }
 
       final userCredential = await _auth.createUserWithEmailAndPassword(
@@ -99,6 +99,37 @@ class AuthService {
             'createdAt': FieldValue.serverTimestamp(),
             'lastLogin': FieldValue.serverTimestamp(),
           };
+
+          if (assignedRole == 'educator') {
+            // Generate unique village code for new educator
+            final chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            final rnd = math.Random();
+            String code = '';
+            bool isUnique = false;
+            
+            while (!isUnique) {
+              code = String.fromCharCodes(
+                Iterable.generate(6, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))),
+              );
+              final check = await firestore.collection('users').where('villageCode', isEqualTo: code).limit(1).get();
+              if (check.docs.isEmpty) isUnique = true;
+            }
+            profileData['villageCode'] = code;
+          }
+
+          if (assignedRole == 'learner' && villageCode != null && villageCode.isNotEmpty) {
+            // Try to find educator by code
+            final eduSnap = await firestore
+                .collection('users')
+                .where('role', isEqualTo: 'educator')
+                .where('villageCode', isEqualTo: villageCode.trim().toUpperCase())
+                .limit(1)
+                .get();
+            
+            if (eduSnap.docs.isNotEmpty) {
+              profileData['educatorId'] = eduSnap.docs.first.id;
+            }
+          }
 
           if (assessment != null) {
             profileData['onboardingAssessment'] = assessment;

@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
+import 'package:go_router/go_router.dart';
 
 class NotificationScreen extends ConsumerStatefulWidget {
   const NotificationScreen({super.key});
@@ -39,7 +40,6 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
           _isFetchingMore = true;
           _limit += 20;
         });
-        // Reset the flag after a short delay to prevent multiple triggers
         Future.delayed(const Duration(seconds: 1), () {
           if (mounted) {
             setState(() => _isFetchingMore = false);
@@ -78,59 +78,49 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     final notificationsAsync = ref.watch(
       paginatedNotificationsProvider(NotificationQuery(user.uid, _limit)),
     );
+    final echoesAsync = ref.watch(communityFeedProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.forest800,
-      appBar: AppBar(
-        title: const Text('Global Alerts'),
-        actions: [
-          if (notificationsAsync.hasValue &&
-              notificationsAsync.value!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Center(
-                child: Text(
-                  'Showing ${_limit > notificationsAsync.value!.length ? notificationsAsync.value!.length : _limit}',
-                  style: AppTypography.label.copyWith(color: Colors.white24, fontSize: 10),
-                ),
-              ),
-            ),
-        ],
-      ),
-      body: notificationsAsync.when(
-        loading: () => _limit == 20
-            ? const Center(child: CircularProgressIndicator(color: AppColors.gold500))
-            : _buildNotificationList(notificationsAsync.value ?? []),
-        error: (err, stack) => Center(
-          child: Text(
-            "Error: $err",
-            style: const TextStyle(color: Colors.white),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: AppColors.forest800,
+        appBar: AppBar(
+          title: const Text('Sanctuary Alerts'),
+          bottom: const TabBar(
+            indicatorColor: AppColors.gold500,
+            labelColor: AppColors.gold500,
+            unselectedLabelColor: Colors.white38,
+            tabs: [
+              Tab(text: 'ALERTS', icon: Icon(Icons.notifications_none_rounded)),
+              Tab(text: 'ECHOES', icon: Icon(Icons.forum_rounded)),
+            ],
           ),
         ),
-        data: (notifications) => _buildNotificationList(notifications),
+        body: TabBarView(
+          children: [
+            // Alerts Tab
+            notificationsAsync.when(
+              loading: () => _limit == 20
+                  ? const Center(child: CircularProgressIndicator(color: AppColors.gold500))
+                  : _buildNotificationList(notificationsAsync.value ?? []),
+              error: (err, stack) => Center(child: Text("Error: $err", style: const TextStyle(color: Colors.white))),
+              data: (notifications) => _buildNotificationList(notifications),
+            ),
+            // Echoes Tab
+            echoesAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
+              error: (err, stack) => Center(child: Text("Error: $err", style: const TextStyle(color: Colors.white))),
+              data: (echoes) => _buildEchoesList(echoes),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildNotificationList(List<Map<String, dynamic>> notifications) {
     if (notifications.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text("🔔", style: TextStyle(fontSize: 64)),
-            const SizedBox(height: 16),
-            Text(
-              "No alerts yet.",
-              style: AppTypography.h3.copyWith(color: Colors.white54),
-            ),
-            Text(
-              "We'll notify you of your achievements!",
-              style: AppTypography.label.copyWith(color: Colors.white30),
-            ),
-          ],
-        ),
-      );
+      return _buildEmptyState("🔔", "No alerts yet.", "We'll notify you of your achievements!");
     }
 
     final user = ref.read(authStateProvider).value;
@@ -155,9 +145,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
           child: GestureDetector(
             onTap: () {
               if (!isRead && user != null) {
-                ref
-                    .read(firebaseServiceProvider)
-                    .markNotificationAsRead(user.uid, notification['id']);
+                ref.read(firebaseServiceProvider).markNotificationAsRead(user.uid, notification['id']);
               }
             },
             child: BrandCard(
@@ -168,9 +156,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: _getNotificationColor(
-                        notification['type'],
-                      ).withValues(alpha: 0.1),
+                      color: _getNotificationColor(notification['type']).withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Text(
@@ -185,20 +171,12 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                       children: [
                         Text(
                           notification['title'] ?? 'Alert',
-                          style: isRead
-                              ? AppTypography.h3.copyWith(
-                                  color: Colors.white70,
-                                )
-                              : AppTypography.h3,
+                          style: isRead ? AppTypography.h3.copyWith(color: Colors.white70) : AppTypography.h3,
                         ),
                         const SizedBox(height: 4),
                         Text(
                           notification['message'] ?? '',
-                          style: isRead
-                              ? AppTypography.body.copyWith(
-                                  color: Colors.white54,
-                                )
-                              : AppTypography.body,
+                          style: isRead ? AppTypography.body.copyWith(color: Colors.white54) : AppTypography.body,
                         ),
                       ],
                     ),
@@ -206,10 +184,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                   if (!isRead)
                     const Padding(
                       padding: EdgeInsets.only(top: 12),
-                      child: CircleAvatar(
-                        radius: 4,
-                        backgroundColor: AppColors.gold500,
-                      ),
+                      child: CircleAvatar(radius: 4, backgroundColor: AppColors.gold500),
                     ),
                 ],
               ),
@@ -217,6 +192,86 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildEchoesList(List<dynamic> echoes) {
+    if (echoes.isEmpty) {
+      return _buildEmptyState("🍃", "The village is quiet.", "Recent community activities will appear here.");
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(24),
+      itemCount: echoes.length,
+      itemBuilder: (context, index) {
+        final echo = echoes[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: BrandCard(
+            onTap: () => context.push('/member/${echo.userId}'),
+            theme: BrandCardTheme.vibrant,
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: AppColors.forest700,
+                  backgroundImage: echo.userPhotoUrl != null
+                      ? (echo.userPhotoUrl.startsWith('http')
+                          ? NetworkImage(echo.userPhotoUrl) as ImageProvider
+                          : AssetImage(echo.userPhotoUrl))
+                      : null,
+                  child: echo.userPhotoUrl == null
+                      ? Text(echo.userName.isNotEmpty ? echo.userName[0].toUpperCase() : '?',
+                          style: const TextStyle(color: Colors.white24, fontSize: 14))
+                      : null,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      RichText(
+                        text: TextSpan(
+                          style: AppTypography.body.copyWith(color: Colors.white70, fontSize: 13),
+                          children: [
+                            TextSpan(
+                              text: echo.userName,
+                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                            const TextSpan(text: ' '),
+                            TextSpan(text: echo.message),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        echo.relativeTime,
+                        style: AppTypography.label.copyWith(color: Colors.white24, fontSize: 9),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(echo.emoji, style: const TextStyle(fontSize: 22)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyState(String emoji, String title, String sub) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 64)),
+          const SizedBox(height: 16),
+          Text(title, style: AppTypography.h3.copyWith(color: Colors.white54)),
+          Text(sub, style: AppTypography.label.copyWith(color: Colors.white30)),
+        ],
+      ),
     );
   }
 
@@ -248,6 +303,3 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     }
   }
 }
-
-
-

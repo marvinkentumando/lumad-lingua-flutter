@@ -454,9 +454,9 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
           "A timeless Mansaka tale of how the world was carved from a giant bird's wing...",
     },
     {
-      "title": "The Weaver of Souls",
+      "title": "The Golden Spirit",
       "excerpt":
-          "A Mandaya legend about the spirit who teaches the patterns found in Dagmay dreams...",
+          "A Mansaka legend about the spirit of the mountains who guided the first tribe to the valley...",
     },
     {
       "title": "Mt. Hamiguitan's Guardian",

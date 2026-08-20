@@ -1,5 +1,3 @@
-import 'package:latlong2/latlong.dart';
-
 class AudioRecording {
   final String id;
   final String title;
@@ -25,7 +23,8 @@ class GeoRecording {
   final String title; // Usually the municipality name
   final String province;
   final String dialect;
-  final LatLng location;
+  final double latitude;
+  final double longitude;
   final String metadata;
   final bool isValidated;
   final List<String> supportedDialects;
@@ -36,7 +35,8 @@ class GeoRecording {
     required this.title,
     required this.province,
     required this.dialect,
-    required this.location,
+    required this.latitude,
+    required this.longitude,
     required this.metadata,
     required this.isValidated,
     this.supportedDialects = const [],
@@ -64,9 +64,8 @@ class GeoRecording {
       title: data['name'] ?? '',
       province: data['province'] ?? 'Davao Region',
       dialect: data['dialect'] ?? 'Lumad',
-      location: geoPoint != null
-          ? LatLng(geoPoint.latitude, geoPoint.longitude)
-          : const LatLng(0, 0),
+      latitude: geoPoint != null ? geoPoint.latitude : 0.0,
+      longitude: geoPoint != null ? geoPoint.longitude : 0.0,
       metadata: data['description'] ?? '',
       isValidated: data['status'] == 'validated',
       supportedDialects: dialects,
@@ -74,6 +73,3 @@ class GeoRecording {
     );
   }
 }
-
-
-

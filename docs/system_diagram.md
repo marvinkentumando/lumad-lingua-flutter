@@ -1,27 +1,27 @@
-# System Architecture Diagram
+# System Architecture Diagram: Sentiment-Driven Pivot
 
-This document illustrates the technical architecture of Lumad Lingua, detailing the flow from user input to external persistence.
+This document illustrates the technical architecture of Lumad Lingua, detailing the flow from social sentiment data to cultural vitality monitoring.
 
 ## 🏗️ Visual Architecture (Mermaid)
 
 ```mermaid
 graph TD
     subgraph Inputs ["1. Inputs Layer"]
-        U[Users: Learners, Contributors, Admins]
-        GPS[GPS / Location Data]
-        VOC[Vocabulary & Cultural Data]
+        U[Users: Learners, Staff/Researchers, Admins]
+        SOC[Social Media: Facebook Posts Data]
+        VOC[Vocabulary & Mansaka Linguistic Data]
         AUD[Audio Input: Pronunciations]
     end
 
     subgraph Client ["2. Client Layer (Flutter App)"]
-        UI[Mobile UI: Glassmorphism / Thematic]
+        UI[Mobile UI: Vitality Dashboard / Learning Hub]
         subgraph Logic ["Business Logic (Riverpod)"]
+            SENT[Sentiment Engine: Vitality Analysis]
             SRS[SRS Engine: Leitner System]
             GAM[Gamification & XP Logic]
-            VAL[Validation Workflows]
         end
         subgraph LocalData ["Local Persistence"]
-            HIVE[(Hive: Upload Queue)]
+            HIVE[(Hive: Local Mastery Cache)]
             CACHE[(Firestore Cache)]
         end
     end
@@ -34,7 +34,7 @@ graph TD
 
     %% Relations
     U --> UI
-    GPS --> Logic
+    SOC --> Logic
     VOC --> Logic
     AUD --> Logic
 
@@ -47,31 +47,32 @@ graph TD
     Logic <--> AUTH
 
     %% Descriptions
-    FS --- FS_DESC[Users, Progress, Dictionary, Audit Logs]
+    FS --- FS_DESC[Social Data, Sentiment Scores, Users, Progress]
     SS --- SS_DESC[Audio fragments .m4a]
 ```
 
 ## 🧩 Component Breakdown
 
 ### 1. Inputs Layer
-*   **Users**: Multiple roles (Learner, Contributor, Educator, Validator, Admin) with distinct permission sets.
-*   **GPS / Location**: Captured during recording to map indigenous fragments to specific Davao regions/municipalities.
-*   **Audio Input**: High-fidelity recordings captured via the `record` package for cultural preservation.
+*   **Users**: Consolidated roles (Learner, Staff/Researcher, Educator, Admin) with direct management access for Researchers.
+*   **Social Data**: Monitoring of Mansaka language usage in digital spaces (Facebook) to track cultural vitality.
+*   **Audio Input**: High-fidelity recordings captured via the `record` package for pronunciation practice.
 
 ### 2. Client Layer (Mobile Application)
-Unlike the original diagram, the "Server" logic is decentralized into the Flutter application for better offline performance:
-*   **SRS Engine**: Resides in `srs_service.dart`. It computes the next review interval for vocabulary.
-*   **Local Persistence (Hive)**: Acts as a buffer. If a user contributes a word while in a remote area without signal, the entry is stored in a Hive-based **Upload Queue** and synced automatically when connectivity returns.
-*   **State Management**: Riverpod handles the reactive data flow between services and the UI.
+The application logic has shifted from geographic mapping to sentiment analysis:
+*   **Sentiment Engine**: Resides in `sentiment_service.dart`. It processes social media data to calculate the "Digital Vitality Index" for the Mansaka language.
+*   **SRS Engine**: Computes mastery levels and review intervals for vocabulary retention.
+*   **Local Persistence (Hive)**: Caches user progress and mastery data for seamless performance.
+*   **State Management**: Riverpod handles reactive data flow, ensuring the Vitality Monitor stays updated with real-time sentiment trends.
 
 ### 3. External Layer
-*   **Firebase Firestore**: The primary source of truth. Stores document versions, user XP, leaderboard rankings, and the validated dictionary.
-*   **Supabase Storage**: Chosen for its robust handling of media assets. All `.m4a` audio fragments contributed by the community are stored here, with signed URLs stored in Firestore.
-*   **Firebase Auth**: Manages secure identity and role-based access control (RBAC).
+*   **Firebase Firestore**: Stores user profiles, progress, dictionary entries, and the `Social_Sentiment_Data` collection.
+*   **Supabase Storage**: Managed hosting for media assets, primarily Mansaka audio recordings and cultural images.
+*   **Firebase Auth**: Secure role-based access control (RBAC).
 
 ## 🔄 Data Flow Summary
-1.  **Submission**: A Contributor records a word (Audio + Metadata).
-2.  **Processing**: The app attaches GPS metadata and checks the local **Upload Queue**.
-3.  **Storage**: The audio file is pushed to **Supabase Storage**; the metadata is pushed to **Firestore** as a `pending` status.
-4.  **Validation**: A Validator reviews the entry in the `ValidatorEntriesScreen`.
-5.  **Activation**: Upon approval, Firestore triggers (via transaction) award XP to the contributor and move the word to the public `dictionary` stream.
+1.  **Collection**: Sentiment data is harvested from digital spaces where Mansaka is used.
+2.  **Analysis**: The `SentimentService` calculates scores (Positive/Neutral/Negative) based on keyword detection and usage frequency.
+3.  **Visualization**: The "Sentiment Trend" dashboard replaces the legacy heatmap, showing the Mansaka language's vitality over time.
+4.  **Contribution**: Researchers add vocabulary and audio directly to Firestore without a "pending" gate, accelerating dictionary expansion.
+5.  **Learning**: Users engage with Mansaka-only lessons, with progress synced between Firestore and the local app state.

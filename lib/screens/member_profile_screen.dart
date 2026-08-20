@@ -103,9 +103,7 @@ class MemberProfileScreen extends ConsumerWidget {
                   _buildStatsRow(context, ref, role, userId, xp, streak, wordsLearned),
                   const SizedBox(height: 40),
                   if (role == UserRole.learner)
-                    _buildArtifactsSection(context, ref, userId)
-                  else
-                    _buildContributionImpact(context, ref, userId, role),
+                    _buildArtifactsSection(context, ref, userId),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -121,9 +119,10 @@ class MemberProfileScreen extends ConsumerWidget {
       case 'admin':
         return UserRole.admin;
       case 'validator':
-        return UserRole.validator;
       case 'contributor':
-        return UserRole.contributor;
+      case 'staff':
+      case 'researcher':
+        return UserRole.staff;
       case 'educator':
         return UserRole.educator;
       default:
@@ -136,12 +135,10 @@ class MemberProfileScreen extends ConsumerWidget {
     switch (role) {
       case UserRole.admin:
         return 'SYSTEM OVERSEER  •  $location';
-      case UserRole.validator:
-        return 'ELDER VALIDATOR  •  $location';
+      case UserRole.staff:
+        return 'RESEARCHER STAFF  •  $location';
       case UserRole.educator:
         return 'WISDOM GUIDE  •  $location';
-      case UserRole.contributor:
-        return 'CULTURAL KEEPER  •  $location';
       case UserRole.learner:
         return 'ELDER PATHFINDER  •  $location';
     }
@@ -253,110 +250,6 @@ class MemberProfileScreen extends ConsumerWidget {
               style: AppTypography.label.copyWith(
                 color: isDark ? Colors.white24 : AppColors.creamText3,
                 fontSize: 7,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildContributionImpact(BuildContext context, WidgetRef ref, String userId, UserRole role) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final metricsAsync = ref.watch(userImpactMetricsProvider(userId));
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Contribution Impact',
-          style: AppTypography.h3.copyWith(
-            color: isDark ? AppColors.gold500 : AppColors.forest500,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 20),
-        metricsAsync.when(
-          data: (metrics) {
-            final double accuracyVal = metrics['accuracy'] ?? 0.0;
-            final double percentile = metrics['percentile'] ?? 0.0;
-            final int xp = metrics['xp'] ?? 0;
-            
-            final accuracy = accuracyVal > 0 
-                ? '${(accuracyVal * 100).toStringAsFixed(0)}%' 
-                : 'N/A';
-            
-            // Rank based on real community percentile
-            String rank;
-            if (percentile >= 0.95) {
-              rank = 'Top 5%';
-            } else if (percentile >= 0.80) {
-              rank = 'Top 20%';
-            } else if (percentile >= 0.50) {
-              rank = 'Top 50%';
-            } else {
-              rank = 'Active';
-            }
-
-            // Spirit Title based on XP
-            String spirit;
-            if (xp >= 5000) {
-              spirit = 'Legend';
-            } else if (xp >= 2000) {
-              spirit = 'Elder';
-            } else if (xp >= 1000) {
-              spirit = 'Guardian';
-            } else if (xp >= 500) {
-              spirit = 'Seeker';
-            } else {
-              spirit = 'Novice';
-            }
-
-            return Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildImpactCard(context, '⭐', 'Accuracy', accuracy),
-                _buildImpactCard(context, '🤝', 'Community', rank),
-                _buildImpactCard(context, '🌿', 'Spirit', spirit),
-              ],
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
-          error: (e, _) => Center(child: Text('Error calculating impact')),
-        ),
-      ],
-    ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1);
-  }
-
-  Widget _buildImpactCard(
-    BuildContext context,
-    String emoji,
-    String label,
-    String value,
-  ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return BrandCard(
-      padding: const EdgeInsets.all(16),
-      borderRadius: 24,
-      child: SizedBox(
-        width: 100,
-        child: Column(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 24)),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: AppTypography.h3.copyWith(
-                color: isDark ? AppColors.gold500 : AppColors.forest700,
-                fontSize: 18,
-              ),
-            ),
-            Text(
-              label.toUpperCase(),
-              style: AppTypography.label.copyWith(
-                color: isDark ? Colors.white24 : AppColors.creamText3,
-                fontSize: 8,
-                letterSpacing: 1,
               ),
             ),
           ],

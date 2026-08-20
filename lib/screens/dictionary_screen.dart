@@ -29,9 +29,6 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
   _DictionarySort _selectedSort = _DictionarySort.alphabetical;
   final _searchController = TextEditingController();
 
-  final PageController _pageController = PageController();
-
-
   List<DictionaryEntry> _applySort(List<DictionaryEntry> entries) {
     var filtered = List<DictionaryEntry>.from(entries);
     switch (_selectedSort) {
@@ -75,13 +72,6 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
     final srsAsync = user != null
         ? ref.watch(srsProgressStreamProvider(user.uid))
         : const AsyncValue.data(<SRSProgress>[]);
-    final dialectsAsync = ref.watch(dialectsProvider);
-
-    final List<String> categories = [
-      'ALL',
-      'SAVED',
-      ...?dialectsAsync.value?.where((d) => d != 'All').map((d) => d.toUpperCase()),
-    ];
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -93,6 +83,30 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                 data: (srsList) {
                   final srsMap = {for (var s in srsList) s.wordId: s};
 
+                  // Filter logic
+                  var items = entries;
+                  if (_selectedCategory == 'SAVED') {
+                    items = items
+                        .where((e) => savedIds.contains(e.id))
+                        .toList();
+                  }
+
+                  if (_searchQuery.isNotEmpty) {
+                    items = items
+                        .where(
+                          (e) =>
+                              e.indigenousWord.toLowerCase().contains(
+                                _searchQuery.toLowerCase(),
+                              ) ||
+                              e.translation.toLowerCase().contains(
+                                _searchQuery.toLowerCase(),
+                              ),
+                        )
+                        .toList();
+                  }
+
+                  items = _applySort(items);
+
                   return Column(
                     children: [
                       Padding(
@@ -101,87 +115,43 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SizedBox(height: 10),
-                            _buildSearchBar(),
-                            const SizedBox(height: 24),
-                            _buildCategoryRow(categories),
+                            _buildSearchBar(
+                              Theme.of(context).brightness == Brightness.dark,
+                              savedIds.length,
+                            ),
                             const SizedBox(height: 16),
                           ],
                         ),
                       ),
                       Expanded(
-                        child: PageView.builder(
-                          controller: _pageController,
-                          onPageChanged: (index) {
-                            if (index < categories.length) {
-                              setState(() {
-                                _selectedCategory = categories[index];
-                              });
-                            }
-                          },
-                          itemCount: categories.length,
-                          itemBuilder: (context, index) {
-                            final category = categories[index];
-                            var items = entries;
-                            if (category == 'SAVED') {
-                              items = items
-                                  .where((e) => savedIds.contains(e.id))
-                                  .toList();
-                            } else if (category != 'ALL') {
-                              items = items
-                                  .where(
-                                    (e) => e.language.toUpperCase() == category,
-                                  )
-                                  .toList();
-                            }
-
-                            if (_searchQuery.isNotEmpty) {
-                              items = items
-                                  .where(
-                                    (e) =>
-                                        e.indigenousWord.toLowerCase().contains(
-                                          _searchQuery.toLowerCase(),
-                                        ) ||
-                                        e.translation.toLowerCase().contains(
-                                          _searchQuery.toLowerCase(),
-                                        ),
-                                  )
-                                  .toList();
-                            }
-
-                            items = _applySort(items);
-
-                            if (items.isEmpty) {
-                              return SingleChildScrollView(
+                        child: items.isEmpty
+                            ? SingleChildScrollView(
                                 child: _buildNoResultsState(
-                                  isSavedTab: category == 'SAVED',
+                                  isSavedTab: _selectedCategory == 'SAVED',
                                 ),
-                              );
-                            }
-
-                            return ListView.builder(
-                              physics: const BouncingScrollPhysics(),
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              itemCount: items.length,
-                              itemBuilder: (context, i) {
-                                final entry = items[i];
-                                final srs = srsMap[entry.id];
-                                return _DictionaryEntryCard(
-                                  entry: entry,
-                                  isExpanded: _expandedWordId == entry.id,
-                                  masteryLevel: srs?.mastery,
-                                  onToggleExpanded: () {
-                                    setState(() {
-                                      _expandedWordId =
-                                          _expandedWordId == entry.id
-                                          ? null
-                                          : entry.id;
-                                    });
-                                  },
-                                );
-                              },
-                            );
-                          },
-                        ),
+                              )
+                            : ListView.builder(
+                                physics: const BouncingScrollPhysics(),
+                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                itemCount: items.length,
+                                itemBuilder: (context, i) {
+                                  final entry = items[i];
+                                  final srs = srsMap[entry.id];
+                                  return _DictionaryEntryCard(
+                                    entry: entry,
+                                    isExpanded: _expandedWordId == entry.id,
+                                    masteryLevel: srs?.mastery,
+                                    onToggleExpanded: () {
+                                      setState(() {
+                                        _expandedWordId =
+                                            _expandedWordId == entry.id
+                                            ? null
+                                            : entry.id;
+                                      });
+                                    },
+                                  );
+                                },
+                              ),
                       ),
                     ],
                   );
@@ -243,7 +213,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(bool isDark, int savedCount) {
     return Row(
       children: [
         Expanded(
@@ -260,8 +230,73 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
           ),
         ),
         const SizedBox(width: 12),
-        _buildSortMenu(Theme.of(context).brightness == Brightness.dark),
+        _buildSavedWordsButton(isDark, savedCount),
+        const SizedBox(width: 12),
+        _buildSortMenu(isDark),
       ],
+    );
+  }
+
+  Widget _buildSavedWordsButton(
+    bool isDark,
+    int savedCount,
+  ) {
+    final isSelected = _selectedCategory == 'SAVED';
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedCategory = isSelected ? 'ALL' : 'SAVED';
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.gold500
+              : (isDark
+                  ? AppColors.forestDarkCard
+                  : Colors.black.withValues(alpha: 0.05)),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color:
+                (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+          ),
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Icon(
+              isSelected ? Icons.bookmark : Icons.bookmark_border_rounded,
+              color: isSelected
+                  ? Colors.black
+                  : (isDark ? AppColors.gold500 : AppColors.forest500),
+              size: 20,
+            ),
+            if (savedCount > 0 && !isSelected)
+              Positioned(
+                top: -8,
+                right: -8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: const BoxDecoration(
+                    color: AppColors.semanticRed,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+                  child: Text(
+                    '$savedCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -346,62 +381,6 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryRow(List<String> categories) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        children: List.generate(categories.length, (index) {
-          final cat = categories[index];
-          final isSelected = _selectedCategory == cat;
-          return Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: GestureDetector(
-              onTap: () {
-                setState(() => _selectedCategory = cat);
-                _pageController.animateToPage(
-                  index,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? (isDark ? AppColors.gold500 : AppColors.forest500)
-                      : (isDark
-                            ? AppColors.forestLightCard
-                            : Colors.black.withValues(alpha: 0.05)),
-                  borderRadius: BorderRadius.circular(25),
-                  border: Border.all(
-                    color: isSelected
-                        ? Colors.transparent
-                        : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
-                  ),
-                ),
-                child: Text(
-                  cat,
-                  style: AppTypography.label.copyWith(
-                    color: isSelected
-                        ? (isDark ? Colors.black : Colors.white)
-                        : (isDark ? Colors.white54 : Colors.black45),
-                    fontWeight: FontWeight.w900,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
       ),
     );
   }
@@ -747,21 +726,6 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard>
                     ),
                   ),
                 ],
-              ),
-            ],
-            if (widget.entry.contributorName != null &&
-                widget.entry.contributorName!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  'Contributed by: ${widget.entry.contributorName}',
-                  style: AppTypography.label.copyWith(
-                    color: isDark ? Colors.white24 : AppColors.creamText3,
-                    fontSize: 10,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
               ),
             ],
           ],

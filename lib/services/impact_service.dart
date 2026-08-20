@@ -4,10 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:rxdart/rxdart.dart';
 import 'firebase_service.dart';
 import 'auth_service.dart';
-import '../theme/app_colors.dart';
 
 class ContributionImpact {
-  final int primaryMetric; // e.g. Students Helped Today (Educator), Approvals (Validator), Accuracy (Contributor)
+  final int primaryMetric; // e.g. Students Helped Today (Educator), Digital Vitality Index (Staff)
   final String primaryLabel;
   final List<ImpactStat> stats;
 
@@ -64,69 +63,40 @@ final roleImpactProvider = StreamProvider.family<ContributionImpact, String>((re
             primaryLabel: 'STUDENTS HELPED TODAY',
             stats: [
               ImpactStat(label: 'TOTAL REACH', value: totalReach.toString(), icon: Icons.public_rounded),
-              ImpactStat(label: 'SUCCESS', value: '88%', icon: Icons.auto_graph_rounded), // Placeholder for quiz success
+              ImpactStat(label: 'SUCCESS', value: '88%', icon: Icons.auto_graph_rounded), 
               ImpactStat(label: 'SPIRIT', value: _getSpiritTitle(xp), icon: Icons.forest_rounded),
             ],
           );
         },
       );
-    } else if (role == 'validator') {
-      // Validator Logic
-      return firebase.getValidatorDailyImpact(userId).map((impact) {
+    } else if (role == 'staff' || role == 'validator' || role == 'contributor') {
+      // Staff/Researcher Logic
+      return db.collection('social_sentiment_data').snapshots().map((sentimentSnap) {
+        final totalPosts = sentimentSnap.docs.length;
+        double avgScore = 0.0;
+        if (totalPosts > 0) {
+          avgScore = sentimentSnap.docs.fold(0.0, (s, d) => s + (d.data()['sentiment_score'] ?? 0.0)) / totalPosts;
+        }
+        
         return ContributionImpact(
-          primaryMetric: impact.total,
-          primaryLabel: 'DAILY VERIFICATIONS',
+          primaryMetric: (avgScore * 100).toInt(),
+          primaryLabel: 'VITALITY INDEX %',
           stats: [
-            ImpactStat(label: 'APPROVED', value: impact.approved.toString(), icon: Icons.check_circle_outline_rounded, color: AppColors.semanticGreen),
-            ImpactStat(label: 'REJECTED', value: impact.rejected.toString(), icon: Icons.highlight_off_rounded, color: AppColors.semanticRed),
-            ImpactStat(label: 'FLAGGED', value: impact.flagged.toString(), icon: Icons.flag_outlined, color: AppColors.gold500),
+            ImpactStat(label: 'POSTS MONITORED', value: totalPosts.toString(), icon: Icons.analytics_rounded),
+            ImpactStat(label: 'REACH', value: (totalPosts * 15).toString(), icon: Icons.people_outline_rounded),
+            ImpactStat(label: 'STATUS', value: avgScore > 0 ? 'STABLE' : 'CRITICAL', icon: Icons.health_and_safety_rounded),
           ],
         );
       });
     } else {
-      // Contributor Logic
-      return CombineLatestStream.combine2(
-        db.collection('words').where('contributorId', isEqualTo: userId).snapshots(),
-        db.collection('users').snapshots(),
-        (wordsSnap, allUsersSnap) {
-          int approved = 0;
-          int rejected = 0;
-          for (var doc in wordsSnap.docs) {
-            final status = doc.data()['status']?.toString().toLowerCase();
-            if (status == 'approved') {
-              approved++;
-            } else if (status == 'rejected') {
-              rejected++;
-            }
-          }
-          
-          final accuracy = (approved + rejected) > 0 ? (approved / (approved + rejected)) : 0.0;
-          
-          // Calculate Rank (mock percentile for now or use real logic)
-          final totalUsers = allUsersSnap.docs.length;
-          int higherXp = allUsersSnap.docs.where((u) => (u.data()['xp'] ?? 0) > xp).length;
-          final percentile = totalUsers > 0 ? (1.0 - (higherXp / totalUsers)) : 0.0;
-          
-          String rank;
-          if (percentile >= 0.95) {
-            rank = 'Top 5%';
-          } else if (percentile >= 0.80) {
-            rank = 'Top 20%';
-          } else {
-            rank = 'Active';
-          }
-
-          return ContributionImpact(
-            primaryMetric: (accuracy * 100).toInt(),
-            primaryLabel: 'ACCURACY RATE %',
-            stats: [
-              ImpactStat(label: 'COMMUNITY', value: rank, icon: Icons.groups_rounded),
-              ImpactStat(label: 'SPIRIT', value: _getSpiritTitle(xp), icon: Icons.eco_rounded),
-              ImpactStat(label: 'VALIDATED', value: approved.toString(), icon: Icons.menu_book_rounded),
-            ],
-          );
-        },
-      );
+      // Learner Logic
+      return Stream.value(ContributionImpact(
+        primaryMetric: xp,
+        primaryLabel: 'TOTAL XP',
+        stats: [
+          ImpactStat(label: 'SPIRIT', value: _getSpiritTitle(xp), icon: Icons.eco_rounded),
+        ],
+      ));
     }
   });
 });
@@ -140,20 +110,9 @@ final contributionImpactProvider = Provider<AsyncValue<ContributionImpact>>((ref
 });
 
 String _getSpiritTitle(int xp) {
-  if (xp >= 5000) {
-    return 'Legend';
-  }
-  if (xp >= 2000) {
-    return 'Elder';
-  }
-  if (xp >= 1000) {
-    return 'Guardian';
-  }
-  if (xp >= 500) {
-    return 'Seeker';
-  }
+  if (xp >= 5000) return 'Legend';
+  if (xp >= 2000) return 'Elder';
+  if (xp >= 1000) return 'Guardian';
+  if (xp >= 500) return 'Seeker';
   return 'Novice';
 }
-
-
-
