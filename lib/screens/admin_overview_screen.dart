@@ -1,18 +1,23 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
+import '../widgets/brand_background.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/firebase_service.dart';
+import '../services/haptic_service.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/wotd_widget.dart';
 import '../services/auth_service.dart';
 import '../services/database_seeder.dart';
 import '../services/word_of_day_service.dart';
 import '../models/dictionary_entry.dart';
+import '../widgets/branded_empty_state.dart';
+import '../widgets/skeleton.dart';
 
 class AdminOverviewScreen extends ConsumerStatefulWidget {
   const AdminOverviewScreen({super.key});
@@ -58,21 +63,11 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
     final activityAsync = ref.watch(platformActivityProvider);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.1,
-              child: Image.asset(
-                'assets/images/topo_map.png',
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-          SafeArea(
-            child: RefreshIndicator(
-              onRefresh: () async {
+      backgroundColor: Colors.transparent,
+      body: BrandBackground(
+        child: SafeArea(
+          child: RefreshIndicator(
+            onRefresh: () async {
                 ref.invalidate(systemHealthProvider);
                 ref.invalidate(platformActivityProvider);
                 await Future.delayed(const Duration(seconds: 1));
@@ -84,7 +79,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                 );
               },
               color: AppColors.gold500,
-              backgroundColor: isDark ? AppColors.forest800 : Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(20),
@@ -94,282 +89,277 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                     _buildHeroBanner(context),
                     const SizedBox(height: 24),
                     _sectionLabel('VILLAGE PULSE'),
-                          const SizedBox(height: 16),
-                          const WotdWidget(),
-                          const SizedBox(height: 12),
-                          _buildWotdAdminControls(),
-                          const SizedBox(height: 32),
-                          _sectionLabel('PLATFORM STATS'),
-                          const SizedBox(height: 16),
-                          GridView.count(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                            childAspectRatio: 1.45,
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            children:
-                                [
-                                      _statCard(
-                                        ref
-                                            .watch(totalUsersCountProvider)
-                                            .when(
-                                              data: (count) => count.toString(),
-                                              loading: () => '...',
-                                              error: (_, __) => '!',
-                                            ),
-                                        'Total Users',
-                                        Icons.people_outline,
-                                        AppColors.semanticBlue,
-                                      ),
-                                      _statCard(
-                                        ref
-                                            .watch(totalWordsCountProvider)
-                                            .when(
-                                              data: (count) => count.toString(),
-                                              loading: () => '...',
-                                              error: (_, __) => '!',
-                                            ),
-                                        'Words Added',
-                                        Icons.library_books_outlined,
-                                        AppColors.semanticGreen,
-                                      ),
-                                      _statCard(
-                                        ref
-                                            .watch(totalAudioClipsCountProvider)
-                                            .when(
-                                              data: (count) => count.toString(),
-                                              loading: () => '...',
-                                              error: (_, __) => '!',
-                                            ),
-                                        'Audio Clips',
-                                        Icons.mic_outlined,
-                                        AppColors.semanticRed,
-                                      ),
-                                      GestureDetector(
-                                        onTap: () =>
-                                            context.push('/admin/dictionary'),
-                                        child: _statCard(
-                                          'MANAGE',
-                                          'Dictionary',
-                                          Icons.book_rounded,
-                                          AppColors.gold500,
-                                        ),
-                                      ),
-                                      GestureDetector(
-                                        onTap: () =>
-                                            context.push('/admin/lessons'),
-                                        child: _statCard(
-                                          'MANAGE',
-                                          'Lessons',
-                                          Icons.library_books_rounded,
-                                          AppColors.semanticBlue,
-                                        ),
-                                      ),
-                                    ]
-                                    .animate(interval: 80.ms)
-                                    .fadeIn(delay: 100.ms)
-                                    .scale(begin: const Offset(0.92, 0.92)),
-                          ),
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            width: double.infinity,
-                            child: BrandButton(
-                              text: "ADVANCED PEDAGOGICAL ANALYTICS",
-                              type: BrandButtonType.primary,
-                              icon: Icons.analytics_rounded,
-                              onTap: () => context.push('/admin/analytics'),
-                            ),
-                          ).animate().fadeIn(delay: 200.ms),
-                          const SizedBox(height: 32),
-                          _sectionLabel('SYSTEM HEALTH'),
-                          const SizedBox(height: 16),
-                          healthAsync.when(
-                            data: (health) => _buildSystemHealthGrid(health),
-                            loading: () => _buildSystemHealthGrid(null),
-                            error: (_, __) => _buildSystemHealthGrid(null),
-                          ),
-                          const SizedBox(height: 32),
-                          _sectionLabel('USER GROWTH (last 7 days)'),
-                          const SizedBox(height: 16),
-                          activityAsync.when(
-                            data: (data) => BrandCard(
-                              theme: BrandCardTheme.vibrant,
-                              child: _buildInteractiveBarChart(
-                                values: data['growth'] ?? [0,0,0,0,0,0,0],
-                                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                                color: AppColors.semanticBlue,
-                                tappedIndex: _tappedGrowthBar,
-                                onTap: (i) => setState(() => _tappedGrowthBar = _tappedGrowthBar == i ? null : i),
+                    const SizedBox(height: 16),
+                    const WotdWidget(),
+                    const SizedBox(height: 12),
+                    _buildWotdAdminControls(),
+                    const SizedBox(height: 32),
+                    _sectionLabel('PLATFORM STATS'),
+                    const SizedBox(height: 16),
+                    GridView.count(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 1.45,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: [
+                        ref.watch(totalUsersCountProvider).when(
+                              data: (count) => _statCard(
+                                count.toString(),
+                                'Total Users',
+                                Icons.people_outline,
+                                AppColors.semanticBlue,
                               ),
-                            ).animate().fadeIn(delay: 400.ms),
-                            loading: () => const Center(child: CircularProgressIndicator()),
-                            error: (_, __) => const Text('Error loading growth data'),
-                          ),
-                          const SizedBox(height: 32),
-                          _sectionLabel('GAMIFICATION & ECONOMICS'),
-                          const SizedBox(height: 16),
-                          BrandCard(
-                            theme: BrandCardTheme.gold,
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                children: [
-                                  Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.auto_awesome_rounded,
-                                        color: AppColors.forest900,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'WARRIOR CIRCLE OPS',
-                                              style: AppTypography.h3.copyWith(
-                                                color: AppColors.forest900,
-                                                fontSize: 16,
-                                              ),
-                                            ),
-                                            Text(
-                                              'Manage seasons, shop prices, and duel moderation.',
-                                              style: AppTypography.body
-                                                  .copyWith(
-                                                    color: AppColors.forest700,
-                                                    fontSize: 12,
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 20),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton(
-                                      onPressed: () => context.push('/admin/gamification'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.forest900,
-                                        foregroundColor: AppColors.gold500,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 16,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                      ),
-                                      child: const Text(
-                                        'GO TO ECONOMICS HUB',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w900,
-                                          letterSpacing: 1.2,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              loading: () => _statCard(
+                                '',
+                                'Total Users',
+                                Icons.people_outline,
+                                AppColors.semanticBlue,
+                                isLoading: true,
+                              ),
+                              error: (_, __) => _statCard(
+                                '!',
+                                'Total Users',
+                                Icons.people_outline,
+                                AppColors.semanticBlue,
                               ),
                             ),
+                        ref.watch(totalWordsCountProvider).when(
+                              data: (count) => _statCard(
+                                count.toString(),
+                                'Words Added',
+                                Icons.library_books_outlined,
+                                AppColors.semanticGreen,
+                              ),
+                              loading: () => _statCard(
+                                '',
+                                'Words Added',
+                                Icons.library_books_outlined,
+                                AppColors.semanticGreen,
+                                isLoading: true,
+                              ),
+                              error: (_, __) => _statCard(
+                                '!',
+                                'Words Added',
+                                Icons.library_books_outlined,
+                                AppColors.semanticGreen,
+                              ),
+                            ),
+                        ref.watch(totalAudioClipsCountProvider).when(
+                              data: (count) => _statCard(
+                                count.toString(),
+                                'Audio Clips',
+                                Icons.mic_outlined,
+                                AppColors.semanticRed,
+                              ),
+                              loading: () => _statCard(
+                                '',
+                                'Audio Clips',
+                                Icons.mic_outlined,
+                                AppColors.semanticRed,
+                                isLoading: true,
+                              ),
+                              error: (_, __) => _statCard(
+                                '!',
+                                'Audio Clips',
+                                Icons.mic_outlined,
+                                AppColors.semanticRed,
+                              ),
+                            ),
+                        GestureDetector(
+                          onTap: () {
+                            HapticService.selection();
+                            context.push('/admin/dictionary');
+                          },
+                          child: _statCard(
+                            'MANAGE',
+                            'Dictionary',
+                            Icons.book_rounded,
+                            AppColors.gold500,
                           ),
-                          const SizedBox(height: 32),
-                          _sectionLabel('SYSTEM MAINTENANCE'),
-                          const SizedBox(height: 16),
-                          BrandCard(
-                            theme: BrandCardTheme.vibrant,
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            HapticService.selection();
+                            context.push('/admin/lessons');
+                          },
+                          child: _statCard(
+                            'MANAGE',
+                            'Lessons',
+                            Icons.library_books_rounded,
+                            AppColors.semanticBlue,
+                          ),
+                        ),
+                      ]
+                          .animate(interval: 80.ms)
+                          .fadeIn(delay: 100.ms)
+                          .scale(begin: const Offset(0.92, 0.92)),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: BrandButton(
+                        text: "ADVANCED PEDAGOGICAL ANALYTICS",
+                        type: BrandButtonType.primary,
+                        icon: Icons.analytics_rounded,
+                        onTap: () => context.push('/admin/analytics'),
+                      ),
+                    ).animate().fadeIn(delay: 200.ms),
+                    const SizedBox(height: 32),
+                    _sectionLabel('SYSTEM HEALTH'),
+                    const SizedBox(height: 16),
+                    healthAsync.when(
+                      data: (health) => _buildSystemHealthGrid(health),
+                      loading: () => _buildSystemHealthGrid(null),
+                      error: (_, __) => _buildSystemHealthGrid(null),
+                    ),
+                    const SizedBox(height: 32),
+                    _sectionLabel('USER GROWTH (last 7 days)'),
+                    const SizedBox(height: 16),
+                    activityAsync.when(
+                      data: (data) => BrandCard(
+                        theme: BrandCardTheme.vibrant,
+                        child: _buildInteractiveBarChart(
+                          values: data['growth'] ?? [0, 0, 0, 0, 0, 0, 0],
+                          labels: [
+                            'Mon',
+                            'Tue',
+                            'Wed',
+                            'Thu',
+                            'Fri',
+                            'Sat',
+                            'Sun'
+                          ],
+                          color: AppColors.semanticBlue,
+                          tappedIndex: _tappedGrowthBar,
+                          onTap: (i) => setState(() =>
+                              _tappedGrowthBar = _tappedGrowthBar == i ? null : i),
+                        ),
+                      ).animate().fadeIn(delay: 400.ms),
+                      loading: () => _buildChartSkeleton(),
+                      error: (_, __) => const Text('Error loading growth data'),
+                    ),
+                    const SizedBox(height: 32),
+                    _sectionLabel('GAMIFICATION & ECONOMICS'),
+                    const SizedBox(height: 16),
+                    BrandCard(
+                      theme: BrandCardTheme.gold,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.auto_awesome_rounded,
+                                  color: AppColors.forest900,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      const Icon(
-                                        Icons.auto_fix_high_rounded,
-                                        color: AppColors.semanticRed,
-                                      ),
-                                      const SizedBox(width: 12),
                                       Text(
-                                        'DATABASE SEEDER',
+                                        'WARRIOR CIRCLE OPS',
                                         style: AppTypography.h3.copyWith(
-                                          color: Colors.white,
+                                          color: AppColors.forest900,
                                           fontSize: 16,
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Reset or initialize core platform data (Lessons, Dictionary). Use with caution.',
-                                    style: AppTypography.body.copyWith(
-                                      color: Colors.white60,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: ElevatedButton(
-                                          onPressed: () => _showSeedConfirmation(),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: AppColors.semanticRed.withValues(alpha: 0.2),
-                                            foregroundColor: AppColors.semanticRed,
-                                            side: const BorderSide(color: AppColors.semanticRed),
-                                            padding: const EdgeInsets.symmetric(vertical: 16),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                          ),
-                                          child: const Text(
-                                            'SEED DATABASE',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w900,
-                                              letterSpacing: 1.2,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: ElevatedButton(
-                                          onPressed: () => _syncMetadata(),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: AppColors.gold500.withValues(alpha: 0.2),
-                                            foregroundColor: AppColors.gold500,
-                                            side: const BorderSide(color: AppColors.gold500),
-                                            padding: const EdgeInsets.symmetric(vertical: 16),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                          ),
-                                          child: const Text(
-                                            'SYNC METADATA',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w900,
-                                              letterSpacing: 1.2,
-                                            ),
-                                          ),
+                                      Text(
+                                        'Manage seasons, shop prices, and duel moderation.',
+                                        style: AppTypography.body.copyWith(
+                                          color: AppColors.forest700,
+                                          fontSize: 12,
                                         ),
                                       ),
                                     ],
                                   ),
-                                ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: double.infinity,
+                              child: BrandButton(
+                                text: 'GO TO ECONOMICS HUB',
+                                onTap: () =>
+                                    context.push('/admin/gamification'),
+                                type: BrandButtonType.primary,
+                                icon: Icons.auto_awesome_rounded,
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 100),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 32),
+                    _sectionLabel('SYSTEM MAINTENANCE'),
+                    const SizedBox(height: 16),
+                    BrandCard(
+                      theme: BrandCardTheme.vibrant,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.auto_fix_high_rounded,
+                                  color: AppColors.semanticRed,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'DATABASE SEEDER',
+                                  style: AppTypography.h3.copyWith(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Reset or initialize core platform data (Lessons, Dictionary). Use with caution.',
+                              style: AppTypography.body.copyWith(
+                                color: Colors.white60,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: BrandButton(
+                                    text: 'SEED DATABASE',
+                                    onTap: () => _showSeedConfirmation(),
+                                    type: BrandButtonType.danger,
+                                    icon: Icons.auto_fix_high_rounded,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: BrandButton(
+                                    text: 'SYNC METADATA',
+                                    onTap: () => _syncMetadata(),
+                                    type: BrandButtonType.secondary,
+                                    icon: Icons.sync_rounded,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 100),
+                  ],
+                ),
+              ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -394,8 +384,12 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
             Expanded(
               child: BrandButton(
                 text: isManual ? "RESUME AUTO" : "PICK MANUALLY",
-                type: isManual ? BrandButtonType.primary : BrandButtonType.secondary,
-                icon: isManual ? Icons.auto_mode_rounded : Icons.edit_calendar_rounded,
+                type: isManual
+                    ? BrandButtonType.primary
+                    : BrandButtonType.secondary,
+                icon: isManual
+                    ? Icons.auto_mode_rounded
+                    : Icons.edit_calendar_rounded,
                 onTap: () {
                   if (isManual) {
                     _resumeAutoRotation();
@@ -460,7 +454,8 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
       await ref.read(firebaseServiceProvider).syncMunicipalityDialects();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Metadata synced! Towns updated with current dialects.')),
+        const SnackBar(
+            content: Text('Metadata synced! Towns updated with current dialects.')),
       );
     } catch (e) {
       if (!mounted) return;
@@ -484,13 +479,13 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
             onPressed: () => Navigator.pop(context),
             child: const Text('CANCEL'),
           ),
-          ElevatedButton(
-            onPressed: () async {
+          BrandButton(
+            text: 'PROCEED',
+            onTap: () async {
               Navigator.pop(context);
               _runSeeder();
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticRed),
-            child: const Text('PROCEED'),
+            type: BrandButtonType.danger,
           ),
         ],
       ),
@@ -542,20 +537,20 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
+                      horizontal: 12,
+                      vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.1),
+                      color: Colors.black.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       'SYSTEM OVERSEER  •  COMMANDER',
                       style: AppTypography.label.copyWith(
-                        color: Colors.black87,
+                        color: Colors.black,
                         fontWeight: FontWeight.w900,
-                        fontSize: 9,
-                        letterSpacing: 1,
+                        fontSize: 10,
+                        letterSpacing: 1.5,
                       ),
                     ),
                   ),
@@ -596,15 +591,18 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
               value = data['uptime'] ?? value;
           }
         }
+
+        final isPulsing = value == 'Online' || value == 'Healthy';
+
         return Expanded(
           child: Container(
             margin: EdgeInsets.only(right: h == _defaultHealth.last ? 0 : 10),
             padding: const EdgeInsets.symmetric(vertical: 16),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.forestDarkCard : Colors.white,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isDark 
+                color: isDark
                     ? (h['color'] as Color).withValues(alpha: 0.15)
                     : AppColors.creamBorder,
               ),
@@ -615,19 +613,39 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                   h['icon'] as IconData,
                   color: h['color'] as Color,
                   size: 20,
-                ),
+                )
+                    .animate(
+                      onPlay: (c) => isPulsing ? c.repeat(reverse: true) : c.stop(),
+                    )
+                    .tint(
+                      color: (h['color'] as Color).withValues(alpha: 0.4),
+                      duration: 2.seconds,
+                    ),
                 const SizedBox(height: 8),
                 Text(
                   value,
                   style: AppTypography.h3.copyWith(
-                    color: isDark ? Colors.white : AppColors.forest500,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 13,
                   ),
-                ),
+                )
+                    .animate(
+                      onPlay: (c) => isPulsing ? c.repeat(reverse: true) : c.stop(),
+                    )
+                    .custom(
+                      duration: 2.seconds,
+                      builder: (context, val, child) => Opacity(
+                        opacity: 0.6 + (val * 0.4),
+                        child: child,
+                      ),
+                    ),
                 Text(
                   (h['label'] as String).toUpperCase(),
                   style: AppTypography.label.copyWith(
-                    color: isDark ? Colors.white24 : AppColors.creamText3,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurfaceVariant
+                        .withValues(alpha: 0.5),
                     fontSize: 7,
                     fontWeight: FontWeight.w900,
                   ),
@@ -640,29 +658,55 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
     );
   }
 
-  Widget _sectionLabel(String label) => Text(
-    label,
-    style: AppTypography.mono.copyWith(
-      color: isDark ? Colors.white24 : AppColors.creamText3,
-      fontSize: 9,
-      letterSpacing: 2,
-    ),
-  );
+  Widget _buildChartSkeleton() {
+    return BrandCard(
+      theme: BrandCardTheme.vibrant,
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: List.generate(7, (i) => Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Skeleton(
+                    height: 30 + (i * 12.0) % 60.0,
+                    borderRadius: 6,
+                  ),
+                  const SizedBox(height: 10),
+                  const Skeleton(height: 8, width: 24, borderRadius: 2),
+                ],
+              ),
+            ),
+          )),
+        ),
+      ),
+    ).animate().fadeIn();
+  }
 
-  Widget _statCard(String value, String label, IconData icon, Color color) {
+  Widget _sectionLabel(String label) => Text(
+        label,
+        style: AppTypography.mono.copyWith(
+          color: isDark ? Colors.white24 : AppColors.creamText3,
+          fontSize: 9,
+          letterSpacing: 2,
+        ),
+      );
+
+  Widget _statCard(String value, String label, IconData icon, Color color, {bool isLoading = false}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.forest700.withValues(alpha: 0.5) : Colors.white,
+        color: isDark ? AppColors.forest700.withValues(alpha: 0.5) : AppColors.gold500,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isDark 
-              ? color.withValues(alpha: 0.1)
-              : AppColors.creamBorder,
+          color: isDark ? color.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.1),
         ),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.05),
+            color: isDark ? color.withValues(alpha: 0.05) : AppColors.gold700.withValues(alpha: 0.2),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -675,26 +719,29 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: isDark ? color.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: color, size: 20),
+            child: Icon(icon, color: isDark ? color : AppColors.forest900, size: 20),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                value,
-                style: AppTypography.display.copyWith(
-                  color: isDark ? Colors.white : AppColors.forest500,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900,
+              if (isLoading)
+                const Skeleton(width: 60, height: 28, borderRadius: 8)
+              else
+                Text(
+                  value,
+                  style: AppTypography.display.copyWith(
+                    color: isDark ? Colors.white : AppColors.forest900,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-              ),
               Text(
                 label.toUpperCase(),
                 style: AppTypography.label.copyWith(
-                  color: isDark ? Colors.white24 : AppColors.creamText3,
+                  color: isDark ? Colors.white24 : AppColors.forest700,
                   fontSize: 8,
                   letterSpacing: 1.0,
                 ),
@@ -719,11 +766,14 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: List.generate(values.length, (i) {
-          final pct = values[i] / max;
+          final pct = values[i] / (max == 0 ? 1 : max);
           final isTapped = tappedIndex == i;
           return Expanded(
             child: GestureDetector(
-              onTap: () => onTap(i),
+              onTap: () {
+                HapticService.light();
+                onTap(i);
+              },
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Column(
@@ -799,6 +849,24 @@ class _WordPickerSheet extends ConsumerStatefulWidget {
 class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
   String _search = '';
   String _dialect = 'All';
+  Timer? _debounce;
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        setState(() => _search = query);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -813,7 +881,7 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
       decoration: BoxDecoration(
-        color: isDark ? AppColors.forest800 : AppColors.creamBg,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: Column(
@@ -823,7 +891,7 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: isDark ? Colors.white10 : Colors.black12,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -838,13 +906,13 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
                       Text(
                         'Select WOTD',
                         style: AppTypography.h2.copyWith(
-                          color: isDark ? Colors.white : AppColors.forest900,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       Text(
                         'Force a word to be the Word of the Day',
                         style: AppTypography.body.copyWith(
-                          color: isDark ? Colors.white60 : AppColors.forest600,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 12,
                         ),
                       ),
@@ -861,16 +929,19 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: TextField(
-              onChanged: (v) => setState(() => _search = v),
-              style: TextStyle(color: isDark ? Colors.white : Colors.black),
+              controller: _searchController,
+              onChanged: _onSearchChanged,
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               decoration: InputDecoration(
                 hintText: 'Search for a word...',
                 hintStyle: TextStyle(
-                  color: isDark ? Colors.white38 : Colors.black38,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant
+                      .withValues(alpha: 0.5),
                 ),
                 prefixIcon: const Icon(Icons.search_rounded),
                 filled: true,
-                fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+                fillColor:
+                    Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
@@ -915,27 +986,17 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
             child: wordsAsync.when(
               data: (words) {
                 // Filter to only show approved words for WOTD
-                final approvedWords = words.where((w) => w.status == ValidationStatus.approved).toList();
+                final approvedWords = words
+                    .where((w) => w.status == ValidationStatus.approved)
+                    .toList();
 
                 if (approvedWords.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.search_off_rounded,
-                          size: 48,
-                          color: isDark ? Colors.white10 : Colors.black12,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No approved words found',
-                          style: TextStyle(
-                            color: isDark ? Colors.white38 : Colors.black38,
-                          ),
-                        ),
-                      ],
-                    ),
+                  return BrandedEmptyState(
+                    title: _search.isNotEmpty ? 'Word Not Found' : 'No Sacred Words',
+                    message: _search.isNotEmpty
+                        ? 'Try a different search term.'
+                        : 'No approved words available for rotation.',
+                    icon: Icons.search_off_rounded,
                   );
                 }
                 return ListView.builder(
@@ -944,7 +1005,7 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
                   itemBuilder: (context, i) {
                     final w = approvedWords[i];
                     return Card(
-                      color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.white,
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
                       margin: const EdgeInsets.only(bottom: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -954,14 +1015,14 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
                         title: Text(
                           w.indigenousWord,
                           style: AppTypography.h3.copyWith(
-                            color: isDark ? Colors.white : AppColors.forest900,
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 18,
                           ),
                         ),
                         subtitle: Text(
-                          '${w.language} • ${w.translation}',
+                          '${w.language} \u2022 ${w.translation}',
                           style: AppTypography.body.copyWith(
-                            color: isDark ? Colors.white60 : AppColors.forest600,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
                         ),
@@ -985,7 +1046,8 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirm WOTD'),
-        content: Text('Set "${word.indigenousWord}" as the Word of the Day? This will override automatic rotation.'),
+        content: Text(
+            'Set "${word.indigenousWord}" as the Word of the Day? This will override automatic rotation.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -998,7 +1060,8 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
               _setWord(word);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500),
-            child: const Text('SET AS WOTD', style: TextStyle(color: Colors.black)),
+            child:
+                const Text('SET AS WOTD', style: TextStyle(color: Colors.black)),
           ),
         ],
       ),
@@ -1010,7 +1073,8 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
       await ref.read(wordOfDayServiceProvider).setManualWord(word.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('"${word.indigenousWord}" is now the Word of the Day.')),
+        SnackBar(
+            content: Text('"${word.indigenousWord}" is now the Word of the Day.')),
       );
     } catch (e) {
       if (!mounted) return;
@@ -1020,6 +1084,3 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
     }
   }
 }
-
-
-

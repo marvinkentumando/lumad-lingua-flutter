@@ -21,6 +21,9 @@ import '../widgets/activity_views/matching_view.dart';
 import '../widgets/activity_views/pronunciation_view.dart';
 import '../widgets/activity_views/scenario_view.dart';
 import '../widgets/activity_views/listening_view.dart';
+import '../widgets/activity_views/word_hunt_view.dart';
+import '../widgets/activity_views/true_false_view.dart';
+import '../widgets/activity_views/fill_blanks_view.dart';
 import '../providers/student_provider.dart';
 import '../providers/quest_provider.dart';
 import '../models/quest.dart';
@@ -30,10 +33,12 @@ import '../widgets/assessment_overlay.dart';
 
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:audio_waveforms/audio_waveforms.dart';
-import '../widgets/grammar_nugget_panel.dart';
 import '../widgets/parallax_background.dart';
 import '../widgets/elders_wisdom_panel.dart';
 import '../utils/icon_utils.dart';
+import '../services/task_evaluator.dart';
+import '../widgets/lesson_session/session_widgets.dart';
+import '../widgets/lesson_session/results_view.dart';
 import 'package:confetti/confetti.dart';
 
 class LessonSessionScreen extends ConsumerStatefulWidget {
@@ -48,6 +53,12 @@ class LessonSessionScreen extends ConsumerStatefulWidget {
 class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
   // MCQ
   int? _selectedIndex;
+
+  // Word Hunt
+  final Set<String> _foundWords = {};
+
+  // Fill in the Blanks
+  final Map<int, String> _selectedBlanks = {};
 
   // Scrambler
   List<String> _scrambledParts = [];
@@ -92,38 +103,6 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
   LessonTask? _suddenDeathTask;
   LessonTask? _lastTask;
   bool _showLeaderboardSnippet = false;
-
-  double _stringSimilarity(String a, String b) {
-    if (a == b) return 1.0;
-    if (a.isEmpty || b.isEmpty) return 0.0;
-    final m = a.length;
-    final n = b.length;
-    final dp = List.generate(m + 1, (i) => List.filled(n + 1, 0));
-    for (var i = 0; i <= m; i++) {
-      dp[i][0] = i;
-    }
-    for (var j = 0; j <= n; j++) {
-      dp[0][j] = j;
-    }
-    for (var i = 1; i <= m; i++) {
-      for (var j = 1; j <= n; j++) {
-        if (a[i - 1] == b[j - 1]) {
-          dp[i][j] = dp[i - 1][j - 1];
-        } else {
-          dp[i][j] =
-              1 +
-              [
-                dp[i - 1][j],
-                dp[i][j - 1],
-                dp[i - 1][j - 1],
-              ].reduce((v, e) => v < e ? v : e);
-        }
-      }
-    }
-    final distance = dp[m][n];
-    final maxLen = m > n ? m : n;
-    return 1.0 - (distance / maxLen);
-  }
 
   @override
   void initState() {
@@ -178,6 +157,8 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     if (task == null) return;
 
     _selectedIndex = null;
+    _foundWords.clear();
+    _selectedBlanks.clear();
     _scrambledParts = [];
     _availableParts = List.from(task.sentenceParts)..shuffle();
     _matchedPairs = {};
@@ -192,6 +173,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
 
   void _onOptionSelected(int index) {
     if (_showFeedback) return;
+    HapticService.selection();
     setState(() {
       _selectedIndex = index;
     });
@@ -228,6 +210,8 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     switch (task.type) {
       case TaskType.multipleChoice:
       case TaskType.listening:
+      case TaskType.trueOrFalse:
+      case TaskType.scenario:
         return _selectedIndex != null;
       case TaskType.sentenceReordering:
         return _scrambledParts.length == task.sentenceParts.length;
@@ -237,8 +221,10 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
         return _hasRecorded;
       case TaskType.vocabulary:
         return _flashcardFlipped;
-      case TaskType.scenario:
-        return _selectedIndex != null;
+      case TaskType.wordHunt:
+        return _foundWords.length == task.options.length;
+      case TaskType.fillInTheBlanks:
+        return _selectedBlanks.length == task.sentenceParts.length;
     }
   }
 
@@ -253,72 +239,23 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     if (task == null) return;
     if (!_isTaskComplete(task)) return;
 
-    bool isCorrect = false;
-    String currentFeedbackSubtitle = "";
+    final evaluation = TaskEvaluator.evaluate(
+      task: task,
+      selectedIndex: _selectedIndex,
+      scrambledParts: _scrambledParts,
+      matchedPairs: _matchedPairs,
+      selectedBlanks: _selectedBlanks,
+      hasRecorded: _hasRecorded,
+      lastWords: _lastWords,
+    );
 
-    switch (task.type) {
-      case TaskType.multipleChoice:
-      case TaskType.listening:
-        isCorrect = _selectedIndex == task.correctAnswerIndex;
-        currentFeedbackSubtitle = isCorrect
-            ? task.hintMetadata
-            : "Correct answer: ${task.options[task.correctAnswerIndex]}.";
-        break;
-      case TaskType.sentenceReordering:
-        isCorrect = _scrambledParts.join(' ') == task.expectedSentence;
-        currentFeedbackSubtitle = isCorrect
-            ? task.hintMetadata
-            : "Correct answer: ${task.expectedSentence}.";
-        break;
-      case TaskType.matching:
-        isCorrect = true;
-        List<String> incorrectPairs = [];
-        for (var p in task.pairs) {
-          final native = p['native'] ?? '';
-          final expectedMeaning = p['meaning'] ?? '';
-          if (_matchedPairs[native] != expectedMeaning) {
-            isCorrect = false;
-            incorrectPairs.add('$native -> $expectedMeaning');
-          }
-        }
-        currentFeedbackSubtitle = isCorrect
-            ? task.hintMetadata
-            : "Review these pairs:\n${incorrectPairs.join('\n')}";
-        break;
-      case TaskType.pronunciation:
-        isCorrect = false;
-        if (_hasRecorded && _lastWords.isNotEmpty) {
-          final similarity = _stringSimilarity(
-            _lastWords.toLowerCase().trim(),
-            task.nativeWord.toLowerCase().trim(),
-          );
-          isCorrect = similarity >= 0.6;
-          currentFeedbackSubtitle = isCorrect
-              ? "Captured: \"$_lastWords\" (${(similarity * 100).round()}% match). Great effort!"
-              : "Heard: \"$_lastWords\". Try to say \"${task.nativeWord}\" more clearly. (${(similarity * 100).round()}% match)";
+    bool isCorrect = evaluation.isCorrect;
+    _feedbackSubtitle = evaluation.feedbackSubtitle;
 
-          if (isCorrect) {
-            ref
-                .read(questActionProvider.notifier)
-                .updateProgress(QuestType.pronunciation, 1);
-          }
-        } else {
-          currentFeedbackSubtitle =
-              "We couldn't hear you clearly. Please try again.";
-        }
-        break;
-      case TaskType.vocabulary:
-        isCorrect = true;
-        currentFeedbackSubtitle = "Great job reviewing this word!";
-        // Update Tribal Challenges progress for flashcards
-        ref.read(questActionProvider.notifier).updateProgress(QuestType.flashcard, 1);
-        break;
-      case TaskType.scenario:
-        isCorrect = _selectedIndex == task.correctAnswerIndex;
-        currentFeedbackSubtitle = isCorrect
-            ? "Perfect response!"
-            : "Actually, it might be better to say: ${task.options[task.correctAnswerIndex]}";
-        break;
+    if (task.type == TaskType.vocabulary && isCorrect) {
+      ref.read(questActionProvider.notifier).updateProgress(QuestType.flashcard, 1);
+    } else if (task.type == TaskType.pronunciation && isCorrect) {
+      ref.read(questActionProvider.notifier).updateProgress(QuestType.pronunciation, 1);
     }
 
     final savedIsCorrect = ref
@@ -332,16 +269,11 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     if (mounted) {
       setState(() {
         _lastAnswerCorrect = savedIsCorrect;
-        _feedbackSubtitle = currentFeedbackSubtitle;
         _showFeedback = true;
         if (!savedIsCorrect) {
           ref.read(studentProvider.notifier).decrementHeart();
           _shakeCounter++;
-          if ((_taskMistakes[task.id] ?? 0) == 0) {
-            _taskMistakes[task.id] = 1;
-          } else {
-            _taskMistakes[task.id] = _taskMistakes[task.id]! + 1;
-          }
+          _taskMistakes[task.id] = (_taskMistakes[task.id] ?? 0) + 1;
           _combo = 0;
           HapticService.error();
           ref.read(audioServiceProvider).playSFX('error');
@@ -383,7 +315,6 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
             ref.read(audioServiceProvider).playSFX('success');
           } else if (_combo >= 3) {
             HapticService.combo();
-
             ref.read(audioServiceProvider).playSFX('success');
           }
         }
@@ -622,112 +553,24 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     required int bonusXp,
   }) {
     if (!mounted) return;
-    final accuracy = totalTasks == 0
-        ? 100
-        : (((totalTasks - distinctMistakeTasks) / totalTasks) * 100).round();
 
-    showModalBottomSheet(
+    // Trigger extra confetti if 3 stars
+    if (stars == 3) {
+      _confettiController.play();
+    }
+
+    showGeneralDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      isDismissible: false,
-      enableDrag: false,
-      builder: (ctx) => Container(
-        padding: const EdgeInsets.fromLTRB(24, 32, 24, 40),
-        decoration: const BoxDecoration(
-          color: AppColors.forest800,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(3, (i) {
-                  return Icon(
-                        i < stars
-                            ? Icons.star_rounded
-                            : Icons.star_outline_rounded,
-                        color: AppColors.gold500,
-                        size: 44,
-                      )
-                      .animate(delay: (i * 200).ms)
-                      .scale(curve: Curves.elasticOut);
-                }),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                stars == 3
-                    ? 'Perfect Session! \ud83c\udf89'
-                    : stars == 2
-                    ? 'Great Work! \ud83c\udf1f'
-                    : 'Lesson Complete! \ud83d\udcaa',
-                style: AppTypography.h2.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
-              _SummaryStatRow(
-                icon: Icons.bolt_rounded,
-                iconColor: AppColors.gold500,
-                label: 'XP Earned',
-                value: '+$xpEarned XP',
-              ),
-              const SizedBox(height: 12),
-              _SummaryStatRow(
-                icon: Icons.check_circle_rounded,
-                iconColor: AppColors.semanticGreen,
-                label: 'Accuracy',
-                value: '$accuracy%',
-              ),
-              const SizedBox(height: 12),
-              _SummaryStatRow(
-                icon: Icons.task_alt_rounded,
-                iconColor: AppColors.semanticBlue,
-                label: 'Tasks Completed',
-                value: '$totalTasks tasks',
-              ),
-              if (bonusXp > 0) ...[
-                const SizedBox(height: 12),
-                _SummaryStatRow(
-                  icon: Icons.local_fire_department_rounded,
-                  iconColor: Colors.orange,
-                  label: 'Bonus XP',
-                  value: '+$bonusXp XP',
-                ),
-              ],
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    context.pop();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.gold500,
-                    foregroundColor: AppColors.forest900,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                  ),
-                  child: Text(
-                    'Continue Learning \u2192',
-                    style: AppTypography.bodyLarge.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.forest900,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+      barrierDismissible: false,
+      barrierColor: Colors.black,
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (dialogContext, anim1, anim2) => SessionResultsView(
+        xpEarned: xpEarned,
+        stars: stars,
+        totalTasks: totalTasks,
+        distinctMistakeTasks: distinctMistakeTasks,
+        bonusXp: bonusXp,
+        onFinish: () => context.go('/'),
       ),
     );
   }
@@ -1075,12 +918,14 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           scrambledParts: _scrambledParts,
           availableParts: _availableParts,
           onWordTap: (word) {
+            HapticService.light();
             setState(() {
               _availableParts.remove(word);
               _scrambledParts.add(word);
             });
           },
           onScrambledWordTap: (word) {
+            HapticService.light();
             setState(() {
               _scrambledParts.remove(word);
               _availableParts.add(word);
@@ -1095,6 +940,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           selectedNative: _selectedNative,
           selectedMeaning: _selectedMeaning,
           onNativeTap: (native) {
+            HapticService.selection();
             setState(() {
               if (_matchedPairs.containsKey(native)) {
                 _matchedPairs.remove(native);
@@ -1109,11 +955,13 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                   _matchedPairs[native] = _selectedMeaning!;
                   _selectedNative = null;
                   _selectedMeaning = null;
+                  HapticService.success();
                 }
               }
             });
           },
           onMeaningTap: (meaning) {
+            HapticService.selection();
             setState(() {
               String? matchedNative;
               _matchedPairs.forEach((key, value) {
@@ -1133,6 +981,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                   _matchedPairs[_selectedNative!] = meaning;
                   _selectedNative = null;
                   _selectedMeaning = null;
+                  HapticService.success();
                 }
               }
             });
@@ -1156,7 +1005,10 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           imageUrl: task.imageUrl,
           audioUrl: task.audioUrl,
           isFlipped: _flashcardFlipped,
-          onFlip: () => setState(() => _flashcardFlipped = !_flashcardFlipped),
+          onFlip: () {
+            HapticService.light();
+            setState(() => _flashcardFlipped = !_flashcardFlipped);
+          },
         );
       case TaskType.scenario:
         return ScenarioView(
@@ -1165,6 +1017,50 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           options: task.options,
           selectedIndex: _selectedIndex,
           onOptionSelected: _onOptionSelected,
+        );
+      case TaskType.wordHunt:
+        return WordHuntView(
+          question: task.questionText,
+          wordsToFind: task.options,
+          foundWords: _foundWords,
+          onWordFound: (word) {
+            setState(() {
+              _foundWords.add(word);
+            });
+            if (_foundWords.length == task.options.length) {
+              HapticService.heavy();
+            } else {
+              HapticService.medium();
+            }
+          },
+        );
+      case TaskType.trueOrFalse:
+        return TrueFalseView(
+          question: task.questionText,
+          selectedIndex: _selectedIndex,
+          onOptionSelected: _onOptionSelected,
+        );
+      case TaskType.fillInTheBlanks:
+        // Ensure we have shuffled options including the correct ones
+        // In a real app, you might add some distractors
+        final options = List<String>.from(task.sentenceParts)..shuffle();
+        return FillBlanksView(
+          question: task.questionText,
+          sentence: task.expectedSentence,
+          availableOptions: options,
+          selectedBlanks: _selectedBlanks,
+          onWordSelected: (index, word) {
+            setState(() {
+              _selectedBlanks[index] = word;
+            });
+            HapticService.light();
+          },
+          onBlankTap: (index) {
+            HapticService.light();
+            setState(() {
+              _selectedBlanks.remove(index);
+            });
+          },
         );
     }
   }
@@ -1271,44 +1167,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                     icon: lessonObj != null ? IconUtils.getIconData(lessonObj.icon) : null,
                   ),
                   if (_showLeaderboardSnippet)
-                    Container(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 8,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.gold500,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.2),
-                            blurRadius: 10,
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.emoji_events_rounded,
-                            color: AppColors.forest900,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              "YOU'RE IN THE TOP 3! \ud83d\udd25",
-                              style: AppTypography.label.copyWith(
-                                color: AppColors.forest900,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ).animate().slideY(begin: -1.0).fadeIn(),
+                    _buildLeaderboardSnippet(),
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
@@ -1333,102 +1192,12 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                       ),
                       child: Column(
                         children: [
-                          if (_combo >= 3)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 8,
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                        Icons.local_fire_department_rounded,
-                                        color: _combo >= 5
-                                            ? Colors.orange
-                                            : AppColors.gold500,
-                                        size: 24,
-                                      )
-                                      .animate(
-                                        onPlay: (c) => c.repeat(reverse: true),
-                                      )
-                                      .scaleXY(
-                                        begin: 1.0,
-                                        end: 1.2,
-                                        duration: 400.ms,
-                                      ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '$_combo COMBO!',
-                                    style: AppTypography.h3.copyWith(
-                                      color: _combo >= 5
-                                          ? Colors.orange
-                                          : AppColors.gold500,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ).animate().slideX(begin: -0.2),
-                                  const Spacer(),
-                                  if (_combo >= 5)
-                                    Text(
-                                      '+15 XP',
-                                      style: AppTypography.mono.copyWith(
-                                        color: Colors.orange,
-                                        fontSize: 12,
-                                      ),
-                                    ).animate().fadeIn().slideY(begin: 0.5),
-                                ],
-                              ),
-                            ),
+                          ComboIndicator(combo: _combo),
                           if (effectiveTask.grammarTitle != null)
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(0, 8, 24, 8),
-                                child: GestureDetector(
-                                  onTap: () {
-                                    HapticService.light();
-                                    showModalBottomSheet(
-                                      context: context,
-                                      backgroundColor: Colors.transparent,
-                                      isScrollControlled: true,
-                                      builder: (context) => GrammarNuggetPanel(
-                                        title: effectiveTask.grammarTitle!,
-                                        description: effectiveTask.grammarDescription ?? '',
-                                        examples: effectiveTask.grammarExamples ?? [],
-                                      ),
-                                    );
-                                  },
-
-                                  child: Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.gold500,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: AppColors.forest800,
-                                        width: 2,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.2),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: const Icon(
-                                      Icons.auto_stories_rounded,
-                                      color: Colors.black,
-                                      size: 18,
-                                    ),
-                                  ),
-                                )
-                                    .animate(onPlay: (c) => c.repeat(reverse: true))
-                                    .scale(
-                                      begin: const Offset(1, 1),
-                                      end: const Offset(1.1, 1.1),
-                                      duration: 1.seconds,
-                                    ),
-                              ),
+                            GrammarButton(
+                              title: effectiveTask.grammarTitle!,
+                              description: effectiveTask.grammarDescription ?? '',
+                              examples: effectiveTask.grammarExamples ?? [],
                             ),
                           Expanded(
                             child: SingleChildScrollView(
@@ -1436,40 +1205,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                               child: _isSuddenDeath && _suddenDeathTask != null
                                   ? Column(
                                       children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(16),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.semanticRed
-                                                .withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(
-                                              16,
-                                            ),
-                                            border: Border.all(
-                                              color: AppColors.semanticRed,
-                                            ),
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              const Icon(
-                                                Icons.warning_amber_rounded,
-                                                color: AppColors.semanticRed,
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                child: Text(
-                                                  "SUDDEN DEATH: Answer correctly to survive!",
-                                                  style: AppTypography.label
-                                                      .copyWith(
-                                                        color: AppColors
-                                                            .semanticRed,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ).animate().shake(),
+                                        const SuddenDeathBanner(),
                                         const SizedBox(height: 24),
                                         _buildTaskContent(effectiveTask),
                                       ],
@@ -1478,39 +1214,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         if (effectiveTask.hintMetadata.isNotEmpty)
-                                          Padding(
-                                            padding: const EdgeInsets.only(bottom: 24),
-                                            child: GestureDetector(
-                                              onTap: () {
-                                                HapticService.selection();
-                                                showEldersWisdom(context, effectiveTask.hintMetadata);
-                                              },
-                                              child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                                decoration: BoxDecoration(
-                                                  color: AppColors.gold500.withValues(alpha: 0.1),
-                                                  borderRadius: BorderRadius.circular(20),
-                                                  border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    const Icon(Icons.auto_awesome, size: 16, color: AppColors.gold500),
-                                                    const SizedBox(width: 8),
-                                                    Text(
-                                                      "ELDERS' WISDOM",
-                                                      style: AppTypography.label.copyWith(
-                                                        color: AppColors.gold500,
-                                                        fontSize: 10,
-                                                        letterSpacing: 2,
-                                                        fontWeight: FontWeight.w900,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ).animate(onPlay: (c) => c.repeat(reverse: true)).shimmer(duration: 2.seconds, color: Colors.white12),
-                                            ),
-                                          ),
+                                          _buildEldersWisdomButton(context, effectiveTask),
                                         _buildTaskContent(effectiveTask)
                                             .animate(key: ValueKey(_shakeCounter))
                                             .shakeX(
@@ -1527,80 +1231,12 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                     ),
                   ),
 
-                  Container(
-                    padding: EdgeInsets.fromLTRB(
-                      24,
-                      16,
-                      24,
-                      MediaQuery.of(context).padding.bottom + 16,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.forest700 : Colors.white,
-                      border: Border(
-                        top: BorderSide(
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.1)
-                              : AppColors.creamBorder,
-                        ),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: AnimatedOpacity(
-                            duration: const Duration(milliseconds: 200),
-                            opacity: _isTaskComplete(effectiveTask) ? 1.0 : 0.5,
-                            child: Material(
-                              color: _isTaskComplete(effectiveTask)
-                                  ? AppColors.gold500
-                                  : (isDark
-                                        ? Colors.white12
-                                        : Colors.black.withValues(alpha: 0.05)),
-                              borderRadius: BorderRadius.circular(16),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(16),
-                                onTap: _isTaskComplete(effectiveTask)
-                                    ? () {
-                                        HapticService.medium();
-                                        _checkAnswer();
-                                      }
-                                    : null,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 16,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: _isTaskComplete(effectiveTask)
-                                        ? [
-                                            const BoxShadow(
-                                              color: AppColors.gold700,
-                                              offset: Offset(0, 5),
-                                            ),
-                                          ]
-                                        : [],
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      'CHECK',
-                                      style: AppTypography.bodyLarge.copyWith(
-                                        color: _isTaskComplete(effectiveTask)
-                                            ? AppColors.creamText
-                                            : (isDark
-                                                  ? Colors.white54
-                                                  : AppColors.creamText3),
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 1.5,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  SessionControlBar(
+                    isComplete: _isTaskComplete(effectiveTask),
+                    onCheck: () {
+                      HapticService.medium();
+                      _checkAnswer();
+                    },
                   ),
                 ],
               ),
@@ -1625,6 +1261,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                     color: Colors.black.withValues(alpha: 0.85),
                     child: XPCelebration(
                       xpEarned: _calculatedSessionXp,
+                      stars: sessionStars,
                       onComplete: () => _showSessionSummary(
                         xpEarned: _calculatedSessionXp,
                         stars: sessionStars,
@@ -1657,54 +1294,70 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     return path;
   }
 
-}
-
-class _SummaryStatRow extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final String label;
-  final String value;
-
-  const _SummaryStatRow({
-    required this.icon,
-    required this.iconColor,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildLeaderboardSnippet() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(14),
+        color: AppColors.gold500,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 10,
+          ),
+        ],
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: iconColor, size: 20),
-          ),
-          const SizedBox(width: 16),
-          Text(
-            label,
-            style: const TextStyle(color: Colors.white70, fontSize: 14),
-          ),
-          const Spacer(),
-          Text(
-            value,
-            style: TextStyle(
-              color: iconColor,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+          const Icon(Icons.emoji_events_rounded, color: AppColors.forest900),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              "YOU'RE IN THE TOP 3! 🔥",
+              style: AppTypography.label.copyWith(
+                color: AppColors.forest900,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
+      ),
+    ).animate().slideY(begin: -1.0).fadeIn();
+  }
+
+  Widget _buildEldersWisdomButton(BuildContext context, LessonTask task) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: GestureDetector(
+        onTap: () {
+          HapticService.selection();
+          showEldersWisdom(context, task.hintMetadata);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.gold500.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.auto_awesome, size: 16, color: AppColors.gold500),
+              const SizedBox(width: 8),
+              Text(
+                "ELDERS' WISDOM",
+                style: AppTypography.label.copyWith(
+                  color: AppColors.gold500,
+                  fontSize: 10,
+                  letterSpacing: 2,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ).animate(onPlay: (c) => c.repeat(reverse: true)).shimmer(duration: 2.seconds, color: Colors.white12),
       ),
     );
   }

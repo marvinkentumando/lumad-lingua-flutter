@@ -31,6 +31,7 @@ class VocabularyView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final resolvedImageUrl = imageUrl != null && imageUrl!.isNotEmpty
         ? ref.read(supabaseStorageServiceProvider).getImageUrl(imageUrl!)
         : null;
@@ -39,7 +40,9 @@ class VocabularyView extends ConsumerWidget {
       children: [
         Text(
           'Review this word',
-          style: AppTypography.h2.copyWith(color: Colors.white),
+          style: AppTypography.h2.copyWith(
+            color: isDark ? Colors.white : AppColors.forest900,
+          ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 32),
@@ -168,7 +171,9 @@ class VocabularyView extends ConsumerWidget {
         const SizedBox(height: 24),
         Text(
           isReadOnly ? 'Educator Preview Mode' : 'Tap the card to flip',
-          style: AppTypography.label.copyWith(color: Colors.white54),
+          style: AppTypography.label.copyWith(
+            color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5),
+          ),
           textAlign: TextAlign.center,
         ).animate().fadeIn(delay: 500.ms),
       ],

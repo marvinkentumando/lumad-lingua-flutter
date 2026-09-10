@@ -99,6 +99,12 @@ class TaskTypeAdapter extends TypeAdapter<TaskType> {
         return TaskType.vocabulary;
       case 6:
         return TaskType.scenario;
+      case 7:
+        return TaskType.wordHunt;
+      case 8:
+        return TaskType.trueOrFalse;
+      case 9:
+        return TaskType.fillInTheBlanks;
       default:
         return TaskType.multipleChoice;
     }
@@ -127,6 +133,15 @@ class TaskTypeAdapter extends TypeAdapter<TaskType> {
         break;
       case TaskType.scenario:
         writer.writeByte(6);
+        break;
+      case TaskType.wordHunt:
+        writer.writeByte(7);
+        break;
+      case TaskType.trueOrFalse:
+        writer.writeByte(8);
+        break;
+      case TaskType.fillInTheBlanks:
+        writer.writeByte(9);
         break;
     }
   }

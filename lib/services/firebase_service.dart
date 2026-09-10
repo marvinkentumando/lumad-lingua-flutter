@@ -18,7 +18,6 @@ import '../models/community_activity.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rxdart/rxdart.dart';
 import '../models/gamification_models.dart';
-import '../models/validator_models.dart';
 import '../models/app_config.dart';
 import '../models/scenario_models.dart';
 import '../models/broadcast.dart';
@@ -35,69 +34,6 @@ class FirebaseService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
   FirebaseFirestore get db => _db;
-
-  Stream<ValidatorDailyImpact> getValidatorDailyImpact(String userId) {
-    final now = DateTime.now();
-    final startOfToday = DateTime(now.year, now.month, now.day);
-
-    // Fetch all validated items for this validator and filter date client-side
-    // to avoid Equality + Range composite index requirement
-    final wordsStream = _db
-        .collection('words')
-        .where('validatorId', isEqualTo: userId)
-        .snapshots();
-
-    final voicesStream = _db
-        .collection('voice_submissions')
-        .where('validatorId', isEqualTo: userId)
-        .snapshots();
-
-    final lessonsStream = _db
-        .collection('lessons')
-        .where('validatorId', isEqualTo: userId)
-        .snapshots();
-
-    return Rx.combineLatest3(
-      wordsStream,
-      voicesStream,
-      lessonsStream,
-      (wordsSnap, voicesSnap, lessonsSnap) {
-        int approved = 0;
-        int rejected = 0;
-        int flagged = 0;
-
-        void processSnap(QuerySnapshot snap) {
-          for (var doc in snap.docs) {
-            final data = doc.data() as Map<String, dynamic>;
-
-            // Filter by date client-side
-            final validatedAt = (data['validatedAt'] as Timestamp?)?.toDate();
-            if (validatedAt == null || validatedAt.isBefore(startOfToday)) continue;
-
-            final status = (data['status'] as String).toUpperCase();
-            if (status == 'APPROVED' || status == 'PUBLISHED') {
-              approved++;
-            } else if (status == 'REJECTED') {
-              rejected++;
-            } else if (status == 'FLAGGED') {
-              flagged++;
-            }
-          }
-        }
-
-        processSnap(wordsSnap);
-        processSnap(voicesSnap);
-        processSnap(lessonsSnap);
-
-        return ValidatorDailyImpact(
-          approved: approved,
-          rejected: rejected,
-          flagged: flagged,
-          total: approved + rejected + flagged,
-        );
-      },
-    );
-  }
 
   // --- Village Code & Educator Linking ---
 
@@ -134,7 +70,6 @@ class FirebaseService {
     }
 
     final educatorId = educatorSnap.docs.first.id;
-    final educatorName = educatorSnap.docs.first.data()['username'] ?? 'Educator';
 
     await _db.collection('users').doc(userId).update({
       'educatorId': educatorId,
@@ -3008,85 +2943,7 @@ class FirebaseService {
   }
   // ── Voice Submission Operations ──────────────────────────────────────────
 
-  /// Fetches items that require urgent attention (older than 48 hours or priority).
-  Stream<List<ValidationItem>> getUrgentQueueItems({String? dialect}) {
-    // Only equality on status - handles simple indexing
-    final wordsStream = _db
-        .collection('words')
-        .where('status', isEqualTo: 'pending')
-        .limit(20)
-        .snapshots();
-
-    final voicesStream = _db
-        .collection('voice_submissions')
-        .where('status', isEqualTo: 'pending')
-        .limit(20)
-        .snapshots();
-
-    return Rx.combineLatest2(wordsStream, voicesStream, (wordSnap, voiceSnap) {
-      final List<ValidationItem> items = [];
-
-      for (var doc in wordSnap.docs) {
-        final data = doc.data();
-        // Filter dialect client-side
-        if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
-          if (data['dialect'] != dialect) continue;
-        }
-
-        items.add(
-          ValidationItem(
-            id: doc.id,
-            type: 'entry',
-            title: data['term'] ?? 'New Entry',
-            subtitle: data['definition'] ?? '',
-            dialect: data['dialect'] ?? 'Unknown',
-            contributor: data['contributorName'] ?? 'Anonymous',
-            submittedAt:
-                (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
-            priority: data['priority'] == true ? 'high' : 'normal',
-            audioUrl: data['audioUrl'] ?? data['audioPath'],
-          ),
-        );
-      }
-
-      for (var doc in voiceSnap.docs) {
-        final data = doc.data();
-        // Filter dialect client-side
-        if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
-          if (data['dialect'] != dialect) continue;
-        }
-
-        items.add(
-          ValidationItem(
-            id: doc.id,
-            type: 'voice',
-            title: data['title'] ?? 'New Voice',
-            subtitle: data['transcript'] ?? '',
-            dialect: data['dialect'] ?? 'Unknown',
-            contributor:
-                data['speakerName'] ?? data['contributorName'] ?? 'Anonymous',
-            submittedAt:
-                (data['submittedAt'] as Timestamp?)?.toDate() ??
-                (data['timestamp'] as Timestamp?)?.toDate() ??
-                DateTime.now(),
-            priority: data['priority'] == true ? 'high' : 'normal',
-            audioUrl: data['audioUrl'],
-          ),
-        );
-      }
-
-      // Sort: high priority first, then by submission date (newest first)
-      items.sort((a, b) {
-        if (a.priority == 'high' && b.priority != 'high') return -1;
-        if (a.priority != 'high' && b.priority == 'high') return 1;
-        return b.submittedAt.compareTo(a.submittedAt);
-      });
-
-      return items;
-    });
-  }
-
-  /// Streams pending voice submissions for validators to review.
+  /// Fetches items that require urgent attention (older than 48 hours  /// Streams pending voice submissions for validators to review.
   Stream<List<VoiceSubmission>> getPendingVoiceSubmissions({
     int limit = 50,
     String? dialect,
@@ -3664,7 +3521,12 @@ class FirebaseService {
         });
   }
 
-  Future<void> toggleLike(String activityId, String userId) async {
+  Future<void> toggleLike(
+    String activityId,
+    String userId, {
+    String? userName,
+    String? userPhotoUrl,
+  }) async {
     final docRef = _db.collection('community_feed').doc(activityId);
 
     return _db.runTransaction((transaction) async {
@@ -3673,6 +3535,7 @@ class FirebaseService {
 
       final data = snapshot.data()!;
       final likedBy = List<String>.from(data['likedBy'] ?? []);
+      final targetUserId = data['userId'] as String?;
 
       if (likedBy.contains(userId)) {
         transaction.update(docRef, {
@@ -3684,6 +3547,27 @@ class FirebaseService {
           'likedBy': FieldValue.arrayUnion([userId]),
           'likeCount': FieldValue.increment(1),
         });
+
+        // Add notification for the activity owner
+        if (targetUserId != null && targetUserId != userId) {
+          final notifRef = _db
+              .collection('users')
+              .doc(targetUserId)
+              .collection('notifications')
+              .doc();
+
+          transaction.set(notifRef, {
+            'type': 'like',
+            'title': 'Sacred Spark! ✨',
+            'message': '${userName ?? 'Someone'} liked your activity.',
+            'senderId': userId,
+            'senderName': userName ?? 'Tribe Member',
+            'senderPhotoUrl': userPhotoUrl,
+            'activityId': activityId,
+            'isRead': false,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+        }
       }
     });
   }
@@ -3692,12 +3576,19 @@ class FirebaseService {
     String activityId,
     String userId,
     String userName,
-    String text,
-  ) async {
+    String text, {
+    String? userPhotoUrl,
+  }) async {
     final activityRef = _db.collection('community_feed').doc(activityId);
     final commentRef = activityRef.collection('comments').doc();
 
     return _db.runTransaction((transaction) async {
+      final snapshot = await transaction.get(activityRef);
+      if (!snapshot.exists) return;
+
+      final data = snapshot.data()!;
+      final targetUserId = data['userId'] as String?;
+
       transaction.set(commentRef, {
         'userId': userId,
         'userName': userName,
@@ -3708,6 +3599,27 @@ class FirebaseService {
       transaction.update(activityRef, {
         'commentCount': FieldValue.increment(1),
       });
+
+      // Add notification for the activity owner
+      if (targetUserId != null && targetUserId != userId) {
+        final notifRef = _db
+            .collection('users')
+            .doc(targetUserId)
+            .collection('notifications')
+            .doc();
+
+        transaction.set(notifRef, {
+          'type': 'comment',
+          'title': 'New Echo! 💬',
+          'message': '$userName commented: "$text"',
+          'senderId': userId,
+          'senderName': userName,
+          'senderPhotoUrl': userPhotoUrl,
+          'activityId': activityId,
+          'isRead': false,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      }
     });
   }
 
@@ -4207,13 +4119,6 @@ final pendingVoiceSubmissionsCountProvider =
       .getPendingVoiceSubmissionsCount(dialect: dialect);
 });
 
-final urgentQueueProvider =
-    StreamProvider.family<List<ValidationItem>, String?>((ref, dialect) {
-  return ref
-      .watch(firebaseServiceProvider)
-      .getUrgentQueueItems(dialect: dialect);
-});
-
 final pendingLessonsCountProvider =
     StreamProvider.family<int, String?>((ref, dialect) {
   return ref
@@ -4226,11 +4131,6 @@ final pendingLessonsCountProvider =
 final communityFeedProvider = StreamProvider<List<CommunityActivity>>((ref) {
   return ref.watch(firebaseServiceProvider).getCommunityFeed();
 });
-
-final validatorDailyImpactProvider =
-    StreamProvider.family<ValidatorDailyImpact, String>((ref, userId) {
-      return ref.watch(firebaseServiceProvider).getValidatorDailyImpact(userId);
-    });
 
 final appConfigProvider = StreamProvider<AppConfig>((ref) {
   return ref.watch(firebaseServiceProvider).getAppConfig();

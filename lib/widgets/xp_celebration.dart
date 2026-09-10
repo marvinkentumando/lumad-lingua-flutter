@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:lottie/lottie.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../services/haptic_service.dart';
@@ -7,11 +8,13 @@ import 'lottie_feedback.dart';
 
 class XPCelebration extends StatefulWidget {
   final int xpEarned;
+  final int stars;
   final VoidCallback onComplete;
 
   const XPCelebration({
     super.key,
     required this.xpEarned,
+    required this.stars,
     required this.onComplete,
   });
 
@@ -36,8 +39,21 @@ class _XPCelebrationState extends State<XPCelebration> {
     return Stack(
       alignment: Alignment.center,
       children: [
-        // Lottie Celebration
+        // Base Lottie Celebration
         const CelebrationLottie(),
+
+        // EXTRA EXPLOSION for 3 Stars
+        if (widget.stars == 3) ...[
+          const CelebrationLottie(), // Double the density
+          Positioned(
+            top: -100,
+            child: Lottie.network(
+              'https://lottie.host/791c8907-5503-4674-8740-109437298642/hZ4y9Y8j7T.json',
+              width: 500,
+              height: 500,
+            ),
+          ),
+        ],
 
         // Main Text Column
         Column(

@@ -4,6 +4,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
+import '../widgets/brand_background.dart';
 import '../services/srs_service.dart';
 
 enum QuizTaskType { mcq, matching, scrambled, audio }
@@ -92,9 +93,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   void _handleAnswer(bool correct) {
     if (correct) _score += 10;
 
-    ref
-        .read(srsServiceProvider)
-        .recordAttempt(_currentIndex.toString(), correct);
+    ref.read(srsServiceProvider).recordAttempt(_currentIndex.toString(), correct);
 
     setState(() {
       if (_currentIndex < _tasks.length - 1) {
@@ -112,44 +111,51 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     final task = _tasks[_currentIndex];
 
     return Scaffold(
-      backgroundColor: AppColors.forest800,
-      appBar: AppBar(
-        title: Text("Quest: ${_currentIndex + 1}/${_tasks.length}"),
-        leading: IconButton(
-          icon: const Icon(Icons.close_rounded),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            LinearProgressIndicator(
-              value: (_currentIndex + 1) / _tasks.length,
-              backgroundColor: AppColors.forest700,
-              valueColor: const AlwaysStoppedAnimation(AppColors.gold500),
+      backgroundColor: Colors.transparent,
+      body: BrandBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            title: Text("Quest: ${_currentIndex + 1}/${_tasks.length}"),
+            leading: IconButton(
+              icon: const Icon(Icons.close_rounded),
+              onPressed: () => Navigator.pop(context),
             ),
-            const SizedBox(height: 40),
-            BrandCard(
-              theme: BrandCardTheme.cream,
-              child: Column(
-                children: [
-                  Text(
-                    _getTaskEmoji(task.type),
-                    style: const TextStyle(fontSize: 48),
+          ),
+          body: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              children: [
+                LinearProgressIndicator(
+                  value: (_currentIndex + 1) / _tasks.length,
+                  backgroundColor: AppColors.forest700.withValues(alpha: 0.2),
+                  valueColor: const AlwaysStoppedAnimation(AppColors.gold500),
+                ),
+                const SizedBox(height: 40),
+                BrandCard(
+                  theme: BrandCardTheme.cream,
+                  child: Column(
+                    children: [
+                      Text(
+                        _getTaskEmoji(task.type),
+                        style: const TextStyle(fontSize: 48),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        task.question,
+                        style: AppTypography.h2,
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    task.question,
-                    style: AppTypography.h2,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 32),
+                Expanded(child: _buildTaskInput(task)),
+              ],
             ),
-            const SizedBox(height: 32),
-            Expanded(child: _buildTaskInput(task)),
-          ],
+          ),
         ),
       ),
     );
@@ -159,49 +165,38 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     switch (task.type) {
       case QuizTaskType.mcq:
         return ListView(
-          children: task.options
-              .map(
-                (opt) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: BrandButton(
-                    text: opt,
-                    type: BrandButtonType.secondary,
-                    onTap: () => _handleAnswer(opt == task.correctAnswer),
-                  ),
-                ),
-              )
-              .toList(),
+          children: task.options.map((opt) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: BrandButton(
+              text: opt,
+              type: BrandButtonType.secondary,
+              onTap: () => _handleAnswer(opt == task.correctAnswer),
+            ),
+          )).toList(),
         );
       case QuizTaskType.scrambled:
         return Column(
           children: [
             Wrap(
               spacing: 8,
-              children: _scrambledCurrent
-                  .map(
-                    (word) => ActionChip(
-                      label: Text(word),
-                      backgroundColor: AppColors.forest700,
-                      labelStyle: const TextStyle(color: Colors.white),
-                      onPressed: () {
-                        setState(() {
-                          _scrambledCurrent.remove(word);
-                          _scrambledCurrent.add(word);
-                        });
-                      },
-                    ),
-                  )
-                  .toList(),
+              children: _scrambledCurrent.map((word) => ActionChip(
+                label: Text(word),
+                backgroundColor: AppColors.forest700,
+                labelStyle: const TextStyle(color: Colors.white),
+                onPressed: () {
+                  setState(() {
+                    _scrambledCurrent.remove(word);
+                    _scrambledCurrent.add(word);
+                  });
+                },
+              )).toList(),
             ),
             const Spacer(),
             BrandButton(
               text: "Check Translation",
               onTap: () {
                 final result = _scrambledCurrent.join(" ");
-                _handleAnswer(
-                  task.validOrders.contains(result) ||
-                      result == task.correctAnswer,
-                );
+                _handleAnswer(task.validOrders.contains(result) || result == task.correctAnswer);
               },
             ),
           ],
@@ -214,17 +209,13 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                 children: [
                   Expanded(
                     child: ListView(
-                      children: _matchingLeft
-                          .map((opt) => _buildMatchChip(opt, isLeft: true))
-                          .toList(),
+                      children: _matchingLeft.map((opt) => _buildMatchChip(opt, isLeft: true)).toList(),
                     ),
                   ),
                   const SizedBox(width: 20),
                   Expanded(
                     child: ListView(
-                      children: _matchingRight
-                          .map((opt) => _buildMatchChip(opt, isLeft: false))
-                          .toList(),
+                      children: _matchingRight.map((opt) => _buildMatchChip(opt, isLeft: false)).toList(),
                     ),
                   ),
                 ],
@@ -243,87 +234,63 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   }
 
   Widget _buildMatchChip(String text, {required bool isLeft}) {
-    bool isSelected = isLeft
-        ? (_selectedLeft == text)
-        : (_selectedRight == text);
-    bool isMatched = isLeft
-        ? _matchedKeys.contains(text)
-        : _matchedKeys.contains(
-            _tasks[_currentIndex].matchingPairs.entries
-                .firstWhere((e) => e.value == text)
-                .key,
-          );
+    bool isSelected = isLeft ? (_selectedLeft == text) : (_selectedRight == text);
+    bool isMatched = isLeft ? _matchedKeys.contains(text) : _matchedKeys.contains(_tasks[_currentIndex].matchingPairs.entries.firstWhere((e) => e.value == text).key);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: BrandButton(
         text: text,
-        type: isMatched
-            ? BrandButtonType.primary
-            : (isSelected
-                  ? BrandButtonType.primary
-                  : BrandButtonType.secondary),
-        onTap: isMatched
-            ? null
-            : () {
-                setState(() {
-                  if (isLeft) {
-                    _selectedLeft = text;
-                  } else {
-                    _selectedRight = text;
-                  }
-
-                  if (_selectedLeft != null && _selectedRight != null) {
-                    if (_tasks[_currentIndex].matchingPairs[_selectedLeft] ==
-                        _selectedRight) {
-                      _matchedKeys.add(_selectedLeft!);
-                      _selectedLeft = null;
-                      _selectedRight = null;
-                      if (_matchedKeys.length ==
-                          _tasks[_currentIndex].matchingPairs.length) {
-                        _handleAnswer(true);
-                      }
-                    } else {
-                      _selectedLeft = null;
-                      _selectedRight = null;
-                    }
-                  }
-                });
-              },
+        type: isMatched ? BrandButtonType.primary : (isSelected ? BrandButtonType.primary : BrandButtonType.secondary),
+        onTap: isMatched ? null : () {
+          setState(() {
+            if (isLeft) {
+              _selectedLeft = text;
+            } else {
+              _selectedRight = text;
+            }
+            if (_selectedLeft != null && _selectedRight != null) {
+              if (_tasks[_currentIndex].matchingPairs[_selectedLeft] == _selectedRight) {
+                _matchedKeys.add(_selectedLeft!);
+                _selectedLeft = null;
+                _selectedRight = null;
+                if (_matchedKeys.length == _tasks[_currentIndex].matchingPairs.length) {
+                  _handleAnswer(true);
+                }
+              } else {
+                _selectedLeft = null;
+                _selectedRight = null;
+              }
+            }
+          });
+        },
       ),
     );
   }
 
   Widget _buildResultScreen() {
     return Scaffold(
-      backgroundColor: AppColors.forest800,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(40.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text("🏆", style: TextStyle(fontSize: 80)),
-              const SizedBox(height: 24),
-              Text(
-                "Ancestral Mastery",
-                style: AppTypography.display.copyWith(
-                  color: AppColors.gold500,
-                  fontSize: 32,
+      backgroundColor: Colors.transparent,
+      body: BrandBackground(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(40.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text("🏆", style: TextStyle(fontSize: 80)),
+                const SizedBox(height: 24),
+                Text("Ancestral Mastery", style: AppTypography.display.copyWith(color: AppColors.gold500, fontSize: 32)),
+                const SizedBox(height: 12),
+                Text("Your IQ session earned $_score XP!", style: AppTypography.h3.copyWith(color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : AppColors.forest900)),
+                const SizedBox(height: 40),
+                BrandButton(
+                  text: "Return to Trail",
+                  type: BrandButtonType.primary,
+                  onTap: () => Navigator.pop(context),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                "Your IQ session earned $_score XP!",
-                style: AppTypography.h3.copyWith(color: Colors.white70),
-              ),
-              const SizedBox(height: 40),
-              BrandButton(
-                text: "Return to Trail",
-                type: BrandButtonType.primary,
-                onTap: () => Navigator.pop(context),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -332,17 +299,10 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 
   String _getTaskEmoji(QuizTaskType type) {
     switch (type) {
-      case QuizTaskType.mcq:
-        return "❓";
-      case QuizTaskType.matching:
-        return "🧩";
-      case QuizTaskType.scrambled:
-        return "🔠";
-      case QuizTaskType.audio:
-        return "🎧";
+      case QuizTaskType.mcq: return "❓";
+      case QuizTaskType.matching: return "🧩";
+      case QuizTaskType.scrambled: return "🔠";
+      case QuizTaskType.audio: return "🎧";
     }
   }
 }
-
-
-

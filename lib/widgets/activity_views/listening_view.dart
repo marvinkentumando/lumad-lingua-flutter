@@ -56,15 +56,18 @@ class _ListeningViewState extends State<ListeningView> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       children: [
         // Audio player section
         Container(
           padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.04),
+            color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white12),
+            border: Border.all(
+              color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.1),
+            ),
           ),
           child: Column(
             children: [
@@ -110,7 +113,7 @@ class _ListeningViewState extends State<ListeningView> {
                           height: 8,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: used ? Colors.white24 : AppColors.gold500,
+                            color: used ? (isDark ? Colors.white24 : Colors.black.withValues(alpha: 0.1)) : AppColors.gold500,
                           ),
                         ),
                       );

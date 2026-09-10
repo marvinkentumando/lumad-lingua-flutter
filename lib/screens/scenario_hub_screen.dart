@@ -7,6 +7,7 @@ import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_background.dart';
 import '../providers/student_provider.dart';
+import '../services/haptic_service.dart';
 import '../services/firebase_service.dart';
 
 class ScenarioHubScreen extends ConsumerWidget {
@@ -118,6 +119,7 @@ class ScenarioHubScreen extends ConsumerWidget {
       theme: isCompleted ? BrandCardTheme.gold : BrandCardTheme.vibrant,
       child: InkWell(
         onTap: () {
+          HapticService.selection();
           // Navigate to scenario session
           context.push('/scenario-session/$id');
         },

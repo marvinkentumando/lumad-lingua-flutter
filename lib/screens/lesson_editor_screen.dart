@@ -22,6 +22,7 @@ import '../widgets/lesson_editors/matching_editor.dart';
 import '../widgets/lesson_editors/sentence_reordering_editor.dart';
 import '../widgets/lesson_editors/listening_editor.dart';
 import '../widgets/lesson_editors/scenario_editor.dart';
+import '../widgets/lesson_editors/editor_utils.dart';
 import '../widgets/lesson_previews/lesson_preview_panel.dart';
 
 class LessonEditorScreen extends ConsumerStatefulWidget {
@@ -207,6 +208,28 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
           'imageUrl': task.imageUrl,
         };
         break;
+      case TaskType.wordHunt:
+        type = ActivityType.wordHunt;
+        data = {
+          'question': task.questionText,
+          'options': task.options, // Words to find
+        };
+        break;
+      case TaskType.trueOrFalse:
+        type = ActivityType.trueOrFalse;
+        data = {
+          'question': task.questionText,
+          'correctIndex': task.correctAnswerIndex, // 0 for True, 1 for False
+        };
+        break;
+      case TaskType.fillInTheBlanks:
+        type = ActivityType.fillInTheBlanks;
+        data = {
+          'question': task.questionText,
+          'expectedSentence': task.expectedSentence,
+          'parts': task.sentenceParts, // The blanks
+        };
+        break;
     }
 
     return LessonStep(
@@ -287,6 +310,22 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
           'options': ['', '', ''],
           'correctIndex': 0,
         };
+      case ActivityType.wordHunt:
+        return {
+          'question': 'Find the hidden words',
+          'options': ['', '', ''],
+        };
+      case ActivityType.trueOrFalse:
+        return {
+          'question': 'Is this statement correct?',
+          'correctIndex': 0,
+        };
+      case ActivityType.fillInTheBlanks:
+        return {
+          'question': 'Fill in the missing words',
+          'expectedSentence': '',
+          'parts': <String>[],
+        };
       default:
         return {};
     }
@@ -315,6 +354,15 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         break;
       case ActivityType.scenario:
         type = TaskType.scenario;
+        break;
+      case ActivityType.wordHunt:
+        type = TaskType.wordHunt;
+        break;
+      case ActivityType.trueOrFalse:
+        type = TaskType.trueOrFalse;
+        break;
+      case ActivityType.fillInTheBlanks:
+        type = TaskType.fillInTheBlanks;
         break;
       default:
         type = TaskType.multipleChoice;
@@ -525,17 +573,17 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         final shouldPop = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            backgroundColor: isDark ? AppColors.forestDarkCard : Colors.white,
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
             title: Text(
               'Unsaved Changes',
               style: AppTypography.h3.copyWith(
-                color: isDark ? Colors.white : AppColors.creamText,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             content: Text(
               'You may have unsaved changes. Are you sure you want to exit?',
               style: AppTypography.body.copyWith(
-                color: isDark ? Colors.white70 : AppColors.creamText2,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             actions: [
@@ -544,7 +592,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                 child: Text(
                   'CANCEL',
                   style: AppTypography.label.copyWith(
-                    color: isDark ? Colors.white54 : AppColors.creamText3,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                   ),
                 ),
               ),
@@ -568,7 +616,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
       child: Stack(
         children: [
           Scaffold(
-            backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+            backgroundColor: Theme.of(context).colorScheme.surface,
             appBar: AppBar(
               backgroundColor: Colors.transparent,
               elevation: 0,
@@ -582,7 +630,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
               leading: IconButton(
                 icon: Icon(
                   Icons.arrow_back_ios_new,
-                  color: isDark ? Colors.white70 : AppColors.creamText2,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   size: 20,
                 ),
                 onPressed: () => Navigator.pop(context),
@@ -593,7 +641,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                   child: Text(
                     'SAVE DRAFT',
                     style: AppTypography.label.copyWith(
-                      color: isDark ? Colors.white54 : AppColors.creamText3,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -751,7 +799,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                 subtitle: Text(
                   step.type.name,
                   style: AppTypography.label.copyWith(
-                    color: isDark ? Colors.white54 : AppColors.creamText3,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                   ),
                 ),
                 tileColor: isSelected
@@ -772,7 +820,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                     ? IconButton(
                         icon: Icon(
                           Icons.delete_outline,
-                          color: isDark ? Colors.white54 : AppColors.creamText3,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                         ),
                         onPressed: () {
                           setState(() {
@@ -855,6 +903,24 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                 ActivityType.scenario,
                 'Cultural Scenario',
                 Icons.movie_outlined,
+              ),
+              _buildActivityOption(
+                dialogContext,
+                ActivityType.wordHunt,
+                'Word Hunt',
+                Icons.grid_on_rounded,
+              ),
+              _buildActivityOption(
+                dialogContext,
+                ActivityType.trueOrFalse,
+                'True or False',
+                Icons.thumbs_up_down_rounded,
+              ),
+              _buildActivityOption(
+                dialogContext,
+                ActivityType.fillInTheBlanks,
+                'Fill in the Blanks',
+                Icons.space_bar_rounded,
               ),
             ],
           ),
@@ -1008,6 +1074,12 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
             step: _selectedStep!,
             onUpdated: () => setState(() {}),
           );
+        case ActivityType.wordHunt:
+          return _buildWordHuntEditor();
+        case ActivityType.trueOrFalse:
+          return _buildTrueOrFalseEditor();
+        case ActivityType.fillInTheBlanks:
+          return _buildFillInTheBlanksEditor();
       }
     } catch (e) {
       return Container(
@@ -1056,9 +1128,196 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         return 'Pair native words with their translations.';
       case ActivityType.sentenceReordering:
         return 'Students drag words to form a correct sentence.';
+      case ActivityType.wordHunt:
+        return 'Students find indigenous words in a grid.';
+      case ActivityType.trueOrFalse:
+        return 'Simple binary choice comprehension check.';
+      case ActivityType.fillInTheBlanks:
+        return 'Students type or select missing words in a sentence.';
       default:
         return 'Configure this activity.';
     }
+  }
+
+    Widget _buildWordHuntEditor() {
+    final options = _selectedStep!.data['options'] as List;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        EditorUtils.buildDataTextField(
+          label: 'Question / Instructions',
+          initialValue: _selectedStep!.data['question'] ?? '',
+          onChanged: (val) {
+            _selectedStep!.data['question'] = val;
+            setState(() {});
+          },
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Words to Find',
+          style: AppTypography.label.copyWith(color: Colors.white70),
+        ),
+        const SizedBox(height: 8),
+        ...List.generate(options.length, (i) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: EditorUtils.buildDataTextField(
+                    label: 'Word ${i + 1}',
+                    initialValue: options[i],
+                    onChanged: (val) {
+                      options[i] = val;
+                      setState(() {});
+                    },
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.remove_circle_outline, color: Colors.white24),
+                  onPressed: () {
+                    setState(() {
+                      options.removeAt(i);
+                    });
+                  },
+                ),
+              ],
+            ),
+          );
+        }),
+        TextButton.icon(
+          icon: const Icon(Icons.add, color: AppColors.gold500),
+          label: const Text('Add Word', style: TextStyle(color: AppColors.gold500)),
+          onPressed: () {
+            setState(() {
+              options.add('');
+            });
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTrueOrFalseEditor() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        EditorUtils.buildDataTextField(
+          label: 'Statement',
+          initialValue: _selectedStep!.data['question'] ?? '',
+          onChanged: (val) {
+            _selectedStep!.data['question'] = val;
+            setState(() {});
+          },
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Correct Answer',
+          style: AppTypography.label.copyWith(color: Colors.white70),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: ChoiceChip(
+                label: const Text('TRUE'),
+                selected: _selectedStep!.data['correctIndex'] == 0,
+                onSelected: (selected) {
+                  if (selected) {
+                    setState(() {
+                      _selectedStep!.data['correctIndex'] = 0;
+                    });
+                  }
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ChoiceChip(
+                label: const Text('FALSE'),
+                selected: _selectedStep!.data['correctIndex'] == 1,
+                onSelected: (selected) {
+                  if (selected) {
+                    setState(() {
+                      _selectedStep!.data['correctIndex'] = 1;
+                    });
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFillInTheBlanksEditor() {
+    final parts = _selectedStep!.data['parts'] as List;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        EditorUtils.buildDataTextField(
+          label: 'Instruction',
+          initialValue: _selectedStep!.data['question'] ?? '',
+          onChanged: (val) {
+            _selectedStep!.data['question'] = val;
+            setState(() {});
+          },
+        ),
+        const SizedBox(height: 16),
+        EditorUtils.buildDataTextField(
+          label: 'Full Sentence (use [word] for blanks)',
+          initialValue: _selectedStep!.data['expectedSentence'] ?? '',
+          onChanged: (val) {
+            _selectedStep!.data['expectedSentence'] = val;
+            // Auto-extract parts if we wanted to, but let's keep it manual for now or simple
+            setState(() {});
+          },
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Answer Keys (Words that go in the blanks)',
+          style: AppTypography.label.copyWith(color: Colors.white70),
+        ),
+        const SizedBox(height: 8),
+        ...List.generate(parts.length, (i) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: EditorUtils.buildDataTextField(
+                    label: 'Blank ${i + 1} Answer',
+                    initialValue: parts[i],
+                    onChanged: (val) {
+                      parts[i] = val;
+                      setState(() {});
+                    },
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.remove_circle_outline, color: Colors.white24),
+                  onPressed: () {
+                    setState(() {
+                      parts.removeAt(i);
+                    });
+                  },
+                ),
+              ],
+            ),
+          );
+        }),
+        TextButton.icon(
+          icon: const Icon(Icons.add, color: AppColors.gold500),
+          label: const Text('Add Blank Answer', style: TextStyle(color: AppColors.gold500)),
+          onPressed: () {
+            setState(() {
+              parts.add('');
+            });
+          },
+        ),
+      ],
+    );
   }
 
   // --- Pane 3: Live Preview ---
@@ -1090,6 +1349,12 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         return Icons.headphones;
       case ActivityType.scenario:
         return Icons.movie_outlined;
+      case ActivityType.wordHunt:
+        return Icons.grid_on_rounded;
+      case ActivityType.trueOrFalse:
+        return Icons.thumbs_up_down_rounded;
+      case ActivityType.fillInTheBlanks:
+        return Icons.space_bar_rounded;
     }
   }
 }

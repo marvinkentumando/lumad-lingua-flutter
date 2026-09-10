@@ -11,10 +11,13 @@ import '../providers/student_provider.dart';
 import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import '../models/lesson.dart';
+import '../models/srs_models.dart';
+import '../widgets/branded_empty_state.dart';
 import '../widgets/skeleton.dart';
-import '../widgets/ambient_topo_background.dart';
+import '../widgets/brand_background.dart';
 import '../widgets/mist_crystal_store.dart';
 import '../widgets/vine_progress_bar.dart';
+import '../widgets/memory_forest.dart';
 import '../services/haptic_service.dart';
 import '../widgets/dynamic_glass_box.dart';
 
@@ -23,12 +26,11 @@ class LearningHubScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final studentState = ref.watch(studentProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: AmbientTopoBackground(
+      body: BrandBackground(
         child: SafeArea(
           child: Column(
             children: [
@@ -44,7 +46,7 @@ class LearningHubScreen extends ConsumerWidget {
                       Text(
                         'Your Learning\nPaths',
                         style: AppTypography.h1ExtraBold.copyWith(
-                          color: isDark ? AppColors.gold500 : AppColors.forest500,
+                          color: Theme.of(context).colorScheme.primary,
                           fontSize: 36,
                           height: 1.1,
                         ),
@@ -90,6 +92,7 @@ class LearningHubScreen extends ConsumerWidget {
                       // Mastery Trends Entry Card
                       GestureDetector(
                         onTap: () {
+                          HapticService.selection();
                           final userId = ref.read(authServiceProvider).currentUser?.uid;
                           final dueCount = userId != null
                               ? ref.read(dueSRSCountProvider(userId)).value ?? 0
@@ -196,6 +199,11 @@ class LearningHubScreen extends ConsumerWidget {
                         ),
                       ).animate().fadeIn(delay: 250.ms).slideX(begin: 0.1),
 
+                      const SizedBox(height: 32),
+
+                      // Memory Forest Section
+                      _buildMemoryForestSection(context, ref),
+
                       const SizedBox(height: 24),
 
 
@@ -204,7 +212,16 @@ class LearningHubScreen extends ConsumerWidget {
                           .watch(lessonsStreamProvider)
                           .when(
                             data: (lessons) {
-                              if (lessons.isEmpty) return const SizedBox();
+                              if (lessons.isEmpty) {
+                                return const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 40),
+                                  child: BrandedEmptyState(
+                                    title: 'Trails Await',
+                                    message: 'No learning paths have been published for your tribe yet.',
+                                    icon: Icons.map_rounded,
+                                  ),
+                                );
+                              }
 
                               // Group lessons by language
                               final groupedByLanguage = <String, List<Lesson>>{};
@@ -321,7 +338,7 @@ class LearningHubScreen extends ConsumerWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white24 : Colors.black12,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -365,13 +382,13 @@ class LearningHubScreen extends ConsumerWidget {
                   Text(
                     'PROGRESS',
                     style: AppTypography.label.copyWith(
-                      color: isDark ? Colors.white38 : AppColors.creamText3,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                     ),
                   ),
                   Text(
                     '$progressInLevel / ${nextLevelXp - currentLevelBaseXp} XP',
                     style: AppTypography.mono.copyWith(
-                      color: isDark ? Colors.white70 : AppColors.forest700,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -383,7 +400,7 @@ class LearningHubScreen extends ConsumerWidget {
               Text(
                 '${xpToNextLevel.clamp(0, 99999)} XP UNTIL NEXT LEVEL',
                 style: AppTypography.body.copyWith(
-                  color: isDark ? Colors.white24 : AppColors.creamText3,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                   fontSize: 12,
                 ),
               ),
@@ -438,15 +455,14 @@ class LearningHubScreen extends ConsumerWidget {
   }
 
   Widget _buildXpRow(BuildContext context, String label, String value, IconData icon) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.03),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05)),
+          border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05)),
         ),
         child: Row(
           children: [
@@ -455,7 +471,7 @@ class LearningHubScreen extends ConsumerWidget {
             Text(
               label,
               style: AppTypography.body.copyWith(
-                color: isDark ? Colors.white70 : AppColors.forest700,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const Spacer(),
@@ -484,8 +500,14 @@ class LearningHubScreen extends ConsumerWidget {
     return SizedBox(
       width: 160,
       child: GestureDetector(
-        onTap: onTap,
+        onTap: () {
+          if (onTap != null) {
+            HapticService.selection();
+            onTap();
+          }
+        },
         child: BrandCard(
+          theme: isDark ? BrandCardTheme.cream : BrandCardTheme.gold,
           padding: const EdgeInsets.all(20),
           borderRadius: 32,
           child: Column(
@@ -496,7 +518,7 @@ class LearningHubScreen extends ConsumerWidget {
               Text(
                 title,
                 style: AppTypography.body.copyWith(
-                  color: isDark ? Colors.white : AppColors.forest900,
+                  color: isDark ? Theme.of(context).colorScheme.onSurface : AppColors.forest900,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
@@ -505,14 +527,16 @@ class LearningHubScreen extends ConsumerWidget {
               Text(
                 value,
                 style: AppTypography.h1ExtraBold.copyWith(
-                  color: isDark ? AppColors.gold500 : AppColors.forest500,
+                  color: isDark ? Theme.of(context).colorScheme.primary : AppColors.forest700,
                   fontSize: 32,
                 ),
               ),
               Text(
                 sub,
                 style: AppTypography.label.copyWith(
-                  color: isDark ? Colors.white54 : AppColors.creamText3,
+                  color: isDark 
+                      ? Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)
+                      : AppColors.forest700.withValues(alpha: 0.6),
                   fontSize: 10,
                   letterSpacing: 1,
                 ),
@@ -541,6 +565,7 @@ class LearningHubScreen extends ConsumerWidget {
     return Opacity(
       opacity: isLocked ? 0.6 : 1.0,
       child: BrandCard(
+        theme: isDark ? BrandCardTheme.cream : BrandCardTheme.gold,
         padding: const EdgeInsets.all(32),
         borderRadius: 40,
         child: Column(
@@ -555,7 +580,9 @@ class LearningHubScreen extends ConsumerWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: isLocked ? Colors.grey : badgeColor,
+                    color: isLocked 
+                        ? Colors.grey 
+                        : (isDark ? badgeColor : Colors.black.withValues(alpha: 0.1)),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -563,9 +590,9 @@ class LearningHubScreen extends ConsumerWidget {
                     style: AppTypography.label.copyWith(
                       color: isLocked
                           ? Colors.white
-                          : (badgeColor.computeLuminance() > 0.5
-                                ? Colors.black87
-                                : Colors.white),
+                          : (isDark 
+                              ? (badgeColor.computeLuminance() > 0.5 ? Colors.black87 : Colors.white)
+                              : AppColors.forest900),
                       fontSize: 11,
                       fontWeight: FontWeight.w900,
                     ),
@@ -581,7 +608,7 @@ class LearningHubScreen extends ConsumerWidget {
                   ),
                   child: Icon(
                     isLocked ? Icons.lock_outline_rounded : icon,
-                    color: isDark ? Colors.white70 : AppColors.forest500,
+                    color: isDark ? Theme.of(context).colorScheme.onSurfaceVariant : AppColors.forest900,
                     size: 24,
                   ),
                 ),
@@ -625,9 +652,9 @@ class LearningHubScreen extends ConsumerWidget {
                 minHeight: 12,
                 backgroundColor: isDark
                     ? Colors.white.withValues(alpha: 0.05)
-                    : Colors.black.withValues(alpha: 0.05),
+                    : Colors.black.withValues(alpha: 0.1),
                 valueColor: AlwaysStoppedAnimation(
-                  isLocked ? Colors.grey : accentColor,
+                  isLocked ? Colors.grey : (isDark ? accentColor : AppColors.forest700),
                 ),
               ),
             ),
@@ -636,7 +663,7 @@ class LearningHubScreen extends ConsumerWidget {
               BrandButton(
                 text: 'Continue Journey',
                 onTap: () => context.push('/learning/path?lessonId=$lessonId'),
-                type: BrandButtonType.primary,
+                type: isDark ? BrandButtonType.primary : BrandButtonType.secondary,
                 icon: Icons.arrow_forward_rounded,
               ),
             ],
@@ -645,7 +672,7 @@ class LearningHubScreen extends ConsumerWidget {
               Text(
                 'Unlock previous lessons to start this journey',
                 style: AppTypography.label.copyWith(
-                  color: Colors.white38,
+                  color: isDark ? Colors.white38 : AppColors.forest700.withValues(alpha: 0.5),
                   fontStyle: FontStyle.italic,
                 ),
               ),
@@ -693,6 +720,71 @@ class LearningHubScreen extends ConsumerWidget {
       default:
         return Icons.school;
     }
+  }
+
+  Widget _buildMemoryForestSection(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authStateProvider).value;
+    final srsAsync = user != null
+        ? ref.watch(srsProgressStreamProvider(user.uid))
+        : const AsyncValue.data(<SRSProgress>[]);
+
+    return srsAsync.when(
+      data: (srsList) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ancestral Vitality',
+                      style: AppTypography.h3.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      'Nurture your memory forest through ritual review',
+                      style: AppTypography.label.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+                TextButton(
+                  onPressed: () {
+                    HapticService.selection();
+                    context.push('/mastery-dashboard');
+                  },
+                  child: Text(
+                    'DETAILS',
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.gold500,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            BrandCard(
+              padding: EdgeInsets.zero,
+              borderRadius: 32,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(32),
+                child: MemoryForest(progress: srsList, height: 200),
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const Skeleton(height: 240, borderRadius: 32),
+      error: (err, _) => const SizedBox.shrink(),
+    );
   }
 }
 

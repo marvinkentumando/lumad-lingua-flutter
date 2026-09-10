@@ -22,12 +22,15 @@ class SentenceReorderingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
           question.isEmpty ? 'Reorder the words' : question,
-          style: AppTypography.h2.copyWith(color: Colors.white),
+          style: AppTypography.h2.copyWith(
+            color: isDark ? Colors.white : AppColors.forest900,
+          ),
         ),
         const SizedBox(height: 32),
         // Drop zone
@@ -35,10 +38,10 @@ class SentenceReorderingView extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 100),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.black12,
+            color: isDark ? Colors.black12 : Colors.black.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: Colors.white24,
+              color: isDark ? Colors.white24 : Colors.black.withValues(alpha: 0.1),
               width: 2,
               style: BorderStyle.solid,
             ),
@@ -86,7 +89,9 @@ class SentenceReorderingView extends StatelessWidget {
           Center(
             child: Text(
               "No words added yet.",
-              style: AppTypography.label.copyWith(color: Colors.white54),
+              style: AppTypography.label.copyWith(
+                color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.3),
+              ),
             ),
           ),
       ],

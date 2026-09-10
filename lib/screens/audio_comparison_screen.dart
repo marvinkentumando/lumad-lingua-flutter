@@ -9,7 +9,7 @@ import 'package:http/http.dart' as http;
 
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
-import '../widgets/ambient_topo_background.dart';
+import '../widgets/brand_background.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import '../services/haptic_service.dart';
@@ -354,7 +354,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           ),
         ],
       ),
-      body: AmbientTopoBackground(
+      body: BrandBackground(
         child: dataAsync.when(
           data: (items) {
             // Process and filter items

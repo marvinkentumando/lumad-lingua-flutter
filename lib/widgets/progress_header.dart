@@ -117,7 +117,7 @@ class ProgressHeader extends StatelessWidget {
                     hearts > 0 ? Icons.favorite_rounded : Icons.favorite_border,
                     color: hearts > 0
                         ? AppColors.semanticRed
-                        : (isDark ? Colors.white38 : AppColors.forest200),
+                        : (isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.2)),
                     size: 24,
                   )
                   .animate(key: ValueKey(hearts), target: 1)
@@ -141,7 +141,7 @@ class ProgressHeader extends StatelessWidget {
                 style: AppTypography.h3.copyWith(
                   color: hearts > 0
                       ? AppColors.semanticRed
-                      : (isDark ? Colors.white38 : AppColors.forest200),
+                      : (isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.3)),
                 ),
               ),
             ],

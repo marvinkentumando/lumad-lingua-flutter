@@ -16,16 +16,16 @@ class AchievementsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final artifactsAsync = ref.watch(userArtifactsProvider);
     final stats = ref.watch(artifactStatsProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
           'Ancestral Honors',
           style: AppTypography.h3.copyWith(
-            color: isDark ? AppColors.gold500 : AppColors.forest500,
+            color: isDark ? Colors.white : AppColors.forest900,
           ),
         ),
         backgroundColor: Colors.transparent,
@@ -33,7 +33,7 @@ class AchievementsScreen extends ConsumerWidget {
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back_ios_new_rounded,
-            color: isDark ? AppColors.gold500 : AppColors.forest500,
+            color: isDark ? Colors.white : AppColors.forest900,
           ),
           onPressed: () {
             if (context.mounted) {
@@ -55,7 +55,7 @@ class AchievementsScreen extends ConsumerWidget {
                     Text(
                       "Your Legacy",
                       style: AppTypography.display.copyWith(
-                        color: isDark ? AppColors.gold500 : AppColors.forest500,
+                        color: isDark ? Colors.white : AppColors.forest900,
                         fontSize: 32,
                       ),
                     ),
@@ -63,11 +63,13 @@ class AchievementsScreen extends ConsumerWidget {
                     Text(
                       "Tracing your journey through ancestral wisdom.",
                       style: AppTypography.body.copyWith(
-                        color: isDark ? Colors.white54 : AppColors.creamText2,
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.5)
+                            : AppColors.forest900.withValues(alpha: 0.5),
                       ),
                     ),
                     const SizedBox(height: 32),
-                    _buildStatsRow(stats),
+                    _buildStatsRow(stats, isDark),
                     const SizedBox(height: 40),
                     _buildSectionHeader("Ancestral Vault"),
                     const SizedBox(height: 16),
@@ -89,7 +91,7 @@ class AchievementsScreen extends ConsumerWidget {
                         ),
                         itemCount: artifacts.length,
                         itemBuilder: (context, index) => 
-                            _buildArtifactCard(context, artifacts[index]),
+                            _buildArtifactCard(context, artifacts[index], isDark),
                       ),
                     const SizedBox(height: 40),
                   ],
@@ -123,38 +125,45 @@ class AchievementsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatsRow(Map<String, dynamic> stats) {
+  Widget _buildStatsRow(Map<String, dynamic> stats, bool isDark) {
     return Row(
       children: [
-        _buildStatItem("Collected", "${stats['earned'] ?? 0}", Icons.auto_awesome),
+        _buildStatItem("Collected", "${stats['earned'] ?? 0}", Icons.auto_awesome, isDark),
         const SizedBox(width: 16),
-        _buildStatItem("Total", "${stats['total'] ?? 0}", Icons.temple_hindu),
+        _buildStatItem("Total", "${stats['total'] ?? 0}", Icons.temple_hindu, isDark),
         const SizedBox(width: 16),
         _buildStatItem(
           "Rank",
           (stats['earned'] ?? 0) >= 10 ? "Elder" : ((stats['earned'] ?? 0) >= 5 ? "Warrior" : "Novice"),
           Icons.workspace_premium,
+          isDark,
         ),
       ],
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon) {
+  Widget _buildStatItem(String label, String value, IconData icon, bool isDark) {
     return Expanded(
       child: BrandCard(
         theme: BrandCardTheme.vibrant,
         padding: const EdgeInsets.all(12),
         child: Column(
           children: [
-            Icon(icon, color: AppColors.gold500, size: 20),
+            Icon(icon, color: isDark ? AppColors.gold500 : AppColors.gold700, size: 20),
             const SizedBox(height: 8),
             Text(
               value,
-              style: AppTypography.h3.copyWith(color: Colors.white, fontSize: 16),
+              style: AppTypography.h3.copyWith(
+                color: isDark ? Colors.white : AppColors.forest900,
+                fontSize: 16,
+              ),
             ),
             Text(
               label,
-              style: AppTypography.label.copyWith(color: Colors.white38, fontSize: 8),
+              style: AppTypography.label.copyWith(
+                color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.4),
+                fontSize: 8,
+              ),
             ),
           ],
         ),
@@ -162,7 +171,7 @@ class AchievementsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildArtifactCard(BuildContext context, Artifact artifact) {
+  Widget _buildArtifactCard(BuildContext context, Artifact artifact, bool isDark) {
     final tierColor = _getTierColor(artifact.tier);
     return GestureDetector(
       onTap: () {
@@ -197,7 +206,10 @@ class AchievementsScreen extends ConsumerWidget {
             const SizedBox(height: 8),
             Text(
               artifact.title,
-              style: AppTypography.h3.copyWith(color: Colors.white, fontSize: 12),
+              style: AppTypography.h3.copyWith(
+                color: isDark ? Colors.white : AppColors.forest900,
+                fontSize: 12,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),

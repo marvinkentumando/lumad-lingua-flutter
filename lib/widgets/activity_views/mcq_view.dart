@@ -20,12 +20,15 @@ class MCQView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
           question.isEmpty ? 'Question?' : question,
-          style: AppTypography.h2.copyWith(color: Colors.white),
+          style: AppTypography.h2.copyWith(
+            color: isDark ? Colors.white : AppColors.forest900,
+          ),
         ),
         const SizedBox(height: 32),
         ...List.generate(options.length, (index) {
@@ -41,19 +44,21 @@ class MCQView extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.semanticBlue.withValues(alpha: 0.1)
-                    : Colors.white.withValues(alpha: 0.05),
+                    : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03)),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isSelected
                       ? AppColors.semanticBlue
-                      : Colors.white.withValues(alpha: 0.1),
+                      : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.1)),
                   width: isSelected ? 2.5 : 1.5,
                 ),
               ),
               child: Text(
                 optionText.isEmpty ? 'Option ${index + 1}' : optionText,
                 style: AppTypography.bodyLarge.copyWith(
-                  color: isSelected ? AppColors.semanticBlue : Colors.white,
+                  color: isSelected
+                      ? AppColors.semanticBlue
+                      : (isDark ? Colors.white : AppColors.forest900),
                 ),
               ),
             ),

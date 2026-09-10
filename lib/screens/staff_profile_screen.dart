@@ -10,18 +10,16 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:lumad_lingua/services/firebase_service.dart';
 import '../providers/role_provider.dart';
-import '../providers/artifact_provider.dart';
-import '../models/artifact.dart';
 import 'package:go_router/go_router.dart';
 import '../services/supabase_storage_service.dart';
 import '../widgets/daily_check_in_board.dart';
 import '../widgets/level_up_modal.dart';
-import '../widgets/skeleton.dart';
-import '../widgets/graceful_image.dart';
-import '../widgets/branded_empty_state.dart';
+import '../widgets/brand_background.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/skeleton.dart';
+import '../services/haptic_service.dart';
 import '../widgets/artifacts/artifact_inventory_section.dart';
-
+import '../providers/theme_provider.dart';
 
 class StaffProfileScreen extends ConsumerWidget {
   const StaffProfileScreen({super.key});
@@ -34,62 +32,66 @@ class StaffProfileScreen extends ConsumerWidget {
     final profile = ref.watch(userProfileProvider).value;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: authState.when(
-        loading: () => _buildProfileSkeleton(),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (user) {
-          return SafeArea(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  const SizedBox(height: 40),
-                  _buildAvatarSection(context, ref, user, currentRole, profile),
-                  if (profile?['bio'] != null &&
-                      (profile?['bio'] as String).isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
-                      child: Text(
-                        profile!['bio'],
-                        textAlign: TextAlign.center,
-                        style: AppTypography.body.copyWith(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white60
-                              : AppColors.creamText2,
-                          fontStyle: FontStyle.italic,
-                          fontSize: 14,
+      backgroundColor: Colors.transparent,
+      body: BrandBackground(
+        child: authState.when(
+          loading: () => _buildProfileSkeleton(),
+          error: (e, _) => Center(child: Text('Error: $e')),
+          data: (user) {
+            return SafeArea(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 40),
+                    _buildAvatarSection(context, ref, user, currentRole, profile),
+                    if (profile?['bio'] != null &&
+                        (profile?['bio'] as String).isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 40),
+                        child: Text(
+                          profile!['bio'],
+                          textAlign: TextAlign.center,
+                          style: AppTypography.body.copyWith(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white60
+                                : AppColors.creamText2,
+                            fontStyle: FontStyle.italic,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
+                    ],
+                    const SizedBox(height: 40),
+                    _buildStatsRow(
+                      context,
+                      ref,
+                      currentRole,
+                      user?.uid ?? '',
+                      currentXp,
+                      profile,
                     ),
+                    const SizedBox(height: 40),
+                    if (currentRole != UserRole.admin && currentRole != UserRole.educator) ...[
+                      const ArtifactInventorySection(),
+                      const SizedBox(height: 40),
+                    ],
+                    _buildJourneyManagement(
+                      context,
+                      ref,
+                      currentRole,
+                      user,
+                      profile,
+                    ),
+                    const SizedBox(height: 40),
                   ],
-                  const SizedBox(height: 40),
-                  _buildStatsRow(
-                    context,
-                    ref,
-                    currentRole,
-                    user?.uid ?? '',
-                    currentXp,
-                    profile,
-                  ),
-                  const SizedBox(height: 40),
-                  const ArtifactInventorySection(),
-                  const SizedBox(height: 40),
-                  _buildJourneyManagement(
-                    context,
-                    ref,
-                    currentRole,
-                    user,
-                    profile,
-                  ),
-                  const SizedBox(height: 40),
-                ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -190,7 +192,94 @@ class StaffProfileScreen extends ConsumerWidget {
             letterSpacing: 1.5,
           ),
         ),
+        if (role == UserRole.educator) ...[
+          const SizedBox(height: 16),
+          if (profile?['villageCode'] != null)
+            GestureDetector(
+              onTap: () {
+                final code = profile?['villageCode'] as String;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Village Code $code copied to clipboard!')),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.gold500.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.fort_rounded, size: 14, color: AppColors.gold500),
+                    const SizedBox(width: 8),
+                    Text(
+                      'VILLAGE CODE: ${profile?['villageCode']}',
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.gold500,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            _buildSetupVillageButton(context, ref, user?.uid),
+        ],
       ],
+    );
+  }
+
+  Widget _buildSetupVillageButton(BuildContext context, WidgetRef ref, String? userId) {
+    return GestureDetector(
+      onTap: () async {
+        if (userId == null) return;
+        HapticService.medium();
+        try {
+          final code = await ref.read(firebaseServiceProvider).generateUniqueVillageCode();
+          await ref.read(firebaseServiceProvider).updateUserProfile(userId, {'villageCode': code});
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Village activated! Students can now join your tribe. 🌿'),
+                backgroundColor: AppColors.semanticGreen,
+              ),
+            );
+          }
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Activation failed: $e'), backgroundColor: AppColors.semanticRed),
+            );
+          }
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.semanticGreen.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.semanticGreen.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.add_home_rounded, size: 14, color: AppColors.semanticGreen),
+            const SizedBox(width: 8),
+            Text(
+              'ACTIVATE VILLAGE CODE',
+              style: AppTypography.label.copyWith(
+                color: AppColors.semanticGreen,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -275,6 +364,18 @@ class StaffProfileScreen extends ConsumerWidget {
           onTap: () => context.push('/offline-wisdom'),
         ),
         const SizedBox(height: 12),
+        _buildManagementTile(
+          context,
+          Theme.of(context).brightness == Brightness.dark
+              ? Icons.light_mode_rounded
+              : Icons.dark_mode_rounded,
+          Theme.of(context).brightness == Brightness.dark
+              ? 'Light Sanctuary'
+              : 'Dark Forest',
+          'Switch between light and dark themes',
+          onTap: () => ref.read(themeProvider.notifier).toggleTheme(),
+        ),
+        const SizedBox(height: 12),
         if (role == UserRole.admin) ...[
           _buildManagementTile(
             context,
@@ -345,18 +446,18 @@ class StaffProfileScreen extends ConsumerWidget {
   }
 
   Widget _buildProfileSkeleton() {
-    return const SafeArea(
+    return SafeArea(
       child: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Column(
           children: [
-            SizedBox(height: 40),
-            Skeleton(width: 140, height: 140, isCircle: true),
-            SizedBox(height: 24),
-            Skeleton(width: 200, height: 32),
-            SizedBox(height: 8),
-            Skeleton(width: 150, height: 16),
-            SizedBox(height: 40),
+            const SizedBox(height: 40),
+            const Skeleton(width: 140, height: 140, isCircle: true),
+            const SizedBox(height: 24),
+            const Skeleton(width: 200, height: 32),
+            const SizedBox(height: 8),
+            const Skeleton(width: 150, height: 16),
+            const SizedBox(height: 40),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -365,27 +466,14 @@ class StaffProfileScreen extends ConsumerWidget {
                 Skeleton(width: 100, height: 100, borderRadius: 50),
               ],
             ),
-            SizedBox(height: 40),
+            const SizedBox(height: 40),
             Skeleton(height: 160, borderRadius: 24),
-            SizedBox(height: 40),
+            const SizedBox(height: 40),
             Skeleton(height: 80, borderRadius: 35),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Skeleton(height: 80, borderRadius: 35),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildArtifactScrollSkeleton() {
-    return SizedBox(
-      height: 160,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: 3,
-        separatorBuilder: (context, _) => const SizedBox(width: 16),
-        itemBuilder: (context, index) => const Skeleton(width: 110, height: 160, borderRadius: 24),
       ),
     );
   }
@@ -1065,4 +1153,3 @@ class _StaffStatsRow extends ConsumerWidget {
     );
   }
 }
-

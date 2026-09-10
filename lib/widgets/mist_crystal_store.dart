@@ -5,6 +5,7 @@ import '../theme/app_typography.dart';
 import '../providers/student_provider.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
+import '../services/haptic_service.dart';
 import 'brand_card.dart';
 
 void showMistCrystalStore(BuildContext context, WidgetRef ref) {
@@ -235,6 +236,7 @@ Widget _buildStoreItem(
             onTap: canAfford
                 ? () {
                     if (onPurchase()) {
+                      HapticService.success();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('Purchased $title!'),
@@ -242,6 +244,7 @@ Widget _buildStoreItem(
                         ),
                       );
                     } else {
+                      HapticService.error();
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text(
@@ -252,7 +255,9 @@ Widget _buildStoreItem(
                       );
                     }
                   }
-                : null,
+                : () {
+                    HapticService.error();
+                  },
             child: Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 16,

@@ -10,6 +10,7 @@ import 'firebase_options.dart';
 import 'services/offline_service.dart';
 import 'services/notification_service.dart';
 import 'widgets/error_boundary.dart';
+import 'providers/theme_provider.dart';
 import 'providers/router_provider.dart';
 
 void main() async {
@@ -74,31 +75,48 @@ class LumadLinguaApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final themeMode = ref.watch(themeProvider);
+    final brightness =
+        themeMode == ThemeMode.system
+            ? MediaQuery.platformBrightnessOf(context)
+            : (themeMode == ThemeMode.dark ? Brightness.dark : Brightness.light);
 
-    return MaterialApp.router(
-      title: 'Lumad Lingua',
-      theme: AppTheme.darkTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.dark,
-      routerConfig: router,
-      debugShowCheckedModeBanner: false,
-      builder: (context, child) {
-        final data = MediaQuery.of(context);
-        return MediaQuery(
-          data: data.copyWith(
-            textScaler: data.textScaler.clamp(
-              minScaleFactor: 0.8,
-              maxScaleFactor: 1.3,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        systemNavigationBarColor: Colors.transparent,
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness:
+            brightness == Brightness.dark ? Brightness.light : Brightness.dark,
+        systemNavigationBarIconBrightness:
+            brightness == Brightness.dark ? Brightness.light : Brightness.dark,
+      ),
+      child: MaterialApp.router(
+        title: 'Lumad Lingua',
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: themeMode,
+        routerConfig: router,
+        debugShowCheckedModeBanner: false,
+        builder: (context, child) {
+          final data = MediaQuery.of(context);
+          return MediaQuery(
+            data: data.copyWith(
+              textScaler: data.textScaler.clamp(
+                minScaleFactor: 0.8,
+                maxScaleFactor: 1.3,
+              ),
             ),
-          ),
-          child: AnimatedTheme(
-            data: AppTheme.darkTheme,
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.easeInOut,
-            child: child!,
-          ),
-        );
-      },
+            child: AnimatedTheme(
+              data: brightness == Brightness.dark
+                  ? AppTheme.darkTheme
+                  : AppTheme.lightTheme,
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeInOut,
+              child: child!,
+            ),
+          );
+        },
+      ),
     );
   }
 }

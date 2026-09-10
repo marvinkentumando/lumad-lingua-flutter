@@ -25,7 +25,7 @@ class _EducatorUnitManagementScreenState
     final dialectsAsync = ref.watch(dialectsProvider);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -122,7 +122,7 @@ class _EducatorUnitManagementScreenState
                 child: Text(
                   'Error: $e',
                   style: TextStyle(
-                    color: isDark ? Colors.white : AppColors.creamText,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -155,11 +155,11 @@ class _EducatorUnitManagementScreenState
                     if (selected) setState(() => _selectedLanguage = dialect);
                   },
                   selectedColor: AppColors.gold500,
-                  backgroundColor: isDark ? AppColors.forest800 : Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                   labelStyle: TextStyle(
                     color: isSelected
                         ? AppColors.forest900
-                        : (isDark ? Colors.white70 : AppColors.creamText2),
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -178,7 +178,7 @@ class _EducatorUnitManagementScreenState
       key: ValueKey(lesson.id),
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.forestDarkCard : Colors.white,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isDark
@@ -215,13 +215,13 @@ class _EducatorUnitManagementScreenState
         subtitle: Text(
           'Unit ${lesson.unitNumber} • Level ${lesson.level}',
           style: AppTypography.body.copyWith(
-            color: isDark ? Colors.white38 : AppColors.creamText3,
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             fontSize: 12,
           ),
         ),
         trailing: Icon(
           Icons.drag_handle_rounded,
-          color: isDark ? Colors.white24 : AppColors.creamText3,
+          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
         ),
       ),
     );
@@ -234,14 +234,14 @@ class _EducatorUnitManagementScreenState
         children: [
           Icon(
             Icons.library_books_rounded,
-            color: isDark ? Colors.white10 : AppColors.creamBorder,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
             size: 64,
           ),
           const SizedBox(height: 16),
           Text(
             'No lessons found for $_selectedLanguage',
             style: AppTypography.h3.copyWith(
-              color: isDark ? Colors.white24 : AppColors.creamText3,
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
           ),
         ],

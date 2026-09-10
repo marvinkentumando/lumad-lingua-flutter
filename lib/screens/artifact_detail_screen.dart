@@ -13,8 +13,9 @@ class ArtifactDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppColors.forest900,
+      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
@@ -22,12 +23,12 @@ class ArtifactDetailScreen extends StatelessWidget {
           SliverAppBar(
             expandedHeight: 400.0,
             stretch: true,
-            backgroundColor: AppColors.forest900,
-            leading: const Padding(
-              padding: EdgeInsets.all(8.0),
+            backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+            leading: Padding(
+              padding: const EdgeInsets.all(8.0),
               child: CircleAvatar(
-                backgroundColor: Colors.black38,
-                child: BackButton(color: AppColors.gold500),
+                backgroundColor: isDark ? Colors.black38 : Colors.white54,
+                child: const BackButton(color: AppColors.gold500),
               ),
             ),
             flexibleSpace: FlexibleSpaceBar(
@@ -50,7 +51,7 @@ class ArtifactDetailScreen extends StatelessWidget {
                               : Image.asset(artifact.imageUrl, fit: BoxFit.cover)),
                         )
                       : Container(
-                          color: AppColors.forest800,
+                          color: isDark ? AppColors.forest800 : AppColors.gold50,
                           child: Center(
                             child: Icon(
                               _getIcon(artifact.type),
@@ -59,13 +60,16 @@ class ArtifactDetailScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-                  const DecoratedBox(
+                  DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, AppColors.forest900],
-                        stops: [0.6, 1.0],
+                        colors: [
+                          Colors.transparent,
+                          isDark ? AppColors.forest900 : AppColors.creamBg,
+                        ],
+                        stops: const [0.6, 1.0],
                       ),
                     ),
                   ),
@@ -149,12 +153,11 @@ class ArtifactDetailScreen extends StatelessWidget {
 
                   const SizedBox(height: 16),
 
-                  // Title
                   Text(
                     artifact.title,
                     style: AppTypography.display.copyWith(
                       fontSize: 36,
-                      color: AppColors.gold500,
+                      color: isDark ? AppColors.gold500 : AppColors.gold700,
                       height: 1.1,
                     ),
                   ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2),
@@ -188,7 +191,7 @@ class ArtifactDetailScreen extends StatelessWidget {
                         Text(
                           artifact.legend ?? "No legend yet. Uncover more rituals to reveal the full story of this sacred object.",
                           style: AppTypography.bodyLarge.copyWith(
-                            color: Colors.white,
+                            color: isDark ? Colors.white : AppColors.forest900,
                             fontSize: 16,
                             height: 1.7,
                             fontStyle: artifact.legend != null ? FontStyle.italic : FontStyle.normal,
@@ -196,12 +199,12 @@ class ArtifactDetailScreen extends StatelessWidget {
                         ),
                         if (artifact.culturalNote != null) ...[
                           const SizedBox(height: 20),
-                          const Divider(color: Colors.white10),
+                          Divider(color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
                           const SizedBox(height: 12),
                           Text(
                             "ELDERS' NOTE",
                             style: AppTypography.label.copyWith(
-                              color: AppColors.gold500,
+                              color: isDark ? AppColors.gold500 : AppColors.gold700,
                               fontSize: 10,
                               letterSpacing: 2,
                             ),
@@ -210,7 +213,7 @@ class ArtifactDetailScreen extends StatelessWidget {
                           Text(
                             artifact.culturalNote!,
                             style: AppTypography.body.copyWith(
-                              color: Colors.white54,
+                              color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.6),
                               fontSize: 14,
                             ),
                           ),
@@ -231,11 +234,12 @@ class ArtifactDetailScreen extends StatelessWidget {
                   Row(
                     children: [
                       _buildOriginChip(
+                        context,
                         "Mountain Region",
                         Icons.terrain_outlined,
                       ),
                       const SizedBox(width: 12),
-                      _buildOriginChip("Abaca Fiber", Icons.grass_outlined),
+                      _buildOriginChip(context, "Abaca Fiber", Icons.grass_outlined),
                     ],
                   ).animate().fadeIn(delay: 800.ms),
 
@@ -263,9 +267,9 @@ class ArtifactDetailScreen extends StatelessWidget {
                         width: 60,
                         height: 60,
                         decoration: BoxDecoration(
-                          color: AppColors.forest800,
+                          color: isDark ? AppColors.forest800 : Colors.black.withValues(alpha: 0.03),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppColors.forest700),
+                          border: Border.all(color: isDark ? AppColors.forest700 : Colors.black.withValues(alpha: 0.1)),
                         ),
                         child: const Icon(
                           Icons.bookmark_border,
@@ -290,6 +294,7 @@ class ArtifactDetailScreen extends StatelessWidget {
     String title,
     IconData icon,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         Icon(icon, color: AppColors.gold500, size: 20),
@@ -297,7 +302,7 @@ class ArtifactDetailScreen extends StatelessWidget {
         Text(
           title.toUpperCase(),
           style: AppTypography.label.copyWith(
-            color: Colors.white38,
+            color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.4),
             letterSpacing: 2,
             fontSize: 12,
           ),
@@ -306,13 +311,14 @@ class ArtifactDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildOriginChip(String label, IconData icon) {
+  Widget _buildOriginChip(BuildContext context, String label, IconData icon) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.forest800,
+        color: isDark ? AppColors.forest800 : Colors.black.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.1)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -322,7 +328,7 @@ class ArtifactDetailScreen extends StatelessWidget {
           Text(
             label,
             style: AppTypography.label.copyWith(
-              color: AppColors.creamText3,
+              color: isDark ? AppColors.creamText3 : AppColors.forest900.withValues(alpha: 0.6),
               fontSize: 12,
             ),
           ),

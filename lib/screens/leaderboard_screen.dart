@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,7 +15,7 @@ import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../services/haptic_service.dart';
 import 'package:go_router/go_router.dart';
-import '../widgets/ambient_topo_background.dart';
+import '../widgets/brand_background.dart';
 
 class LeaderboardEntry {
   final String name;
@@ -131,7 +132,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: AmbientTopoBackground(
+      body: BrandBackground(
         child: Stack(
         children: [
 
@@ -635,6 +636,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     if (user == null) return;
 
     final myName = user.displayName ?? 'A Fellow Traveler';
+    final profile = ref.read(userProfileProvider).value;
 
     try {
       await ref.read(firebaseServiceProvider).addNotification(targetUid, {
@@ -643,6 +645,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
         'message': '$myName sent you a Sacred Spark for your progress!',
         'senderId': user.uid,
         'senderName': myName,
+        'senderPhotoUrl': profile?['photoURL'],
+        'isRead': false,
+        'timestamp': FieldValue.serverTimestamp(),
       });
 
       if (mounted) {

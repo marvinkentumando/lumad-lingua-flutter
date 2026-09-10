@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../providers/student_provider.dart';
+import '../services/haptic_service.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/topo_background.dart';
@@ -70,6 +71,7 @@ class StreakHistoryScreen extends ConsumerWidget {
   }
 
   Widget _buildStreakHero(BuildContext context, StudentState student) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Column(
         children: [
@@ -130,13 +132,13 @@ class StreakHistoryScreen extends ConsumerWidget {
               ? 'You\'re on fire!' 
               : 'Start your journey today!',
             style: AppTypography.h2.copyWith(
-              color: Theme.of(context).brightness == Brightness.dark ? Colors.white : AppColors.forest700,
+              color: isDark ? Colors.white : AppColors.forest700,
             ),
           ),
           Text(
             'Keep learning daily to grow your streak.',
             style: AppTypography.body.copyWith(
-              color: Colors.grey,
+              color: isDark ? Colors.grey : AppColors.forest900.withValues(alpha: 0.5),
             ),
           ),
         ],
@@ -145,6 +147,7 @@ class StreakHistoryScreen extends ConsumerWidget {
   }
 
   Widget _buildShieldStats(BuildContext context, WidgetRef ref, StudentState student) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return BrandCard(
       theme: BrandCardTheme.vibrant,
       padding: const EdgeInsets.all(20),
@@ -165,11 +168,15 @@ class StreakHistoryScreen extends ConsumerWidget {
               children: [
                 Text(
                   'STREAK SHIELDS',
-                  style: AppTypography.label.copyWith(color: AppColors.gold500),
+                  style: AppTypography.label.copyWith(
+                    color: isDark ? AppColors.gold500 : AppColors.gold700,
+                  ),
                 ),
                 Text(
                   '${student.streakShields} Available',
-                  style: AppTypography.h3.copyWith(color: Colors.white),
+                  style: AppTypography.h3.copyWith(
+                    color: isDark ? Colors.white : AppColors.forest900,
+                  ),
                 ),
               ],
             ),
@@ -190,6 +197,7 @@ class StreakHistoryScreen extends ConsumerWidget {
     final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
     final daysInMonth = lastDayOfMonth.day;
     final startWeekday = firstDayOfMonth.weekday; // 1 = Monday
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -199,11 +207,15 @@ class StreakHistoryScreen extends ConsumerWidget {
           children: [
             Text(
               DateFormat('MMMM yyyy').format(now).toUpperCase(),
-              style: AppTypography.label.copyWith(color: Colors.grey),
+              style: AppTypography.label.copyWith(
+                color: isDark ? Colors.grey : AppColors.forest900.withValues(alpha: 0.4),
+              ),
             ),
             Text(
               'ACTIVITY MAP',
-              style: AppTypography.label.copyWith(color: AppColors.gold500),
+              style: AppTypography.label.copyWith(
+                color: isDark ? AppColors.gold500 : AppColors.gold700,
+              ),
             ),
           ],
         ),
@@ -216,7 +228,7 @@ class StreakHistoryScreen extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: ['M', 'T', 'W', 'T', 'F', 'S', 'S']
-                    .map((d) => Text(d, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)))
+                    .map((d) => Text(d, style: TextStyle(color: isDark ? Colors.grey : AppColors.forest900.withValues(alpha: 0.3), fontSize: 12, fontWeight: FontWeight.bold)))
                     .toList(),
               ),
               const SizedBox(height: 12),
@@ -244,7 +256,7 @@ class StreakHistoryScreen extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: isActive 
                         ? AppColors.gold500 
-                        : (isToday ? Colors.white10 : Colors.transparent),
+                        : (isToday ? (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)) : Colors.transparent),
                       shape: BoxShape.circle,
                       border: isToday ? Border.all(color: AppColors.gold500) : null,
                     ),
@@ -252,7 +264,9 @@ class StreakHistoryScreen extends ConsumerWidget {
                     child: Text(
                       '$day',
                       style: TextStyle(
-                        color: isActive ? Colors.black : Colors.white70,
+                        color: isActive
+                            ? Colors.black
+                            : (isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.6)),
                         fontSize: 12,
                         fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
                       ),
@@ -273,13 +287,16 @@ class StreakHistoryScreen extends ConsumerWidget {
       {'days': 30, 'title': 'Month of Wisdom', 'reward': 500, 'rewardText': '500 Crystals'},
       {'days': 100, 'title': 'Tribe Guardian', 'reward': 2000, 'rewardText': '2,000 Crystals'},
     ];
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'MILESTONES',
-          style: AppTypography.label.copyWith(color: Colors.grey),
+          style: AppTypography.label.copyWith(
+            color: isDark ? Colors.grey : AppColors.forest900.withValues(alpha: 0.4),
+          ),
         ),
         const SizedBox(height: 16),
         ...milestones.map((m) {
@@ -300,15 +317,17 @@ class StreakHistoryScreen extends ConsumerWidget {
                     height: 40,
                     decoration: BoxDecoration(
                       color: isUnlocked
-                          ? (isClaimed ? Colors.white10 : AppColors.gold500)
-                          : Colors.white10,
+                          ? (isClaimed ? (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)) : AppColors.gold500)
+                          : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       isClaimed
                           ? Icons.check_circle_rounded
                           : (isUnlocked ? Icons.emoji_events_rounded : Icons.lock_rounded),
-                      color: isUnlocked && !isClaimed ? Colors.black : Colors.grey,
+                      color: isUnlocked && !isClaimed
+                          ? Colors.black
+                          : (isDark ? Colors.grey : AppColors.forest900.withValues(alpha: 0.2)),
                       size: 20,
                     ),
                   ),
@@ -320,14 +339,18 @@ class StreakHistoryScreen extends ConsumerWidget {
                         Text(
                           m['title'] as String,
                           style: AppTypography.h3.copyWith(
-                            color: isUnlocked ? Colors.white : Colors.grey,
+                            color: isUnlocked
+                                ? (isDark ? Colors.white : AppColors.forest900)
+                                : (isDark ? Colors.grey : AppColors.forest900.withValues(alpha: 0.3)),
                             fontSize: 16,
                           ),
                         ),
                         Text(
                           m['rewardText'] as String,
                           style: AppTypography.label.copyWith(
-                            color: isUnlocked ? AppColors.gold500 : Colors.grey,
+                            color: isUnlocked
+                                ? (isDark ? AppColors.gold500 : AppColors.gold700)
+                                : (isDark ? Colors.grey : AppColors.forest900.withValues(alpha: 0.2)),
                             fontSize: 10,
                             letterSpacing: 1,
                           ),
@@ -337,7 +360,7 @@ class StreakHistoryScreen extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(2),
                           child: LinearProgressIndicator(
                             value: progress,
-                            backgroundColor: Colors.white10,
+                            backgroundColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
                             color: AppColors.gold500,
                             minHeight: 4,
                           ),
@@ -350,6 +373,7 @@ class StreakHistoryScreen extends ConsumerWidget {
                     BrandButton(
                       text: 'CLAIM',
                       onTap: () {
+                        HapticService.celebration();
                         ref.read(studentProvider.notifier).claimMilestone(days, reward);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -365,7 +389,9 @@ class StreakHistoryScreen extends ConsumerWidget {
                     Text(
                       '$days d',
                       style: AppTypography.mono.copyWith(
-                        color: isUnlocked ? AppColors.gold500 : Colors.grey,
+                        color: isUnlocked
+                            ? (isDark ? AppColors.gold500 : AppColors.gold700)
+                            : (isDark ? Colors.grey : AppColors.forest900.withValues(alpha: 0.2)),
                         fontSize: 14,
                       ),
                     ),

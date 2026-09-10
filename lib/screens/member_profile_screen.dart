@@ -10,8 +10,10 @@ import '../models/artifact.dart';
 import '../providers/artifact_provider.dart';
 import '../services/firebase_service.dart';
 import '../widgets/skeleton.dart';
+import '../widgets/branded_empty_state.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/brand_background.dart';
 
 final validatorActivityCountProvider = StreamProvider.family<int, String>((ref, userId) {
   return ref.watch(firebaseServiceProvider).getValidatorActivityCount(userId);
@@ -31,7 +33,7 @@ class MemberProfileScreen extends ConsumerWidget {
     final profileAsync = ref.watch(otherUserProfileProvider(userId));
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -48,68 +50,70 @@ class MemberProfileScreen extends ConsumerWidget {
           ),
         ),
       ),
-      body: profileAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.gold500),
-        ),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (profile) {
-          if (profile == null) {
-            return const Center(child: Text('Profile not found'));
-          }
+      body: BrandBackground(
+        child: profileAsync.when(
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: AppColors.gold500),
+          ),
+          error: (e, _) => Center(child: Text('Error: $e')),
+          data: (profile) {
+            if (profile == null) {
+              return const Center(child: Text('Profile not found'));
+            }
 
-          final roleString = profile['role']?.toString().toLowerCase();
-          final role = _parseRole(roleString);
-          final xp = profile['xp'] as int? ?? 0;
-          final streak = profile['streak'] as int? ?? 0;
-          final wordsLearned = profile['wordCount'] as int? ?? 0;
-          final displayName =
-              profile['username'] ?? profile['displayName'] ?? 'Tribe Member';
-          final photoUrl = profile['photoURL'];
+            final roleString = profile['role']?.toString().toLowerCase();
+            final role = _parseRole(roleString);
+            final xp = profile['xp'] as int? ?? 0;
+            final streak = profile['streak'] as int? ?? 0;
+            final wordsLearned = profile['wordCount'] as int? ?? 0;
+            final displayName =
+                profile['username'] ?? profile['displayName'] ?? 'Tribe Member';
+            final photoUrl = profile['photoURL'];
 
-          return SafeArea(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
-                  _buildAvatarSection(
-                    context,
-                    displayName,
-                    role,
-                    photoUrl,
-                    profile,
-                  ),
-                  if (profile['bio'] != null &&
-                      (profile['bio'] as String).isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
-                      child: Text(
-                        profile['bio'],
-                        textAlign: TextAlign.center,
-                        style: AppTypography.body.copyWith(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white60
-                              : AppColors.creamText2,
-                          fontStyle: FontStyle.italic,
-                          fontSize: 14,
+            return SafeArea(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 20),
+                    _buildAvatarSection(
+                      context,
+                      displayName,
+                      role,
+                      photoUrl,
+                      profile,
+                    ),
+                    if (profile['bio'] != null &&
+                        (profile['bio'] as String).isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 40),
+                        child: Text(
+                          profile['bio'],
+                          textAlign: TextAlign.center,
+                          style: AppTypography.body.copyWith(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white60
+                                : AppColors.creamText2,
+                            fontStyle: FontStyle.italic,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
-                    ),
+                    ],
+                    const SizedBox(height: 40),
+                    _buildStatsRow(context, ref, role, userId, xp, streak, wordsLearned),
+                    const SizedBox(height: 40),
+                    if (role == UserRole.learner)
+                      _buildArtifactsSection(context, ref, userId),
+                    const SizedBox(height: 40),
                   ],
-                  const SizedBox(height: 40),
-                  _buildStatsRow(context, ref, role, userId, xp, streak, wordsLearned),
-                  const SizedBox(height: 40),
-                  if (role == UserRole.learner)
-                    _buildArtifactsSection(context, ref, userId),
-                  const SizedBox(height: 40),
-                ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -174,7 +178,7 @@ class MemberProfileScreen extends ConsumerWidget {
         Text(
           name,
           style: AppTypography.h1ExtraBold.copyWith(
-            color: isDark ? AppColors.gold500 : AppColors.forest500,
+            color: isDark ? AppColors.gold500 : AppColors.forest900,
             fontSize: 32,
           ),
         ),
@@ -182,7 +186,7 @@ class MemberProfileScreen extends ConsumerWidget {
         Text(
           _getRoleBadge(role, profile),
           style: AppTypography.label.copyWith(
-            color: isDark ? Colors.white38 : AppColors.creamText3,
+            color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5),
             fontSize: 12,
             letterSpacing: 1.5,
           ),
@@ -234,21 +238,21 @@ class MemberProfileScreen extends ConsumerWidget {
           children: [
             Icon(
               icon,
-              color: isDark ? AppColors.gold500 : AppColors.forest500,
+              color: isDark ? AppColors.gold500 : AppColors.gold700,
               size: 18,
             ),
             const SizedBox(height: 4),
             Text(
               value,
               style: AppTypography.h1ExtraBold.copyWith(
-                color: isDark ? Colors.white : AppColors.forest700,
+                color: isDark ? Colors.white : AppColors.forest900,
                 fontSize: 18,
               ),
             ),
             Text(
               label,
               style: AppTypography.label.copyWith(
-                color: isDark ? Colors.white24 : AppColors.creamText3,
+                color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.4),
                 fontSize: 7,
               ),
             ),
@@ -263,8 +267,8 @@ class MemberProfileScreen extends ConsumerWidget {
     WidgetRef ref,
     String userId,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final artifactsAsync = ref.watch(otherUserArtifactsProvider(userId));
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -272,7 +276,7 @@ class MemberProfileScreen extends ConsumerWidget {
         Text(
           'Earned Artifacts',
           style: AppTypography.h3.copyWith(
-            color: isDark ? AppColors.gold500 : AppColors.forest500,
+            color: isDark ? AppColors.gold500 : AppColors.gold700,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -281,14 +285,10 @@ class MemberProfileScreen extends ConsumerWidget {
           data: (artifacts) {
             final earned = artifacts.where((a) => a.isEarned).toList();
             if (earned.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  child: Text(
-                    'No artifacts discovered yet...',
-                    style: AppTypography.body.copyWith(color: Colors.white24),
-                  ),
-                ),
+              return const BrandedEmptyState(
+                title: 'No Treasures',
+                message: 'No artifacts discovered by this member yet.',
+                icon: Icons.temple_hindu_rounded,
               );
             }
             return SizedBox(
@@ -299,7 +299,7 @@ class MemberProfileScreen extends ConsumerWidget {
                 itemCount: earned.length,
                 separatorBuilder: (context, _) => const SizedBox(width: 16),
                 itemBuilder: (context, index) {
-                  return _buildArtifactCard(context, earned[index]);
+                  return _buildArtifactCard(context, earned[index], isDark);
                 },
               ),
             );
@@ -318,7 +318,7 @@ class MemberProfileScreen extends ConsumerWidget {
     ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1);
   }
 
-  Widget _buildArtifactCard(BuildContext context, Artifact artifact) {
+  Widget _buildArtifactCard(BuildContext context, Artifact artifact, bool isDark) {
     final isEarned = artifact.isEarned;
     final tierColor = _getTierColor(artifact.tier);
 
@@ -346,7 +346,7 @@ class MemberProfileScreen extends ConsumerWidget {
                 border: Border.all(
                   color: isEarned
                       ? tierColor.withValues(alpha: 0.5)
-                      : Colors.white10,
+                      : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.1)),
                   width: 2,
                 ),
                 boxShadow: isEarned
@@ -377,7 +377,9 @@ class MemberProfileScreen extends ConsumerWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.label.copyWith(
-                color: isEarned ? Colors.white : Colors.white38,
+                color: isEarned
+                    ? (isDark ? Colors.white : AppColors.forest900)
+                    : (isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.3)),
                 fontSize: 10,
                 fontWeight: FontWeight.w800,
               ),
@@ -390,7 +392,7 @@ class MemberProfileScreen extends ConsumerWidget {
                 child: LinearProgressIndicator(
                   value: artifact.progress,
                   minHeight: 4,
-                  backgroundColor: Colors.white10,
+                  backgroundColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
                   valueColor: AlwaysStoppedAnimation<Color>(
                     tierColor.withValues(alpha: 0.5),
                   ),
@@ -401,7 +403,7 @@ class MemberProfileScreen extends ConsumerWidget {
                 '${artifact.currentProgress}/${artifact.targetValue}',
                 style: AppTypography.label.copyWith(
                   fontSize: 8,
-                  color: Colors.white24,
+                  color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.2),
                 ),
               ),
             ] else
@@ -409,7 +411,7 @@ class MemberProfileScreen extends ConsumerWidget {
                 artifact.tier.name.toUpperCase(),
                 style: AppTypography.label.copyWith(
                   fontSize: 8,
-                  color: Colors.white70,
+                  color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.6),
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1,
                 ),
@@ -439,6 +441,3 @@ class MemberProfileScreen extends ConsumerWidget {
     }
   }
 }
-
-
-

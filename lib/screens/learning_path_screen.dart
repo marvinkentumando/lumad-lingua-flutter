@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,16 +13,19 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/unit_header_card.dart';
 import '../widgets/lesson_step_card.dart';
+import '../widgets/branded_empty_state.dart';
+import '../widgets/wisdom_portal.dart';
 import '../widgets/skeleton.dart';
 import '../utils/icon_utils.dart';
 import '../providers/student_provider.dart';
 import '../providers/learning_provider.dart';
 import '../providers/user_preferences_provider.dart';
-import '../widgets/ambient_topo_background.dart';
+import '../widgets/brand_background.dart';
 import '../widgets/assessment_overlay.dart';
 import '../models/assessment.dart';
 import '../services/auth_service.dart';
 import '../services/certificate_service.dart';
+import '../services/haptic_service.dart';
 
 class LearningPathScreen extends ConsumerStatefulWidget {
   const LearningPathScreen({super.key});
@@ -160,18 +164,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: AnimatedBuilder(
-        animation: _scrollController,
-        builder: (context, child) {
-          double scrollOffset = 0.0;
-          if (_scrollController.hasClients) {
-            scrollOffset = _scrollController.offset;
-          }
-          return AmbientTopoBackground(
-            scrollOffset: scrollOffset,
-            child: child!,
-          );
-        },
+      body: BrandBackground(
         child: Stack(
           children: [
             CustomScrollView(
@@ -353,7 +346,6 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
   }
 
   Widget _buildGlassHeader(BuildContext context, String language) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final topPadding = MediaQuery.of(context).padding.top;
 
     return Positioned(
@@ -366,11 +358,10 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
           child: Container(
             padding: EdgeInsets.only(top: topPadding + 10, bottom: 20),
             decoration: BoxDecoration(
-              color: (isDark ? const Color(0xFF0F1711) : Colors.white)
-                  .withValues(alpha: 0.7),
+              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
               border: Border(
                 bottom: BorderSide(
-                  color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
                 ),
               ),
             ),
@@ -384,7 +375,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                   },
                   icon: Icon(
                     Icons.arrow_back_ios_new,
-                    color: isDark ? Colors.white70 : AppColors.forest700,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     size: 20,
                   ),
                 ),
@@ -403,7 +394,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                       Text(
                         'Learning Path',
                         style: AppTypography.h2.copyWith(
-                          color: isDark ? Colors.white : AppColors.forest700,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 22,
                           height: 1.1,
                         ),
@@ -434,7 +425,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                 : Colors.black.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(30),
             border: Border.all(
-              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
             ),
           ),
           child: Row(
@@ -496,7 +487,6 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
   }
 
   Widget _toggleBtn(String label, bool active) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
@@ -518,7 +508,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
           style: AppTypography.label.copyWith(
             color: active
                 ? Colors.black
-                : (isDark ? Colors.white24 : Colors.black26),
+                : Theme.of(context).colorScheme.onSurfaceVariant,
             fontWeight: FontWeight.w900,
             fontSize: 12,
             letterSpacing: 1.1,
@@ -540,7 +530,13 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
     return lessonsAsync.when(
       data: (allLessons) {
         if (allLessons.isEmpty) {
-          return const SliverFillRemaining(child: Center(child: Text('No lessons found.')));
+          return const SliverFillRemaining(
+            child: BrandedEmptyState(
+              title: 'Trail Unmarked',
+              message: 'No lessons found for this language yet.',
+              icon: Icons.map_outlined,
+            ),
+          );
         }
 
         // Find the language for the selected lessonId, or default to first
@@ -709,63 +705,48 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
   }
 
   Widget _buildSummitVisual(bool isUnlocked) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return GestureDetector(
-      onTap: isUnlocked ? _triggerSummitCelebration : null,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isUnlocked
-                  ? AppColors.gold500.withValues(alpha: 0.2)
-                  : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
-              border: Border.all(
-                color: isUnlocked
-                    ? AppColors.gold500.withValues(alpha: 0.5)
-                    : (isDark ? Colors.white10 : Colors.black12),
-                width: 2,
-              ),
-              boxShadow: isUnlocked
-                  ? [
-                      BoxShadow(
-                        color: AppColors.gold500.withValues(alpha: 0.2),
-                        blurRadius: 40,
-                        spreadRadius: 10,
-                      ),
-                    ]
-                  : [],
-            ),
-            child: Icon(
-              Icons.wb_sunny_rounded, // Ancestral Sun
-              color: isUnlocked
-                  ? AppColors.gold500
-                  : (isDark ? Colors.white10 : Colors.black12),
-              size: 64,
-            ),
-          ).animate(onPlay: (c) => isUnlocked ? c.repeat(reverse: true) : null)
-           .scale(begin: const Offset(1, 1), end: const Offset(1.1, 1.1), duration: 3.seconds, curve: Curves.easeInOut)
-           .shimmer(delay: 2.seconds, duration: 2.seconds),
-          const SizedBox(height: 16),
-          Text(
-            'THE PEAK OF WISDOM',
-            style: AppTypography.label.copyWith(
-              color: isUnlocked ? AppColors.gold500 : (isDark ? Colors.white24 : Colors.black26),
-              letterSpacing: 4,
-              fontWeight: FontWeight.w900,
-              fontSize: 12,
+    return AnimatedBuilder(
+      animation: _scrollController,
+      builder: (context, child) {
+        // Calculate parallax offset
+        double scrollOffset = 0.0;
+        if (_scrollController.hasClients) {
+          scrollOffset = _scrollController.offset;
+        }
+
+        // Only start parallaxing when we're near the summit (usually top of list)
+        // Adjust the multiplier to control "depth"
+        final parallaxY = scrollOffset * 0.15;
+
+        return Transform.translate(
+          offset: Offset(0, parallaxY),
+          child: GestureDetector(
+            onTap: isUnlocked ? _triggerSummitCelebration : null,
+            child: Column(
+              children: [
+                WisdomPortal(isUnlocked: isUnlocked, size: 200),
+                const SizedBox(height: 24),
+                Text(
+                  'THE PEAK OF WISDOM',
+                  style: AppTypography.label.copyWith(
+                    color: isUnlocked ? AppColors.gold500 : Theme.of(context).colorScheme.onSurfaceVariant,
+                    letterSpacing: 4,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
+                  ),
+                ).animate(onPlay: (c) => isUnlocked ? c.repeat() : null).shimmer(duration: 3.seconds),
+                Text(
+                  isUnlocked ? 'Tap to enter the Peak' : 'Complete all lessons to reach the summit',
+                  style: AppTypography.body.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
             ),
           ),
-          Text(
-            isUnlocked ? 'Tap to enter the Peak' : 'Complete all lessons to reach the summit',
-            style: AppTypography.body.copyWith(
-              color: isDark ? Colors.white24 : Colors.black26,
-              fontSize: 10,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -828,9 +809,10 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
               onTap: isLocked
                   ? null
                   : () {
-                      HapticFeedback.lightImpact();
+                      HapticService.light();
                       context.push('/lesson_session?lessonId=${lesson.id}');
                     },
+              index: totalLessons - globalIndex,
             ),
           ),
         );
@@ -849,6 +831,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
               isActive: isActive,
               startShift: horizontalShift,
               endShift: nextShift,
+              index: totalLessons - globalIndex - 1,
             ),
           );
         } else {
@@ -861,6 +844,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
               isActive: isActive,
               startShift: horizontalShift,
               endShift: horizontalShift, // Vertical line
+              index: totalLessons - globalIndex - 1,
             ),
           );
         }
@@ -876,6 +860,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
               isActive: !isSummitUnlocked && isCompleted,
               startShift: 0, // Summit is centered
               endShift: horizontalShift,
+              index: totalLessons,
             ),
           );
         }
@@ -907,6 +892,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
     bool isCached = false,
     String? label,
     VoidCallback? onTap,
+    int index = 0,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = isExam ? AppColors.semanticRed : AppColors.gold500;
@@ -941,7 +927,14 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                       );
                     },
                   ),
-                Container(
+                Animate(
+                  delay: (index * 200 + 500).ms,
+                ).fadeIn(duration: 600.ms).scale(
+                  begin: const Offset(0, 0),
+                  end: const Offset(1, 1),
+                  curve: Curves.elasticOut,
+                ).custom(
+                  builder: (context, value, child) => Container(
                   width: isActive ? 84 : 70,
                   height: isActive ? 84 : 70,
                   decoration: BoxDecoration(
@@ -975,10 +968,10 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                     icon,
                     color: isCompleted || isActive || isExam
                         ? Colors.black
-                        : (isDark ? Colors.white24 : Colors.black26),
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                     size: isActive ? 34 : 28,
                   ),
-                ),
+                )),
                 if (isCached)
                   Positioned(
                     top: -4,
@@ -1001,19 +994,22 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                         color: Colors.white,
                         size: 14,
                       ),
-                    ).animate().scale(duration: 400.ms, curve: Curves.elasticOut),
+                    ).animate(delay: (index * 200 + 1000).ms).scale(duration: 400.ms, curve: Curves.elasticOut),
                   ),
               ],
             ),
             if (label != null) ...[
               const SizedBox(height: 12),
+              Animate(
+                delay: (index * 200 + 800).ms,
+              ).fadeIn(duration: 400.ms).slideY(begin: 0.2),
               Container(
                 constraints: const BoxConstraints(maxWidth: 160),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.black.withValues(alpha: 0.4) : Colors.white.withValues(alpha: 0.8),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05)),
+                  border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05)),
                 ),
                 child: Text(
                   label,
@@ -1021,7 +1017,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: AppTypography.label.copyWith(
-                    color: isDark ? Colors.white : Colors.black,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.w800,
                     fontSize: 11,
                     letterSpacing: 0.5,
@@ -1041,22 +1037,27 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
     bool isActive = false,
     double startShift = 0,
     double endShift = 0,
+    int index = 0,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Center(
-      child: CustomPaint(
-        size: const Size(double.infinity, 70),
-        painter: PathLinePainter(
-          startShift: startShift,
-          endShift: endShift,
-          color: isCompleted 
-              ? AppColors.gold500 
-              : (isActive 
-                  ? (isDark ? Colors.white30 : Colors.black38) 
-                  : (isDark ? Colors.white10 : Colors.black12)),
-          isDashed: !isCompleted && !isActive,
-          isCompleted: isCompleted,
+    return Animate().custom(
+      duration: 1000.ms,
+      delay: (index * 200).ms,
+      builder: (context, value, child) => Center(
+        child: CustomPaint(
+          size: const Size(double.infinity, 80),
+          painter: PathLinePainter(
+            startShift: startShift,
+            endShift: endShift,
+            color: isCompleted 
+                ? AppColors.gold500 
+                : (isActive 
+                    ? Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3)
+                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
+            isDashed: !isCompleted && !isActive,
+            isCompleted: isCompleted,
+            growth: value,
+            isActive: isActive,
+          ),
         ),
       ),
     );
@@ -1069,6 +1070,8 @@ class PathLinePainter extends CustomPainter {
   final Color color;
   final bool isDashed;
   final bool isCompleted;
+  final double growth; // 0.0 to 1.0
+  final bool isActive;
 
   PathLinePainter({
     required this.startShift,
@@ -1076,47 +1079,138 @@ class PathLinePainter extends CustomPainter {
     required this.color,
     this.isDashed = false,
     this.isCompleted = false,
+    this.growth = 1.0,
+    this.isActive = false,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color
-      ..strokeWidth = 5
+      ..color = color.withValues(alpha: isDashed ? 0.3 : 1.0)
+      ..strokeWidth = 6
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
 
     final startX = size.width / 2 + startShift;
     final endX = size.width / 2 + endShift;
 
+    // Use Quadratic Bezier for a winding feel
     final path = Path();
-    path.moveTo(startX, 5);
-    path.lineTo(endX, size.height - 5);
+    path.moveTo(startX, 0);
+    
+    // Calculate an organic control point for the curve
+    // The "wiggle" factor is based on the shift difference to keep curves consistent
+    final wiggle = (startX - endX).abs() > 10 ? (startX - endX) * 0.3 : 30.0;
+    final controlPoint = Offset((startX + endX) / 2 + wiggle, size.height * 0.5);
+    final endPoint = Offset(endX, size.height);
 
-    if (isDashed) {
-      const dashWidth = 8.0;
-      const dashSpace = 8.0;
-      double distance = 0.0;
-      for (final PathMetric measurePath in path.computeMetrics()) {
-        while (distance < measurePath.length) {
-          canvas.drawPath(
-            measurePath.extractPath(distance, distance + dashWidth),
-            paint,
-          );
-          distance += dashWidth + dashSpace;
+    path.quadraticBezierTo(
+      controlPoint.dx, controlPoint.dy,
+      endPoint.dx, endPoint.dy,
+    );
+
+    // Extract and draw growth path
+    final pathMetrics = path.computeMetrics();
+    for (final metric in pathMetrics) {
+      final extractPath = metric.extractPath(0, metric.length * growth);
+      
+      if (isDashed) {
+        _drawDashedWovenPath(canvas, metric, paint, growth);
+      } else {
+        // Main Vine Body
+        canvas.drawPath(extractPath, paint);
+        
+        // Texture Layer: "Woven Vine" Detail
+        if (growth > 0) {
+          _drawWovenTexture(canvas, extractPath, color);
         }
       }
-    } else {
-      canvas.drawPath(path, paint);
 
-      if (isCompleted) {
-        final glowPaint = Paint()
-          ..color = color.withValues(alpha: 0.3)
-          ..strokeWidth = 12
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8)
-          ..strokeCap = StrokeCap.round
-          ..style = PaintingStyle.stroke;
-        canvas.drawPath(path, glowPaint);
+      // Procedural Leaves
+      if (growth > 0.1 && !isDashed) {
+        _drawProceduralLeaves(canvas, metric, growth);
+      }
+    }
+
+    if (isCompleted && growth >= 1.0) {
+      final glowPaint = Paint()
+        ..color = color.withValues(alpha: 0.15)
+        ..strokeWidth = 14
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10)
+        ..strokeCap = StrokeCap.round
+        ..style = PaintingStyle.stroke;
+      canvas.drawPath(path, glowPaint);
+    }
+  }
+
+  void _drawWovenTexture(Canvas canvas, Path path, Color baseColor) {
+    // Secondary "fiber" lines to give a woven feel
+    final texturePaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.1)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final pathMetrics = path.computeMetrics();
+    for (final metric in pathMetrics) {
+      const dashWidth = 10.0;
+      const dashSpace = 15.0;
+      double distance = 5.0; // Offset from start
+
+      while (distance < metric.length) {
+        canvas.drawPath(
+          metric.extractPath(distance, math.min(distance + dashWidth, metric.length)),
+          texturePaint,
+        );
+        distance += dashWidth + dashSpace;
+      }
+    }
+  }
+
+  void _drawDashedWovenPath(Canvas canvas, PathMetric metric, Paint paint, double g) {
+    const dashWidth = 8.0;
+    const dashSpace = 8.0;
+    double distance = 0.0;
+    while (distance < metric.length * g) {
+      canvas.drawPath(
+        metric.extractPath(distance, math.min(distance + dashWidth, metric.length * g)),
+        paint,
+      );
+      distance += dashWidth + dashSpace;
+    }
+  }
+
+  void _drawProceduralLeaves(Canvas canvas, PathMetric metric, double g) {
+    final rand = math.Random(startShift.hashCode + endShift.hashCode);
+    const int leafCount = 3;
+    final leafPaint = Paint()
+      ..color = color.withValues(alpha: 0.7)
+      ..style = PaintingStyle.fill;
+
+    for (int i = 0; i < leafCount; i++) {
+      final double t = (i + 1) / (leafCount + 1);
+      if (t > g) continue;
+
+      final tangent = metric.getTangentForOffset(metric.length * t);
+      if (tangent != null) {
+        final pos = tangent.position;
+        final angle = tangent.vector.direction;
+
+        canvas.save();
+        canvas.translate(pos.dx, pos.dy);
+        canvas.rotate(angle + (i % 2 == 0 ? 1.0 : -1.0));
+        
+        final leafScale = math.min(1.0, (g - t) / 0.1) * (0.7 + rand.nextDouble() * 0.5);
+        canvas.scale(leafScale);
+
+        final leafPath = Path()
+          ..moveTo(0, 0)
+          ..quadraticBezierTo(6, -10, 14, 0)
+          ..quadraticBezierTo(6, 10, 0, 0)
+          ..close();
+        
+        canvas.drawPath(leafPath, leafPaint);
+        canvas.restore();
       }
     }
   }
@@ -1127,6 +1221,7 @@ class PathLinePainter extends CustomPainter {
            oldDelegate.isDashed != isDashed || 
            oldDelegate.isCompleted != isCompleted ||
            oldDelegate.startShift != startShift ||
-           oldDelegate.endShift != endShift;
+           oldDelegate.endShift != endShift ||
+           oldDelegate.growth != growth;
   }
 }

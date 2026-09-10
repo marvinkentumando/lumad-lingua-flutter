@@ -9,6 +9,7 @@ import '../widgets/brand_background.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../providers/student_provider.dart';
+import '../services/haptic_service.dart';
 import '../models/scenario_models.dart';
 
 class ScenarioSessionScreen extends ConsumerStatefulWidget {
@@ -51,8 +52,10 @@ class _ScenarioSessionScreenState extends ConsumerState<ScenarioSessionScreen> {
   }
 
   Future<void> _handleChoice(ScenarioChoice choice) async {
+    HapticService.selection();
     if (choice.targetNodeId == 'end') {
       if (_isSaving) return;
+      HapticService.success();
       setState(() => _isSaving = true);
       
       try {

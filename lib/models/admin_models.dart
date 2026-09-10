@@ -63,28 +63,6 @@ class AdminUser {
   }
 }
 
-class ContentEntry {
-  final String id;
-  String term;
-  String dialect;
-  String partOfSpeech;
-  String status; // 'pending', 'validated', 'rejected'
-  String contributorName;
-  String? rejectionReason;
-  final DateTime submittedAt;
-
-  ContentEntry({
-    required this.id,
-    required this.term,
-    required this.dialect,
-    required this.partOfSpeech,
-    required this.status,
-    required this.contributorName,
-    this.rejectionReason,
-    DateTime? submittedAt,
-  }) : submittedAt = submittedAt ?? DateTime.now();
-}
-
 class AuditLogEntry {
   final String id;
   final String action;

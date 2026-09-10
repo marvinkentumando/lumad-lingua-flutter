@@ -46,6 +46,7 @@ class MainLayout extends ConsumerWidget {
     final userAsync = ref.watch(authStateProvider);
     final culturalTheme = ref.watch(culturalThemeProvider);
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -88,16 +89,21 @@ class MainLayout extends ConsumerWidget {
                   selectedFontSize: 8,
                   unselectedFontSize: 8,
                   currentIndex: currentIndex,
-                  selectedItemColor: culturalTheme.accentColor,
-                  unselectedItemColor: Colors.white.withValues(alpha: 0.3),
+                  selectedItemColor: isDark ? culturalTheme.accentColor : AppColors.forest700,
+                  unselectedItemColor: isDark
+                      ? Colors.white.withValues(alpha: 0.3)
+                      : AppColors.forest900.withValues(alpha: 0.4),
                   selectedLabelStyle: AppTypography.label.copyWith(
                     fontSize: 8,
                     fontWeight: FontWeight.w900,
-                    color: culturalTheme.accentColor,
+                    color: isDark ? culturalTheme.accentColor : AppColors.forest700,
                   ),
                   unselectedLabelStyle: AppTypography.label.copyWith(
                     fontSize: 8,
                     fontWeight: FontWeight.bold,
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.3)
+                        : AppColors.forest900.withValues(alpha: 0.4),
                   ),
                   onTap: (index) {
                     if (index >= 0 && index < navItems.length) {

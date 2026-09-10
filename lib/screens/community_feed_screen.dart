@@ -26,10 +26,13 @@ class CommunityFeedScreen extends ConsumerWidget {
                 child: feedAsync.when(
                   data: (activities) {
                     if (activities.isEmpty) {
-                      return const Center(
+                      final isDark = Theme.of(context).brightness == Brightness.dark;
+                      return Center(
                         child: Text(
                           "The community is quiet... for now. 🌿",
-                          style: TextStyle(color: Colors.white24),
+                          style: TextStyle(
+                            color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.2),
+                          ),
                         ),
                       );
                     }
@@ -67,6 +70,7 @@ class CommunityFeedScreen extends ConsumerWidget {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Row(
@@ -83,12 +87,12 @@ class CommunityFeedScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
+              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.notifications_none_rounded,
-              color: Colors.white70,
+              color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -111,10 +115,14 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
 
   void _toggleLike() {
     final user = ref.read(authStateProvider).value;
+    final profile = ref.read(userProfileProvider).value;
     if (user != null) {
-      ref
-          .read(firebaseServiceProvider)
-          .toggleLike(widget.activity.id, user.uid);
+      ref.read(firebaseServiceProvider).toggleLike(
+            widget.activity.id,
+            user.uid,
+            userName: profile?['username'] ?? 'A tribe member',
+            userPhotoUrl: profile?['photoURL'],
+          );
     }
   }
 
@@ -146,6 +154,7 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
     final user = ref.watch(authStateProvider).value;
     final isLiked = user != null && widget.activity.likedBy.contains(user.uid);
     final themeColor = _getThemeColor(widget.activity.type);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -173,13 +182,15 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
                 children: [
                   RichText(
                     text: TextSpan(
-                      style: AppTypography.body.copyWith(color: Colors.white),
+                      style: AppTypography.body.copyWith(
+                        color: isDark ? Colors.white : AppColors.forest900,
+                      ),
                       children: [
                         TextSpan(
                           text: widget.activity.userName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: AppColors.gold500,
+                            color: isDark ? AppColors.gold500 : AppColors.forest700,
                           ),
                         ),
                         TextSpan(text: ' ${widget.activity.message}'),
@@ -189,16 +200,16 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.access_time_rounded,
-                        color: Colors.white24,
+                        color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
                         size: 10,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         widget.activity.relativeTime.toUpperCase(),
                         style: AppTypography.label.copyWith(
-                          color: Colors.white24,
+                          color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
                           fontSize: 9,
                           letterSpacing: 1,
                         ),
@@ -219,12 +230,12 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
                           decoration: BoxDecoration(
                             color: isLiked
                                 ? AppColors.semanticRed.withValues(alpha: 0.1)
-                                : Colors.white.withValues(alpha: 0.03),
+                                : (isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.03)),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: isLiked
                                   ? AppColors.semanticRed.withValues(alpha: 0.2)
-                                  : Colors.white10,
+                                  : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
                             ),
                           ),
                           child: Row(
@@ -235,7 +246,7 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
                                         : Icons.favorite_border,
                                     color: isLiked
                                         ? AppColors.semanticRed
-                                        : Colors.white54,
+                                        : (isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.4)),
                                     size: 16,
                                   )
                                   .animate(target: isLiked ? 1 : 0)
@@ -250,7 +261,7 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
                                 style: AppTypography.label.copyWith(
                                   color: isLiked
                                       ? AppColors.semanticRed
-                                      : Colors.white54,
+                                      : (isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5)),
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -269,22 +280,24 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.03),
+                            color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.03),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.white10),
+                            border: Border.all(
+                              color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                            ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.mode_comment_outlined,
-                                color: Colors.white54,
+                                color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.4),
                                 size: 16,
                               ),
                               const SizedBox(width: 6),
                               Text(
                                 "${widget.activity.commentCount}",
                                 style: AppTypography.label.copyWith(
-                                  color: Colors.white54,
+                                  color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5),
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -307,14 +320,14 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
                           );
                         },
                         borderRadius: BorderRadius.circular(4),
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
                             horizontal: 4,
                             vertical: 2,
                           ),
                           child: Icon(
                             Icons.share_outlined,
-                            color: Colors.white54,
+                            color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.4),
                             size: 16,
                           ),
                         ),
@@ -400,6 +413,7 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
                                   user.uid,
                                   profile['username'] ?? 'Anonymous',
                                   _commentController.text.trim(),
+                                  userPhotoUrl: profile['photoURL'],
                                 );
                             _commentController.clear();
                             if (context.mounted) Navigator.pop(context);

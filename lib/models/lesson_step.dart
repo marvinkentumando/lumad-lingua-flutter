@@ -7,6 +7,9 @@ enum ActivityType {
   sentenceReordering,
   listening,
   scenario,
+  wordHunt,
+  trueOrFalse,
+  fillInTheBlanks,
 }
 
 class LessonStep {
@@ -71,6 +74,17 @@ class LessonStep {
             options != null &&
             options.length >= 2 &&
             options.every((opt) => opt.toString().trim().isNotEmpty);
+      case ActivityType.wordHunt:
+        final options = data['options'] as List?;
+        return (data['question'] ?? '').trim().isNotEmpty &&
+            options != null &&
+            options.isNotEmpty;
+      case ActivityType.trueOrFalse:
+        return (data['question'] ?? '').trim().isNotEmpty &&
+            data['correctIndex'] != null;
+      case ActivityType.fillInTheBlanks:
+        return (data['question'] ?? '').trim().isNotEmpty &&
+            (data['expectedSentence'] ?? '').trim().isNotEmpty;
     }
   }
 }

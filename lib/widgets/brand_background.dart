@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
 import '../services/cultural_theme_service.dart';
 import '../theme/cultural_patterns.dart';
+import 'generative_dagmay_background.dart';
 
 class BrandBackground extends ConsumerStatefulWidget {
   final Widget child;
@@ -37,87 +38,89 @@ class _BrandBackgroundState extends ConsumerState<BrandBackground>
     final culturalTheme = ref.watch(culturalThemeProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Stack(
-      children: [
-        // Base Dynamic Background
-        AnimatedContainer(
-          duration: const Duration(seconds: 1),
-          color: isDark ? AppColors.forest900 : AppColors.creamBg,
-        ),
-
-        // Ambient "Mist" or "Sun Rays" Layer (Phase 7)
-        Positioned.fill(
-          child: AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              return CustomPaint(
-                painter: AmbientEnvironmentPainter(
-                  progress: _controller.value,
-                  isDark: isDark,
-                  primaryColor: culturalTheme.primaryColor,
-                ),
-              );
-            },
+    return GenerativeDagmayBackground(
+      child: Stack(
+        children: [
+          // Base Dynamic Background
+          AnimatedContainer(
+            duration: const Duration(seconds: 1),
+            color: isDark ? AppColors.forest900 : AppColors.creamBg,
           ),
-        ),
-
-        // Cultural Pattern Layer
-        Positioned.fill(
-          child: CustomPaint(
-            painter: CulturalPatternPainter(
-              color: isDark
-                  ? culturalTheme.accentColor.withValues(alpha: 0.1)
-                  : culturalTheme.primaryColor.withValues(alpha: 0.05),
-              patternType: culturalTheme.patternType,
-              scale: 1.5,
+  
+          // Ambient "Mist" or "Sun Rays" Layer (Phase 7)
+          Positioned.fill(
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                return CustomPaint(
+                  painter: AmbientEnvironmentPainter(
+                    progress: _controller.value,
+                    isDark: isDark,
+                    primaryColor: culturalTheme.primaryColor,
+                  ),
+                );
+              },
             ),
           ),
-        ),
-
-        // Animated Orbs
-        AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            return Stack(
-              children: [
-                _buildOrb(
-                  color: culturalTheme.primaryColor.withValues(alpha: 0.12),
-                  size: 600,
-                  offset: Offset(
-                    math.sin(_controller.value * 2 * math.pi) * 100 + 50,
-                    math.cos(_controller.value * 2 * math.pi) * 150 + 200,
-                  ),
-                ),
-                _buildOrb(
-                  color: culturalTheme.accentColor.withValues(alpha: 0.08),
-                  size: 450,
-                  offset: Offset(
-                    math.cos(_controller.value * 2 * math.pi + math.pi) * 150 + 250,
-                    math.sin(_controller.value * 2 * math.pi + math.pi) * 100 + 450,
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-
-        // Grain Overlay
-        Opacity(
-          opacity: 0.02,
-          child: Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: NetworkImage(
-                  'https://www.transparenttextures.com/patterns/carbon-fibre.png',
-                ),
-                repeat: ImageRepeat.repeat,
+  
+          // Cultural Pattern Layer
+          Positioned.fill(
+            child: CustomPaint(
+              painter: CulturalPatternPainter(
+                color: isDark
+                    ? culturalTheme.accentColor.withValues(alpha: 0.1)
+                    : culturalTheme.primaryColor.withValues(alpha: 0.05),
+                patternType: culturalTheme.patternType,
+                scale: 1.5,
               ),
             ),
           ),
-        ),
-
-        widget.child,
-      ],
+  
+          // Animated Orbs
+          AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return Stack(
+                children: [
+                  _buildOrb(
+                    color: culturalTheme.primaryColor.withValues(alpha: 0.12),
+                    size: 600,
+                    offset: Offset(
+                      math.sin(_controller.value * 2 * math.pi) * 100 + 50,
+                      math.cos(_controller.value * 2 * math.pi) * 150 + 200,
+                    ),
+                  ),
+                  _buildOrb(
+                    color: culturalTheme.accentColor.withValues(alpha: 0.08),
+                    size: 450,
+                    offset: Offset(
+                      math.cos(_controller.value * 2 * math.pi + math.pi) * 150 + 250,
+                      math.sin(_controller.value * 2 * math.pi + math.pi) * 100 + 450,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+  
+          // Grain Overlay
+          Opacity(
+            opacity: 0.02,
+            child: Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: NetworkImage(
+                    'https://www.transparenttextures.com/patterns/carbon-fibre.png',
+                  ),
+                  repeat: ImageRepeat.repeat,
+                ),
+              ),
+            ),
+          ),
+  
+          widget.child,
+        ],
+      ),
     );
   }
 

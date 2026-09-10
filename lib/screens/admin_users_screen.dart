@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../services/firebase_service.dart';
+import '../services/haptic_service.dart';
 import '../models/admin_models.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_button.dart';
-import '../widgets/ambient_topo_background.dart';
+import '../widgets/brand_background.dart';
 import 'package:share_plus/share_plus.dart';
+import '../widgets/branded_empty_state.dart';
 import '../providers/admin_users_provider.dart';
 
 class AdminUsersScreen extends ConsumerStatefulWidget {
@@ -59,10 +61,11 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   Widget build(BuildContext context) {
     final usersState = ref.watch(adminUsersProvider);
     final filtered = _getFiltered(usersState.users);
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: AmbientTopoBackground(
+      body: BrandBackground(
         child: Stack(
           children: [
             SafeArea(
@@ -76,8 +79,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                       onChanged: (v) => setState(() => _userSearch = v),
                       decoration: InputDecoration(
                         hintText: 'Search by name or email...',
-                        hintStyle: const TextStyle(
-                          color: Colors.white24,
+                        hintStyle: TextStyle(
+                          color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
                           fontSize: 13,
                         ),
                         prefixIcon: const Icon(
@@ -87,34 +90,35 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                         ),
                         suffixIcon: _userSearch.isNotEmpty
                             ? IconButton(
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.close_rounded,
-                                  color: Colors.white38,
+                                  color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5),
                                   size: 18,
                                 ),
                                 onPressed: () {
+                                  HapticService.light();
                                   _searchCtrl.clear();
                                   setState(() => _userSearch = '');
                                 },
                               )
                             : null,
                         filled: true,
-                        fillColor: AppColors.forest800.withValues(alpha: 0.5),
+                        fillColor: isDark ? AppColors.forest800.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.5),
                         contentPadding: const EdgeInsets.symmetric(vertical: 0),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide(
-                            color: Colors.white.withValues(alpha: 0.05),
+                            color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.forest900.withValues(alpha: 0.05),
                           ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide(
-                            color: Colors.white.withValues(alpha: 0.05),
+                            color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.forest900.withValues(alpha: 0.05),
                           ),
                         ),
                       ),
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: isDark ? Colors.white : AppColors.forest900),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -133,7 +137,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                               Text(
                                 '${filtered.length} user${filtered.length == 1 ? '' : 's'}',
                                 style: AppTypography.label.copyWith(
-                                  color: Colors.white24,
+                                  color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
                                   fontSize: 10,
                                 ),
                               ),
@@ -175,24 +179,12 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                         ),
                         Expanded(
                           child: filtered.isEmpty && !usersState.isLoading
-                              ? Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(
-                                        Icons.person_search_rounded,
-                                        color: Colors.white10,
-                                        size: 64,
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        'No users found.',
-                                        style: AppTypography.h3.copyWith(
-                                          color: Colors.white24,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                              ? BrandedEmptyState(
+                                  title: _userSearch.isNotEmpty ? 'User Not Found' : 'Village is Empty',
+                                  message: _userSearch.isNotEmpty
+                                      ? 'No users match your search criteria.'
+                                      : 'No members have registered in the tribe yet.',
+                                  icon: _userSearch.isNotEmpty ? Icons.person_search_rounded : Icons.people_outline_rounded,
                                 )
                               : ListView.separated(
                                   controller: _scrollController,
@@ -245,6 +237,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
       'Educator',
       'Learner',
     ];
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -254,16 +247,19 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: GestureDetector(
-            onTap: () => setState(() {
+            onTap: () {
+              HapticService.selection();
+              setState(() {
                 _roleFilter = r;
-              }),
+              });
+            },
               child: Chip(
                 label: Text(r),
                 backgroundColor: isSelected
                     ? AppColors.gold500
-                    : Colors.white.withValues(alpha: 0.05),
+                    : (isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.forest900.withValues(alpha: 0.05)),
                 labelStyle: TextStyle(
-                  color: isSelected ? AppColors.forest900 : Colors.white70,
+                  color: isSelected ? AppColors.forest900 : (isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7)),
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   fontSize: 12,
                 ),
@@ -277,13 +273,14 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: AppColors.forest900.withValues(alpha: 0.8),
+        color: isDark ? AppColors.forest900.withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.8),
         border: Border(
           bottom: BorderSide(
-            color: Colors.white.withValues(alpha: 0.05),
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.forest900.withValues(alpha: 0.05),
             width: 1,
           ),
         ),
@@ -317,7 +314,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 Text(
                   'User Management',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.3),
+                    color: isDark ? Colors.white.withValues(alpha: 0.3) : AppColors.forest900.withValues(alpha: 0.3),
                     fontSize: 11,
                   ),
                 ),
@@ -332,6 +329,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   Widget _userRow(AdminUser user, int i) {
     final isSuspended = user.status == 'suspended';
     final color = _roleColor(user.role);
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return ColorFiltered(
       colorFilter: isSuspended
           ? const ColorFilter.matrix([
@@ -359,12 +357,12 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
           : const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.forest700.withValues(alpha: 0.3),
+          color: isDark ? AppColors.forest700.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSuspended
                 ? AppColors.semanticRed.withValues(alpha: 0.4)
-                : Colors.white.withValues(alpha: 0.05),
+                : (isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.forest900.withValues(alpha: 0.05)),
             width: isSuspended ? 1.5 : 1,
           ),
         ),
@@ -372,7 +370,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           child: InkWell(
-            onTap: () => _showUserDetailSheet(user),
+            onTap: () {
+              HapticService.selection();
+              _showUserDetailSheet(user);
+            },
             borderRadius: BorderRadius.circular(20),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -386,7 +387,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: isSuspended
-                                ? Colors.white24
+                                ? (isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.24))
                                 : color.withValues(alpha: 0.3),
                             width: 2,
                           ),
@@ -397,7 +398,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                           child: Text(
                             user.name[0],
                             style: TextStyle(
-                              color: isSuspended ? Colors.white38 : color,
+                              color: isSuspended ? (isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.38)) : color,
                               fontWeight: FontWeight.w900,
                               fontSize: 18,
                             ),
@@ -416,7 +417,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                 : AppColors.semanticGreen,
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: AppColors.forest900,
+                              color: isDark ? AppColors.forest900 : Colors.white,
                               width: 2,
                             ),
                           ),
@@ -432,7 +433,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                         Text(
                           user.name,
                           style: AppTypography.body.copyWith(
-                            color: isSuspended ? Colors.white38 : Colors.white,
+                            color: isSuspended ? (isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.38)) : (isDark ? Colors.white : AppColors.forest900),
                             fontWeight: FontWeight.w900,
                             fontSize: 16,
                             decoration: isSuspended
@@ -445,12 +446,12 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                           children: [
                             _roleBadge(
                               user.role,
-                              isSuspended ? Colors.white24 : color,
+                              isSuspended ? (isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.24)) : color,
                             ),
                             const SizedBox(width: 8),
-                            const Text(
+                            Text(
                               '·',
-                              style: TextStyle(color: Colors.white24),
+                              style: TextStyle(color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.24)),
                             ),
                             const SizedBox(width: 8),
                             Text(
@@ -469,9 +470,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                     ),
                   ),
                   PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_horiz, color: Colors.white24),
+                    icon: Icon(Icons.more_horiz, color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.24)),
                     padding: EdgeInsets.zero,
-                    color: AppColors.forest800,
+                    color: isDark ? AppColors.forest800 : Colors.white,
                     elevation: 20,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -482,17 +483,20 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                         'edit',
                         'Edit Profile',
                         Icons.edit_outlined,
+                        isDark,
                       ),
                       _buildPopupItem(
                         'promote',
                         'Change Role',
                         Icons.shield_outlined,
+                        isDark,
                       ),
                       const PopupMenuDivider(height: 1),
                       _buildPopupItem(
                         'suspend',
                         isSuspended ? 'Unsuspend' : 'Suspend',
                         Icons.block_flipped,
+                        isDark,
                         color: AppColors.semanticRed,
                       ),
                     ],
@@ -509,10 +513,11 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   void _showUserDetailSheet(AdminUser user) {
     final isSuspended = user.status == 'suspended';
     final color = _roleColor(user.role);
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.forest900,
+      backgroundColor: isDark ? AppColors.forest900 : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
@@ -528,7 +533,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.white24,
+                    color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -552,12 +557,12 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                     const SizedBox(height: 16),
                     Text(
                       user.name,
-                      style: AppTypography.h2.copyWith(color: Colors.white),
+                      style: AppTypography.h2.copyWith(color: isDark ? Colors.white : AppColors.forest900),
                     ),
                     Text(
                       user.email,
                       style: AppTypography.body.copyWith(
-                        color: Colors.white38,
+                        color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5),
                         fontSize: 12,
                       ),
                     ),
@@ -573,14 +578,16 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                     'CONTRIBUTIONS',
                     user.totalContributions.toString(),
                     Icons.edit_rounded,
+                    isDark,
                   ),
                   const SizedBox(width: 12),
-                  _detailStat('XP', user.xp.toString(), Icons.star_rounded),
+                  _detailStat('XP', user.xp.toString(), Icons.star_rounded, isDark),
                   const SizedBox(width: 12),
                   _detailStat(
                     'JOINED',
                     '${user.joinedAt.month}/${user.joinedAt.year}',
                     Icons.calendar_today_rounded,
+                    isDark,
                   ),
                 ],
               ),
@@ -588,21 +595,21 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppColors.forestDarkCard,
+                  color: isDark ? AppColors.forestDarkCard : AppColors.forest50,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.access_time_rounded,
-                      color: Colors.white24,
+                      color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
                       size: 16,
                     ),
                     const SizedBox(width: 8),
                     Text(
                       'Last active: ${_formatLastActive(user.lastActive)}',
                       style: AppTypography.body.copyWith(
-                        color: Colors.white38,
+                        color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5),
                         fontSize: 12,
                       ),
                     ),
@@ -643,7 +650,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                             Text(
                               user.suspensionReason!,
                               style: AppTypography.body.copyWith(
-                                color: Colors.white70,
+                                color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7),
                                 fontSize: 12,
                               ),
                             ),
@@ -661,12 +668,12 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     );
   }
 
-  Widget _detailStat(String label, String value, IconData icon) {
+  Widget _detailStat(String label, String value, IconData icon, bool isDark) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: AppColors.forestDarkCard,
+          color: isDark ? AppColors.forestDarkCard : AppColors.forest50,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
@@ -680,14 +687,14 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
             Text(
               value,
               style: AppTypography.h3.copyWith(
-                color: Colors.white,
+                color: isDark ? Colors.white : AppColors.forest900,
                 fontSize: 15,
               ),
             ),
             Text(
               label,
               style: AppTypography.label.copyWith(
-                color: Colors.white24,
+                color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
                 fontSize: 8,
               ),
             ),
@@ -842,18 +849,19 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   PopupMenuItem<String> _buildPopupItem(
     String value,
     String label,
-    IconData icon, {
+    IconData icon,
+    bool isDark, {
     Color? color,
   }) {
     return PopupMenuItem(
       value: value,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: color ?? Colors.white70),
+          Icon(icon, size: 18, color: color ?? (isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7))),
           const SizedBox(width: 12),
           Text(
             label,
-            style: TextStyle(color: color ?? Colors.white, fontSize: 13),
+            style: TextStyle(color: color ?? (isDark ? Colors.white : AppColors.forest900), fontSize: 13),
           ),
         ],
       ),

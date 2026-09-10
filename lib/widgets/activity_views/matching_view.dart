@@ -51,12 +51,16 @@ class _MatchingViewState extends State<MatchingView> {
         .where((s) => s.isNotEmpty)
         .toList();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
           widget.question.isEmpty ? 'Match the pairs' : widget.question,
-          style: AppTypography.h2.copyWith(color: Colors.white),
+          style: AppTypography.h2.copyWith(
+            color: isDark ? Colors.white : AppColors.forest900,
+          ),
         ),
         const SizedBox(height: 32),
         ...List.generate(natives.length, (index) {
@@ -84,13 +88,13 @@ class _MatchingViewState extends State<MatchingView> {
                           ? AppColors.gold500.withValues(alpha: 0.2)
                           : (widget.selectedNative == native
                                 ? AppColors.semanticBlue.withValues(alpha: 0.3)
-                                : AppColors.forestDarkCard),
+                                : (isDark ? AppColors.forestDarkCard : Colors.black.withValues(alpha: 0.03))),
                       border: Border.all(
                         color: isNativeMatched
                             ? AppColors.gold500
                             : (widget.selectedNative == native
                                   ? AppColors.semanticBlue
-                                  : Colors.white24),
+                                  : (isDark ? Colors.white24 : Colors.black.withValues(alpha: 0.1))),
                         width:
                             isNativeMatched || widget.selectedNative == native
                             ? 2
@@ -100,7 +104,9 @@ class _MatchingViewState extends State<MatchingView> {
                     ),
                     child: Text(
                       native.isEmpty ? 'Native' : native,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(
+                        color: isDark ? Colors.white : AppColors.forest900,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -121,13 +127,13 @@ class _MatchingViewState extends State<MatchingView> {
                           ? AppColors.gold500.withValues(alpha: 0.2)
                           : (widget.selectedMeaning == meaning
                                 ? AppColors.semanticBlue.withValues(alpha: 0.3)
-                                : AppColors.forest800),
+                                : (isDark ? AppColors.forest800 : Colors.black.withValues(alpha: 0.03))),
                       border: Border.all(
                         color: isMeaningMatched
                             ? AppColors.gold500
                             : (widget.selectedMeaning == meaning
                                   ? AppColors.semanticBlue
-                                  : Colors.white24),
+                                  : (isDark ? Colors.white24 : Colors.black.withValues(alpha: 0.1))),
                         width:
                             isMeaningMatched ||
                                 widget.selectedMeaning == meaning
@@ -138,7 +144,9 @@ class _MatchingViewState extends State<MatchingView> {
                     ),
                     child: Text(
                       meaning.isEmpty ? 'Meaning' : meaning,
-                      style: const TextStyle(color: Colors.white70),
+                      style: TextStyle(
+                        color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7),
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),

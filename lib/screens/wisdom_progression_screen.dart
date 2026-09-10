@@ -5,7 +5,7 @@ import '../theme/app_typography.dart';
 import '../providers/student_provider.dart';
 import '../services/firebase_service.dart';
 import '../widgets/brand_card.dart';
-import '../widgets/ambient_topo_background.dart';
+import '../widgets/brand_background.dart';
 
 import '../providers/role_provider.dart';
 
@@ -20,7 +20,7 @@ class WisdomProgressionScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: AmbientTopoBackground(
+      body: BrandBackground(
         child: SafeArea(
           child: Column(
             children: [

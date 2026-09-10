@@ -9,6 +9,7 @@ import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/brand_text_field.dart';
 import '../services/auth_service.dart';
+import '../services/haptic_service.dart';
 import '../widgets/parallax_background.dart';
 
 import '../widgets/assessment_overlay.dart';
@@ -218,16 +219,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   void _nextStep() {
     if (_validateStep()) {
+      HapticService.navigation();
       setState(() {
         _currentStep++;
         _errorMessage = null;
       });
     } else {
+      HapticService.error();
       setState(() => _errorMessage = "Please fill all fields correctly");
     }
   }
 
   void _prevStep() {
+    HapticService.navigation();
     setState(() {
       _currentStep--;
       _errorMessage = null;
@@ -284,7 +288,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back_rounded,
-            color: isDark ? Colors.white : AppColors.forest700,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
           onPressed: () {
             if (_currentStep > 0) {
@@ -317,9 +321,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     end: Alignment.bottomCenter,
                     colors: [
                       isDark
-                          ? AppColors.forest900.withValues(alpha: 0.7)
+                          ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.7)
                           : Colors.white.withValues(alpha: 0.8),
-                      isDark ? AppColors.forest900 : AppColors.creamBg,
+                      Theme.of(context).colorScheme.surface,
                     ],
                   ),
                 ),
@@ -434,6 +438,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   Widget _buildStepIndicator() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(_totalSteps, (index) {
@@ -446,7 +451,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           decoration: BoxDecoration(
             color: isActive
                 ? AppColors.gold500
-                : Colors.white.withValues(alpha: 0.2),
+                : (isDark ? Colors.white.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.1)),
             borderRadius: BorderRadius.circular(3),
           ),
         );
@@ -544,6 +549,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   Widget _buildInviteBanner() {
     final role = _detectedInvite!['role']?.toString().toUpperCase() ?? 'STAFF';
     final group = _detectedInvite!['indigenousGroup'];
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       margin: const EdgeInsets.only(top: 12),
@@ -572,7 +578,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 Text(
                   "You've been invited as a $role${group != null ? ' for $group' : ''}.",
                   style: AppTypography.body.copyWith(
-                    color: Colors.white70,
+                    color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7),
                     fontSize: 11,
                   ),
                 ),
@@ -601,7 +607,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         Text(
           "Province",
           style: AppTypography.label.copyWith(
-            color: isDark ? Colors.white70 : AppColors.forest700,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 12,
           ),
         ),
@@ -621,7 +627,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         Text(
           "Municipality",
           style: AppTypography.label.copyWith(
-            color: isDark ? Colors.white70 : AppColors.forest700,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 12,
           ),
         ),
@@ -646,7 +652,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         Text(
           "Enter a code from your educator to join their specific community village.",
           style: AppTypography.label.copyWith(
-            color: Colors.white24,
+            color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
             fontSize: 9,
           ),
         ),
@@ -664,14 +670,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     required List<String> items,
     required ValueChanged<String?> onChanged,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.forest800 : Colors.white,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? Colors.white10 : AppColors.creamBorder,
+          color: Theme.of(context).colorScheme.outline,
         ),
       ),
       child: DropdownButtonHideUnderline(
@@ -680,11 +685,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           hint: Text(
             hint,
             style: TextStyle(
-              color: isDark ? Colors.white24 : Colors.black26,
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.38),
               fontSize: 14,
             ),
           ),
-          dropdownColor: isDark ? AppColors.forest800 : Colors.white,
+          dropdownColor: Theme.of(context).colorScheme.surfaceContainerHighest,
           isExpanded: true,
           icon: const Icon(
             Icons.keyboard_arrow_down_rounded,
@@ -696,7 +701,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               child: Text(
                 item,
                 style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black87,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 14,
                 ),
               ),
@@ -709,14 +714,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   Widget _buildPathStep() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           "Native Language",
           style: AppTypography.label.copyWith(
-            color: isDark ? Colors.white70 : AppColors.forest700,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 12,
           ),
         ),
@@ -735,7 +739,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         Text(
           "Learning Goal",
           style: AppTypography.label.copyWith(
-            color: isDark ? Colors.white : AppColors.forest700,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -748,12 +752,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             return ChoiceChip(
               label: Text(goal),
               selected: isSelected,
-              onSelected: (val) => setState(() => _learningGoal = goal),
+              onSelected: (val) {
+            HapticService.selection();
+            setState(() => _learningGoal = goal);
+          },
               selectedColor: AppColors.gold500,
               labelStyle: TextStyle(
                 color: isSelected
                     ? AppColors.forest900
-                    : (isDark ? Colors.white : AppColors.forest500),
+                    : Theme.of(context).colorScheme.onSurface,
               ),
             );
           }).toList(),
@@ -765,7 +772,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   Widget _buildTermsCheckbox() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         SizedBox(
@@ -773,11 +779,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           width: 24,
           child: Checkbox(
             value: _acceptedTerms,
-            onChanged: (val) => setState(() => _acceptedTerms = val ?? false),
+            onChanged: (val) {
+            HapticService.selection();
+            setState(() => _acceptedTerms = val ?? false);
+          },
             activeColor: AppColors.gold500,
             checkColor: AppColors.forest900,
             side: BorderSide(
-              color: isDark ? Colors.white30 : AppColors.forest200,
+              color: Theme.of(context).colorScheme.outline,
             ),
           ),
         ),
@@ -788,7 +797,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               text: "I agree to the ",
               style: AppTypography.body.copyWith(
                 fontSize: 12,
-                color: isDark ? Colors.white70 : AppColors.forest700,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               children: [
                 WidgetSpan(
@@ -835,18 +844,24 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   void _showLegalDialog(String title, String content) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.forest900,
+        backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
         title: Text(
           title,
-          style: AppTypography.display.copyWith(color: AppColors.gold500, fontSize: 20),
+          style: AppTypography.display.copyWith(
+            color: isDark ? AppColors.gold500 : AppColors.gold700,
+            fontSize: 20,
+          ),
         ),
         content: SingleChildScrollView(
           child: Text(
             content,
-            style: AppTypography.body.copyWith(color: Colors.white70),
+            style: AppTypography.body.copyWith(
+              color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7),
+            ),
           ),
         ),
         actions: [
@@ -854,7 +869,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             onPressed: () => Navigator.pop(context),
             child: Text(
               "CLOSE",
-              style: TextStyle(color: AppColors.gold500),
+              style: TextStyle(color: isDark ? AppColors.gold500 : AppColors.gold700),
             ),
           ),
         ],
@@ -899,11 +914,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         Text(
           "Already have an account?",
           style: AppTypography.body.copyWith(
-            color: isDark ? AppColors.creamText2 : AppColors.creamText3,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
         TextButton(
-          onPressed: () => context.push('/login'),
+          onPressed: () {
+            HapticService.selection();
+            context.push('/login');
+          },
           child: Text(
             "Sign In",
             style: AppTypography.body.copyWith(

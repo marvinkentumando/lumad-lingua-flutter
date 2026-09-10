@@ -13,6 +13,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../services/firebase_service.dart';
+import '../services/haptic_service.dart';
 import '../models/admin_models.dart';
 import 'package:intl/intl.dart';
 
@@ -38,7 +39,7 @@ class _EducatorAnalyticsScreenState
     final totalWordsAsync = ref.watch(totalWordsCountProvider);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
@@ -47,7 +48,7 @@ class _EducatorAnalyticsScreenState
             ref.invalidate(topLearnersProvider);
           },
           color: AppColors.gold500,
-          backgroundColor: isDark ? AppColors.forest800 : Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -139,7 +140,7 @@ class _EducatorAnalyticsScreenState
                             padding: const EdgeInsets.only(bottom: 32),
                             child: Text(
                               'No quiz data recorded yet.',
-                              style: AppTypography.body.copyWith(color: isDark ? Colors.white24 : AppColors.creamText3),
+                              style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
                             ),
                           )
                         else
@@ -153,7 +154,7 @@ class _EducatorAnalyticsScreenState
                             padding: const EdgeInsets.only(bottom: 32),
                             child: Text(
                               'No significant hurdles identified yet.',
-                              style: AppTypography.body.copyWith(color: isDark ? Colors.white24 : AppColors.creamText3),
+                              style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
                             ),
                           )
                         else
@@ -384,8 +385,10 @@ class _EducatorAnalyticsScreenState
                 final h = maxVal > 0 ? (val / maxVal) * 120 : 0.0;
                 
                 return GestureDetector(
-                  onTap: () =>
-                      setState(() => _tappedBarIndex = isTapped ? null : i),
+                  onTap: () {
+                    HapticService.light();
+                    setState(() => _tappedBarIndex = isTapped ? null : i);
+                  },
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -705,7 +708,10 @@ class _EducatorAnalyticsScreenState
     final count = unreadCountAsync.value ?? 0;
 
     return GestureDetector(
-      onTap: () => context.push('/educator/feedback'),
+      onTap: () {
+        HapticService.selection();
+        context.push('/educator/feedback');
+      },
       child: Stack(
         children: [
           Container(
@@ -762,10 +768,13 @@ class _EducatorAnalyticsScreenState
         return Padding(
           padding: const EdgeInsets.only(right: 8),
           child: GestureDetector(
-            onTap: () => setState(() {
-              _timeRange = range;
-              _tappedBarIndex = null;
-            }),
+            onTap: () {
+              HapticService.selection();
+              setState(() {
+                _timeRange = range;
+                _tappedBarIndex = null;
+              });
+            },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(

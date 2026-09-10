@@ -8,6 +8,7 @@ import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/brand_text_field.dart';
 import '../services/auth_service.dart';
+import '../services/haptic_service.dart';
 import '../widgets/parallax_background.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -88,9 +89,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     end: Alignment.bottomCenter,
                     colors: [
                       isDark
-                          ? AppColors.forest900.withValues(alpha: 0.7)
+                          ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.7)
                           : Colors.white.withValues(alpha: 0.8),
-                      isDark ? AppColors.forest900 : AppColors.creamBg,
+                      Theme.of(context).colorScheme.surface,
                     ],
                   ),
                 ),
@@ -185,11 +186,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         Text(
           "Don't have an account?",
           style: AppTypography.body.copyWith(
-            color: isDark ? AppColors.creamText2 : AppColors.creamText3,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
         TextButton(
-          onPressed: () => context.push('/signup'),
+          onPressed: () {
+            HapticService.selection();
+            context.push('/signup');
+          },
           child: Text(
             "Sign Up",
             style: AppTypography.body.copyWith(

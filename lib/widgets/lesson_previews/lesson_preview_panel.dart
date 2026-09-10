@@ -57,7 +57,8 @@ class LessonPreviewPanel extends StatelessWidget {
   }
 
   Widget _buildLivePreviewContent() {
-    if (selectedStep == null) {
+    final step = selectedStep;
+    if (step == null) {
       return const Center(
         child: Text(
           'Select a step to preview',
@@ -66,7 +67,7 @@ class LessonPreviewPanel extends StatelessWidget {
       );
     }
 
-    switch (selectedStep!.type) {
+    switch (step.type) {
       case ActivityType.configuration:
         return ConfigurationPreview(
           title: title,
@@ -75,22 +76,34 @@ class LessonPreviewPanel extends StatelessWidget {
           dialect: dialect,
         );
       case ActivityType.vocabulary:
-        return VocabularyPreview(step: selectedStep!);
+        return VocabularyPreview(step: step);
       case ActivityType.mcq:
-        return MCQPreview(step: selectedStep!);
+        return MCQPreview(step: step);
       case ActivityType.pronunciation:
-        return PronunciationPreview(step: selectedStep!);
+        return PronunciationPreview(step: step);
       case ActivityType.matching:
-        return MatchingPreview(step: selectedStep!);
+        return MatchingPreview(step: step);
       case ActivityType.sentenceReordering:
-        return SentenceReorderingPreview(step: selectedStep!);
+        return SentenceReorderingPreview(step: step);
       case ActivityType.listening:
-        return ListeningPreview(step: selectedStep!);
+        return ListeningPreview(step: step);
       case ActivityType.scenario:
-        return ScenarioPreview(step: selectedStep!);
+        return ScenarioPreview(step: step);
+      case ActivityType.wordHunt:
+        return _buildPlaceholderPreview('Word Hunt');
+      case ActivityType.trueOrFalse:
+        return _buildPlaceholderPreview('True or False');
+      case ActivityType.fillInTheBlanks:
+        return _buildPlaceholderPreview('Fill in the Blanks');
     }
   }
+
+  Widget _buildPlaceholderPreview(String type) {
+    return Center(
+      child: Text(
+        'Preview for $type coming soon',
+        style: const TextStyle(color: Colors.white24),
+      ),
+    );
+  }
 }
-
-
-

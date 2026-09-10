@@ -3,15 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/dictionary_entry.dart';
 import '../models/srs_models.dart';
 import '../widgets/brand_button.dart';
+import '../widgets/brand_background.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../services/firebase_service.dart';
 import '../services/audio_service.dart';
 import '../services/auth_service.dart';
+import '../services/haptic_service.dart';
 import '../providers/saved_words_provider.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/brand_search_bar.dart';
-import '../widgets/ambient_topo_background.dart';
 import '../providers/search_history_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -28,6 +29,12 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
   String? _expandedWordId;
   _DictionarySort _selectedSort = _DictionarySort.alphabetical;
   final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   List<DictionaryEntry> _applySort(List<DictionaryEntry> entries) {
     var filtered = List<DictionaryEntry>.from(entries);
@@ -75,7 +82,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: AmbientTopoBackground(
+      body: BrandBackground(
         child: SafeArea(
           child: dictionaryAsync.when(
             data: (entries) {
@@ -83,26 +90,17 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                 data: (srsList) {
                   final srsMap = {for (var s in srsList) s.wordId: s};
 
-                  // Filter logic
                   var items = entries;
                   if (_selectedCategory == 'SAVED') {
-                    items = items
-                        .where((e) => savedIds.contains(e.id))
-                        .toList();
+                    items = items.where((e) => savedIds.contains(e.id)).toList();
                   }
 
                   if (_searchQuery.isNotEmpty) {
-                    items = items
-                        .where(
-                          (e) =>
-                              e.indigenousWord.toLowerCase().contains(
-                                _searchQuery.toLowerCase(),
-                              ) ||
-                              e.translation.toLowerCase().contains(
-                                _searchQuery.toLowerCase(),
-                              ),
-                        )
-                        .toList();
+                    items = items.where(
+                      (e) =>
+                          e.indigenousWord.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                          e.translation.toLowerCase().contains(_searchQuery.toLowerCase()),
+                    ).toList();
                   }
 
                   items = _applySort(items);
@@ -143,10 +141,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                                     masteryLevel: srs?.mastery,
                                     onToggleExpanded: () {
                                       setState(() {
-                                        _expandedWordId =
-                                            _expandedWordId == entry.id
-                                            ? null
-                                            : entry.id;
+                                        _expandedWordId = _expandedWordId == entry.id ? null : entry.id;
                                       });
                                     },
                                   );
@@ -169,8 +164,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
               itemCount: 5,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               separatorBuilder: (_, __) => const SizedBox(height: 16),
-              itemBuilder: (_, __) =>
-                  const Skeleton(height: 80, borderRadius: 24),
+              itemBuilder: (_, __) => const Skeleton(height: 80, borderRadius: 24),
             ),
             error: (err, stack) => Center(
               child: Text(
@@ -185,26 +179,21 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
   }
 
   Widget _buildNoResultsState({bool isSavedTab = false}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 40),
         child: Column(
           children: [
             Icon(
-              isSavedTab
-                  ? Icons.bookmark_outline_rounded
-                  : Icons.search_off_rounded,
-              color: isDark ? Colors.white24 : AppColors.forest200,
+              isSavedTab ? Icons.bookmark_outline_rounded : Icons.search_off_rounded,
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
               size: 48,
             ),
             const SizedBox(height: 16),
             Text(
-              isSavedTab
-                  ? 'You haven\'t saved any words yet.'
-                  : 'No words match your search.',
+              isSavedTab ? 'You haven\'t saved any words yet.' : 'No words match your search.',
               style: AppTypography.body.copyWith(
-                color: isDark ? Colors.white38 : AppColors.creamText2,
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
               ),
             ),
           ],
@@ -237,13 +226,11 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
     );
   }
 
-  Widget _buildSavedWordsButton(
-    bool isDark,
-    int savedCount,
-  ) {
+  Widget _buildSavedWordsButton(bool isDark, int savedCount) {
     final isSelected = _selectedCategory == 'SAVED';
     return GestureDetector(
       onTap: () {
+        HapticService.selection();
         setState(() {
           _selectedCategory = isSelected ? 'ALL' : 'SAVED';
         });
@@ -251,15 +238,10 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.gold500
-              : (isDark
-                  ? AppColors.forestDarkCard
-                  : Colors.black.withValues(alpha: 0.05)),
+          color: isSelected ? AppColors.gold500 : Theme.of(context).colorScheme.surfaceContainerHighest,
           shape: BoxShape.circle,
           border: Border.all(
-            color:
-                (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
           ),
         ),
         child: Stack(
@@ -267,9 +249,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
           children: [
             Icon(
               isSelected ? Icons.bookmark : Icons.bookmark_border_rounded,
-              color: isSelected
-                  ? Colors.black
-                  : (isDark ? AppColors.gold500 : AppColors.forest500),
+              color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
               size: 20,
             ),
             if (savedCount > 0 && !isSelected)
@@ -307,57 +287,30 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
       icon: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.forestDarkCard
-              : Colors.black.withValues(alpha: 0.05),
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           shape: BoxShape.circle,
           border: Border.all(
-            color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
           ),
         ),
         child: Icon(
           Icons.sort_rounded,
-          color: isDark ? AppColors.gold500 : AppColors.forest500,
+          color: Theme.of(context).colorScheme.primary,
           size: 20,
         ),
       ),
-      color: isDark ? AppColors.forest800 : AppColors.creamBg,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       itemBuilder: (context) => [
-        _buildSortItem(
-          _DictionarySort.alphabetical,
-          'A - Z',
-          Icons.sort_by_alpha,
-          isDark,
-        ),
-        _buildSortItem(
-          _DictionarySort.reverseAlphabetical,
-          'Z - A',
-          Icons.sort_by_alpha,
-          isDark,
-        ),
-        _buildSortItem(
-          _DictionarySort.newest,
-          'Newest First',
-          Icons.new_releases_outlined,
-          isDark,
-        ),
-        _buildSortItem(
-          _DictionarySort.oldest,
-          'Oldest First',
-          Icons.history_rounded,
-          isDark,
-        ),
+        _buildSortItem(_DictionarySort.alphabetical, 'A - Z', Icons.sort_by_alpha, isDark),
+        _buildSortItem(_DictionarySort.reverseAlphabetical, 'Z - A', Icons.sort_by_alpha, isDark),
+        _buildSortItem(_DictionarySort.newest, 'Newest First', Icons.new_releases_outlined, isDark),
+        _buildSortItem(_DictionarySort.oldest, 'Oldest First', Icons.history_rounded, isDark),
       ],
     );
   }
 
-  PopupMenuItem<_DictionarySort> _buildSortItem(
-    _DictionarySort value,
-    String label,
-    IconData icon,
-    bool isDark,
-  ) {
+  PopupMenuItem<_DictionarySort> _buildSortItem(_DictionarySort value, String label, IconData icon, bool isDark) {
     final isSelected = _selectedSort == value;
     return PopupMenuItem(
       value: value,
@@ -366,17 +319,13 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
           Icon(
             icon,
             size: 18,
-            color: isSelected
-                ? (isDark ? AppColors.gold500 : AppColors.forest500)
-                : (isDark ? Colors.white38 : Colors.black38),
+            color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
           ),
           const SizedBox(width: 12),
           Text(
             label,
             style: AppTypography.body.copyWith(
-              color: isSelected
-                  ? (isDark ? Colors.white : AppColors.forest500)
-                  : (isDark ? Colors.white70 : Colors.black87),
+              color: isSelected ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurfaceVariant,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
           ),
@@ -400,22 +349,17 @@ class _DictionaryEntryCard extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<_DictionaryEntryCard> createState() =>
-      _DictionaryEntryCardState();
+  ConsumerState<_DictionaryEntryCard> createState() => _DictionaryEntryCardState();
 }
 
-class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard>
-    with SingleTickerProviderStateMixin {
+class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard> with SingleTickerProviderStateMixin {
   bool _isPlaying = false;
 
   void _togglePlay() {
+    HapticService.light();
     if (widget.entry.audioUrl == null || widget.entry.audioUrl!.isEmpty) {
-      // Fallback to TTS if no recording is available
       setState(() => _isPlaying = true);
-      ref
-          .read(audioServiceProvider)
-          .speak(widget.entry.indigenousWord)
-          .then((_) {
+      ref.read(audioServiceProvider).speak(widget.entry.indigenousWord).then((_) {
         if (mounted) setState(() => _isPlaying = false);
       });
       return;
@@ -426,9 +370,7 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard>
       setState(() => _isPlaying = false);
     } else {
       setState(() => _isPlaying = true);
-      ref.read(audioServiceProvider).playFromUrl(widget.entry.audioUrl!).then((
-        _,
-      ) {
+      ref.read(audioServiceProvider).playFromUrl(widget.entry.audioUrl!).then((_) {
         if (mounted) setState(() => _isPlaying = false);
       });
     }
@@ -452,43 +394,40 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
-      onTap: widget.onToggleExpanded,
+      onTap: () {
+        HapticService.selection();
+        widget.onToggleExpanded();
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.forestDarkCard : Colors.white,
+          color: isDark ? Theme.of(context).colorScheme.surfaceContainerHighest : AppColors.gold500,
           borderRadius: BorderRadius.circular(32),
           border: Border.all(
             color: widget.isExpanded
-                ? (isDark ? AppColors.gold500 : AppColors.forest500).withValues(alpha: 0.3)
-                : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
+                : (isDark ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.1)),
           ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Row 1: Badge, Phonetic, Play
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppColors.forest50.withValues(alpha: isDark ? 0.1 : 0.8),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isDark ? Colors.white24 : AppColors.forest200,
-                    ),
+                    border: Border.all(color: Theme.of(context).colorScheme.outline),
                   ),
                   child: Text(
                     widget.entry.language.toUpperCase(),
                     style: AppTypography.label.copyWith(
-                      color: isDark ? Colors.white70 : AppColors.forest700,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
@@ -496,17 +435,13 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard>
                 ),
                 if (widget.masteryLevel != null) ...[
                   const SizedBox(width: 8),
-                  Icon(
-                    Icons.star_rounded,
-                    size: 14,
-                    color: _getMasteryColor(widget.masteryLevel!),
-                  ),
+                  Icon(Icons.star_rounded, size: 14, color: _getMasteryColor(widget.masteryLevel!)),
                 ],
                 const SizedBox(width: 12),
                 Text(
                   widget.entry.phonetic ?? '',
                   style: AppTypography.mono.copyWith(
-                    color: isDark ? Colors.white24 : AppColors.creamText3,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                     fontSize: 12,
                   ),
                 ),
@@ -517,33 +452,20 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard>
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: _isPlaying
-                          ? AppColors.gold500
-                          : AppColors.terracotta,
+                      color: _isPlaying ? AppColors.gold500 : AppColors.terracotta,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      _isPlaying
-                          ? Icons.stop_rounded
-                          : Icons.play_arrow_rounded,
-                      color: Colors.white,
-                      size: 30,
-                    ),
+                    child: Icon(_isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded, color: Colors.white, size: 30),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            // Row 2: Word
             Text(
               widget.entry.indigenousWord,
-              style: AppTypography.h1ExtraBold.copyWith(
-                color: isDark ? AppColors.gold500 : AppColors.forest500,
-                fontSize: 28,
-              ),
+              style: AppTypography.h1ExtraBold.copyWith(color: Theme.of(context).colorScheme.primary, fontSize: 28),
             ),
             const SizedBox(height: 12),
-            // Row 3: Translations
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -554,9 +476,7 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard>
                       RichText(
                         text: TextSpan(
                           style: AppTypography.body.copyWith(
-                            color: isDark
-                                ? Colors.white54
-                                : AppColors.creamText2,
+                            color: isDark ? Theme.of(context).colorScheme.onSurfaceVariant : AppColors.forest900.withValues(alpha: 0.7),
                             fontSize: 13,
                           ),
                           children: [
@@ -564,9 +484,7 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard>
                               text: 'ENG ',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: isDark
-                                    ? Colors.white38
-                                    : AppColors.creamText3,
+                                color: isDark ? Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5) : AppColors.forest900.withValues(alpha: 0.4),
                               ),
                             ),
                             TextSpan(text: widget.entry.translation),
@@ -576,9 +494,7 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard>
                       RichText(
                         text: TextSpan(
                           style: AppTypography.body.copyWith(
-                            color: isDark
-                                ? Colors.white54
-                                : AppColors.creamText2,
+                            color: isDark ? Theme.of(context).colorScheme.onSurfaceVariant : AppColors.forest900.withValues(alpha: 0.7),
                             fontSize: 13,
                           ),
                           children: [
@@ -586,9 +502,7 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard>
                               text: 'FIL ',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: isDark
-                                    ? Colors.white38
-                                    : AppColors.creamText3,
+                                color: isDark ? Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5) : AppColors.forest900.withValues(alpha: 0.4),
                               ),
                             ),
                             TextSpan(text: widget.entry.translationFilipino),
@@ -600,71 +514,26 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard>
                 ),
               ],
             ),
-
-            // Expanded Section
             if (widget.isExpanded) ...[
               const SizedBox(height: 24),
-              Divider(
-                color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
-              ),
+              Divider(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
               const SizedBox(height: 20),
-              Text(
-                'DEFINITION',
-                style: AppTypography.label.copyWith(
-                  color: isDark ? AppColors.gold500 : AppColors.forest500,
-                  fontSize: 10,
-                ),
-              ),
+              Text('DEFINITION', style: AppTypography.label.copyWith(color: Theme.of(context).colorScheme.primary, fontSize: 10)),
               const SizedBox(height: 8),
-              Text(
-                widget.entry.usageContext,
-                style: AppTypography.body.copyWith(
-                  color: isDark ? Colors.white70 : AppColors.creamText,
-                  fontSize: 14,
-                  height: 1.5,
-                ),
-              ),
-              if (widget.entry.usageExampleNative != null &&
-                  widget.entry.usageExampleNative!.isNotEmpty) ...[
+              Text(widget.entry.usageContext, style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurface, fontSize: 14, height: 1.5)),
+              if (widget.entry.usageExampleNative != null && widget.entry.usageExampleNative!.isNotEmpty) ...[
                 const SizedBox(height: 24),
-                Text(
-                  'USAGE EXAMPLE',
-                  style: AppTypography.label.copyWith(
-                    color: isDark ? AppColors.gold500 : AppColors.forest500,
-                    fontSize: 10,
-                  ),
-                ),
+                Text('USAGE EXAMPLE', style: AppTypography.label.copyWith(color: isDark ? AppColors.gold500 : AppColors.forest500, fontSize: 10)),
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.only(left: 16),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      left: BorderSide(
-                        color: isDark ? AppColors.gold500 : AppColors.forest500,
-                        width: 4,
-                      ),
-                    ),
-                  ),
+                  decoration: BoxDecoration(border: Border(left: BorderSide(color: Theme.of(context).colorScheme.primary, width: 4))),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '"${widget.entry.usageExampleNative}"',
-                        style: AppTypography.h1ExtraBold.copyWith(
-                          color: isDark
-                              ? AppColors.gold500
-                              : AppColors.forest500,
-                          fontSize: 20,
-                        ),
-                      ),
+                      Text('"${widget.entry.usageExampleNative}"', style: AppTypography.h1ExtraBold.copyWith(color: Theme.of(context).colorScheme.primary, fontSize: 20)),
                       const SizedBox(height: 4),
-                      Text(
-                        widget.entry.usageExampleTranslation ?? '',
-                        style: AppTypography.body.copyWith(
-                          color: isDark ? Colors.white38 : AppColors.creamText2,
-                          fontSize: 13,
-                        ),
-                      ),
+                      Text(widget.entry.usageExampleTranslation ?? '', style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 13)),
                     ],
                   ),
                 ),
@@ -678,51 +547,18 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard>
                       icon: Icons.share_outlined,
                       type: BrandButtonType.secondary,
                       onTap: () {
-                        final String shareText =
-                            'Lumad Lingua - Learn ${widget.entry.language}\n\n'
-                            'Word: ${widget.entry.indigenousWord}\n'
-                            '${widget.entry.phonetic != null && widget.entry.phonetic!.isNotEmpty ? "Phonetic: ${widget.entry.phonetic}\n" : ""}'
-                            'Translation (EN): ${widget.entry.translation}\n'
-                            'Translation (FIL): ${widget.entry.translationFilipino}\n\n'
-                            'Definition: ${widget.entry.usageContext}\n'
-                            '${widget.entry.usageExampleNative != null && widget.entry.usageExampleNative!.isNotEmpty ? "\nExample: \"${widget.entry.usageExampleNative}\"\n(${widget.entry.usageExampleTranslation ?? ""})" : ""}';
-
-                        SharePlus.instance.share(
-                          ShareParams(
-                            text: shareText,
-                            subject:
-                                'Learning ${widget.entry.indigenousWord} in ${widget.entry.language}',
-                          ),
-                        );
+                        final String shareText = 'Lumad Lingua - Learn ${widget.entry.language}\n\nWord: ${widget.entry.indigenousWord}\nTranslation: ${widget.entry.translation}\nDefinition: ${widget.entry.usageContext}';
+                        SharePlus.instance.share(ShareParams(text: shareText, subject: 'Learning ${widget.entry.indigenousWord} in ${widget.entry.language}'));
                       },
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: BrandButton(
-                      text:
-                          ref
-                              .watch(savedWordsProvider)
-                              .contains(widget.entry.id)
-                          ? 'SAVED'
-                          : 'SAVE',
-                      icon:
-                          ref
-                              .watch(savedWordsProvider)
-                              .contains(widget.entry.id)
-                          ? Icons.bookmark
-                          : Icons.bookmark_border,
-                      type:
-                          ref
-                              .watch(savedWordsProvider)
-                              .contains(widget.entry.id)
-                          ? BrandButtonType.primary
-                          : BrandButtonType.secondary,
-                      onTap: () {
-                        ref
-                            .read(savedWordsProvider.notifier)
-                            .toggleSave(widget.entry.id, context: context);
-                      },
+                      text: ref.watch(savedWordsProvider).contains(widget.entry.id) ? 'SAVED' : 'SAVE',
+                      icon: ref.watch(savedWordsProvider).contains(widget.entry.id) ? Icons.bookmark : Icons.bookmark_border,
+                      type: ref.watch(savedWordsProvider).contains(widget.entry.id) ? BrandButtonType.primary : BrandButtonType.secondary,
+                      onTap: () => ref.read(savedWordsProvider.notifier).toggleSave(widget.entry.id, context: context),
                     ),
                   ),
                 ],
@@ -736,4 +572,3 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard>
 }
 
 enum _DictionarySort { alphabetical, reverseAlphabetical, newest, oldest }
-

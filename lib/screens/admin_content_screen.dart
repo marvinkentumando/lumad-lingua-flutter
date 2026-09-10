@@ -15,6 +15,8 @@ import '../models/lesson.dart';
 import '../models/dictionary_entry.dart';
 import '../models/scenario_models.dart';
 import '../models/admin_models.dart';
+import '../widgets/branded_empty_state.dart';
+import '../widgets/brand_background.dart';
 import '../services/haptic_service.dart';
 import '../services/auth_service.dart';
 
@@ -65,47 +67,40 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.1,
-              child: Image.asset(
-                'assets/images/topo_map.png',
-                fit: BoxFit.cover,
+      backgroundColor: Colors.transparent,
+      body: BrandBackground(
+        child: Stack(
+          children: [
+            SafeArea(
+              child: Column(
+                children: [
+                  _buildHeader(context),
+                  _buildSearchBar(),
+                  _buildTabBar(),
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildDictionaryTab(),
+                        _buildRecordingsTab(),
+                        _buildLessonsTab(),
+                        _buildScenariosTab(),
+                        _buildAuditTab(),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          SafeArea(
-            child: Column(
-              children: [
-                _buildHeader(context),
-                _buildSearchBar(),
-                _buildTabBar(),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildDictionaryTab(),
-                      _buildRecordingsTab(),
-                      _buildLessonsTab(),
-                      _buildScenariosTab(),
-                      _buildAuditTab(),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (_isSelectionMode)
-            Positioned(
-              bottom: 20,
-              left: 20,
-              right: 20,
-              child: _buildBulkActionsBar(),
-            ),
-        ],
+            if (_isSelectionMode)
+              Positioned(
+                bottom: 20,
+                left: 20,
+                right: 20,
+                child: _buildBulkActionsBar(),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -201,10 +196,10 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: isDark ? AppColors.forest800 : Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text('Confirm Bulk Approval', style: TextStyle(color: AppColors.gold500)),
         content: Text('Are you sure you want to approve ${_selectedIds.length} items? This will make them live on the platform.',
-          style: TextStyle(color: isDark ? Colors.white70 : Colors.black87)),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
           ElevatedButton(
@@ -306,7 +301,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                 Text(
                   'Content Moderation',
                   style: TextStyle(
-                    color: isDark ? Colors.white.withValues(alpha: 0.3) : AppColors.creamText3,
+                    color: isDark ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3) : AppColors.creamText3,
                     fontSize: 11,
                   ),
                 ),
@@ -318,11 +313,11 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
               ),
               child: Icon(
                 Icons.settings_suggest_rounded,
-                color: isDark ? Colors.white70 : AppColors.forest900,
+                color: isDark ? Theme.of(context).colorScheme.onSurfaceVariant : Theme.of(context).colorScheme.secondary,
                 size: 20,
               ),
             ),
@@ -342,7 +337,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
         decoration: InputDecoration(
           hintText: 'Search terms or contributors...',
           hintStyle: TextStyle(
-            color: isDark ? Colors.white24 : AppColors.creamText3,
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             fontSize: 13,
           ),
           prefixIcon: const Icon(
@@ -381,7 +376,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
             ),
           ),
         ),
-        style: TextStyle(color: isDark ? Colors.white : AppColors.creamText),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
       ),
     );
   }
@@ -391,17 +386,18 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
       margin: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       height: 48,
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
       ),
       child: TabBar(
+        onTap: (_) => HapticService.light(),
         controller: _tabController,
         indicator: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           color: AppColors.gold500,
         ),
         labelColor: Colors.black,
-        unselectedLabelColor: isDark ? Colors.white60 : AppColors.creamText3,
+        unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
         labelStyle: AppTypography.label.copyWith(fontWeight: FontWeight.bold, fontSize: 11),
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
@@ -521,15 +517,10 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
         }
         final logs = snapshot.data ?? [];
         if (logs.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.history_rounded, color: isDark ? Colors.white10 : Colors.black12, size: 64),
-                const SizedBox(height: 16),
-                Text('No audit logs yet.', style: AppTypography.h3.copyWith(color: isDark ? Colors.white24 : AppColors.creamText3)),
-              ],
-            ),
+          return const BrandedEmptyState(
+            title: 'Silence in the Valley',
+            message: 'No audit logs have been recorded yet.',
+            icon: Icons.history_rounded,
           );
         }
 
@@ -542,9 +533,9 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
               padding: const EdgeInsets.only(bottom: 12),
               child: Container(
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.forest700.withValues(alpha: 0.3) : Colors.white,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.creamBorder),
+                  border: Border.all(color: Theme.of(context).colorScheme.outline),
                 ),
                 child: ListTile(
                   leading: Container(
@@ -559,7 +550,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                   title: Text(
                     '${log.action}: ${log.targetName}',
                     style: AppTypography.body.copyWith(
-                      color: isDark ? Colors.white : AppColors.forest900,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
@@ -590,24 +581,12 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.search_off_rounded,
-            color: isDark ? Colors.white10 : Colors.black12,
-            size: 64,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No matching content found.',
-            style: AppTypography.h3.copyWith(
-              color: isDark ? Colors.white24 : AppColors.creamText3,
-            ),
-          ),
-        ],
-      ),
+    return BrandedEmptyState(
+      title: _searchQuery.isNotEmpty ? 'No Echoes Found' : 'Clean Slate',
+      message: _searchQuery.isNotEmpty
+          ? 'No matching content found for your search.'
+          : 'This section is currently empty.',
+      icon: _searchQuery.isNotEmpty ? Icons.search_off_rounded : Icons.inventory_2_rounded,
     );
   }
 
@@ -710,17 +689,19 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
           decoration: BoxDecoration(
             color: isSelected 
                 ? AppColors.gold500.withValues(alpha: 0.1)
-                : (isDark ? AppColors.forest700.withValues(alpha: 0.3) : Colors.white),
+                : (isDark ? AppColors.forest700.withValues(alpha: 0.3) : AppColors.gold500),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isSelected 
                   ? AppColors.gold500 
-                  : (isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.creamBorder),
+                  : (isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.gold700.withValues(alpha: 0.2)),
               width: isSelected ? 2 : 1,
             ),
             boxShadow: isDark ? [] : [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: isSelected 
+                    ? AppColors.gold500.withValues(alpha: 0.2) 
+                    : AppColors.gold700.withValues(alpha: 0.1),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -735,17 +716,17 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                     padding: const EdgeInsets.only(right: 12),
                     child: Icon(
                       isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                      color: AppColors.gold500,
+                      color: isDark ? AppColors.gold500 : AppColors.forest900,
                     ),
                   ),
                 Container(
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: 0.1),
+                    color: isDark ? iconColor.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(icon, color: iconColor, size: 24),
+                  child: Icon(icon, color: isDark ? iconColor : AppColors.forest900, size: 24),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -755,7 +736,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                       Text(
                         title,
                         style: AppTypography.h3.copyWith(
-                          color: isDark ? Colors.white : AppColors.forest500,
+                          color: isDark ? Colors.white : AppColors.forest900,
                           fontWeight: FontWeight.w900,
                           fontSize: 16,
                         ),
@@ -764,7 +745,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                       Text(
                         subtitle,
                         style: AppTypography.label.copyWith(
-                          color: isDark ? Colors.white38 : AppColors.creamText3,
+                          color: isDark ? Colors.white38 : AppColors.forest700,
                           fontSize: 11,
                         ),
                       ),
@@ -772,7 +753,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                       Text(
                         author,
                         style: AppTypography.mono.copyWith(
-                          color: AppColors.gold500.withValues(alpha: 0.6),
+                          color: isDark ? AppColors.gold500.withValues(alpha: 0.6) : AppColors.forest900.withValues(alpha: 0.5),
                           fontSize: 10,
                         ),
                       ),
@@ -787,7 +768,10 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    BrandBadge(text: status.toUpperCase(), style: statusStyle),
+                    BrandBadge(
+                      text: status.toUpperCase(), 
+                      style: isDark ? statusStyle : BrandBadgeStyle.dark,
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -795,7 +779,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                           _actionIcon(
                             Icons.history_rounded,
                             onHistory,
-                            color: AppColors.gold500,
+                            color: isDark ? AppColors.gold500 : AppColors.forest900,
                           ),
                         if (onHistory != null) const SizedBox(width: 8),
                         _actionIcon(
@@ -818,7 +802,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
   void _showVersionHistoryModal(String docId, String collection, String title) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (context) => Column(
         children: [
@@ -849,7 +833,13 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                 
                 return historyAsync.when(
                   data: (history) {
-                    if (history.isEmpty) return Center(child: Text('No history found.', style: TextStyle(color: isDark ? Colors.white38 : AppColors.creamText3)));
+                    if (history.isEmpty) {
+                      return const BrandedEmptyState(
+                        title: 'No Past Lives',
+                        message: 'No version history found for this item.',
+                        icon: Icons.history_rounded,
+                      );
+                    }
 
                     return ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -896,7 +886,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: isDark ? AppColors.forest800 : Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: const Text('Version Snapshot'),
         content: SingleChildScrollView(
           child: Column(
@@ -925,7 +915,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: isDark ? AppColors.forest800 : Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Column(
           children: [
@@ -1031,7 +1021,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
   void _showSystemActionsModal() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -1208,7 +1198,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                             title: Text(
                               e.key,
                               style: TextStyle(
-                                color: isDark ? Colors.white : AppColors.forest900,
+                                color: Theme.of(context).colorScheme.onSurface,
                                 fontWeight: e.value
                                     ? FontWeight.bold
                                     : FontWeight.normal,
@@ -1252,6 +1242,10 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
     required VoidCallback onTap,
   }) {
     return ListTile(
+      onTap: () {
+        HapticService.selection();
+        onTap();
+      },
       contentPadding: const EdgeInsets.symmetric(vertical: 4),
       leading: Container(
         padding: const EdgeInsets.all(10),
@@ -1273,7 +1267,6 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
         ),
       ),
       trailing: Icon(Icons.chevron_right_rounded, color: isDark ? Colors.white24 : Colors.black12),
-      onTap: onTap,
     );
   }
 

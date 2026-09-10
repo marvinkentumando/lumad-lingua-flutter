@@ -11,11 +11,11 @@ import '../models/dictionary_entry.dart';
 import '../models/srs_models.dart';
 import '../models/app_config.dart';
 
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import '../services/haptic_service.dart';
+import '../widgets/brand_background.dart';
 import '../widgets/branded_empty_state.dart';
 
 
@@ -48,7 +48,6 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
       CurvedAnimation(parent: _flipController, curve: Curves.easeInOutCubic),
     );
 
-    // Keyboard shortcuts
     HardwareKeyboard.instance.addHandler(_handleKey);
   }
 
@@ -116,9 +115,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
     if (user == null || _deck == null) return;
 
     final entry = _deck![_currentIndex];
-    final currentSrs =
-        _srsData[entry.id] ??
-        SRSProgress(wordId: entry.id, nextReview: DateTime.now());
+    final currentSrs = _srsData[entry.id] ?? SRSProgress(wordId: entry.id, nextReview: DateTime.now());
 
     int newLevel;
     double newEaseFactor = currentSrs.easeFactor;
@@ -132,36 +129,27 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
     if (wasCorrect) {
       newLevel = min(currentSrs.level + 1, 5);
       consecutiveCorrect++;
-      
-      // Performance-based Ease Factor adjustment
-      // If correct, boost ease factor slightly (up to 3.0)
       newEaseFactor = min(3.0, newEaseFactor + 0.1);
 
       if (consecutiveCorrect == 1) {
         intervalDays = 1;
       } else if (consecutiveCorrect == 2) {
-        intervalDays = 4; // Accelerated learning phase
+        intervalDays = 4;
       } else {
-        // SM-2 dynamic interval: I(n) = (Previous Interval + Overdue/2) * EF
         final lastReview = currentSrs.lastReview ?? now.subtract(const Duration(days: 1));
         final prevInterval = currentSrs.nextReview.difference(lastReview).inDays;
         final overdueDays = max(0, now.difference(currentSrs.nextReview).inDays);
-        
-        // Bonus for answering correctly when overdue
         intervalDays = ((prevInterval + (overdueDays / 2)) * newEaseFactor).round();
       }
-      
       ref.read(firebaseServiceProvider).addXp(user.uid, config.cardReviewXp); 
     } else {
       newLevel = 0; 
       consecutiveCorrect = 0;
-      // Penalty for failure: drop ease factor
       newEaseFactor = max(1.3, newEaseFactor - 0.2);
-      intervalDays = 1; // Review tomorrow
+      intervalDays = 1;
       lastFailure = now;
     }
 
-    // Cap interval to 1 year
     intervalDays = min(365, max(1, intervalDays));
     final nextReview = now.add(Duration(days: intervalDays));
 
@@ -175,9 +163,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
       easeFactor: newEaseFactor,
     );
 
-    await ref
-        .read(firebaseServiceProvider)
-        .updateSRSProgress(user.uid, updatedSrs);
+    await ref.read(firebaseServiceProvider).updateSRSProgress(user.uid, updatedSrs);
 
     if (!mounted) return;
     _next();
@@ -190,10 +176,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
             children: [
               const Icon(Icons.check_circle, color: Colors.white, size: 16),
               const SizedBox(width: 8),
-              Text(
-                'Mastery Level Up! +${config.cardReviewXp} XP',
-                style: AppTypography.label.copyWith(color: Colors.white),
-              ),
+              Text('Mastery Level Up! +${config.cardReviewXp} XP', style: AppTypography.label.copyWith(color: Colors.white)),
             ],
           ),
           backgroundColor: AppColors.semanticGreen,
@@ -208,325 +191,160 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).value;
     final dictionaryAsync = ref.watch(dictionaryStreamProvider);
-    final bookmarksAsync = user != null
-        ? ref.watch(userBookmarksStreamProvider(user.uid))
-        : const AsyncValue.data(<String>[]);
-    final srsAsync = user != null
-        ? ref.watch(srsProgressStreamProvider(user.uid))
-        : const AsyncValue.data(<SRSProgress>[]);
+    final bookmarksAsync = user != null ? ref.watch(userBookmarksStreamProvider(user.uid)) : const AsyncValue.data(<String>[]);
+    final srsAsync = user != null ? ref.watch(srsProgressStreamProvider(user.uid)) : const AsyncValue.data(<SRSProgress>[]);
 
     return dictionaryAsync.when(
-      loading: () => const Scaffold(
-        backgroundColor: AppColors.forest800,
-        body: Center(
-          child: CircularProgressIndicator(color: AppColors.gold500),
-        ),
-      ),
+      loading: () => const Scaffold(backgroundColor: Colors.transparent, body: BrandBackground(child: Center(child: CircularProgressIndicator(color: AppColors.gold500)))),
       error: (_, __) => _buildEmptyState(),
-      data: (dictionary) {
-        return bookmarksAsync.when(
-          loading: () => const Scaffold(
-            backgroundColor: AppColors.forest800,
-            body: Center(
-              child: CircularProgressIndicator(color: AppColors.gold500),
-            ),
-          ),
+      data: (dictionary) => bookmarksAsync.when(
+        loading: () => const Scaffold(backgroundColor: Colors.transparent, body: BrandBackground(child: Center(child: CircularProgressIndicator(color: AppColors.gold500)))),
+        error: (_, __) => _buildEmptyState(),
+        data: (bookmarks) => srsAsync.when(
+          loading: () => const Scaffold(backgroundColor: Colors.transparent, body: BrandBackground(child: Center(child: CircularProgressIndicator(color: AppColors.gold500)))),
           error: (_, __) => _buildEmptyState(),
-          data: (bookmarks) {
-            return srsAsync.when(
-              loading: () => const Scaffold(
-                backgroundColor: AppColors.forest800,
-                body: Center(
-                  child: CircularProgressIndicator(color: AppColors.gold500),
-                ),
+          data: (srsList) {
+            _srsData = {for (var s in srsList) s.wordId: s};
+            if (_deck == null) {
+              List<DictionaryEntry> deckEntries = [];
+              if (widget.isReviewMode) {
+                final now = DateTime.now();
+                deckEntries = dictionary.where((entry) {
+                  final srs = _srsData[entry.id];
+                  return srs != null && srs.nextReview.isBefore(now);
+                }).toList();
+              } else {
+                deckEntries = dictionary.where((entry) => bookmarks.contains(entry.id)).toList();
+              }
+
+              if (deckEntries.isEmpty) return _buildEmptyState();
+
+              final now = DateTime.now();
+              deckEntries.sort((a, b) {
+                final srsA = _srsData[a.id];
+                final srsB = _srsData[b.id];
+                double scoreA = srsA != null ? max(0, now.difference(srsA.nextReview).inMinutes).toDouble() + (srsA.lastFailure != null ? max(0, 4320 - now.difference(srsA.lastFailure!).inMinutes) * 1.5 : 0) : 999999;
+                double scoreB = srsB != null ? max(0, now.difference(srsB.nextReview).inMinutes).toDouble() + (srsB.lastFailure != null ? max(0, 4320 - now.difference(srsB.lastFailure!).inMinutes) * 1.5 : 0) : 999999;
+                return scoreB.compareTo(scoreA);
+              });
+
+              final initialDeck = deckEntries.take(15).toList();
+              WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) setState(() => _deck = initialDeck); });
+              return const Scaffold(backgroundColor: Colors.transparent, body: BrandBackground(child: Center(child: CircularProgressIndicator(color: AppColors.gold500))));
+            }
+
+            if (_deck!.isEmpty) return _buildEmptyState();
+            final entry = _deck![_currentIndex];
+            final progress = (_currentIndex + 1) / _deck!.length;
+            final isLast = _currentIndex == _deck!.length - 1;
+            final currentSrs = _srsData[entry.id];
+
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+
+            return Scaffold(
+              backgroundColor: Colors.transparent,
+              appBar: AppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                title: Text('DAILY REVIEW', style: AppTypography.label.copyWith(color: AppColors.gold500, letterSpacing: 2)),
+                actions: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: Center(
+                      child: Text(
+                        '${_currentIndex + 1} / ${_deck!.length}',
+                        style: AppTypography.mono.copyWith(
+                          color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.3),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              error: (_, __) => _buildEmptyState(),
-              data: (srsList) {
-                // Map SRS data for quick lookup
-                _srsData = {for (var s in srsList) s.wordId: s};
-
-                if (_deck == null) {
-                  List<DictionaryEntry> deckEntries = [];
-
-                  if (widget.isReviewMode) {
-                    // 1. Review Mode: Only cards that are DUE
-                    final now = DateTime.now();
-                    deckEntries = dictionary.where((entry) {
-                      final srs = _srsData[entry.id];
-                      return srs != null && srs.nextReview.isBefore(now);
-                    }).toList();
-                  } else {
-                    // 2. Study Mode: Only bookmarked cards
-                    deckEntries = dictionary
-                        .where((entry) => bookmarks.contains(entry.id))
-                        .toList();
-                  }
-
-                  if (deckEntries.isEmpty) {
-                    return _buildEmptyState();
-                  }
-
-                  // Smart Shuffling (SRS Expansion): Prioritize based on Forgetfulness Curves
-                  final now = DateTime.now();
-                  deckEntries.sort((a, b) {
-                    final srsA = _srsData[a.id];
-                    final srsB = _srsData[b.id];
-
-                    double scoreA = 0;
-                    double scoreB = 0;
-
-                    if (srsA != null) {
-                      // Overdue component
-                      final overdue = now.difference(srsA.nextReview).inMinutes;
-                      scoreA += max(0, overdue).toDouble();
-
-                      // Forgetfulness Curve component:
-                      // Prioritize words failed RECENTLY for immediate reinforcement
-                      if (srsA.lastFailure != null) {
-                        final timeSinceFail = now
-                            .difference(srsA.lastFailure!)
-                            .inMinutes;
-                        // Boost score for recent failures (within a 3-day window)
-                        // Newer failures (small timeSinceFail) get higher scores
-                        scoreA += max(0, 4320 - timeSinceFail) * 1.5;
-                      }
-                    } else {
-                      scoreA = 999999; // New cards always first
-                    }
-
-                    if (srsB != null) {
-                      final overdue = now.difference(srsB.nextReview).inMinutes;
-                      scoreB += max(0, overdue).toDouble();
-
-                      if (srsB.lastFailure != null) {
-                        final timeSinceFail = now
-                            .difference(srsB.lastFailure!)
-                            .inMinutes;
-                        scoreB += max(0, 4320 - timeSinceFail) * 1.5;
-                      }
-                    } else {
-                      scoreB = 999999;
-                    }
-
-                    return scoreB.compareTo(scoreA); // Higher score first
-                  });
-
-                  final initialDeck = deckEntries.take(15).toList();
-
-                  // Only set initial deck once to avoid reshuffling on every build
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    setState(() {
-                      _deck = initialDeck;
-                    });
-                  });
-                  return const Scaffold(
-                    backgroundColor: AppColors.forest800,
-                    body: Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.gold500,
+              body: BrandBackground(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+                  child: Column(
+                    children: [
+                      ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(value: progress, minHeight: 4, backgroundColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05), valueColor: const AlwaysStoppedAnimation(AppColors.gold500))),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Mastery: ${currentSrs?.mastery.name ?? "New"}', style: AppTypography.mono.copyWith(color: _getMasteryColor(currentSrs?.mastery, isDark), fontSize: 11)),
+                          Text('${(progress * 100).toInt()}% done', style: AppTypography.mono.copyWith(color: isDark ? AppColors.gold500 : AppColors.gold700, fontSize: 11)),
+                        ],
                       ),
-                    ),
-                  );
-                }
-
-                if (_deck!.isEmpty) return _buildEmptyState();
-
-                final entry = _deck![_currentIndex];
-                final progress = (_currentIndex + 1) / _deck!.length;
-                final isLast = _currentIndex == _deck!.length - 1;
-                final currentSrs = _srsData[entry.id];
-
-                return Scaffold(
-                  backgroundColor: AppColors.forest800,
-                  appBar: AppBar(
-                    backgroundColor: Colors.transparent,
-                    elevation: 0,
-                    title: Text(
-                      'DAILY REVIEW',
-                      style: AppTypography.label.copyWith(
-                        color: AppColors.gold500,
-                        letterSpacing: 2,
-                      ),
-                    ),
-                    actions: [
-                      Padding(
-                        padding: const EdgeInsets.only(right: 16),
-                        child: Center(
-                          child: Text(
-                            '${_currentIndex + 1} / ${_deck!.length}',
-                            style: AppTypography.mono.copyWith(
-                              color: Colors.white38,
-                              fontSize: 13,
-                            ),
+                      const SizedBox(height: 32),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: _flipCard,
+                          child: AnimatedBuilder(
+                            animation: _flipAnimation,
+                            builder: (context, child) {
+                              final angle = _flipAnimation.value * pi;
+                              final isShowingFront = angle < pi / 2;
+                              return Transform(
+                                alignment: Alignment.center,
+                                transform: Matrix4.identity()..setEntry(3, 2, 0.001)..rotateY(angle),
+                                child: isShowingFront ? _buildFront(entry, isDark) : Transform(alignment: Alignment.center, transform: Matrix4.identity()..rotateY(pi), child: _buildBack(entry)),
+                              );
+                            },
                           ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        _isFlipped ? '' : 'Tap card to reveal answer',
+                        style: AppTypography.label.copyWith(
+                          color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          _navControl(icon: Icons.chevron_left_rounded, label: 'PREV', onTap: _currentIndex > 0 ? _previous : null, isDark: isDark),
+                          const SizedBox(width: 12),
+                          if (_isFlipped) ...[
+                            Expanded(child: BrandButton(text: 'Hard', type: BrandButtonType.secondary, onTap: () => _updateSRS(false))),
+                            const SizedBox(width: 12),
+                            Expanded(child: BrandButton(text: isLast ? 'Finish ✓' : 'Easy ✓', type: BrandButtonType.primary, onTap: isLast ? _showCompletionModal : () => _updateSRS(true))),
+                          ] else
+                            Expanded(child: BrandButton(text: 'Flip Card  ↕', type: BrandButtonType.primary, onTap: _flipCard)),
+                          const SizedBox(width: 12),
+                          _navControl(icon: Icons.chevron_right_rounded, label: 'NEXT', onTap: _currentIndex < _deck!.length - 1 ? _next : null, isDark: isDark),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '← → arrow keys or Space to navigate',
+                        style: AppTypography.mono.copyWith(
+                          color: isDark ? Colors.white12 : AppColors.forest900.withValues(alpha: 0.1),
+                          fontSize: 10,
                         ),
                       ),
                     ],
                   ),
-                  body: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-                    child: Column(
-                      children: [
-                        // Progress bar
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            minHeight: 4,
-                            backgroundColor: Colors.white10,
-                            valueColor: const AlwaysStoppedAnimation(
-                              AppColors.gold500,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Mastery: ${currentSrs?.mastery.name ?? "New"}',
-                              style: AppTypography.mono.copyWith(
-                                color: _getMasteryColor(currentSrs?.mastery),
-                                fontSize: 11,
-                              ),
-                            ),
-                            Text(
-                              '${(progress * 100).toInt()}% done',
-                              style: AppTypography.mono.copyWith(
-                                color: AppColors.gold500,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 32),
-
-                        // The flip card
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: _flipCard,
-                            child: AnimatedBuilder(
-                              animation: _flipAnimation,
-                              builder: (context, child) {
-                                final angle = _flipAnimation.value * pi;
-                                final isShowingFront = angle < pi / 2;
-
-                                return Transform(
-                                  alignment: Alignment.center,
-                                  transform: Matrix4.identity()
-                                    ..setEntry(3, 2, 0.001)
-                                    ..rotateY(angle),
-                                  child: isShowingFront
-                                      ? _buildFront(entry)
-                                      : Transform(
-                                          alignment: Alignment.center,
-                                          transform: Matrix4.identity()
-                                            ..rotateY(pi),
-                                          child: _buildBack(entry),
-                                        ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Hint
-                        Text(
-                          _isFlipped ? '' : 'Tap card to reveal answer',
-                          style: AppTypography.label.copyWith(
-                            color: Colors.white24,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Navigation Controls
-                        Row(
-                          children: [
-                            // Previous
-                            _navControl(
-                              icon: Icons.chevron_left_rounded,
-                              label: 'PREV',
-                              onTap: _currentIndex > 0 ? _previous : null,
-                            ),
-                            const SizedBox(width: 12),
-
-                            // Forgot / Learned
-                            if (_isFlipped) ...[
-                              Expanded(
-                                child: BrandButton(
-                                  text: 'Hard',
-                                  type: BrandButtonType.secondary,
-                                  onTap: () => _updateSRS(false),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: BrandButton(
-                                  text: isLast ? 'Finish ✓' : 'Easy ✓',
-                                  type: BrandButtonType.primary,
-                                  onTap: isLast
-                                      ? _showCompletionModal
-                                      : () => _updateSRS(true),
-                                ),
-                              ),
-                            ] else
-                              Expanded(
-                                child: BrandButton(
-                                  text: 'Flip Card  ↕',
-                                  type: BrandButtonType.primary,
-                                  onTap: _flipCard,
-                                ),
-                              ),
-
-                            const SizedBox(width: 12),
-                            // Next
-                            _navControl(
-                              icon: Icons.chevron_right_rounded,
-                              label: 'NEXT',
-                              onTap: _currentIndex < _deck!.length - 1
-                                  ? _next
-                                  : null,
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 8),
-                        Text(
-                          '← → arrow keys or Space to navigate',
-                          style: AppTypography.mono.copyWith(
-                            color: Colors.white12,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+                ),
+              ),
             );
           },
-        );
-      },
+        ),
+      ),
     );
   }
 
-  Color _getMasteryColor(MasteryLevel? level) {
+  Color _getMasteryColor(MasteryLevel? level, bool isDark) {
     switch (level) {
-      case MasteryLevel.mastered:
-        return AppColors.semanticGreen;
-      case MasteryLevel.reviewing:
-        return AppColors.gold500;
-      case MasteryLevel.learning:
-        return Colors.blue;
-      default:
-        return Colors.white24;
+      case MasteryLevel.mastered: return AppColors.semanticGreen;
+      case MasteryLevel.reviewing: return AppColors.gold500;
+      case MasteryLevel.learning: return Colors.blue;
+      default: return isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.2);
     }
   }
 
-  Widget _buildFront(DictionaryEntry entry) {
+  Widget _buildFront(DictionaryEntry entry, bool isDark) {
     return BrandCard(
       theme: BrandCardTheme.vibrant,
       child: SizedBox(
@@ -539,14 +357,12 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
               decoration: BoxDecoration(
                 color: AppColors.gold500.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: AppColors.gold500.withValues(alpha: 0.3),
-                ),
+                border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
               ),
               child: Text(
                 entry.language.toUpperCase(),
                 style: AppTypography.mono.copyWith(
-                  color: AppColors.gold500,
+                  color: isDark ? AppColors.gold500 : AppColors.gold700,
                   fontSize: 9,
                   letterSpacing: 2,
                 ),
@@ -556,7 +372,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
             Text(
               entry.indigenousWord,
               style: AppTypography.display.copyWith(
-                color: Colors.white,
+                color: isDark ? Colors.white : AppColors.forest900,
                 fontSize: 52,
                 height: 1.1,
               ),
@@ -565,18 +381,24 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
             const SizedBox(height: 16),
             Text(
               entry.partOfSpeechLabel,
-              style: AppTypography.label.copyWith(color: Colors.white24),
+              style: AppTypography.label.copyWith(
+                color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
+              ),
             ),
             const SizedBox(height: 32),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.touch_app, color: Colors.white12, size: 14),
+                Icon(
+                  Icons.touch_app,
+                  color: isDark ? Colors.white12 : AppColors.forest900.withValues(alpha: 0.2),
+                  size: 14,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   'Tap to reveal',
                   style: AppTypography.mono.copyWith(
-                    color: Colors.white12,
+                    color: isDark ? Colors.white12 : AppColors.forest900.withValues(alpha: 0.2),
                     fontSize: 11,
                   ),
                 ),
@@ -597,47 +419,14 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(
-              'TRANSLATION',
-              style: AppTypography.mono.copyWith(
-                color: AppColors.gold700,
-                fontSize: 9,
-                letterSpacing: 2,
-              ),
-            ),
+            Text('TRANSLATION', style: AppTypography.mono.copyWith(color: AppColors.gold700, fontSize: 9, letterSpacing: 2)),
             const SizedBox(height: 16),
-            Text(
-              entry.translation,
-              style: AppTypography.display.copyWith(
-                color: AppColors.creamText,
-                fontSize: 36,
-                height: 1.1,
-              ),
-              textAlign: TextAlign.center,
-            ),
+            Text(entry.translation, style: AppTypography.display.copyWith(color: AppColors.creamText, fontSize: 36, height: 1.1), textAlign: TextAlign.center),
             if (entry.usageContext.isNotEmpty) ...[
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 20),
-                child: Divider(color: AppColors.creamBorder),
-              ),
-              Text(
-                'EXAMPLE USAGE',
-                style: AppTypography.mono.copyWith(
-                  color: AppColors.creamText3,
-                  fontSize: 9,
-                  letterSpacing: 2,
-                ),
-              ),
+              const Padding(padding: EdgeInsets.symmetric(vertical: 20), child: Divider(color: AppColors.creamBorder)),
+              Text('EXAMPLE USAGE', style: AppTypography.mono.copyWith(color: AppColors.creamText3, fontSize: 9, letterSpacing: 2)),
               const SizedBox(height: 10),
-              Text(
-                '"${entry.usageContext}"',
-                style: AppTypography.body.copyWith(
-                  color: AppColors.creamText2,
-                  fontStyle: FontStyle.italic,
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
+              Text('"${entry.usageContext}"', style: AppTypography.body.copyWith(color: AppColors.creamText2, fontStyle: FontStyle.italic, height: 1.5), textAlign: TextAlign.center),
             ],
           ],
         ),
@@ -649,18 +438,19 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
     required IconData icon,
     required String label,
     required VoidCallback? onTap,
+    required bool isDark,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: onTap != null
-              ? AppColors.forest700
-              : AppColors.forest700.withValues(alpha: 0.3),
+          color: onTap != null ? AppColors.forest700 : AppColors.forest700.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: Colors.white.withValues(alpha: onTap != null ? 0.08 : 0.03),
+            color: isDark
+                ? Colors.white.withValues(alpha: onTap != null ? 0.08 : 0.03)
+                : Colors.black.withValues(alpha: onTap != null ? 0.08 : 0.03),
           ),
         ),
         child: Column(
@@ -668,13 +458,17 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
           children: [
             Icon(
               icon,
-              color: onTap != null ? Colors.white70 : Colors.white12,
+              color: onTap != null
+                  ? (isDark ? Colors.white70 : Colors.white)
+                  : (isDark ? Colors.white12 : Colors.white.withValues(alpha: 0.2)),
               size: 22,
             ),
             Text(
               label,
               style: AppTypography.mono.copyWith(
-                color: onTap != null ? Colors.white24 : Colors.white10,
+                color: onTap != null
+                    ? (isDark ? Colors.white24 : Colors.white.withValues(alpha: 0.5))
+                    : (isDark ? Colors.white10 : Colors.white.withValues(alpha: 0.1)),
                 fontSize: 8,
               ),
             ),
@@ -688,11 +482,8 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
     HapticService.celebration();
     final config = ref.read(appConfigProvider).value ?? AppConfig.fromFirestore({});
     final bonusXp = _deck!.length * config.cardCompletionBonusXp;
-
     final uid = ref.read(authStateProvider).value?.uid;
-    if (uid != null) {
-      ref.read(firebaseServiceProvider).addXp(uid, bonusXp.toInt());
-    }
+    if (uid != null) ref.read(firebaseServiceProvider).addXp(uid, bonusXp.toInt());
     showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.7),
@@ -703,65 +494,19 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('🏆', style: TextStyle(fontSize: 56))
-                  .animate(onPlay: (c) => c.repeat(reverse: true))
-                  .scaleXY(end: 1.1, duration: 600.ms),
+              const Text('🏆', style: TextStyle(fontSize: 56)).animate(onPlay: (c) => c.repeat(reverse: true)).scaleXY(end: 1.1, duration: 600.ms),
               const SizedBox(height: 16),
-              Text(
-                'Session Complete!',
-                style: AppTypography.display.copyWith(fontSize: 24),
-              ),
+              Text('Session Complete!', style: AppTypography.display.copyWith(fontSize: 24)),
               const SizedBox(height: 8),
-              Text(
-                'You studied all ${_deck!.length} cards.',
-                style: AppTypography.body.copyWith(color: AppColors.creamText3),
-              ),
+              Text('You studied all ${_deck!.length} cards.', style: AppTypography.body.copyWith(color: AppColors.creamText3)),
               const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.gold100,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '+$bonusXp XP EARNED',
-                  style: AppTypography.mono.copyWith(
-                    color: AppColors.gold700,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+              Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), decoration: BoxDecoration(color: AppColors.gold100, borderRadius: BorderRadius.circular(12)), child: Text('+$bonusXp XP EARNED', style: AppTypography.mono.copyWith(color: AppColors.gold700, fontWeight: FontWeight.bold))),
               const SizedBox(height: 24),
               Row(
                 children: [
-                  Expanded(
-                    child: BrandButton(
-                      text: 'Again',
-                      type: BrandButtonType.secondary,
-                      onTap: () {
-                        Navigator.pop(context);
-                        setState(() {
-                          _currentIndex = 0;
-                          _isFlipped = false;
-                          _deck!.shuffle(Random());
-                        });
-                        _flipController.reset();
-                      },
-                    ),
-                  ),
+                  Expanded(child: BrandButton(text: 'Again', type: BrandButtonType.secondary, onTap: () { Navigator.pop(context); setState(() { _currentIndex = 0; _isFlipped = false; _deck!.shuffle(Random()); }); _flipController.reset(); })),
                   const SizedBox(width: 12),
-                  Expanded(
-                    child: BrandButton(
-                      text: 'Done',
-                      type: BrandButtonType.primary,
-                      onTap: () => Navigator.of(context)
-                        ..pop()
-                        ..pop(),
-                    ),
-                  ),
+                  Expanded(child: BrandButton(text: 'Done', type: BrandButtonType.primary, onTap: () => Navigator.of(context)..pop()..pop())),
                 ],
               ),
             ],
@@ -773,22 +518,15 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
 
   Widget _buildEmptyState() {
     return Scaffold(
-      backgroundColor: AppColors.forest800,
-      body: BrandedEmptyState(
-        title: widget.isReviewMode ? 'All Caught Up!' : 'No Flashcards Yet',
-        message: widget.isReviewMode
-            ? 'You have reviewed all your due cards. Come back later for more reinforcement.'
-            : 'Bookmark words from the Dictionary to start building your personal study deck.',
-        emoji: widget.isReviewMode ? '🌿' : '💫',
-        action: BrandButton(
-          text: widget.isReviewMode ? '🏠  Back to Dashboard' : '📖  Go to Dictionary',
-          type: BrandButtonType.primary,
-          onTap: () => Navigator.pop(context),
+      backgroundColor: Colors.transparent,
+      body: BrandBackground(
+        child: BrandedEmptyState(
+          title: widget.isReviewMode ? 'All Caught Up!' : 'No Flashcards Yet',
+          message: widget.isReviewMode ? 'You have reviewed all your due cards. Come back later for more reinforcement.' : 'Bookmark words from the Dictionary to start building your personal study deck.',
+          emoji: widget.isReviewMode ? '🌿' : '💫',
+          action: BrandButton(text: widget.isReviewMode ? '🏠  Back to Dashboard' : '📖  Go to Dictionary', type: BrandButtonType.primary, onTap: () => Navigator.pop(context)),
         ),
       ),
     );
   }
 }
-
-
-

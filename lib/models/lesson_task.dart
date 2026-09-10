@@ -18,6 +18,12 @@ enum TaskType {
   vocabulary,
   @HiveField(6)
   scenario,
+  @HiveField(7)
+  wordHunt,
+  @HiveField(8)
+  trueOrFalse,
+  @HiveField(9)
+  fillInTheBlanks,
 }
 
 @HiveType(typeId: 5)

@@ -44,7 +44,7 @@ class WotdWidget extends ConsumerWidget {
 
     return RepaintBoundary(
       child: BrandCard(
-        theme: BrandCardTheme.vibrant,
+        theme: isDark ? BrandCardTheme.vibrant : BrandCardTheme.gold,
         padding: const EdgeInsets.all(24),
         borderRadius: 32,
         child: Column(
@@ -55,9 +55,9 @@ class WotdWidget extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                           Icons.auto_awesome_rounded,
-                          color: AppColors.gold500,
+                          color: isDark ? AppColors.gold500 : AppColors.forest900,
                           size: 18,
                         )
                         .animate(onPlay: (c) => c.repeat())
@@ -66,7 +66,7 @@ class WotdWidget extends ConsumerWidget {
                     Text(
                       'WORD OF THE DAY',
                       style: AppTypography.label.copyWith(
-                        color: AppColors.gold500,
+                        color: isDark ? AppColors.gold500 : AppColors.forest900,
                         letterSpacing: 2,
                         fontWeight: FontWeight.w900,
                       ),
@@ -79,13 +79,13 @@ class WotdWidget extends ConsumerWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.05),
+                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     entry.language.toUpperCase(),
                     style: AppTypography.label.copyWith(
-                      color: isDark ? Colors.white38 : AppColors.forest400,
+                      color: isDark ? Colors.white38 : AppColors.forest700,
                       fontSize: 10,
                     ),
                   ),
@@ -105,7 +105,7 @@ class WotdWidget extends ConsumerWidget {
                         style: GoogleFonts.outfit(
                           fontSize: 36,
                           fontWeight: FontWeight.w900,
-                          color: isDark ? Colors.white : AppColors.forest500,
+                          color: isDark ? Colors.white : AppColors.forest900,
                           letterSpacing: -1,
                         ),
                       ).animate().fadeIn().slideX(begin: -0.1),
@@ -113,7 +113,7 @@ class WotdWidget extends ConsumerWidget {
                         Text(
                           entry.phonetic!,
                           style: AppTypography.mono.copyWith(
-                            color: AppColors.gold500.withValues(alpha: 0.4),
+                            color: isDark ? AppColors.gold500.withValues(alpha: 0.4) : AppColors.forest700.withValues(alpha: 0.6),
                             fontSize: 14,
                           ),
                         ),
@@ -130,7 +130,7 @@ class WotdWidget extends ConsumerWidget {
                       },
                       icon: Icon(
                         isSaved ? Icons.bookmark : Icons.bookmark_border,
-                        color: AppColors.gold500,
+                        color: isDark ? AppColors.gold500 : AppColors.forest700,
                         size: 28,
                       ),
                     ).animate(target: isSaved ? 1 : 0).scale(duration: 200.ms),
@@ -152,19 +152,19 @@ class WotdWidget extends ConsumerWidget {
                         width: 56,
                         height: 56,
                         decoration: BoxDecoration(
-                          color: AppColors.gold500,
+                          color: isDark ? AppColors.gold500 : AppColors.terracotta,
                           borderRadius: BorderRadius.circular(18),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.gold500.withValues(alpha: 0.2),
+                              color: (isDark ? AppColors.gold500 : AppColors.terracotta).withValues(alpha: 0.2),
                               blurRadius: 15,
                               offset: const Offset(0, 8),
                             ),
                           ],
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.volume_up_rounded,
-                          color: Colors.black,
+                          color: isDark ? Colors.black : Colors.white,
                           size: 28,
                         ),
                       ),
@@ -177,14 +177,14 @@ class WotdWidget extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.03),
+                color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.info_outline_rounded,
-                    color: AppColors.gold500,
+                    color: isDark ? AppColors.gold500 : AppColors.forest700,
                     size: 20,
                   ),
                   const SizedBox(width: 12),
@@ -192,7 +192,7 @@ class WotdWidget extends ConsumerWidget {
                     child: Text(
                       entry.usageContext,
                       style: AppTypography.body.copyWith(
-                        color: isDark ? Colors.white70 : AppColors.creamText,
+                        color: isDark ? Colors.white70 : AppColors.forest900,
                         height: 1.4,
                         fontSize: 13,
                       ),
@@ -207,7 +207,7 @@ class WotdWidget extends ConsumerWidget {
               child: BrandButton(
                 text: 'LEARN MORE IN DICTIONARY',
                 onTap: () => context.go('/dictionary'),
-                type: BrandButtonType.primary,
+                type: isDark ? BrandButtonType.primary : BrandButtonType.secondary,
               ),
             ),
           ],
@@ -217,10 +217,11 @@ class WotdWidget extends ConsumerWidget {
   }
 
   Widget _buildLoading(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return RepaintBoundary(
       child:
           BrandCard(
-                theme: BrandCardTheme.vibrant,
+                theme: isDark ? BrandCardTheme.vibrant : BrandCardTheme.gold,
                 padding: const EdgeInsets.all(24),
                 borderRadius: 32,
                 child: Column(

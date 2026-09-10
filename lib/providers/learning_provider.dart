@@ -167,28 +167,73 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
     // Track streak for adaptive difficulty
     int newStreak = isCorrect && isFirstTry ? state.firstTryStreak + 1 : 0;
 
-    // Adaptive Difficulty: If streak hits 3, upgrade the next MCQ task in queue if possible.
-    // Fix #18: Preserve the original task ID via `logicalTaskId` when upgrading.
+    // --- ADAPTIVE DIFFICULTY SCALING ---
+    // If user is on a roll (streak >= 3), make upcoming tasks harder.
     if (newStreak >= 3) {
       for (int i = 0; i < newQueue.length; i++) {
-        if (newQueue[i].type == TaskType.multipleChoice && i > 0) {
-          final task = newQueue[i];
+        final task = newQueue[i];
+
+        // 1. Multiple Choice -> Sentence Reordering or Fill in the Blanks
+        if (task.type == TaskType.multipleChoice && i > 0) {
           final correctText = task.options[task.correctAnswerIndex];
 
           if (correctText.contains(' ') && correctText.split(' ').length >= 3) {
-            // Keep the original ID so _taskMistakes always keys off the source task.
+            // Case A: Long sentence -> Reconstruct it
             newQueue[i] = LessonTask(
-              id: task
-                  .id, // ← Fix #18: Use original ID, NOT '${task.id}_harder'
+              id: task.id,
               type: TaskType.sentenceReordering,
               questionText: 'Reconstruct the correct translation:',
               sentenceParts: List.from(correctText.split(' '))..shuffle(),
               expectedSentence: correctText,
               hintMetadata: task.hintMetadata,
             );
+            newStreak = 0; // Reset streak after one upgrade to prevent overwhelming
+            break;
+          } else if (correctText.isNotEmpty) {
+            // Case B: Single word/Short phrase -> Fill in the blank
+            newQueue[i] = LessonTask(
+              id: task.id,
+              type: TaskType.fillInTheBlanks,
+              questionText: 'Recall the correct indigenous term:',
+              expectedSentence: '[word]',
+              sentenceParts: [correctText],
+              hintMetadata: 'Hint: ${task.questionText}',
+            );
             newStreak = 0;
             break;
           }
+        }
+
+        // 2. Listening (MCQ) -> Listening (Recall)
+        if (task.type == TaskType.listening && i > 0) {
+          final correctText = task.options[task.correctAnswerIndex];
+          newQueue[i] = LessonTask(
+            id: task.id,
+            type: TaskType.fillInTheBlanks,
+            questionText: 'Listen and recall the indigenous word:',
+            expectedSentence: '[word]',
+            sentenceParts: [correctText],
+            audioUrl: task.audioUrl,
+            hintMetadata: 'Listen closely to the oral wisdom.',
+          );
+          newStreak = 0;
+          break;
+        }
+
+        // 3. Vocabulary (Flashcard) -> Active Recall (Fill in Blanks)
+        // If streak is high, skip the passive learning and go straight to recall.
+        if (task.type == TaskType.vocabulary && i > 0 && newStreak >= 5) {
+          newQueue[i] = LessonTask(
+            id: task.id,
+            type: TaskType.fillInTheBlanks,
+            questionText: 'Active Recall: What is "${task.options.first}"?',
+            expectedSentence: '[word]',
+            sentenceParts: [task.nativeWord],
+            audioUrl: task.audioUrl,
+            hintMetadata: 'You seem to have mastered the basics. Try to recall it!',
+          );
+          newStreak = 0;
+          break;
         }
       }
     }

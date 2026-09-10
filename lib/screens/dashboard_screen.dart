@@ -16,7 +16,7 @@ import '../widgets/wotd_widget.dart';
 import '../widgets/crystal_burst_animation.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/branded_empty_state.dart';
-import '../widgets/ambient_topo_background.dart';
+import '../widgets/brand_background.dart';
 import '../services/upload_queue_service.dart';
 import '../providers/student_provider.dart';
 import '../providers/quest_provider.dart';
@@ -69,7 +69,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       children: [
         Scaffold(
           backgroundColor: Colors.transparent,
-          body: AmbientTopoBackground(
+          body: BrandBackground(
             child: SafeArea(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
@@ -172,7 +172,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     Text(
                       'Madyaw na\nallaw,\n$displayName!',
                       style: AppTypography.displayBold.copyWith(
-                        color: Colors.black,
+                        color: AppColors.forest900,
                         fontSize: 34,
                         height: 1.1,
                       ),
@@ -181,7 +181,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     Text(
                       'LEVEL ${student.level} \u2022 ${student.levelTitle.toUpperCase()}',
                       style: AppTypography.label.copyWith(
-                        color: Colors.black54,
+                        color: AppColors.forest700,
                         fontWeight: FontWeight.w900,
                         fontSize: 11,
                         letterSpacing: 1,
@@ -192,9 +192,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       borderRadius: BorderRadius.circular(4),
                       child: LinearProgressIndicator(
                         value: student.levelProgress,
-                        backgroundColor: Colors.black12,
+                        backgroundColor: AppColors.forest900.withValues(alpha: 0.1),
                         valueColor: const AlwaysStoppedAnimation<Color>(
-                          Colors.black54,
+                          AppColors.forest700,
                         ),
                         minHeight: 4,
                       ),
@@ -235,9 +235,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Text(
               'TRIBAL CHALLENGES',
               style: AppTypography.label.copyWith(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white24
-                    : AppColors.forest400,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 letterSpacing: 2,
                 fontWeight: FontWeight.w900,
                 fontSize: 10,
@@ -378,8 +376,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     quest.title,
                     style: AppTypography.h3.copyWith(
                       color: isClaimed
-                          ? (isDark ? Colors.white24 : AppColors.creamText3)
-                          : (isDark ? Colors.white : AppColors.forest700),
+                        ? Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)
+                        : Theme.of(context).colorScheme.onSurface,
                       fontSize: 15,
                       decoration: isClaimed ? TextDecoration.lineThrough : null,
                     ),
@@ -387,7 +385,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   Text(
                     quest.description,
                     style: AppTypography.body.copyWith(
-                      color: isDark ? Colors.white24 : AppColors.creamText2,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 11,
                     ),
                   ),
@@ -419,7 +417,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   style: AppTypography.mono.copyWith(
                     color: isDone
                         ? AppColors.gold500
-                        : (isDark ? Colors.white38 : AppColors.creamText3),
+                        : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -458,9 +456,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         Text(
           'CHALLENGE HUB',
           style: AppTypography.label.copyWith(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white24
-                : AppColors.forest400,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             letterSpacing: 2,
             fontWeight: FontWeight.w900,
             fontSize: 10,
@@ -579,7 +575,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget _buildCurrentLessonCard(BuildContext context) {
     final latestAsync = ref.watch(latestLessonProvider);
     final detailsAsync = ref.watch(latestLessonDetailsProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return detailsAsync.when(
       data: (lesson) {
@@ -638,7 +633,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               Text(
                 lesson.title,
                 style: AppTypography.h1ExtraBold.copyWith(
-                  color: isDark ? Colors.white : AppColors.forest700,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 28,
                 ),
               ),
@@ -646,7 +641,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               Text(
                 lesson.description,
                 style: AppTypography.body.copyWith(
-                  color: isDark ? Colors.white38 : AppColors.creamText2,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                 ),
               ),
               const SizedBox(height: 24),
@@ -656,7 +651,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   Text(
                     'Lesson Progress',
                     style: AppTypography.label.copyWith(
-                      color: isDark ? Colors.white54 : AppColors.creamText3,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                       fontSize: 12,
                     ),
                   ),
@@ -963,14 +958,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTypography.bodyLarge.copyWith(
-                      color: isDark ? Colors.white : AppColors.forest700,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
                     title,
                     style: AppTypography.body.copyWith(
-                      color: isDark ? Colors.white24 : AppColors.creamText2,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 11,
                     ),
                   ),
@@ -1004,13 +999,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildStreakSummaryCard(BuildContext context, StudentState student) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: () {
         HapticService.light();
         context.push('/streak');
       },
       child: BrandCard(
-        theme: BrandCardTheme.vibrant,
+        theme: isDark ? BrandCardTheme.vibrant : BrandCardTheme.gold,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Row(
           children: [
@@ -1019,12 +1015,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               children: [
                 Icon(
                   Icons.local_fire_department_rounded,
-                  color: AppColors.gold500.withValues(alpha: 0.2),
+                  color: isDark ? AppColors.gold500.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.1),
                   size: 48,
                 ).animate(onPlay: (c) => c.repeat()).scale(end: const Offset(1.2, 1.2)),
-                const Icon(
+                Icon(
                   Icons.local_fire_department_rounded,
-                  color: AppColors.gold500,
+                  color: isDark ? AppColors.gold500 : Colors.black,
                   size: 32,
                 ),
               ],
@@ -1036,16 +1032,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 children: [
                   Text(
                     '${student.displayedStreak} DAYS',
-                    style: AppTypography.h3.copyWith(color: Colors.white, fontSize: 16),
+                    style: AppTypography.h3.copyWith(
+                      color: isDark ? Colors.white : AppColors.forest900, 
+                      fontSize: 16,
+                    ),
                   ),
                   Text(
                     'Keep the flame alive!',
-                    style: AppTypography.body.copyWith(color: Colors.white70, fontSize: 12),
+                    style: AppTypography.body.copyWith(
+                      color: isDark ? Colors.white70 : AppColors.forest700, 
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 16),
+            Icon(
+              Icons.arrow_forward_ios_rounded, 
+              color: isDark ? Colors.white24 : Colors.black26, 
+              size: 16,
+            ),
           ],
         ),
       ),

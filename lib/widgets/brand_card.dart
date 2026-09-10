@@ -30,6 +30,7 @@ class BrandCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardTextColor = isDark ? Colors.white : AppColors.forest900;
 
     Widget card;
 
@@ -38,12 +39,12 @@ class BrandCard extends StatelessWidget {
         margin: margin,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: isDark ? AppColors.forestDarkCard : AppColors.creamBg,
+          color: isDark ? AppColors.forestDarkCard : AppColors.gold50,
           borderRadius: BorderRadius.circular(borderRadius),
           border: Border.all(
             color: isDark
                 ? Colors.white.withValues(alpha: 0.05)
-                : AppColors.creamBorder,
+                : AppColors.gold200,
             width: 1.5,
           ),
           boxShadow: isDark
@@ -56,7 +57,7 @@ class BrandCard extends StatelessWidget {
                 ]
               : [
                   BoxShadow(
-                    color: AppColors.creamShadow.withValues(alpha: 0.2),
+                    color: AppColors.gold200.withValues(alpha: 0.2),
                     offset: const Offset(0, 4),
                     blurRadius: 0,
                   ),
@@ -72,14 +73,17 @@ class BrandCard extends StatelessWidget {
             if (!isDark)
               Positioned.fill(
                 child: Opacity(
-                  opacity: 0.3,
+                  opacity: 0.2,
                   child: Image.asset(
                     'assets/images/paper_texture.png',
                     fit: BoxFit.cover,
                   ),
                 ),
               ),
-            Padding(padding: padding, child: child),
+            DefaultTextStyle(
+              style: TextStyle(color: cardTextColor),
+              child: Padding(padding: padding, child: child),
+            ),
           ],
         ),
       );
@@ -88,25 +92,28 @@ class BrandCard extends StatelessWidget {
         margin: margin,
         padding: padding,
         decoration: BoxDecoration(
-          color: isDark ? AppColors.forest500 : Colors.white,
+          color: isDark ? AppColors.forest500 : AppColors.gold100,
           borderRadius: BorderRadius.circular(borderRadius),
           border: Border.all(
             color: isDark
                 ? AppColors.forest200.withValues(alpha: 0.3)
-                : AppColors.creamBorder,
+                : AppColors.gold200,
             width: 2,
           ),
           boxShadow: [
             BoxShadow(
               color: isDark
                   ? Colors.black.withValues(alpha: 0.4)
-                  : AppColors.creamShadow.withValues(alpha: 0.3),
+                  : AppColors.gold200.withValues(alpha: 0.3),
               offset: const Offset(0, 8),
               blurRadius: 0,
             ),
           ],
         ),
-        child: child,
+        child: DefaultTextStyle(
+          style: TextStyle(color: cardTextColor),
+          child: child,
+        ),
       );
     } else {
       // Gold Theme - Playful & Interactive
@@ -125,7 +132,10 @@ class BrandCard extends StatelessWidget {
             ),
           ],
         ),
-        child: child,
+        child: DefaultTextStyle(
+          style: TextStyle(color: isDark ? Colors.white : AppColors.forest900),
+          child: child,
+        ),
       );
     }
 

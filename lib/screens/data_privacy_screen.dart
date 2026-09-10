@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
-import '../widgets/ambient_topo_background.dart';
+import '../widgets/brand_background.dart';
 import '../widgets/brand_button.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
@@ -19,7 +19,7 @@ class DataPrivacyScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: AmbientTopoBackground(
+      body: BrandBackground(
         child: SafeArea(
           child: Column(
             children: [

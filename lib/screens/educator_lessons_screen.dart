@@ -6,7 +6,9 @@ import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../models/educator_models.dart';
 import '../models/lesson.dart';
+import '../widgets/branded_empty_state.dart';
 import '../services/firebase_service.dart';
+import '../services/haptic_service.dart';
 import '../providers/educator_provider.dart';
 
 enum LessonSort { newest, oldest, name, views }
@@ -82,7 +84,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
     final rawLessonsAsync = ref.watch(allLessonsStreamProvider);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: educatorLessonsAsync.when(
           data: (allEduLessons) {
@@ -113,7 +115,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                               Text(
                                 '${allEduLessons.length} lessons • ${allEduLessons.where((l) => l.status == 'PUBLISHED').length} published',
                                 style: AppTypography.body.copyWith(
-                                  color: isDark ? Colors.white24 : AppColors.creamText3,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                                 ),
                               ),
                             ],
@@ -215,7 +217,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
             child: Text(
               'Error: $e',
               style: TextStyle(
-                color: isDark ? Colors.white : AppColors.creamText,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),
@@ -244,7 +246,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
           decoration: BoxDecoration(
             color: isActive
                 ? AppColors.gold500
-                : (isDark ? AppColors.forestDarkCard : Colors.white),
+                : Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isActive
@@ -265,40 +267,12 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 60),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              _searchQuery.isNotEmpty
-                  ? Icons.search_off_rounded
-                  : Icons.history_edu_rounded,
-              color: Colors.white10,
-              size: 64,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _searchQuery.isNotEmpty
-                  ? 'No matching lessons found.'
-                  : 'Your library is empty.',
-              style: AppTypography.h3.copyWith(
-                color: isDark ? Colors.white24 : AppColors.creamText3,
-              ),
-            ),
-            if (_searchQuery.isEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                'Start by creating your first lesson.',
-                style: AppTypography.body.copyWith(
-                  color: isDark ? Colors.white12 : AppColors.creamBorder,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
+    return BrandedEmptyState(
+      title: _searchQuery.isNotEmpty ? 'No Scrolls Found' : 'Empty Library',
+      message: _searchQuery.isNotEmpty
+          ? 'No matching lessons found for your search.'
+          : 'Start by creating your first ancestral lesson.',
+      icon: _searchQuery.isNotEmpty ? Icons.search_off_rounded : Icons.history_edu_rounded,
     );
   }
 
@@ -310,7 +284,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.forestDarkCard : Colors.white,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isDark
@@ -359,7 +333,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
             style: TextStyle(
               color: isActive
                   ? AppColors.gold500
-                  : (isDark ? Colors.white70 : AppColors.creamText),
+                  : (isDark ? Colors.white70 : Theme.of(context).colorScheme.onSurface),
               fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
             ),
           ),
@@ -372,7 +346,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.forestDarkCard : Colors.white,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isDark
@@ -383,12 +357,12 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
       child: TextField(
         controller: _searchController,
         onChanged: (val) => setState(() => _searchQuery = val),
-        style: TextStyle(color: isDark ? Colors.white : AppColors.creamText),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
         decoration: InputDecoration(
           icon: const Icon(Icons.search_rounded, color: AppColors.gold500, size: 20),
           hintText: 'Search lessons...',
           hintStyle: AppTypography.body.copyWith(
-            color: isDark ? Colors.white24 : AppColors.creamText3,
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             fontSize: 14,
           ),
           border: InputBorder.none,
@@ -396,7 +370,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
               ? IconButton(
                   icon: Icon(
                     Icons.close_rounded,
-                    color: isDark ? Colors.white38 : AppColors.creamText3,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                     size: 18,
                   ),
                   onPressed: () {
@@ -469,7 +443,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
   void _showLessonActions(EducatorLesson lesson) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDark ? AppColors.forest800 : AppColors.creamBg,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -492,7 +466,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
               Text(
                 lesson.subtitle,
                 style: AppTypography.body.copyWith(
-                  color: isDark ? Colors.white38 : AppColors.creamText3,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                   fontSize: 12,
                 ),
               ),
@@ -686,7 +660,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
@@ -702,7 +676,10 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
     bool isDestructive = false,
   }) {
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        HapticService.selection();
+        onTap();
+      },
       borderRadius: BorderRadius.circular(16),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -741,7 +718,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                     Text(
                       subtitle,
                       style: AppTypography.body.copyWith(
-                        color: isDark ? Colors.white24 : AppColors.creamText3,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                         fontSize: 11,
                       ),
                     ),
@@ -772,7 +749,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
       onTap: () => context.push('/lesson-editor', extra: lesson.id),
       onLongPress: () => _showLessonActions(lesson),
       child: BrandCard(
-        theme: BrandCardTheme.vibrant,
+        theme: isDark ? BrandCardTheme.vibrant : BrandCardTheme.gold,
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -783,15 +760,16 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: (isDraft ? Colors.white : AppColors.gold500)
-                        .withValues(alpha: 0.1),
+                    color: isDark 
+                        ? (isDraft ? Colors.white : AppColors.gold500).withValues(alpha: 0.1)
+                        : Colors.black.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     isDraft ? Icons.edit_note_rounded : Icons.menu_book_rounded,
-                    color: isDraft
-                        ? (isDark ? Colors.white38 : AppColors.creamText3)
-                        : AppColors.gold500,
+                    color: isDark 
+                        ? (isDraft ? Colors.white38 : AppColors.gold500)
+                        : AppColors.forest900,
                     size: 20,
                   ),
                 ),
@@ -801,7 +779,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                     Icons.more_horiz_rounded,
                     color: isDark
                         ? Colors.white.withValues(alpha: 0.2)
-                        : AppColors.creamText3.withValues(alpha: 0.5),
+                        : AppColors.forest900.withValues(alpha: 0.4),
                     size: 20,
                   ),
                 ),
@@ -813,7 +791,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.h3.copyWith(
-                color: isDark ? Colors.white : AppColors.creamText,
+                color: isDark ? Colors.white : AppColors.forest900,
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
@@ -822,7 +800,9 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
             Text(
               lesson.subtitle,
               style: AppTypography.body.copyWith(
-                color: isDark ? Colors.white24 : AppColors.creamText3,
+                color: isDark 
+                    ? Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)
+                    : AppColors.forest700,
                 fontSize: 10,
               ),
             ),
@@ -831,26 +811,32 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
             if (!isDraft)
               Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.visibility_rounded,
-                    color: Colors.white24,
+                    color: isDark ? Colors.white24 : AppColors.forest700.withValues(alpha: 0.5),
                     size: 12,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     _formatViewCount(lesson.viewCount),
                     style: AppTypography.label.copyWith(
-                      color: Colors.white24,
+                      color: isDark ? Colors.white24 : AppColors.forest700.withValues(alpha: 0.5),
                       fontSize: 9,
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Icon(Icons.people_rounded, color: Colors.white24, size: 12),
+                  Icon(
+                    Icons.people_rounded, 
+                    color: isDark ? Colors.white24 : AppColors.forest700.withValues(alpha: 0.5), 
+                    size: 12,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     lesson.studentCount.toString(),
                     style: AppTypography.label.copyWith(
-                      color: isDark ? Colors.white24 : AppColors.creamText3,
+                      color: isDark 
+                          ? Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)
+                          : AppColors.forest700.withValues(alpha: 0.5),
                       fontSize: 9,
                     ),
                   ),
@@ -866,8 +852,8 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: isDraft
-                        ? (isDark ? Colors.white24 : AppColors.creamBorder)
-                        : AppColors.semanticGreen,
+                        ? (isDark ? Colors.white24 : AppColors.forest700.withValues(alpha: 0.4))
+                        : (isDark ? AppColors.semanticGreen : AppColors.forest900),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -875,9 +861,10 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                   isDraft ? 'DRAFT • v${lesson.version}' : lesson.status,
                   style: AppTypography.label.copyWith(
                     color: isDraft
-                        ? (isDark ? Colors.white24 : AppColors.creamText3)
-                        : AppColors.semanticGreen,
+                        ? (isDark ? Colors.white24 : AppColors.forest700.withValues(alpha: 0.6))
+                        : (isDark ? AppColors.semanticGreen : AppColors.forest900),
                     fontSize: 8,
+                    fontWeight: isDraft ? null : FontWeight.w900,
                   ),
                 ),
               ],
@@ -1162,7 +1149,7 @@ class _CurriculumMapViewState extends State<_CurriculumMapView> {
                                 child: Text(
                                   'UNIT $uNum',
                                   style: AppTypography.label.copyWith(
-                                    color: isDark ? Colors.white24 : AppColors.creamText3,
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                                     fontSize: 8,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -1198,17 +1185,21 @@ class _CurriculumMapViewState extends State<_CurriculumMapView> {
           width: double.infinity,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: isDark ? AppColors.forestDarkCard : Colors.white,
+            color: isDark 
+                ? Theme.of(context).colorScheme.surfaceContainerHighest 
+                : AppColors.gold500,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: lesson.status == 'PUBLISHED'
-                  ? AppColors.gold500.withValues(alpha: 0.3)
-                  : (isDark ? Colors.white10 : AppColors.creamBorder),
+                  ? (isDark ? AppColors.gold500.withValues(alpha: 0.3) : AppColors.gold700)
+                  : (isDark ? Colors.white10 : AppColors.gold700.withValues(alpha: 0.2)),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
+                color: isDark 
+                    ? Colors.black.withValues(alpha: 0.1) 
+                    : AppColors.gold700.withValues(alpha: 0.2),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -1234,13 +1225,17 @@ class _CurriculumMapViewState extends State<_CurriculumMapView> {
                   Text(
                     'LVL ${lesson.level}',
                     style: AppTypography.label.copyWith(
-                      color: AppColors.gold500,
+                      color: isDark ? AppColors.gold500 : AppColors.forest900.withValues(alpha: 0.6),
                       fontSize: 8,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
                   if (lesson.prerequisiteId != null && lesson.prerequisiteId!.isNotEmpty)
-                    const Icon(Icons.link_rounded, size: 12, color: AppColors.gold500),
+                    Icon(
+                      Icons.link_rounded, 
+                      size: 12, 
+                      color: isDark ? AppColors.gold500 : AppColors.forest900,
+                    ),
                 ],
               ),
             ],
@@ -1368,7 +1363,7 @@ class _StudentCompletionSheet extends ConsumerWidget {
                     Text(
                       lesson.title,
                       style: AppTypography.body.copyWith(
-                        color: isDark ? Colors.white38 : AppColors.creamText3,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                         fontSize: 12,
                       ),
                       maxLines: 1,
@@ -1381,7 +1376,7 @@ class _StudentCompletionSheet extends ConsumerWidget {
                 onPressed: () => Navigator.pop(context),
                 icon: Icon(
                   Icons.close_rounded,
-                  color: isDark ? Colors.white38 : AppColors.creamText3,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                 ),
               ),
             ],
@@ -1396,24 +1391,10 @@ class _StudentCompletionSheet extends ConsumerWidget {
                 }).toList();
 
                 if (activeStudents.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.group_off_rounded,
-                          size: 48,
-                          color: isDark ? Colors.white10 : AppColors.creamBorder,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No students have started this yet.',
-                          style: TextStyle(
-                            color: isDark ? Colors.white24 : AppColors.creamText3,
-                          ),
-                        ),
-                      ],
-                    ),
+                  return const BrandedEmptyState(
+                    title: 'Quiet Classroom',
+                    message: 'No students have started this lesson yet.',
+                    icon: Icons.group_off_rounded,
                   );
                 }
 
@@ -1426,7 +1407,7 @@ class _StudentCompletionSheet extends ConsumerWidget {
                       (lb) => lb.lessonTitle == lesson.title,
                     );
 
-                    return _buildStudentItem(student, progress, isDark);
+                    return _buildStudentItem(context, student, progress, isDark);
                   },
                 );
               },
@@ -1442,6 +1423,7 @@ class _StudentCompletionSheet extends ConsumerWidget {
   }
 
   Widget _buildStudentItem(
+    BuildContext context,
     EducatorStudent student,
     StudentLessonProgress progress,
     bool isDark,
@@ -1466,7 +1448,7 @@ class _StudentCompletionSheet extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.forestDarkCard : Colors.white,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.creamBorder,
@@ -1495,7 +1477,7 @@ class _StudentCompletionSheet extends ConsumerWidget {
                 Text(
                   'Accuracy: ${(progress.accuracy * 100).toInt()}%',
                   style: AppTypography.label.copyWith(
-                    color: isDark ? Colors.white24 : AppColors.creamText3,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                     fontSize: 10,
                   ),
                 ),
@@ -1524,7 +1506,7 @@ class _StudentCompletionSheet extends ConsumerWidget {
               Text(
                 '${(progress.progress * 100).toInt()}% SCORE',
                 style: AppTypography.mono.copyWith(
-                  color: isDark ? Colors.white38 : AppColors.creamText3,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                   fontSize: 8,
                 ),
               ),

@@ -19,20 +19,34 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppColors.forest900,
+      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
       body: Stack(
         children: [
           // Background Gradient
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0xFF0F2619), AppColors.forest900],
+                colors: [
+                  isDark ? const Color(0xFF0F2619) : AppColors.gold50,
+                  isDark ? AppColors.forest900 : AppColors.creamBg,
+                ],
               ),
             ),
           ),
+          if (!isDark)
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0.2,
+                child: Image.asset(
+                  'assets/images/paper_texture.png',
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
 
           PageView(
             controller: _pageController,
@@ -42,6 +56,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             },
             children: [
               _buildNarrativePage(
+                context,
                 title: "The Echoes Fade",
                 subtitle: "OUR ANCESTRAL VOICES",
                 description:
@@ -50,20 +65,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 accentColor: AppColors.gold500,
               ),
               _buildNarrativePage(
+                context,
                 title: "The Ancestral Vault",
                 subtitle: "SACRED KNOWLEDGE",
                 description:
                     "Every word you learn restores a piece of our history. Unlock ancient artifacts and rebuild the legacy of our people.",
                 icon: Icons.auto_awesome,
-                accentColor: Colors.cyanAccent,
+                accentColor: isDark ? Colors.cyanAccent : AppColors.semanticBlue,
               ),
               _buildNarrativePage(
+                context,
                 title: "Your Tribal Journey",
                 subtitle: "WISDOM AWAITS",
                 description:
                     "Join the Warriors' Circle and compete in ritual duels. The path to mastery is long, but the elders walk with you.",
                 icon: Icons.fort_rounded,
-                accentColor: Colors.orangeAccent,
+                accentColor: isDark ? Colors.orangeAccent : AppColors.terracotta,
               ),
             ],
           ),
@@ -75,7 +92,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             right: 40,
             child: Column(
               children: [
-                _buildIndicator(),
+                _buildIndicator(isDark),
                 const SizedBox(height: 40),
                 _buildActionButton(
                   _currentIndex == 2 ? "BEGIN THE RITUAL" : "CONTINUE",
@@ -98,7 +115,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  Widget _buildNarrativePage({
+  Widget _buildNarrativePage(
+    BuildContext context, {
     required String title,
     required String subtitle,
     required String description,
@@ -106,6 +124,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     IconData? icon,
     required Color accentColor,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40),
       child: Column(
@@ -151,7 +170,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             title,
             textAlign: TextAlign.center,
             style: AppTypography.display.copyWith(
-              color: Colors.white,
+              color: isDark ? Colors.white : AppColors.forest900,
               fontSize: 38,
               height: 1.1,
             ),
@@ -162,7 +181,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             description,
             textAlign: TextAlign.center,
             style: AppTypography.bodyLarge.copyWith(
-              color: Colors.white70,
+              color: isDark ? Colors.white70 : AppColors.creamText2,
               fontSize: 18,
               height: 1.6,
             ),
@@ -172,7 +191,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  Widget _buildIndicator() {
+  Widget _buildIndicator(bool isDark) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(
@@ -183,7 +202,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           width: _currentIndex == index ? 32 : 8,
           height: 8,
           decoration: BoxDecoration(
-            color: _currentIndex == index ? AppColors.gold500 : Colors.white10,
+            color: _currentIndex == index
+                ? AppColors.gold500
+                : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.1)),
             borderRadius: BorderRadius.circular(4),
           ),
         ),

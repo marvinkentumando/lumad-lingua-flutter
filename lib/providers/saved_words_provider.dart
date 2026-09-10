@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
+import '../services/haptic_service.dart';
 import '../theme/app_colors.dart';
 
 class SavedWordsNotifier extends Notifier<Set<String>> {
@@ -35,6 +36,12 @@ class SavedWordsNotifier extends Notifier<Set<String>> {
     }
 
     final isCurrentlySaved = state.contains(wordId);
+
+    if (isCurrentlySaved) {
+      HapticService.light();
+    } else {
+      HapticService.success();
+    }
 
     // Optimistic Update
     final previousState = state;

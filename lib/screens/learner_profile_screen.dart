@@ -17,8 +17,9 @@ import '../widgets/daily_check_in_board.dart';
 import '../widgets/level_up_modal.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/profile_avatar.dart';
-import '../widgets/ambient_topo_background.dart';
+import '../widgets/brand_background.dart';
 import '../widgets/artifacts/artifact_inventory_section.dart';
+import '../providers/theme_provider.dart';
 
 class LearnerProfileScreen extends ConsumerWidget {
   const LearnerProfileScreen({super.key});
@@ -32,7 +33,7 @@ class LearnerProfileScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: AmbientTopoBackground(
+      body: BrandBackground(
         child: authState.when(
           loading: () => _buildProfileSkeleton(),
           error: (e, _) => Center(child: Text('Error: $e')),
@@ -73,7 +74,9 @@ class LearnerProfileScreen extends ConsumerWidget {
                       profile,
                     ),
                     const SizedBox(height: 40),
-                    if (currentRole == UserRole.learner)
+                    if (currentRole == UserRole.learner && 
+                        profile?['role']?.toString().toLowerCase() != 'admin' && 
+                        profile?['role']?.toString().toLowerCase() != 'educator')
                       const ArtifactInventorySection(),
                     const SizedBox(height: 40),
                     _buildJourneyManagement(
@@ -275,6 +278,18 @@ class LearnerProfileScreen extends ConsumerWidget {
           'Offline Wisdom',
           'Manage cached lessons and audio files for offline use',
           onTap: () => context.push('/offline-wisdom'),
+        ),
+        const SizedBox(height: 12),
+        _buildManagementTile(
+          context,
+          Theme.of(context).brightness == Brightness.dark
+              ? Icons.light_mode_rounded
+              : Icons.dark_mode_rounded,
+          Theme.of(context).brightness == Brightness.dark
+              ? 'Light Sanctuary'
+              : 'Dark Forest',
+          'Switch between light and dark themes',
+          onTap: () => ref.read(themeProvider.notifier).toggleTheme(),
         ),
         const SizedBox(height: 12),
         if (role == UserRole.learner) ...[

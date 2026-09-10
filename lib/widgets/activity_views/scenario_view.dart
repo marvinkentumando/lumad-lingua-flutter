@@ -22,6 +22,7 @@ class ScenarioView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -55,7 +56,7 @@ class ScenarioView extends StatelessWidget {
           child: Text(
             scenarioText.isEmpty ? 'Scenario details...' : scenarioText,
             style: AppTypography.body.copyWith(
-              color: Colors.white,
+              color: isDark ? Colors.white : AppColors.forest900,
               fontStyle: FontStyle.italic,
             ),
             textAlign: TextAlign.center,
@@ -78,19 +79,21 @@ class ScenarioView extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.semanticBlue.withValues(alpha: 0.1)
-                    : Colors.white.withValues(alpha: 0.05),
+                    : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03)),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isSelected
                       ? AppColors.semanticBlue
-                      : Colors.white.withValues(alpha: 0.1),
+                      : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.1)),
                   width: isSelected ? 2.5 : 1.5,
                 ),
               ),
               child: Text(
                 options[index].isEmpty ? 'Option ${index + 1}' : options[index],
                 style: AppTypography.bodyLarge.copyWith(
-                  color: isSelected ? AppColors.semanticBlue : Colors.white,
+                  color: isSelected
+                      ? AppColors.semanticBlue
+                      : (isDark ? Colors.white : AppColors.forest900),
                 ),
               ),
             ),

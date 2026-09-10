@@ -31,12 +31,15 @@ class PronunciationView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           question.isEmpty ? 'Tap and Speak' : question,
-          style: AppTypography.h2.copyWith(color: Colors.white),
+          style: AppTypography.h2.copyWith(
+            color: isDark ? Colors.white : AppColors.forest900,
+          ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 48),
@@ -52,7 +55,7 @@ class PronunciationView extends StatelessWidget {
         Text(
           phonetic.isEmpty ? '/phonetic/' : phonetic,
           style: AppTypography.bodyLarge.copyWith(
-            color: Colors.white54,
+            color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5),
             fontStyle: FontStyle.italic,
           ),
           textAlign: TextAlign.center,
@@ -74,7 +77,7 @@ class PronunciationView extends StatelessWidget {
                   recorderController: recorderController!,
                   enableGesture: false,
                   waveStyle: WaveStyle(
-                    waveColor: Colors.white.withValues(alpha: 0.5),
+                    waveColor: isDark ? Colors.white.withValues(alpha: 0.5) : AppColors.forest900.withValues(alpha: 0.5),
                     spacing: 4.0,
                     extendWaveform: true,
                     showMiddleLine: false,
@@ -86,18 +89,18 @@ class PronunciationView extends StatelessWidget {
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     color: isReadOnly
-                        ? Colors.white12
+                        ? (isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.05))
                         : AppColors.forestDarkCard,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isReadOnly ? Colors.white24 : AppColors.gold500,
+                      color: isReadOnly ? (isDark ? Colors.white24 : Colors.black.withValues(alpha: 0.1)) : AppColors.gold500,
                       width: 2,
                     ),
                   ),
                   child: Icon(
                     Icons.mic_rounded,
                     size: 48,
-                    color: isReadOnly ? Colors.white24 : AppColors.gold500,
+                    color: isReadOnly ? (isDark ? Colors.white24 : Colors.black.withValues(alpha: 0.1)) : AppColors.gold500,
                   ),
                 ),
               if (isRecording)
@@ -123,7 +126,9 @@ class PronunciationView extends StatelessWidget {
               : (isRecording
                     ? "Listening..."
                     : (hasRecorded ? "Audio recorded!" : "Tap to record")),
-          style: AppTypography.label.copyWith(color: Colors.white70),
+          style: AppTypography.label.copyWith(
+            color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7),
+          ),
         ),
       ],
     );

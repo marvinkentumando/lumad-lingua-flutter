@@ -46,25 +46,28 @@ class MasteryDashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : AppColors.forest900;
+    
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Row(
         children: [
           IconButton(
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(
+            icon: Icon(
               Icons.arrow_back_ios_new_rounded,
-              color: Colors.white,
+              color: textColor,
             ),
             style: IconButton.styleFrom(
-              backgroundColor: Colors.white.withValues(alpha: 0.05),
+              backgroundColor: textColor.withValues(alpha: 0.05),
               padding: const EdgeInsets.all(12),
             ),
           ),
           const SizedBox(width: 16),
           Text(
             'Mastery Trends',
-            style: AppTypography.h2ExtraBold.copyWith(color: Colors.white),
+            style: AppTypography.h2ExtraBold.copyWith(color: textColor),
           ),
         ],
       ),
@@ -77,9 +80,9 @@ class MasteryDashboardScreen extends ConsumerWidget {
       children: [
         _buildOverallMasteryCard(stats.overallMastery),
         const SizedBox(height: 32),
-        _buildMasteryBreakdown(stats.counts),
+        _buildMasteryBreakdown(context, stats.counts),
         const SizedBox(height: 32),
-        _buildWeeklyTrend(stats.weeklyProgress),
+        _buildWeeklyTrend(context, stats.weeklyProgress),
         const SizedBox(height: 32),
         _buildReviewAction(context),
       ],
@@ -142,14 +145,16 @@ class MasteryDashboardScreen extends ConsumerWidget {
     ).animate().fadeIn().scale(delay: 200.ms);
   }
 
-  Widget _buildMasteryBreakdown(Map<MasteryLevel, int> counts) {
+  Widget _buildMasteryBreakdown(BuildContext context, Map<MasteryLevel, int> counts) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'VOCABULARY STATUS',
           style: AppTypography.label.copyWith(
-            color: Colors.white24,
+            color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.4),
             letterSpacing: 2,
             fontWeight: FontWeight.w900,
             fontSize: 10,
@@ -160,6 +165,7 @@ class MasteryDashboardScreen extends ConsumerWidget {
           children: [
             Expanded(
               child: _buildBreakdownItem(
+                context,
                 'NEW',
                 counts[MasteryLevel.newWord]!,
                 AppColors.semanticBlue,
@@ -168,6 +174,7 @@ class MasteryDashboardScreen extends ConsumerWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _buildBreakdownItem(
+                context,
                 'LEARNING',
                 counts[MasteryLevel.learning]!,
                 AppColors.gold500,
@@ -176,6 +183,7 @@ class MasteryDashboardScreen extends ConsumerWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _buildBreakdownItem(
+                context,
                 'MASTERED',
                 counts[MasteryLevel.mastered]!,
                 AppColors.semanticGreen,
@@ -187,23 +195,25 @@ class MasteryDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildBreakdownItem(String label, int count, Color color) {
+  Widget _buildBreakdownItem(BuildContext context, String label, int count, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return BrandCard(
-      theme: BrandCardTheme.vibrant,
+      theme: isDark ? BrandCardTheme.vibrant : BrandCardTheme.gold,
       padding: const EdgeInsets.symmetric(vertical: 20),
       child: Column(
         children: [
           Text(
             count.toString(),
             style: AppTypography.h1ExtraBold.copyWith(
-              color: color,
+              color: isDark ? color : AppColors.forest900,
               fontSize: 24,
             ),
           ),
           Text(
             label,
             style: AppTypography.label.copyWith(
-              color: Colors.white24,
+              color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.5),
               fontSize: 8,
               fontWeight: FontWeight.bold,
             ),
@@ -213,8 +223,11 @@ class MasteryDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildWeeklyTrend(List<double> progress) {
+  Widget _buildWeeklyTrend(BuildContext context, List<double> progress) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return BrandCard(
+      theme: isDark ? BrandCardTheme.vibrant : BrandCardTheme.gold,
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,7 +235,7 @@ class MasteryDashboardScreen extends ConsumerWidget {
           Text(
             'WEEKLY PROGRESS',
             style: AppTypography.label.copyWith(
-              color: AppColors.gold500,
+              color: isDark ? AppColors.gold500 : AppColors.forest900.withValues(alpha: 0.5),
               letterSpacing: 2,
               fontWeight: FontWeight.w900,
               fontSize: 10,
@@ -243,8 +256,8 @@ class MasteryDashboardScreen extends ConsumerWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        AppColors.gold500,
-                        AppColors.gold500.withValues(alpha: 0.1),
+                        isDark ? AppColors.gold500 : AppColors.forest900,
+                        (isDark ? AppColors.gold500 : AppColors.forest900).withValues(alpha: 0.1),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(8),

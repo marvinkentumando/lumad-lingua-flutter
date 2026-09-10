@@ -4,7 +4,9 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../models/educator_models.dart';
+import '../widgets/branded_empty_state.dart';
 import '../providers/educator_provider.dart';
+import '../services/haptic_service.dart';
 import '../services/firebase_service.dart';
 
 enum StudentSort { name, progress, level }
@@ -67,7 +69,7 @@ class _EducatorStudentsScreenState
         final strugglingCount = allStudents.where((s) => s.isStruggling).length;
 
         return Scaffold(
-          backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+          backgroundColor: Theme.of(context).colorScheme.surface,
           body: SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,7 +92,7 @@ class _EducatorStudentsScreenState
                           Text(
                             '${allStudents.length} learners',
                             style: AppTypography.body.copyWith(
-                              color: isDark ? Colors.white24 : AppColors.creamText3,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                             ),
                           ),
                           if (strugglingCount > 0) ...[
@@ -126,7 +128,7 @@ class _EducatorStudentsScreenState
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     decoration: BoxDecoration(
-                      color: isDark ? AppColors.forestDarkCard : Colors.white,
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: isDark
@@ -138,7 +140,7 @@ class _EducatorStudentsScreenState
                       controller: _searchController,
                       onChanged: (val) => setState(() => _searchQuery = val),
                       style: TextStyle(
-                        color: isDark ? Colors.white : AppColors.creamText,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                       decoration: InputDecoration(
                         icon: const Icon(
@@ -148,7 +150,7 @@ class _EducatorStudentsScreenState
                         ),
                         hintText: 'Search students...',
                         hintStyle: AppTypography.body.copyWith(
-                          color: isDark ? Colors.white24 : AppColors.creamText3,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                           fontSize: 14,
                         ),
                         border: InputBorder.none,
@@ -156,7 +158,7 @@ class _EducatorStudentsScreenState
                             ? IconButton(
                                 icon: Icon(
                                   Icons.close_rounded,
-                                  color: isDark ? Colors.white38 : AppColors.creamText3,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                                   size: 18,
                                 ),
                                 onPressed: () {
@@ -187,7 +189,7 @@ class _EducatorStudentsScreenState
                   child: Text(
                     '${filteredStudents.length} result${filteredStudents.length == 1 ? '' : 's'}',
                     style: AppTypography.label.copyWith(
-                      color: isDark ? Colors.white24 : AppColors.creamText3,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                       fontSize: 10,
                     ),
                   ),
@@ -219,43 +221,24 @@ class _EducatorStudentsScreenState
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.person_search_rounded,
-            color: isDark ? Colors.white10 : AppColors.creamBorder,
-            size: 64,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No students found.',
-            style: AppTypography.h3.copyWith(
-              color: isDark ? Colors.white24 : AppColors.creamText3,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Try adjusting your search or filter.',
-            style: AppTypography.body.copyWith(
-              color: isDark ? Colors.white12 : AppColors.creamBorder,
-            ),
-          ),
-        ],
-      ),
+    return BrandedEmptyState(
+      title: _searchQuery.isNotEmpty ? 'Member Not Found' : 'Quiet Village',
+      message: _searchQuery.isNotEmpty
+          ? 'Try adjusting your search or filter.'
+          : 'No students have joined your village yet.',
+      icon: _searchQuery.isNotEmpty ? Icons.person_search_rounded : Icons.people_outline_rounded,
     );
   }
 
   Widget _buildSortDropdown() {
     return PopupMenuButton<StudentSort>(
       onSelected: (sort) => setState(() => _currentSort = sort),
-      color: isDark ? AppColors.forest800 : Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.forestDarkCard : Colors.white,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isDark
@@ -303,7 +286,7 @@ class _EducatorStudentsScreenState
               style: TextStyle(
                 color: isActive
                     ? AppColors.gold500
-                    : (isDark ? Colors.white70 : AppColors.creamText),
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
                 fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -316,7 +299,10 @@ class _EducatorStudentsScreenState
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: GestureDetector(
-        onTap: () => _showStudentDetailSheet(student),
+        onTap: () {
+          HapticService.selection();
+          _showStudentDetailSheet(student);
+        },
         child: BrandCard(
           theme: BrandCardTheme.vibrant,
           child: Row(
@@ -359,7 +345,7 @@ class _EducatorStudentsScreenState
                         Text(
                           student.name,
                           style: AppTypography.h3.copyWith(
-                            color: isDark ? Colors.white : AppColors.creamText,
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 16,
                           ),
                         ),
@@ -420,7 +406,7 @@ class _EducatorStudentsScreenState
                 style: AppTypography.mono.copyWith(
                   color: student.isStruggling
                       ? AppColors.semanticRed
-                      : (isDark ? Colors.white24 : AppColors.creamText3),
+                      : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                   fontSize: 12,
                   fontWeight: student.isStruggling
                       ? FontWeight.bold
@@ -438,7 +424,7 @@ class _EducatorStudentsScreenState
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
@@ -455,7 +441,7 @@ class _EducatorStudentsScreenState
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white24 : AppColors.creamBorder,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -503,7 +489,7 @@ class _EducatorStudentsScreenState
                     Text(
                       student.name,
                       style: AppTypography.h2.copyWith(
-                        color: isDark ? Colors.white : AppColors.creamText,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     Row(
@@ -594,7 +580,7 @@ class _EducatorStudentsScreenState
                   const SizedBox(width: 12),
                   Container(
                     decoration: BoxDecoration(
-                      color: isDark ? AppColors.forestDarkCard : Colors.white,
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: isDark
@@ -888,7 +874,7 @@ class _EducatorStudentsScreenState
             Text(
               'Last 30 days',
               style: AppTypography.label.copyWith(
-                color: isDark ? Colors.white24 : AppColors.creamText3,
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                 fontSize: 8,
               ),
             ),
