@@ -1073,24 +1073,12 @@ class _StaffStatsRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Fetch stats based on role
-    final studentCount = role == UserRole.educator
-        ? ref.watch(totalUsersCountProvider).value ?? 0
-        : 0;
-
-    if (role == UserRole.admin) return const SizedBox.shrink();
+    if (role == UserRole.admin || role == UserRole.educator) return const SizedBox.shrink();
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        if (role == UserRole.educator)
-          _buildMetricCircle(
-            context,
-            Icons.people_rounded,
-            studentCount.toString(),
-            'STUDENTS',
-          )
-        else if (role == UserRole.staff)
+        if (role == UserRole.staff)
           GestureDetector(
             onTap: () => context.push('/sentiment'),
             child: _buildMetricCircle(

@@ -7,7 +7,6 @@ import '../widgets/brand_card.dart';
 import '../services/firebase_service.dart';
 import '../services/haptic_service.dart';
 import '../services/auth_service.dart';
-import '../models/lesson.dart';
 import '../models/dictionary_entry.dart';
 import '../models/community_activity.dart';
 import '../widgets/wotd_widget.dart';
@@ -55,7 +54,6 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
     final notificationsAsync = userAuth != null
         ? ref.watch(userNotificationsStreamProvider(userAuth.uid))
         : const AsyncValue<List<Map<String, dynamic>>>.data([]);
-    final lessonsAsync = ref.watch(allLessonsStreamProvider);
     final educatorStudentsAsync = ref.watch(educatorStudentsProvider);
     final totalWordsAsync = ref.watch(totalWordsCountProvider);
     final communityActivitiesAsync = ref.watch(communityFeedProvider);
@@ -88,15 +86,9 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
                   const SizedBox(height: 24),
                   const WotdWidget(),
                   const SizedBox(height: 32),
-                  _buildStatsRow(lessonsAsync, educatorStudentsAsync),
-                  const SizedBox(height: 24),
-                  _buildQuickActions(educatorStudentsAsync, userProfileAsync),
-                  const SizedBox(height: 32),
                   _buildStrugglingStudentsAlert(educatorStudentsAsync),
                   const SizedBox(height: 24),
                   _buildCulturalMilestone(totalWordsAsync),
-                  const SizedBox(height: 24),
-                  _buildUpcomingDeadlines(lessonsAsync),
                   const SizedBox(height: 24),
                   _buildRecentActivity(
                     educatorStudentsAsync,
@@ -176,50 +168,46 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
     );
   }
 
-  Widget _buildStatsRow(AsyncValue<List<Lesson>> lessonsAsync, AsyncValue<List<EducatorStudent>> studentsAsync) {
-    int total = lessonsAsync.value?.length ?? 0;
-    int live = lessonsAsync.value?.where((l) => l.status == 'PUBLISHED').length ?? 0;
-    int drafts = lessonsAsync.value?.where((l) => l.status == 'DRAFT').length ?? 0;
-    int count = studentsAsync.value?.length ?? 0;
-    String studentsCount = count >= 1000 ? '${(count / 1000).toStringAsFixed(1)}k' : count.toString();
-    return Row(children: [
-      Expanded(child: _buildStatCard('TOTAL', total.toString(), Icons.auto_stories_rounded)),
-      const SizedBox(width: 12),
-      Expanded(child: _buildStatCard('LIVE', live.toString(), Icons.rocket_launch_rounded)),
-      const SizedBox(width: 12),
-      Expanded(child: _buildStatCard('DRAFTS', drafts.toString(), Icons.edit_document)),
-      const SizedBox(width: 12),
-      Expanded(child: _buildStatCard('STUDENTS', studentsCount, Icons.group_rounded)),
-    ]);
-  }
-
-  Widget _buildStatCard(String label, String value, IconData icon) {
-    return BrandCard(padding: const EdgeInsets.symmetric(vertical: 16), child: Column(children: [Icon(icon, color: AppColors.gold500.withValues(alpha: 0.5), size: 20), const SizedBox(height: 8), Text(value, style: AppTypography.h2.copyWith(color: Theme.of(context).colorScheme.onSurface)), Text(label, style: AppTypography.label.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 9))]));
-  }
-
-  Widget _buildQuickActions(AsyncValue<List<EducatorStudent>> studentsAsync, AsyncValue<Map<String, dynamic>?> userProfileAsync) {
-    return Row(children: [
-      _buildQuickActionBtn(Icons.campaign_rounded, 'Broadcast', () => _showBroadcastDialog(studentsAsync, userProfileAsync)),
-      const SizedBox(width: 12),
-      _buildQuickActionBtn(Icons.perm_media_rounded, 'Gallery', () => context.push('/gallery')),
-      const SizedBox(width: 12),
-      _buildQuickActionBtn(Icons.insights_rounded, 'Analytics', () => context.go('/educator/analytics')),
-    ]);
-  }
-
-  void _showBroadcastDialog(AsyncValue<List<EducatorStudent>> studentsAsync, AsyncValue<Map<String, dynamic>?> profileAsync) {
-    final controller = TextEditingController();
-    showDialog(context: context, builder: (ctx) => AlertDialog(backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest, title: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Village Broadcast', style: AppTypography.h3.copyWith(color: Theme.of(context).colorScheme.onSurface)), IconButton(onPressed: () { Navigator.pop(ctx); context.push('/educator/broadcast-history'); }, icon: const Icon(Icons.history_rounded, color: AppColors.gold500), tooltip: 'Broadcast History')]), content: Column(mainAxisSize: MainAxisSize.min, children: [Text('Send a message to all your students.', style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)), const SizedBox(height: 16), TextField(controller: controller, maxLines: 3, style: TextStyle(color: Theme.of(context).colorScheme.onSurface), decoration: InputDecoration(hintText: 'Type your announcement here...', hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)), filled: true, fillColor: isDark ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.surface.withValues(alpha: 0.5), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isDark ? Colors.transparent : Theme.of(context).colorScheme.outline))))]), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)))), ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500, foregroundColor: AppColors.forest900), onPressed: () async { if (controller.text.trim().isEmpty) return; final msg = controller.text.trim(); Navigator.pop(ctx); if (studentsAsync.hasValue && profileAsync.hasValue) { final educator = profileAsync.value; final educatorId = ref.read(authStateProvider).value?.uid ?? ''; final educatorName = educator?['username'] ?? 'Educator'; final studentIds = studentsAsync.value!.map((u) => u.id).toList(); try { await ref.read(firebaseServiceProvider).sendVillageBroadcast(educatorId: educatorId, educatorName: educatorName, title: 'Announcement from Educator', message: msg, studentIds: studentIds); if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Announcement sent to ${studentIds.length} students!'), backgroundColor: AppColors.semanticGreen)); } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to send broadcast: $e'), backgroundColor: AppColors.semanticRed)); } } }, child: const Text('Send Broadcast', style: TextStyle(fontWeight: FontWeight.bold)))]));
-  }
-
-  Widget _buildQuickActionBtn(IconData icon, String label, VoidCallback onTap) {
-    return Expanded(child: GestureDetector(onTap: () { HapticService.selection(); onTap(); }, child: Container(padding: const EdgeInsets.symmetric(vertical: 14), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(16), border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : Theme.of(context).colorScheme.outline)), child: Column(children: [Icon(icon, color: AppColors.gold500, size: 22), const SizedBox(height: 6), Text(label, style: AppTypography.label.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 9, fontWeight: FontWeight.w700))]))));
-  }
-
   Widget _buildStrugglingStudentsAlert(AsyncValue<List<EducatorStudent>> studentsAsync) {
     final struggling = studentsAsync.value?.where((u) => u.isStruggling).toList() ?? [];
     if (struggling.isEmpty) return const SizedBox.shrink();
-    return GestureDetector(onTap: () => context.go('/educator/students'), child: Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: AppColors.semanticRed.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.semanticRed.withValues(alpha: 0.3))), child: Row(children: [const Icon(Icons.warning_amber_rounded, color: AppColors.semanticRed, size: 28), const SizedBox(width: 16), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Attention Needed', style: AppTypography.h3.copyWith(color: AppColors.semanticRed)), Text('${struggling.length} student${struggling.length > 1 ? 's' : ''} might be falling behind based on recent activity.', style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13))])), Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), decoration: BoxDecoration(color: AppColors.semanticRed.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)), child: Text('VIEW', style: AppTypography.label.copyWith(color: AppColors.semanticRed, fontWeight: FontWeight.w900, fontSize: 10)))])));
+    return GestureDetector(
+      onTap: () => context.go('/educator/students'),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.semanticRed.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.semanticRed.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: AppColors.semanticRed, size: 28),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Attention Needed', style: AppTypography.h3.copyWith(color: AppColors.semanticRed)),
+                  Text(
+                    "${struggling.length} student${struggling.length > 1 ? 's' : ''} might be falling behind based on recent activity.",
+                    style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(color: AppColors.semanticRed.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
+              child: Text(
+                'VIEW',
+                style: AppTypography.label.copyWith(color: AppColors.semanticRed, fontWeight: FontWeight.w900, fontSize: 10),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildCulturalMilestone(AsyncValue<int> totalWordsAsync) {
@@ -227,17 +215,6 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
     final target = ((wordsCount / 100).floor() + 1) * 100;
     final progress = (wordsCount % 100) / 100.0;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [_buildSectionTitle('Village Milestone'), const SizedBox(height: 12), BrandCard(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Dictionary Expansion', style: AppTypography.h3.copyWith(color: Theme.of(context).colorScheme.onSurface)), Text('${(progress * 100).toInt()}%', style: AppTypography.h3.copyWith(color: AppColors.gold500))]), const SizedBox(height: 12), ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(value: progress, backgroundColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05), valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold500), minHeight: 8)), const SizedBox(height: 8), Text('${target - wordsCount} more words until the community unlocks the next milestone.', style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 11))]))]);
-  }
-
-  Widget _buildUpcomingDeadlines(AsyncValue<List<Lesson>> lessonsAsync) {
-    final drafts = lessonsAsync.value?.where((l) => l.status == 'DRAFT').take(3).toList() ?? [];
-    if (drafts.isEmpty) return const SizedBox.shrink();
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [_buildSectionTitle('Pending Tasks'), const SizedBox(height: 12), ...drafts.map((d) => _buildDeadlineItem({'title': 'Review "${d.title}" draft', 'due': 'Needs completion', 'icon': Icons.edit_note_rounded, 'urgency': 'normal'}))]);
-  }
-
-  Widget _buildDeadlineItem(Map<String, dynamic> item) {
-    final isUrgent = item['urgency'] == 'urgent';
-    return Padding(padding: const EdgeInsets.only(bottom: 10), child: GestureDetector(onTap: () => context.push('/admin/lessons'), child: Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(16), border: Border.all(color: isUrgent ? AppColors.semanticRed.withValues(alpha: 0.3) : (isDark ? Colors.white.withValues(alpha: 0.05) : Theme.of(context).colorScheme.outline))), child: Row(children: [Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: (isUrgent ? AppColors.semanticRed : AppColors.gold500).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)), child: Icon(item['icon'] as IconData, color: isUrgent ? AppColors.semanticRed : AppColors.gold500, size: 18)), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item['title'] as String, style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w700, fontSize: 13)), Text(item['due'] as String, style: AppTypography.label.copyWith(color: isUrgent ? AppColors.semanticRed : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 10))])), Icon(Icons.chevron_right_rounded, color: isDark ? Colors.white.withValues(alpha: 0.1) : AppColors.creamText3.withValues(alpha: 0.3), size: 20)]))));
   }
 
   String _timeAgo(DateTime d) {

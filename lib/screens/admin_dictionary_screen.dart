@@ -146,9 +146,10 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
 
   Widget _buildWordCard(DictionaryEntry word, bool isDark, int index) {
     return BrandCard(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      borderRadius: 20,
+      theme: isDark ? BrandCardTheme.cream : BrandCardTheme.gold,
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      borderRadius: 24,
       child: Row(
         children: [
           Expanded(
@@ -168,13 +169,15 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: AppColors.gold500.withValues(alpha: 0.1),
+                        color: isDark
+                            ? AppColors.gold500.withValues(alpha: 0.1)
+                            : AppColors.forest900.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         word.partOfSpeechLabel.toUpperCase(),
                         style: AppTypography.label.copyWith(
-                          color: AppColors.gold500,
+                          color: isDark ? AppColors.gold500 : AppColors.gold900,
                           fontSize: 8,
                           fontWeight: FontWeight.w900,
                         ),
@@ -185,7 +188,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
                 Text(
                   word.translation,
                   style: AppTypography.body.copyWith(
-                    color: isDark ? Colors.white60 : AppColors.forest600,
+                    color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.7),
                     fontSize: 14,
                   ),
                 ),
@@ -193,7 +196,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
                 Text(
                   '${word.language} • ${word.status.name.toUpperCase()}',
                   style: AppTypography.label.copyWith(
-                    color: isDark ? Colors.white24 : AppColors.creamText3,
+                    color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.4),
                     fontSize: 9,
                   ),
                 ),
@@ -201,10 +204,18 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
             ),
           ),
           if (word.audioUrl != null && word.audioUrl!.isNotEmpty)
-            PreviewAudioPlayer(audioUrl: word.audioUrl!, size: 32),
+            PreviewAudioPlayer(
+              audioUrl: word.audioUrl!,
+              size: 32,
+              color: isDark ? AppColors.gold500 : AppColors.forest900,
+            ),
           const SizedBox(width: 12),
           IconButton(
-            icon: const Icon(Icons.edit_rounded, color: AppColors.gold500, size: 20),
+            icon: Icon(
+              Icons.edit_rounded,
+              color: isDark ? AppColors.gold500 : AppColors.forest900,
+              size: 20,
+            ),
             onPressed: () => _showEntryDialog(context, word),
           ),
           IconButton(

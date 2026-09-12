@@ -408,9 +408,27 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard> with
           borderRadius: BorderRadius.circular(32),
           border: Border.all(
             color: widget.isExpanded
-                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
-                : (isDark ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.1)),
+                ? (isDark ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3) : AppColors.gold700)
+                : (isDark
+                    ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05)
+                    : AppColors.gold700.withValues(alpha: 0.2)),
+            width: isDark ? 1.5 : 2.5,
           ),
+          boxShadow: isDark
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    offset: const Offset(0, 4),
+                    blurRadius: 12,
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: AppColors.gold700.withValues(alpha: 0.4),
+                    offset: Offset(0, widget.isExpanded ? 4 : 8),
+                    blurRadius: 0,
+                  ),
+                ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

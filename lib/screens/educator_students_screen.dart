@@ -421,10 +421,11 @@ class _EducatorStudentsScreenState
   }
 
   void _showStudentDetailSheet(EducatorStudent student) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: isDark ? Theme.of(context).colorScheme.surface : AppColors.creamBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
@@ -441,7 +442,7 @@ class _EducatorStudentsScreenState
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                    color: (isDark ? Colors.white : AppColors.forest900).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -489,7 +490,7 @@ class _EducatorStudentsScreenState
                     Text(
                       student.name,
                       style: AppTypography.h2.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
+                        color: isDark ? Colors.white : AppColors.forest900,
                       ),
                     ),
                     Row(
@@ -498,7 +499,7 @@ class _EducatorStudentsScreenState
                         Text(
                           student.level.toUpperCase(),
                           style: AppTypography.label.copyWith(
-                            color: AppColors.gold500,
+                            color: isDark ? AppColors.gold500 : AppColors.gold700,
                           ),
                         ),
                       ],
@@ -515,6 +516,7 @@ class _EducatorStudentsScreenState
                       'LESSONS',
                       student.lessonsCompleted.toString(),
                       Icons.menu_book_rounded,
+                      isDark,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -523,6 +525,7 @@ class _EducatorStudentsScreenState
                       'STREAK',
                       '${student.streakDays} Days',
                       Icons.local_fire_department_rounded,
+                      isDark,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -531,6 +534,7 @@ class _EducatorStudentsScreenState
                       'PROGRESS',
                       '${(student.progress * 100).toInt()}%',
                       Icons.trending_up_rounded,
+                      isDark,
                     ),
                   ),
                 ],
@@ -543,85 +547,16 @@ class _EducatorStudentsScreenState
               Text(
                 'LESSON BREAKDOWN',
                 style: AppTypography.label.copyWith(
-                  color: AppColors.gold500,
+                  color: isDark ? AppColors.gold500 : AppColors.gold700,
                   letterSpacing: 2,
                   fontWeight: FontWeight.w900,
                 ),
               ),
               const SizedBox(height: 12),
               ...student.lessonBreakdown.map(
-                (lp) => _buildLessonProgressItem(lp),
+                (lp) => _buildLessonProgressItem(lp, isDark),
               ),
-              const SizedBox(height: 24),
-              // Action buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.gold500,
-                        foregroundColor: AppColors.forest900,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        _showMessageTemplateDialog(student);
-                      },
-                      icon: const Icon(Icons.send_rounded, size: 18),
-                      label: const Text(
-                        'Message Student',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.05)
-                            : AppColors.creamBorder,
-                      ),
-                    ),
-                    child: IconButton(
-                      onPressed: () async {
-                        try {
-                          await ref.read(firebaseServiceProvider).addNotification(student.id, {
-                            'title': 'Guardian Alert 🛡️',
-                            'message': 'Your educator has requested a check-in with your guardian regarding your progress.',
-                            'type': 'broadcast',
-                          });
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Guardian notification sent for ${student.name}.'),
-                              backgroundColor: AppColors.semanticGreen,
-                            ),
-                          );
-                        } catch (e) {
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Failed to contact guardian: $e'),
-                              backgroundColor: AppColors.semanticRed,
-                            ),
-                          );
-                        }
-                      },
-                      icon: const Icon(
-                        Icons.family_restroom_rounded,
-                        color: AppColors.gold500,
-                      ),
-                      tooltip: 'Contact Guardian',
-                    ),
-                  ),
-                ],
-              ),
+              const SizedBox(height: 60),
             ],
           ),
         ),
@@ -629,17 +564,17 @@ class _EducatorStudentsScreenState
     );
   }
 
-  Widget _buildLessonProgressItem(StudentLessonProgress lp) {
+  Widget _buildLessonProgressItem(StudentLessonProgress lp, bool isDark) {
     Color statusColor;
     switch (lp.status) {
       case 'Completed':
         statusColor = AppColors.semanticGreen;
         break;
       case 'In Progress':
-        statusColor = AppColors.gold500;
+        statusColor = isDark ? AppColors.gold500 : AppColors.gold700;
         break;
       default:
-        statusColor = Colors.white24;
+        statusColor = isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.2);
     }
 
     return Padding(
@@ -647,9 +582,18 @@ class _EducatorStudentsScreenState
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.forestDarkCard,
+          color: isDark ? AppColors.forestDarkCard : Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.03)),
+          border: Border.all(
+            color: (isDark ? Colors.white : AppColors.forest900).withValues(alpha: 0.05),
+          ),
+          boxShadow: isDark ? [] : [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -669,7 +613,7 @@ class _EducatorStudentsScreenState
                   Text(
                     lp.lessonTitle,
                     style: AppTypography.body.copyWith(
-                      color: Colors.white,
+                      color: isDark ? Colors.white : AppColors.forest900,
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
                     ),
@@ -681,7 +625,7 @@ class _EducatorStudentsScreenState
                         height: 3,
                         width: double.infinity,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.05),
+                          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -716,7 +660,7 @@ class _EducatorStudentsScreenState
                 Text(
                   'Accuracy: ${(lp.accuracy * 100).toInt()}%',
                   style: AppTypography.label.copyWith(
-                    color: Colors.white54,
+                    color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5),
                     fontSize: 8,
                   ),
                 ),
@@ -728,120 +672,29 @@ class _EducatorStudentsScreenState
     );
   }
 
-  void _showMessageTemplateDialog(EducatorStudent student) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.forestDarkCard,
-        title: Text(
-          'Message ${student.name}',
-          style: AppTypography.h3.copyWith(color: Colors.white),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Select a template:',
-              style: AppTypography.body.copyWith(
-                color: Colors.white70,
-                fontSize: 13,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildTemplateOption(
-              ctx,
-              student,
-              'Great progress on the recent lessons! Keep it up!',
-            ),
-            _buildTemplateOption(
-              ctx,
-              student,
-              'I noticed you\'re struggling with some vocabulary. Want to review together?',
-            ),
-            _buildTemplateOption(
-              ctx,
-              student,
-              'Don\'t forget to complete your pending assignments.',
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.white54),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTemplateOption(
-    BuildContext ctx,
-    EducatorStudent student,
-    String text,
-  ) {
-    return InkWell(
-      onTap: () async {
-        try {
-          await ref.read(firebaseServiceProvider).addNotification(student.id, {
-            'title': 'Message from Educator ✉️',
-            'message': text,
-            'type': 'broadcast',
-          });
-          if (!mounted) return;
-          if (ctx.mounted) Navigator.pop(ctx);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Message sent to ${student.name}'),
-              backgroundColor: AppColors.semanticGreen,
-            ),
-          );
-        } catch (e) {
-          if (!mounted) return;
-          if (ctx.mounted) Navigator.pop(ctx);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to send message: $e'),
-              backgroundColor: AppColors.semanticRed,
-            ),
-          );
-        }
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppColors.forest800,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          text,
-          style: const TextStyle(color: Colors.white, fontSize: 13),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String label, String value, IconData icon) {
+  Widget _buildStatCard(String label, String value, IconData icon, bool isDark) {
     return BrandCard(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(icon, color: AppColors.gold500.withValues(alpha: 0.5), size: 20),
+          Icon(icon, color: isDark ? AppColors.gold500.withValues(alpha: 0.5) : AppColors.gold700, size: 20),
           const SizedBox(height: 8),
           Text(
             value,
-            style: AppTypography.h3.copyWith(color: Colors.white, fontSize: 16),
+            textAlign: TextAlign.center,
+            style: AppTypography.h3.copyWith(
+              color: isDark ? Colors.white : AppColors.forest900, 
+              fontSize: 14,
+            ),
           ),
           Text(
             label,
+            textAlign: TextAlign.center,
             style: AppTypography.label.copyWith(
-              color: Colors.white24,
-              fontSize: 9,
+              color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
+              fontSize: 8,
             ),
           ),
         ],
@@ -856,6 +709,7 @@ class _EducatorStudentsScreenState
       final dateKey = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
       return dateKey;
     });
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -866,7 +720,7 @@ class _EducatorStudentsScreenState
             Text(
               '30-DAY ACTIVITY HEATMAP',
               style: AppTypography.label.copyWith(
-                color: AppColors.gold500,
+                color: isDark ? AppColors.gold500 : AppColors.gold700,
                 letterSpacing: 2,
                 fontWeight: FontWeight.w900,
               ),
@@ -874,7 +728,7 @@ class _EducatorStudentsScreenState
             Text(
               'Last 30 days',
               style: AppTypography.label.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
                 fontSize: 8,
               ),
             ),

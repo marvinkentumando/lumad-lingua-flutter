@@ -12,7 +12,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
+import '../widgets/brand_background.dart';
 import '../services/firebase_service.dart';
+import '../services/auth_service.dart';
 import '../services/haptic_service.dart';
 import '../models/admin_models.dart';
 import 'package:intl/intl.dart';
@@ -32,186 +34,191 @@ class _EducatorAnalyticsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final allUsersAsync = ref.watch(allUsersProvider);
+    final userAuth = ref.watch(authStateProvider).value;
+    final educatorId = userAuth?.uid ?? '';
+
+    final allUsersAsync = ref.watch(educatorLearnersProvider(educatorId));
     final dialectDistAsync = ref.watch(dialectDistributionProvider);
-    final topLearnersAsync = ref.watch(topLearnersProvider);
-    final analyticsAsync = ref.watch(educatorAnalyticsProvider);
+    final topLearnersAsync = ref.watch(villageTopLearnersProvider(educatorId));
+    final analyticsAsync = ref.watch(educatorAnalyticsProvider(educatorId));
     final totalWordsAsync = ref.watch(totalWordsCountProvider);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(allUsersProvider);
-            ref.invalidate(dialectDistributionProvider);
-            ref.invalidate(topLearnersProvider);
-          },
-          color: AppColors.gold500,
-          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 32),
-                _buildHeader(
-                  allUsersAsync.value ?? [],
-                  dialectDistAsync.value ?? {},
-                  analyticsAsync.value ?? {},
-                  totalWordsAsync.value ?? 0,
-                  topLearnersAsync.value ?? [],
-                ),
-                const SizedBox(height: 24),
-                
-                allUsersAsync.when(
-                  data: (users) => _buildActiveLearnersStats(users),
-                  loading: () => _buildLoadingCard(100),
-                  error: (e, _) => const SizedBox.shrink(),
-                ),
-                const SizedBox(height: 24),
-
-                analyticsAsync.when(
-                  data: (analytics) => Row(
-                    children: [
-                      _buildStatCard(
-                        'Total XP',
-                        '${analytics['totalXP'] ?? 0}',
-                        'Across Village',
-                        AppColors.gold500,
-                      ),
-                      const SizedBox(width: 12),
-                      _buildStatCard(
-                        'Progress',
-                        (analytics['avgLessonsCompleted'] as double? ?? 0).toStringAsFixed(1),
-                        'Avg Lessons',
-                        AppColors.semanticBlue,
-                      ),
-                      const SizedBox(width: 12),
-                      _buildStatCard(
-                        'Accuracy',
-                        '${((analytics['pronunciationAccuracy'] as double? ?? 0) * 100).toInt()}%',
-                        'Pronunciation',
-                        AppColors.semanticGreen,
-                      ),
-                    ],
+      backgroundColor: Colors.transparent,
+      body: BrandBackground(
+        child: SafeArea(
+          child: RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(educatorLearnersProvider(educatorId));
+              ref.invalidate(villageTopLearnersProvider(educatorId));
+              ref.invalidate(educatorAnalyticsProvider(educatorId));
+            },
+            color: AppColors.gold500,
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 32),
+                  _buildHeader(
+                    allUsersAsync.value ?? [],
+                    dialectDistAsync.value ?? {},
+                    analyticsAsync.value ?? {},
+                    totalWordsAsync.value ?? 0,
+                    topLearnersAsync.value ?? [],
                   ),
-                  loading: () => _buildLoadingCard(80),
-                  error: (_, __) => const SizedBox.shrink(),
-                ),
-                const SizedBox(height: 32),
+                  const SizedBox(height: 24),
+                  
+                  allUsersAsync.when(
+                    data: (users) => _buildActiveLearnersStats(users),
+                    loading: () => _buildLoadingCard(100),
+                    error: (e, _) => const SizedBox.shrink(),
+                  ),
+                  const SizedBox(height: 24),
 
-                _buildTimeRangeSelector(),
-                const SizedBox(height: 24),
-
-                allUsersAsync.when(
-                  data: (users) => _buildActivityChart(users),
-                  loading: () => _buildLoadingCard(220),
-                  error: (e, _) => _buildErrorCard(e),
-                ),
-
-                const SizedBox(height: 32),
-
-                allUsersAsync.when(
-                  data: (users) => _buildStudentGrowth(users),
-                  loading: () => _buildLoadingCard(120),
-                  error: (e, _) => const SizedBox.shrink(),
-                ),
-
-                const SizedBox(height: 32),
-                _buildRetentionCard(allUsersAsync),
-                const SizedBox(height: 16),
-                _buildWordsStatsCard(totalWordsAsync),
-
-                const SizedBox(height: 32),
-                analyticsAsync.when(
-                  data: (analytics) {
-                    final quizPerformance = List<Map<String, dynamic>>.from(analytics['quizPerformance'] ?? []);
-                    final commonHurdles = List<Map<String, dynamic>>.from(analytics['commonHurdles'] ?? []);
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  analyticsAsync.when(
+                    data: (analytics) => Row(
                       children: [
-                        _buildSectionTitle('Quiz Performance'),
-                        const SizedBox(height: 16),
-                        if (quizPerformance.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 32),
-                            child: Text(
-                              'No quiz data recorded yet.',
-                              style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
-                            ),
-                          )
-                        else
-                          ...quizPerformance.map((q) => _buildQuizItem(q)),
-
-                        const SizedBox(height: 32),
-                        _buildSectionTitle('Common Hurdles'),
-                        const SizedBox(height: 16),
-                        if (commonHurdles.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 32),
-                            child: Text(
-                              'No significant hurdles identified yet.',
-                              style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
-                            ),
-                          )
-                        else
-                          ...commonHurdles.map((h) => _buildHurdleItem(
-                                h['topic'] ?? 'Unknown Topic',
-                                h['stat'] ?? 'No stats',
-                                h['lessonName'] ?? 'Unknown Lesson',
-                              )),
+                        _buildStatCard(
+                          'Total XP',
+                          '${analytics['totalXP'] ?? 0}',
+                          'Across Village',
+                          AppColors.gold500,
+                        ),
+                        const SizedBox(width: 12),
+                        _buildStatCard(
+                          'Progress',
+                          (analytics['avgLessonsCompleted'] as double? ?? 0).toStringAsFixed(1),
+                          'Avg Lessons',
+                          AppColors.semanticBlue,
+                        ),
+                        const SizedBox(width: 12),
+                        _buildStatCard(
+                          'Accuracy',
+                          '${((analytics['pronunciationAccuracy'] as double? ?? 0) * 100).toInt()}%',
+                          'Pronunciation',
+                          AppColors.semanticGreen,
+                        ),
                       ],
-                    );
-                  },
-                  loading: () => Column(
-                    children: [
-                      _buildLoadingCard(150),
-                      const SizedBox(height: 32),
-                      _buildLoadingCard(150),
-                    ],
+                    ),
+                    loading: () => _buildLoadingCard(80),
+                    error: (_, __) => const SizedBox.shrink(),
                   ),
-                  error: (e, _) => const SizedBox.shrink(),
-                ),
+                  const SizedBox(height: 32),
 
-                const SizedBox(height: 32),
-                _buildSectionTitle('Top Learners'),
-                const SizedBox(height: 16),
-                topLearnersAsync.when(
-                  data: (learners) => Column(
-                    children: learners.asMap().entries.map((e) {
-                      final i = e.key;
-                      final l = e.value;
-                      return _buildLeaderboardItem(
-                        '${i + 1}',
-                        l['username'] ?? 'Learner',
-                        l['municipality'] ?? l['indigenousGroup'] ?? 'Unknown',
-                        l['xp'] ?? 0,
-                        i == 0
-                            ? AppColors.gold500
-                            : i == 1
-                            ? Colors.grey.shade400
-                            : i == 2
-                            ? Colors.orange.shade300
-                            : (isDark ? Colors.white24 : AppColors.creamBorder),
+                  _buildTimeRangeSelector(),
+                  const SizedBox(height: 24),
+
+                  allUsersAsync.when(
+                    data: (users) => _buildActivityChart(users),
+                    loading: () => _buildLoadingCard(220),
+                    error: (e, _) => _buildErrorCard(e),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  allUsersAsync.when(
+                    data: (users) => _buildStudentGrowth(users),
+                    loading: () => _buildLoadingCard(120),
+                    error: (e, _) => const SizedBox.shrink(),
+                  ),
+
+                  const SizedBox(height: 32),
+                  _buildRetentionCard(allUsersAsync),
+                  const SizedBox(height: 16),
+                  _buildWordsStatsCard(totalWordsAsync),
+
+                  const SizedBox(height: 32),
+                  analyticsAsync.when(
+                    data: (analytics) {
+                      final quizPerformance = List<Map<String, dynamic>>.from(analytics['quizPerformance'] ?? []);
+                      final commonHurdles = List<Map<String, dynamic>>.from(analytics['commonHurdles'] ?? []);
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionTitle('Quiz Performance'),
+                          const SizedBox(height: 16),
+                          if (quizPerformance.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 32),
+                              child: Text(
+                                'No quiz data recorded yet.',
+                                style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                              ),
+                            )
+                          else
+                            ...quizPerformance.map((q) => _buildQuizItem(q)),
+
+                          const SizedBox(height: 32),
+                          _buildSectionTitle('Common Hurdles'),
+                          const SizedBox(height: 16),
+                          if (commonHurdles.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 32),
+                              child: Text(
+                                'No significant hurdles identified yet.',
+                                style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                              ),
+                            )
+                          else
+                            ...commonHurdles.map((h) => _buildHurdleItem(
+                                  h['topic'] ?? 'Unknown Topic',
+                                  h['stat'] ?? 'No stats',
+                                  h['lessonName'] ?? 'Unknown Lesson',
+                                )),
+                        ],
                       );
-                    }).toList(),
+                    },
+                    loading: () => Column(
+                      children: [
+                        _buildLoadingCard(150),
+                        const SizedBox(height: 32),
+                        _buildLoadingCard(150),
+                      ],
+                    ),
+                    error: (e, _) => const SizedBox.shrink(),
                   ),
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(color: AppColors.gold500),
-                  ),
-                  error: (e, _) => Text(
-                    'Error: $e',
-                    style: TextStyle(
-                      color: isDark ? Colors.white54 : AppColors.creamText3,
+
+                  const SizedBox(height: 32),
+                  _buildSectionTitle('Top Learners'),
+                  const SizedBox(height: 16),
+                  topLearnersAsync.when(
+                    data: (learners) => Column(
+                      children: learners.asMap().entries.map((e) {
+                        final i = e.key;
+                        final l = e.value;
+                        return _buildLeaderboardItem(
+                          '${i + 1}',
+                          l['username'] ?? 'Learner',
+                          l['municipality'] ?? l['indigenousGroup'] ?? 'Unknown',
+                          l['xp'] ?? 0,
+                          i == 0
+                              ? AppColors.gold500
+                              : i == 1
+                              ? Colors.grey.shade400
+                              : i == 2
+                              ? Colors.orange.shade300
+                              : (isDark ? Colors.white24 : AppColors.creamBorder),
+                        );
+                      }).toList(),
+                    ),
+                    loading: () => const Center(
+                      child: CircularProgressIndicator(color: AppColors.gold500),
+                    ),
+                    error: (e, _) => Text(
+                      'Error: $e',
+                      style: TextStyle(
+                        color: isDark ? Colors.white54 : AppColors.creamText3,
+                      ),
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 100),
-              ],
+                  const SizedBox(height: 100),
+                ],
+              ),
             ),
           ),
         ),
@@ -287,6 +294,7 @@ class _EducatorAnalyticsScreenState
   Widget _buildActivityChart(List<AdminUser> users) {
     final now = DateTime.now();
     final List<Map<String, dynamic>> bars = [];
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (_timeRange == 'Daily') {
       // Last 7 days of Daily Active Users (DAU)
@@ -360,8 +368,15 @@ class _EducatorAnalyticsScreenState
         border: Border.all(
           color: isDark
               ? Colors.white.withValues(alpha: 0.05)
-              : AppColors.creamBorder,
+              : AppColors.forest900.withValues(alpha: 0.05),
         ),
+        boxShadow: isDark ? [] : [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -369,7 +384,7 @@ class _EducatorAnalyticsScreenState
           Text(
             chartTitle,
             style: AppTypography.h3.copyWith(
-              color: isDark ? Colors.white : AppColors.creamText,
+              color: isDark ? Colors.white : AppColors.forest900,
             ),
           ),
           const SizedBox(height: 20),
@@ -395,7 +410,7 @@ class _EducatorAnalyticsScreenState
                       Text(
                         '$val',
                         style: AppTypography.label.copyWith(
-                          color: isTapped ? AppColors.gold500 : (isDark ? Colors.white38 : AppColors.creamText3),
+                          color: isTapped ? AppColors.gold500 : (isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.3)),
                           fontSize: 9,
                           fontWeight: isTapped ? FontWeight.bold : FontWeight.normal,
                         ),
@@ -418,7 +433,7 @@ class _EducatorAnalyticsScreenState
                         style: AppTypography.label.copyWith(
                           color: isTapped
                               ? AppColors.gold500
-                              : (isDark ? Colors.white38 : AppColors.creamText3),
+                              : (isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.4)),
                         ),
                       ),
                     ],
@@ -435,6 +450,7 @@ class _EducatorAnalyticsScreenState
   Widget _buildStudentGrowth(List<AdminUser> users) {
     final now = DateTime.now();
     final thirtyDaysAgo = now.subtract(const Duration(days: 30));
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     
     final recentCount = users
         .where((u) => u.joinedAt.isAfter(thirtyDaysAgo))
@@ -468,7 +484,7 @@ class _EducatorAnalyticsScreenState
           Text(
             'Student Growth',
             style: AppTypography.h3.copyWith(
-              color: isDark ? Colors.white : AppColors.creamText,
+              color: isDark ? Colors.white : AppColors.forest900,
             ),
           ),
           const SizedBox(height: 4),
@@ -808,6 +824,7 @@ class _EducatorAnalyticsScreenState
   Widget _buildQuizItem(Map<String, dynamic> quiz) {
     final pass = quiz['pass'] as int;
     final fail = quiz['fail'] as int;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -817,8 +834,15 @@ class _EducatorAnalyticsScreenState
         border: Border.all(
           color: isDark
               ? Colors.white.withValues(alpha: 0.03)
-              : AppColors.creamBorder,
+              : AppColors.forest900.withValues(alpha: 0.05),
         ),
+        boxShadow: isDark ? [] : [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -826,7 +850,7 @@ class _EducatorAnalyticsScreenState
           Text(
             quiz['name'] as String,
             style: AppTypography.body.copyWith(
-              color: isDark ? Colors.white : AppColors.creamText,
+              color: isDark ? Colors.white : AppColors.forest900,
               fontWeight: FontWeight.bold,
               fontSize: 13,
             ),
@@ -887,6 +911,7 @@ class _EducatorAnalyticsScreenState
   }
 
   Widget _buildHurdleItem(String topic, String stat, String lessonName) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -914,14 +939,14 @@ class _EducatorAnalyticsScreenState
                 Text(
                   topic,
                   style: AppTypography.body.copyWith(
-                    color: isDark ? Colors.white : AppColors.creamText,
+                    color: isDark ? Colors.white : AppColors.forest900,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
                   stat,
                   style: AppTypography.body.copyWith(
-                    color: isDark ? Colors.white24 : AppColors.creamText3,
+                    color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.4),
                     fontSize: 11,
                   ),
                 ),
@@ -949,6 +974,7 @@ class _EducatorAnalyticsScreenState
   }
 
   Widget _buildAnalyticsCard(String title, String data, IconData icon) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return BrandCard(
       child: Row(
         children: [
@@ -958,7 +984,7 @@ class _EducatorAnalyticsScreenState
               color: AppColors.gold500.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: AppColors.gold500, size: 24),
+            child: Icon(icon, color: isDark ? AppColors.gold500 : AppColors.gold700, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -968,14 +994,14 @@ class _EducatorAnalyticsScreenState
                 Text(
                   title,
                   style: AppTypography.h3.copyWith(
-                    color: isDark ? Colors.white : AppColors.creamText,
+                    color: isDark ? Colors.white : AppColors.forest900,
                     fontSize: 16,
                   ),
                 ),
                 Text(
                   data,
                   style: AppTypography.body.copyWith(
-                    color: isDark ? Colors.white24 : AppColors.creamText3,
+                    color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.5),
                     fontSize: 12,
                   ),
                 ),
@@ -1015,8 +1041,15 @@ class _EducatorAnalyticsScreenState
         border: Border.all(
           color: isDark
               ? Colors.white.withValues(alpha: 0.05)
-              : AppColors.creamBorder,
+              : AppColors.forest900.withValues(alpha: 0.05),
         ),
+        boxShadow: isDark ? [] : [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -1041,14 +1074,14 @@ class _EducatorAnalyticsScreenState
                 Text(
                   name,
                   style: AppTypography.body.copyWith(
-                    color: isDark ? Colors.white : AppColors.creamText,
+                    color: isDark ? Colors.white : AppColors.forest900,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
                   municipality,
                   style: AppTypography.label.copyWith(
-                    color: isDark ? Colors.white38 : AppColors.creamText3,
+                    color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.4),
                     fontSize: 10,
                   ),
                 ),
@@ -1058,7 +1091,7 @@ class _EducatorAnalyticsScreenState
           Text(
             '$score XP',
             style: AppTypography.mono.copyWith(
-              color: AppColors.gold500,
+              color: isDark ? AppColors.gold500 : AppColors.gold700,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1094,6 +1127,7 @@ class _EducatorAnalyticsScreenState
   }
 
   Widget _buildStatCard(String label, String value, String sub, Color color) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
@@ -1101,8 +1135,15 @@ class _EducatorAnalyticsScreenState
           color: isDark ? AppColors.forestDarkCard : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.creamBorder,
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.forest900.withValues(alpha: 0.05),
           ),
+          boxShadow: isDark ? [] : [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           children: [
@@ -1118,7 +1159,7 @@ class _EducatorAnalyticsScreenState
             Text(
               value,
               style: GoogleFonts.outfit(
-                color: isDark ? Colors.white : AppColors.creamText,
+                color: isDark ? Colors.white : AppColors.forest900,
                 fontSize: 24,
                 fontWeight: FontWeight.w900,
               ),
@@ -1126,7 +1167,7 @@ class _EducatorAnalyticsScreenState
             Text(
               sub,
               style: AppTypography.label.copyWith(
-                color: isDark ? Colors.white24 : AppColors.creamText3,
+                color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.4),
                 fontSize: 9,
               ),
             ),

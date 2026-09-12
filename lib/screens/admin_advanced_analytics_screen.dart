@@ -5,7 +5,6 @@ import '../services/firebase_service.dart';
 import '../services/haptic_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
-import '../widgets/glass_box.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/branded_empty_state.dart';
 import '../widgets/brand_background.dart';
@@ -53,7 +52,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
                 children: [
                   _sectionLabel(context, 'LEARNING ECOSYSTEM HEALTH'),
                   const SizedBox(height: 16),
-                  _buildSystemMetrics(data['srsHealth'] as Map<String, dynamic>? ?? {}),
+                  _buildSystemMetrics(context, data['srsHealth'] as Map<String, dynamic>? ?? {}),
                   
                   const SizedBox(height: 40),
                   _sectionLabel(context, 'LESSON HEATMAPS (STUMBLE POINTS)'),
@@ -97,17 +96,20 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _sectionLabel(BuildContext context, String label) => Text(
-    label,
-    style: AppTypography.label.copyWith(
-      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-      letterSpacing: 2,
-      fontWeight: FontWeight.w900,
-      fontSize: 10,
-    ),
-  );
+  Widget _sectionLabel(BuildContext context, String label) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return Text(
+      label,
+      style: AppTypography.label.copyWith(
+        color: isDark ? Colors.white.withValues(alpha: 0.5) : AppColors.forest900.withValues(alpha: 0.5),
+        letterSpacing: 2,
+        fontWeight: FontWeight.w900,
+        fontSize: 10,
+      ),
+    );
+  }
 
-  Widget _buildSystemMetrics(Map<String, dynamic> health) {
+  Widget _buildSystemMetrics(BuildContext context, Map<String, dynamic> health) {
     final rate = (health['retentionRate'] as num? ?? 0.0).toDouble() * 100;
     final total = (health['totalCards'] as num? ?? 0).toInt();
 
@@ -115,6 +117,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
       children: [
         Expanded(
           child: _metricCard(
+            context,
             'Retention Rate',
             '${rate.toStringAsFixed(1)}%',
             rate > 85 ? AppColors.semanticGreen : AppColors.gold500,
@@ -124,6 +127,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
         const SizedBox(width: 16),
         Expanded(
           child: _metricCard(
+            context,
             'Active Terms',
             total.toString(),
             AppColors.semanticBlue,
@@ -135,6 +139,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
   }
 
   Widget _buildLessonHeatmaps(BuildContext context, Map<String, dynamic> struggles, Map<String, dynamic> names) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     if (struggles.isEmpty) return _emptyState('The trail is fresh. No student stumbles recorded yet.');
 
     final sortedLessons = struggles.entries.toList()
@@ -164,7 +169,10 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         lessonName, 
-                        style: AppTypography.h3.copyWith(color: AppColors.gold500, fontSize: 16),
+                        style: AppTypography.h3.copyWith(
+                          color: isDark ? AppColors.gold500 : AppColors.gold700, 
+                          fontSize: 16
+                        ),
                       ),
                     ),
                     const Icon(Icons.warning_amber_rounded, color: AppColors.semanticRed, size: 16),
@@ -185,7 +193,10 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
                           children: [
                             Text(
                               'Task ${ts.key.split('_').last}', 
-                              style: AppTypography.label.copyWith(color: Colors.white70, fontSize: 10),
+                              style: AppTypography.label.copyWith(
+                                color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7), 
+                                fontSize: 10
+                              ),
                             ),
                             Text(
                               '${ts.value} slips', 
@@ -199,7 +210,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
                           child: LinearProgressIndicator(
                             value: pct,
                             minHeight: 4,
-                            backgroundColor: Colors.white.withValues(alpha: 0.05),
+                            backgroundColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
                             valueColor: AlwaysStoppedAnimation(
                               Color.lerp(AppColors.gold500, AppColors.semanticRed, pct),
                             ),
@@ -220,9 +231,10 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
   Widget _buildSRSMasteryChart(BuildContext context, Map<String, dynamic> health) {
     final dist = Map<int, int>.from(health['masteryDistribution'] as Map? ?? {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0});
     final maxDist = dist.values.isEmpty ? 1 : dist.values.reduce((a, b) => a > b ? a : b);
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BrandCard(
-      theme: BrandCardTheme.vibrant,
+      theme: isDark ? BrandCardTheme.vibrant : BrandCardTheme.gold,
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -230,7 +242,10 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
           children: [
             Text(
               'Mastery Box Distribution', 
-              style: AppTypography.h3.copyWith(color: Colors.white, fontSize: 14),
+              style: AppTypography.h3.copyWith(
+                color: isDark ? Colors.white : AppColors.forest900, 
+                fontSize: 14
+              ),
             ),
             const SizedBox(height: 32),
             SizedBox(
@@ -248,7 +263,9 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
                       Text(
                         '${e.value}', 
                         style: AppTypography.mono.copyWith(
-                          color: isPeak ? AppColors.gold500 : Colors.white60, 
+                          color: isPeak 
+                              ? (isDark ? AppColors.gold500 : AppColors.gold900) 
+                              : (isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.5)), 
                           fontSize: 9,
                           fontWeight: isPeak ? FontWeight.bold : FontWeight.normal,
                         ),
@@ -260,12 +277,12 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
                         width: 28,
                         height: h,
                         decoration: BoxDecoration(
-                          color: _getLevelColor(e.key),
+                          color: _getLevelColor(e.key, isDark),
                           borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
                           boxShadow: [
                             if (isPeak)
                               BoxShadow(
-                                color: _getLevelColor(e.key).withValues(alpha: 0.3),
+                                color: _getLevelColor(e.key, isDark).withValues(alpha: 0.3),
                                 blurRadius: 15,
                                 spreadRadius: 2,
                               ),
@@ -276,7 +293,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
                       Text(
                         'BOX ${e.key}', 
                         style: AppTypography.label.copyWith(
-                          color: Colors.white24, 
+                          color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3), 
                           fontSize: 8,
                           letterSpacing: 1,
                         ),
@@ -292,9 +309,12 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _metricCard(String label, String value, Color color, IconData icon) {
-    return GlassBox(
+  Widget _metricCard(BuildContext context, String label, String value, Color color, IconData icon) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return BrandCard(
+      theme: isDark ? BrandCardTheme.cream : BrandCardTheme.gold,
       borderRadius: 24,
+      padding: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -306,13 +326,13 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
                 color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: color, size: 20),
+              child: Icon(icon, color: isDark ? color : AppColors.gold900, size: 20),
             ),
             const SizedBox(height: 16),
             Text(
               value, 
               style: AppTypography.display.copyWith(
-                color: Colors.white, 
+                color: isDark ? Colors.white : AppColors.forest900, 
                 fontSize: 28,
                 fontWeight: FontWeight.w900,
               ),
@@ -320,7 +340,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
             Text(
               label.toUpperCase(), 
               style: AppTypography.label.copyWith(
-                color: Colors.white38, 
+                color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5), 
                 fontSize: 9,
                 letterSpacing: 1,
               ),
@@ -331,8 +351,8 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  Color _getLevelColor(int level) {
-    if (level == 0) return Colors.white10;
+  Color _getLevelColor(int level, bool isDark) {
+    if (level == 0) return isDark ? Colors.white10 : Colors.black12;
     if (level < 3) return AppColors.semanticRed;
     if (level < 5) return AppColors.gold500;
     return AppColors.semanticGreen;

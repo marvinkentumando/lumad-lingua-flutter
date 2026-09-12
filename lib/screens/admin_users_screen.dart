@@ -8,6 +8,8 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/brand_background.dart';
+import '../widgets/brand_card.dart';
+import '../widgets/profile_avatar.dart';
 import 'package:share_plus/share_plus.dart';
 import '../widgets/branded_empty_state.dart';
 import '../providers/admin_users_provider.dart';
@@ -330,180 +332,152 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     final isSuspended = user.status == 'suspended';
     final color = _roleColor(user.role);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     return ColorFiltered(
       colorFilter: isSuspended
           ? const ColorFilter.matrix([
-              0.2126,
-              0.7152,
-              0.0722,
-              0,
-              0,
-              0.2126,
-              0.7152,
-              0.0722,
-              0,
-              0,
-              0.2126,
-              0.7152,
-              0.0722,
-              0,
-              0,
-              0,
-              0,
-              0,
-              1,
-              0,
+              0.2126, 0.7152, 0.0722, 0, 0,
+              0.2126, 0.7152, 0.0722, 0, 0,
+              0.2126, 0.7152, 0.0722, 0, 0,
+              0, 0, 0, 1, 0,
             ])
           : const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.forest700.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSuspended
-                ? AppColors.semanticRed.withValues(alpha: 0.4)
-                : (isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.forest900.withValues(alpha: 0.05)),
-            width: isSuspended ? 1.5 : 1,
-          ),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          child: InkWell(
-            onTap: () {
-              HapticService.selection();
-              _showUserDetailSheet(user);
-            },
-            borderRadius: BorderRadius.circular(20),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
+      child: BrandCard(
+        theme: isDark ? BrandCardTheme.cream : BrandCardTheme.gold,
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: EdgeInsets.zero,
+        borderRadius: 24,
+        onTap: () {
+          HapticService.selection();
+          _showUserDetailSheet(user);
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Stack(
                 children: [
-                  Stack(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isSuspended
-                                ? (isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.24))
-                                : color.withValues(alpha: 0.3),
-                            width: 2,
-                          ),
-                        ),
-                        child: CircleAvatar(
-                          radius: 22,
-                          backgroundColor: color.withValues(alpha: 0.1),
-                          child: Text(
-                            user.name[0],
-                            style: TextStyle(
-                              color: isSuspended ? (isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.38)) : color,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 18,
-                            ),
-                          ),
-                        ),
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isSuspended
+                            ? (isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.24))
+                            : (isDark ? color.withValues(alpha: 0.3) : AppColors.forest900.withValues(alpha: 0.1)),
+                        width: 2,
                       ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: isSuspended
-                                ? AppColors.semanticRed
-                                : AppColors.semanticGreen,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isDark ? AppColors.forest900 : Colors.white,
-                              width: 2,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          user.name,
-                          style: AppTypography.body.copyWith(
-                            color: isSuspended ? (isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.38)) : (isDark ? Colors.white : AppColors.forest900),
-                            fontWeight: FontWeight.w900,
-                            fontSize: 16,
-                            decoration: isSuspended
-                                ? TextDecoration.lineThrough
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            _roleBadge(
-                              user.role,
-                              isSuspended ? (isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.24)) : color,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '·',
-                              style: TextStyle(color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.24)),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '${user.xp} XP',
-                              style: AppTypography.mono.copyWith(
-                                color: AppColors.gold500.withValues(
-                                  alpha: isSuspended ? 0.2 : 0.6,
-                                ),
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                    ),
+                    child: ProfileAvatar(
+                      photoUrl: user.photoURL,
+                      radius: 22,
+                      iconSize: 24,
+                      backgroundColor: isDark ? color.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05),
                     ),
                   ),
-                  PopupMenuButton<String>(
-                    icon: Icon(Icons.more_horiz, color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.24)),
-                    padding: EdgeInsets.zero,
-                    color: isDark ? AppColors.forest800 : Colors.white,
-                    elevation: 20,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: isSuspended
+                            ? AppColors.semanticRed
+                            : AppColors.semanticGreen,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isDark ? AppColors.forest900 : AppColors.gold500,
+                          width: 2,
+                        ),
+                      ),
                     ),
-                    onSelected: (val) => _handleUserAction(val, user),
-                    itemBuilder: (context) => [
-                      _buildPopupItem(
-                        'edit',
-                        'Edit Profile',
-                        Icons.edit_outlined,
-                        isDark,
-                      ),
-                      _buildPopupItem(
-                        'promote',
-                        'Change Role',
-                        Icons.shield_outlined,
-                        isDark,
-                      ),
-                      const PopupMenuDivider(height: 1),
-                      _buildPopupItem(
-                        'suspend',
-                        isSuspended ? 'Unsuspend' : 'Suspend',
-                        Icons.block_flipped,
-                        isDark,
-                        color: AppColors.semanticRed,
-                      ),
-                    ],
                   ),
                 ],
               ),
-            ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.name,
+                      style: AppTypography.body.copyWith(
+                        color: isSuspended 
+                            ? (isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.38)) 
+                            : (isDark ? Colors.white : AppColors.forest900),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        decoration: isSuspended ? TextDecoration.lineThrough : null,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        _roleBadge(
+                          user.role,
+                          isSuspended 
+                              ? (isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.24)) 
+                              : (isDark ? color : AppColors.forest900.withValues(alpha: 0.6)),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '·',
+                          style: TextStyle(color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.24)),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${user.xp} XP',
+                          style: AppTypography.mono.copyWith(
+                            color: isDark 
+                                ? AppColors.gold500.withValues(alpha: isSuspended ? 0.2 : 0.6)
+                                : AppColors.forest900.withValues(alpha: isSuspended ? 0.2 : 0.5),
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuButton<String>(
+                icon: Icon(
+                  Icons.more_horiz, 
+                  color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
+                ),
+                padding: EdgeInsets.zero,
+                color: isDark ? AppColors.forest800 : AppColors.gold50,
+                elevation: 20,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: isDark ? BorderSide.none : BorderSide(color: AppColors.gold700.withValues(alpha: 0.2)),
+                ),
+                onSelected: (val) => _handleUserAction(val, user),
+                itemBuilder: (context) => [
+                  _buildPopupItem(
+                    'edit',
+                    'Edit Profile',
+                    Icons.edit_outlined,
+                    isDark,
+                  ),
+                  _buildPopupItem(
+                    'promote',
+                    'Change Role',
+                    Icons.shield_outlined,
+                    isDark,
+                  ),
+                  const PopupMenuDivider(height: 1),
+                  _buildPopupItem(
+                    'suspend',
+                    isSuspended ? 'Unsuspend' : 'Suspend',
+                    Icons.block_flipped,
+                    isDark,
+                    color: AppColors.semanticRed,
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
@@ -517,7 +491,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.forest900 : Colors.white,
+      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
@@ -533,7 +507,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.1),
+                    color: isDark ? Colors.white10 : AppColors.forest900.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -542,16 +516,20 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               Center(
                 child: Column(
                   children: [
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundColor: color.withValues(alpha: 0.1),
-                      child: Text(
-                        user.name[0],
-                        style: TextStyle(
-                          color: color,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 28,
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isDark ? color.withValues(alpha: 0.5) : AppColors.gold500,
+                          width: 2,
                         ),
+                      ),
+                      child: ProfileAvatar(
+                        photoUrl: user.photoURL,
+                        radius: 50,
+                        iconSize: 50,
+                        backgroundColor: isDark ? color.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -567,7 +545,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    _roleBadge(user.role, color),
+                    _roleBadge(user.role, isDark ? color : AppColors.gold700),
                   ],
                 ),
               ),
@@ -714,30 +692,32 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   void _showInviteDialog() {
     final emailCtrl = TextEditingController();
     String selectedRole = 'educator';
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: AppColors.forest700,
+          backgroundColor: isDark ? AppColors.forest700 : AppColors.creamBg,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
+            side: isDark ? BorderSide.none : const BorderSide(color: AppColors.gold500, width: 2),
           ),
           title: Text(
             'Invite New Staff',
-            style: AppTypography.h3.copyWith(color: AppColors.gold500),
+            style: AppTypography.h3.copyWith(color: isDark ? AppColors.gold500 : AppColors.gold700),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: emailCtrl,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: isDark ? Colors.white : AppColors.forest900),
                 decoration: InputDecoration(
                   labelText: 'Email Address',
-                  labelStyle: const TextStyle(color: Colors.white54),
+                  labelStyle: TextStyle(color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5)),
                   filled: true,
-                  fillColor: AppColors.forest800,
+                  fillColor: isDark ? AppColors.forest800 : Colors.black.withValues(alpha: 0.05),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -747,18 +727,18 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: selectedRole,
-                dropdownColor: AppColors.forest800,
+                dropdownColor: isDark ? AppColors.forest800 : AppColors.creamBg,
                 decoration: InputDecoration(
                   labelText: 'Role',
-                  labelStyle: const TextStyle(color: Colors.white54),
+                  labelStyle: TextStyle(color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5)),
                   filled: true,
-                  fillColor: AppColors.forest800,
+                  fillColor: isDark ? AppColors.forest800 : Colors.black.withValues(alpha: 0.05),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
                 ),
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: isDark ? Colors.white : AppColors.forest900),
                 items: ['educator', 'admin']
                     .map(
                       (r) => DropdownMenuItem(
@@ -776,9 +756,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text(
+              child: Text(
                 'Cancel',
-                style: TextStyle(color: Colors.white54),
+                style: TextStyle(color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5)),
               ),
             ),
             BrandButton(
@@ -798,16 +778,20 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                     showDialog(
                       context: context,
                       builder: (context) => AlertDialog(
-                        backgroundColor: AppColors.forest800,
-                        title: const Text('Invitation Sent! 🌿', style: TextStyle(color: AppColors.gold500)),
+                        backgroundColor: isDark ? AppColors.forest800 : AppColors.creamBg,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          side: isDark ? BorderSide.none : const BorderSide(color: AppColors.gold500, width: 2),
+                        ),
+                        title: Text('Invitation Sent! 🌿', style: TextStyle(color: isDark ? AppColors.gold500 : AppColors.gold700)),
                         content: Text(
                           'The invitation for $email is ready.\n\nSince automated emails are pending, please tell the user to:\n\n1. Go to the Sign Up screen.\n2. Use $email specifically.\n3. Their $selectedRole role will activate automatically.',
-                          style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+                          style: TextStyle(color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7), fontSize: 13, height: 1.5),
                         ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('LATER', style: TextStyle(color: Colors.white38)),
+                            child: Text('LATER', style: TextStyle(color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.4))),
                           ),
                           BrandButton(
                             text: 'SHARE INVITE',
@@ -892,8 +876,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
         return AppColors.gold500;
       case 'educator':
         return AppColors.semanticGreen;
+      case 'validator':
+        return AppColors.semanticBlue;
       default:
-        return Colors.white54;
+        return AppColors.terracotta;
     }
   }
 
@@ -915,29 +901,31 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   void _showEditUserDialog(AdminUser user) {
     final nameCtrl = TextEditingController(text: user.name);
     final xpCtrl = TextEditingController(text: user.xp.toString());
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.forest700,
+        backgroundColor: isDark ? AppColors.forest700 : AppColors.creamBg,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
+          side: isDark ? BorderSide.none : const BorderSide(color: AppColors.gold500, width: 2),
         ),
         title: Text(
           'Edit User Details',
-          style: AppTypography.h3.copyWith(color: AppColors.gold500),
+          style: AppTypography.h3.copyWith(color: isDark ? AppColors.gold500 : AppColors.gold700),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameCtrl,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: isDark ? Colors.white : AppColors.forest900),
               decoration: InputDecoration(
                 labelText: 'Username',
-                labelStyle: const TextStyle(color: Colors.white54),
+                labelStyle: TextStyle(color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5)),
                 filled: true,
-                fillColor: AppColors.forest800,
+                fillColor: isDark ? AppColors.forest800 : Colors.black.withValues(alpha: 0.05),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -947,13 +935,13 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
             const SizedBox(height: 12),
             TextField(
               controller: xpCtrl,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: isDark ? Colors.white : AppColors.forest900),
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
                 labelText: 'XP',
-                labelStyle: const TextStyle(color: Colors.white54),
+                labelStyle: TextStyle(color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5)),
                 filled: true,
-                fillColor: AppColors.forest800,
+                fillColor: isDark ? AppColors.forest800 : Colors.black.withValues(alpha: 0.05),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -965,9 +953,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text(
+            child: Text(
               'Cancel',
-              style: TextStyle(color: Colors.white54),
+              style: TextStyle(color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5)),
             ),
           ),
           BrandButton(
@@ -1097,9 +1085,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   }
 
   void _showRoleSwitcherModal(AdminUser user) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.forest900,
+      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -1114,7 +1103,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1123,7 +1112,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
             Text(
               'CHANGE ROLE: ${user.name}',
               style: AppTypography.label.copyWith(
-                color: AppColors.gold500,
+                color: isDark ? AppColors.gold500 : AppColors.gold700,
                 letterSpacing: 2,
                 fontWeight: FontWeight.w900,
               ),
@@ -1135,6 +1124,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               'Learner',
               'Can access lessons and dictionary',
               Icons.school_outlined,
+              isDark,
             ),
             _roleOption(
               user,
@@ -1142,6 +1132,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               'Educator',
               'Can create and manage lessons',
               Icons.menu_book_rounded,
+              isDark,
             ),
             _roleOption(
               user,
@@ -1149,6 +1140,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               'Administrator',
               'Full system and user control',
               Icons.shield_outlined,
+              isDark,
             ),
           ],
         ),
@@ -1162,6 +1154,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     String label,
     String sub,
     IconData icon,
+    bool isDark,
   ) {
     final isCurrent = user.role == roleId;
     final color = _roleColor(roleId);
@@ -1186,18 +1179,25 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
           color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(icon, color: isCurrent ? color : Colors.white24, size: 20),
+        child: Icon(
+          icon, 
+          color: isCurrent ? color : (isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3)), 
+          size: 20,
+        ),
       ),
       title: Text(
         label,
         style: AppTypography.h3.copyWith(
-          color: isCurrent ? color : Colors.white70,
+          color: isCurrent ? (isDark ? color : AppColors.forest900) : (isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.5)),
           fontSize: 16,
         ),
       ),
       subtitle: Text(
         sub,
-        style: AppTypography.body.copyWith(color: Colors.white24, fontSize: 11),
+        style: AppTypography.body.copyWith(
+          color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3), 
+          fontSize: 11,
+        ),
       ),
       trailing: isCurrent
           ? Icon(Icons.check_circle_rounded, color: color, size: 20)
