@@ -8,6 +8,7 @@ class ConfigurationPreview extends StatelessWidget {
   final String description;
   final String difficulty;
   final String dialect;
+  final VoidCallback onStart;
 
   const ConfigurationPreview({
     super.key,
@@ -15,6 +16,7 @@ class ConfigurationPreview extends StatelessWidget {
     required this.description,
     required this.difficulty,
     required this.dialect,
+    required this.onStart,
   });
 
   @override
@@ -44,7 +46,11 @@ class ConfigurationPreview extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 40),
-        BrandButton(text: 'START', onTap: () {}, type: BrandButtonType.primary),
+        BrandButton(
+          text: 'START',
+          onTap: onStart,
+          type: BrandButtonType.primary,
+        ),
       ],
     );
   }
