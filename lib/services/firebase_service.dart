@@ -1754,6 +1754,75 @@ class FirebaseService {
     });
   }
 
+  /// Rejects a pending lesson, recording the decision and notifying its contributor.
+  Future<void> rejectLesson(
+    String id,
+    String validatorId,
+    String validatorRole,
+    String feedback,
+  ) async {
+    final rejectionFeedback = feedback.trim();
+    if (rejectionFeedback.isEmpty) {
+      throw ArgumentError.value(
+        feedback,
+        'feedback',
+        'Rejection feedback cannot be empty.',
+      );
+    }
+
+    return _db.runTransaction((transaction) async {
+      final docRef = _db.collection('lessons').doc(id);
+      final doc = await transaction.get(docRef);
+      final data = doc.data();
+      if (data == null || data['status'] != 'PENDING_REVIEW') return;
+
+      final validatorRef = _db.collection('users').doc(validatorId);
+      final validatorDoc = await transaction.get(validatorRef);
+      final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
+
+      _saveVersionTransaction(transaction, docRef, data, validatorId);
+      _logAuditTransaction(
+        transaction,
+        action: 'REJECTED',
+        actorId: validatorId,
+        actorName: validatorName,
+        targetId: id,
+        targetName: data['title'] ?? 'Unknown Lesson',
+        targetType: 'lesson',
+        icon: '🚫',
+        metadata: {'feedback': rejectionFeedback},
+      );
+
+      transaction.update(docRef, {
+        'status': 'REJECTED',
+        'isValidated': false,
+        'validatorId': validatorId,
+        'validatorRole': validatorRole,
+        'validatorFeedback': rejectionFeedback,
+        'rejectionFeedback': rejectionFeedback,
+        'rejectedAt': FieldValue.serverTimestamp(),
+        'validatedAt': FieldValue.serverTimestamp(),
+      });
+
+      final contributorId = data['contributorId'];
+      final title = data['title'] ?? 'your lesson';
+      if (contributorId != null) {
+        final notifRef = _db
+            .collection('users')
+            .doc(contributorId)
+            .collection('notifications')
+            .doc();
+        transaction.set(notifRef, {
+          'title': 'Lesson Rejected ⚠️',
+          'message': 'Your lesson "$title" was not approved: $rejectionFeedback',
+          'type': 'rejection',
+          'timestamp': FieldValue.serverTimestamp(),
+          'isRead': false,
+        });
+      }
+    });
+  }
+
   Stream<List<Lesson>> getPendingLessons({String? dialect}) {
     return _db
         .collection('lessons')

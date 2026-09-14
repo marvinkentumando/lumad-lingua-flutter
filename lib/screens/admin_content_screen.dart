@@ -641,6 +641,193 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
       onDelete: () => _showDeletePasswordDialog(data.title, () {
         ref.read(firebaseServiceProvider).deleteLesson(data.id);
       }),
+      reviewActions: data.status == 'PENDING_REVIEW'
+          ? [
+              _actionIcon(
+                Icons.check_circle_outline_rounded,
+                () => _approveLesson(data),
+                color: AppColors.semanticGreen,
+              ),
+              _actionIcon(
+                Icons.flag_outlined,
+                () => _showFlagLessonDialog(data),
+                color: AppColors.terracotta,
+              ),
+              _reviewAction(
+                label: 'REJECT',
+                icon: Icons.cancel_outlined,
+                onTap: () => _showRejectLessonDialog(data),
+                color: AppColors.semanticRed,
+              ),
+            ]
+          : null,
+    );
+  }
+
+  String get _reviewerId =>
+      ref.read(authServiceProvider).currentUser?.uid ?? 'admin';
+
+  Future<void> _approveLesson(Lesson lesson) async {
+    try {
+      await ref
+          .read(firebaseServiceProvider)
+          .approveLesson(lesson.id, _reviewerId, 'Administrator');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Lesson approved.'),
+            backgroundColor: AppColors.semanticGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Approval failed: $e'),
+            backgroundColor: AppColors.semanticRed,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showFlagLessonDialog(Lesson lesson) async {
+    final controller = TextEditingController();
+    final feedback = await _showLessonFeedbackDialog(
+      title: 'Request Changes',
+      prompt: 'Explain the changes needed before this lesson can be published.',
+      actionLabel: 'SEND FEEDBACK',
+      actionColor: AppColors.terracotta,
+      controller: controller,
+    );
+    controller.dispose();
+    if (feedback == null) return;
+
+    try {
+      await ref
+          .read(firebaseServiceProvider)
+          .flagLesson(lesson.id, _reviewerId, 'Administrator', feedback);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Request failed: $e'),
+            backgroundColor: AppColors.semanticRed,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showRejectLessonDialog(Lesson lesson) async {
+    final controller = TextEditingController();
+    final feedback = await _showLessonFeedbackDialog(
+      title: 'Reject Lesson?',
+      prompt: 'This lesson will not be published. Rejection feedback is required.',
+      actionLabel: 'REJECT',
+      actionColor: AppColors.semanticRed,
+      controller: controller,
+      requireFeedback: true,
+    );
+    controller.dispose();
+    if (feedback == null) return;
+
+    try {
+      await ref
+          .read(firebaseServiceProvider)
+          .rejectLesson(lesson.id, _reviewerId, 'Administrator', feedback);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Lesson rejected.'),
+            backgroundColor: AppColors.semanticRed,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Rejection failed: $e'),
+            backgroundColor: AppColors.semanticRed,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<String?> _showLessonFeedbackDialog({
+    required String title,
+    required String prompt,
+    required String actionLabel,
+    required Color actionColor,
+    required TextEditingController controller,
+    bool requireFeedback = false,
+  }) async {
+    var showFeedbackError = false;
+    return showDialog<String>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: Text(
+            title,
+            style: AppTypography.h3.copyWith(color: actionColor),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                prompt,
+                style: AppTypography.body.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                minLines: 3,
+                maxLines: 5,
+                onChanged: (_) {
+                  if (showFeedbackError) {
+                    setDialogState(() => showFeedbackError = false);
+                  }
+                },
+                decoration: InputDecoration(
+                  hintText: 'Feedback for the contributor...',
+                  errorText: showFeedbackError
+                      ? 'Please provide rejection feedback.'
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('CANCEL'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final feedback = controller.text.trim();
+                if (requireFeedback && feedback.isEmpty) {
+                  setDialogState(() => showFeedbackError = true);
+                  return;
+                }
+                Navigator.pop(dialogContext, feedback);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: actionColor),
+              child: Text(actionLabel),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -672,6 +859,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
     required VoidCallback onDelete,
     VoidCallback? onHistory,
     String? audioUrl,
+    List<Widget>? reviewActions,
   }) {
     final isSelected = _selectedIds.contains(id);
     final statusStyle = status == 'validated' || status == 'published' || status == 'approved'
@@ -773,15 +961,17 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                       style: isDark ? statusStyle : BrandBadgeStyle.dark,
                     ),
                     const SizedBox(height: 8),
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      alignment: WrapAlignment.end,
                       children: [
+                        if (reviewActions != null) ...reviewActions,
                         if (onHistory != null)
                           _actionIcon(
                             Icons.history_rounded,
                             onHistory,
                             color: isDark ? AppColors.gold500 : AppColors.forest900,
                           ),
-                        if (onHistory != null) const SizedBox(width: 8),
                         _actionIcon(
                           Icons.delete_outline_rounded,
                           onDelete,
@@ -1014,6 +1204,30 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: color ?? Colors.white70, size: 18),
+      ),
+    );
+  }
+
+  Widget _reviewAction({
+    required String label,
+    required IconData icon,
+    required VoidCallback onTap,
+    required Color color,
+  }) {
+    return TextButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, color: color, size: 18),
+      label: Text(
+        label,
+        style: AppTypography.label.copyWith(
+          color: color,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
     );
   }
