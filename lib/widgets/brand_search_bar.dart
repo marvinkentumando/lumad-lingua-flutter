@@ -74,183 +74,75 @@ class _BrandSearchBarState extends State<BrandSearchBar> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Theme tokens
-    final bgColor =
-        isDark ? Colors.black.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.8);
+    // Standardized tokens from AdminUsersScreen
+    final bgColor = isDark
+        ? AppColors.forest800.withValues(alpha: 0.5)
+        : Colors.white.withValues(alpha: 0.5);
     final borderColor = isDark
-        ? AppColors.gold500.withValues(alpha: 0.2)
-        : AppColors.forest500.withValues(alpha: 0.1);
-    final iconColor = isDark ? AppColors.gold500 : AppColors.forest700;
+        ? Colors.white.withValues(alpha: 0.05)
+        : AppColors.forest900.withValues(alpha: 0.05);
     final textColor = isDark ? Colors.white : AppColors.forest900;
-    final hintColor = isDark ? Colors.white38 : AppColors.creamText2;
-    final cursorColor = isDark ? AppColors.gold500 : AppColors.forest500;
+    final hintColor = isDark
+        ? Colors.white24
+        : AppColors.forest900.withValues(alpha: 0.3);
 
-    final searchBarContent = Container(
-      height: 58,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: widget.isMinimal ? Colors.transparent : bgColor,
-        borderRadius: BorderRadius.circular(24),
-        border: null,
-        boxShadow: widget.isMinimal || isDark
-            ? []
-            : [
-                BoxShadow(
-                  color: AppColors.creamShadow.withValues(alpha: 0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _controller,
-              focusNode: widget.focusNode,
-              autofocus: widget.autofocus,
-              textInputAction: widget.textInputAction,
-              onChanged: widget.onChanged,
-              onSubmitted: (val) {
-                HapticFeedback.mediumImpact();
-                widget.onSubmitted?.call(val);
-              },
-              style: AppTypography.body.copyWith(
-                color: textColor,
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
-              cursorColor: cursorColor,
-              decoration: InputDecoration(
-                hintText: widget.hintText,
-                hintStyle: AppTypography.body.copyWith(
-                  color: hintColor,
-                  fontSize: 14,
-                ),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
+    return Container(
+      margin: widget.isMinimal ? EdgeInsets.zero : const EdgeInsets.symmetric(vertical: 8),
+      child: TextField(
+        controller: _controller,
+        focusNode: widget.focusNode,
+        autofocus: widget.autofocus,
+        textInputAction: widget.textInputAction,
+        onChanged: widget.onChanged,
+        onSubmitted: (val) {
+          HapticFeedback.mediumImpact();
+          widget.onSubmitted?.call(val);
+        },
+        style: TextStyle(color: textColor, fontSize: 14),
+        decoration: InputDecoration(
+          hintText: widget.hintText,
+          hintStyle: TextStyle(color: hintColor, fontSize: 13),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            color: AppColors.gold500,
+            size: 20,
           ),
-
-          // Suffix Actions with Animated Transitions
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 250),
-                transitionBuilder: (child, animation) => FadeTransition(
-                  opacity: animation,
-                  child: ScaleTransition(scale: animation, child: child),
-                ),
-                child: _hasText
-                    ? GestureDetector(
-                        key: const ValueKey('clear'),
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          _controller.clear();
-                          widget.onChanged?.call('');
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: textColor.withValues(alpha: 0.1),
-                          ),
-                          child: Icon(
-                            Icons.close_rounded,
-                            size: 14,
-                            color: textColor,
-                          ),
-                        ),
-                      )
-                    : Row(
-                        key: const ValueKey('search_mic'),
-                        children: [
-                          if (widget.showMic) ...[
-                            GestureDetector(
-                              onTap: () {
-                                HapticFeedback.mediumImpact();
-                                widget.onMicTap?.call();
-                              },
-                              child: Icon(
-                                Icons.mic_none_rounded,
-                                color: iconColor,
-                                size: 22,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                          ],
-                          GestureDetector(
-                            onTap: () {
-                              HapticFeedback.mediumImpact();
-                              widget.onSubmitted?.call(_controller.text);
-                            },
-                            child: Icon(Icons.search_rounded, color: iconColor, size: 22),
-                          ),
-                        ],
-                      ),
-              ),
-
-              // Persistent Filter Section
-              if (widget.showFilter) ...[
-                const SizedBox(width: 12),
-                Container(
-                  width: 1,
-                  height: 20,
-                  color: borderColor.withValues(alpha: 0.5),
-                ),
-                const SizedBox(width: 12),
-                GestureDetector(
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    widget.onFilterTap?.call();
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: iconColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: iconColor.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.tune_rounded, color: iconColor, size: 14),
-                        const SizedBox(width: 6),
-                        Text(
-                          'FILTERS',
-                          style: AppTypography.label.copyWith(
-                            color: iconColor,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ],
-                    ),
+          suffixIcon: _hasText
+              ? IconButton(
+                  icon: Icon(
+                    Icons.close_rounded,
+                    color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5),
+                    size: 18,
                   ),
-                ),
-              ],
-            ],
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    _controller.clear();
+                    widget.onChanged?.call('');
+                  },
+                )
+              : (widget.showFilter
+                  ? IconButton(
+                      icon: const Icon(Icons.tune_rounded, color: AppColors.gold500, size: 20),
+                      onPressed: widget.onFilterTap,
+                    )
+                  : null),
+          filled: true,
+          fillColor: bgColor,
+          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: borderColor),
           ),
-        ],
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: borderColor),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: AppColors.gold500, width: 1.5),
+          ),
+        ),
       ),
-    );
-
-    if (widget.isMinimal) return searchBarContent;
-
-    return GlassBox(
-      borderRadius: 24,
-      blur: 15,
-      opacity: isDark ? 0.15 : 0.05,
-      border: Border.all(color: Colors.transparent, width: 0),
-      child: searchBarContent,
     );
   }
 }

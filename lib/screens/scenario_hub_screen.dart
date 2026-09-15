@@ -10,11 +10,20 @@ import '../providers/student_provider.dart';
 import '../services/haptic_service.dart';
 import '../services/firebase_service.dart';
 
-class ScenarioHubScreen extends ConsumerWidget {
+import '../widgets/brand_search_bar.dart';
+
+class ScenarioHubScreen extends ConsumerStatefulWidget {
   const ScenarioHubScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ScenarioHubScreen> createState() => _ScenarioHubScreenState();
+}
+
+class _ScenarioHubScreenState extends ConsumerState<ScenarioHubScreen> {
+  String _searchQuery = '';
+
+  @override
+  Widget build(BuildContext context) {
     final student = ref.watch(studentProvider);
     final completedScenarios = student.lessonProgress;
     final scenariosAsync = ref.watch(scenariosProvider);
@@ -30,49 +39,61 @@ class ScenarioHubScreen extends ConsumerWidget {
                   _buildHeader(context),
                   Expanded(
                     child: scenariosAsync.when(
-                      data: (scenarios) => ListView.builder(
-                        padding: const EdgeInsets.all(24),
-                        itemCount: scenarios.length + 1,
-                        itemBuilder: (context, index) {
-                          if (index == 0) {
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Scenario Stories',
-                                  style: AppTypography.displayBold.copyWith(
-                                    color: AppColors.gold500,
-                                    fontSize: 32,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Choose your path. Every word matters.',
-                                  style: AppTypography.body.copyWith(
-                                    color: Colors.white60,
-                                  ),
-                                ),
-                                const SizedBox(height: 32),
-                              ],
-                            );
-                          }
+                      data: (scenarios) {
+                        final filtered = scenarios.where((s) =>
+                          s.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                          s.description.toLowerCase().contains(_searchQuery.toLowerCase())
+                        ).toList();
 
-                          final scenario = scenarios[index - 1];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: _buildScenarioCard(
-                              context,
-                              title: scenario.title,
-                              description: scenario.description,
-                              difficulty: scenario.difficulty,
-                              reward: '${scenario.baseReward} XP',
-                              id: scenario.id,
-                              icon: _getIconData(scenario.iconName),
-                              isCompleted: completedScenarios.containsKey(scenario.id),
-                            ),
-                          );
-                        },
-                      ),
+                        return ListView.builder(
+                          padding: const EdgeInsets.all(24),
+                          itemCount: filtered.length + 1,
+                          itemBuilder: (context, index) {
+                            if (index == 0) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Scenario Stories',
+                                    style: AppTypography.displayBold.copyWith(
+                                      color: AppColors.gold500,
+                                      fontSize: 32,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Choose your path. Every word matters.',
+                                    style: AppTypography.body.copyWith(
+                                      color: Colors.white60,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  BrandSearchBar(
+                                    hintText: 'Search stories...',
+                                    onChanged: (v) => setState(() => _searchQuery = v),
+                                  ),
+                                  const SizedBox(height: 32),
+                                ],
+                              );
+                            }
+
+                            final scenario = filtered[index - 1];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: _buildScenarioCard(
+                                context,
+                                title: scenario.title,
+                                description: scenario.description,
+                                difficulty: scenario.difficulty,
+                                reward: '${scenario.baseReward} XP',
+                                id: scenario.id,
+                                icon: _getIconData(scenario.iconName),
+                                isCompleted: completedScenarios.containsKey(scenario.id),
+                              ),
+                            );
+                          },
+                        );
+                      },
                       loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
                       error: (err, _) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
                     ),

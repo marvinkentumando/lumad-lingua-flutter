@@ -21,6 +21,9 @@ import '../widgets/memory_forest.dart';
 import '../services/haptic_service.dart';
 import '../widgets/dynamic_glass_box.dart';
 
+import '../providers/daily_challenge_provider.dart';
+import '../models/daily_challenge.dart';
+
 class LearningHubScreen extends ConsumerWidget {
   const LearningHubScreen({super.key});
 
@@ -88,6 +91,84 @@ class LearningHubScreen extends ConsumerWidget {
                         ),
                       ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
                       const SizedBox(height: 32),
+
+                      // Daily Challenge Card
+                      ref.watch(dailyChallengeProvider).when(
+                        data: (challenge) {
+                          if (challenge == null) return const SizedBox.shrink();
+                          final isCompleted = ref.watch(dailyChallengeStatusProvider);
+
+                          return GestureDetector(
+                            onTap: () {
+                              HapticService.selection();
+                              if (isCompleted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('You have already completed today\'s challenge! Come back tomorrow.'),
+                                  ),
+                                );
+                              } else {
+                                context.push('/daily-challenge', extra: challenge);
+                              }
+                            },
+                            child: BrandCard(
+                              theme: isCompleted ? BrandCardTheme.gold : BrandCardTheme.vibrant,
+                              padding: const EdgeInsets.all(24),
+                              borderRadius: 32,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: isCompleted ? Colors.black12 : Colors.white10,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      isCompleted ? Icons.check_circle_rounded : Icons.auto_awesome_rounded,
+                                      color: isCompleted ? AppColors.forest900 : Colors.white,
+                                      size: 28,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 20),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          isCompleted ? 'Challenge Completed' : challenge.title,
+                                          style: AppTypography.h3.copyWith(
+                                            color: isCompleted ? AppColors.forest900 : Colors.white,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                        Text(
+                                          isCompleted
+                                              ? 'Your spirit grows stronger. Come back in 24h.'
+                                              : challenge.description,
+                                          style: AppTypography.body.copyWith(
+                                            color: isCompleted ? AppColors.forest700 : Colors.white60,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (!isCompleted)
+                                    const Icon(
+                                      Icons.arrow_forward_ios_rounded,
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ).animate().fadeIn(delay: 220.ms).slideX(begin: -0.1);
+                        },
+                        loading: () => Skeleton(height: 100, borderRadius: 32),
+                        error: (_, __) => const SizedBox.shrink(),
+                      ),
+
+                      const SizedBox(height: 16),
 
                       // Mastery Trends Entry Card
                       GestureDetector(
@@ -200,12 +281,6 @@ class LearningHubScreen extends ConsumerWidget {
                       ).animate().fadeIn(delay: 250.ms).slideX(begin: 0.1),
 
                       const SizedBox(height: 32),
-
-                      // Memory Forest Section
-                      _buildMemoryForestSection(context, ref),
-
-                      const SizedBox(height: 24),
-
 
                       // Progress Cards
                       ref
@@ -722,70 +797,6 @@ class LearningHubScreen extends ConsumerWidget {
     }
   }
 
-  Widget _buildMemoryForestSection(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authStateProvider).value;
-    final srsAsync = user != null
-        ? ref.watch(srsProgressStreamProvider(user.uid))
-        : const AsyncValue.data(<SRSProgress>[]);
-
-    return srsAsync.when(
-      data: (srsList) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Ancestral Vitality',
-                      style: AppTypography.h3.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    Text(
-                      'Nurture your memory forest through ritual review',
-                      style: AppTypography.label.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
-                ),
-                TextButton(
-                  onPressed: () {
-                    HapticService.selection();
-                    context.push('/mastery-dashboard');
-                  },
-                  child: Text(
-                    'DETAILS',
-                    style: AppTypography.label.copyWith(
-                      color: AppColors.gold500,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            BrandCard(
-              padding: EdgeInsets.zero,
-              borderRadius: 32,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(32),
-                child: MemoryForest(progress: srsList, height: 200),
-              ),
-            ),
-          ],
-        );
-      },
-      loading: () => const Skeleton(height: 240, borderRadius: 32),
-      error: (err, _) => const SizedBox.shrink(),
-    );
-  }
 }
 
 

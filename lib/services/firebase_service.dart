@@ -25,6 +25,8 @@ import '../models/feedback.dart';
 import '../models/assessment.dart';
 import 'offline_service.dart';
 
+import '../models/daily_challenge.dart';
+
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
   factory FirebaseService() => _instance;
@@ -652,6 +654,18 @@ class FirebaseService {
     await _db.collection('words').doc(id).delete();
   }
 
+  Future<void> bulkAddWords(List<DictionaryEntry> entries) async {
+    final batch = _db.batch();
+    for (var entry in entries) {
+      final docRef = _db.collection('words').doc();
+      batch.set(docRef, {
+        ...entry.toFirestore(),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    }
+    await batch.commit();
+  }
+
   Future<void> bulkApproveWords(List<String> ids, String validatorId, String validatorRole) async {
     return _db.runTransaction((transaction) async {
       final configDoc = await transaction.get(_db.collection('config').doc('app'));
@@ -1071,6 +1085,99 @@ class FirebaseService {
         .collection('srs_progress')
         .doc(progress.wordId)
         .set(progress.toFirestore());
+  }
+
+  // --- Daily Challenge Operations ---
+
+  Future<DailyChallenge?> getDailyChallenge(String dateId) async {
+    final doc = await _db.collection('daily_challenges').doc(dateId).get();
+    if (doc.exists) {
+      return DailyChallenge.fromFirestore(doc.data()!, doc.id);
+    }
+    return null;
+  }
+
+  Future<void> saveDailyChallenge(DailyChallenge challenge) async {
+    await _db
+        .collection('daily_challenges')
+        .doc(challenge.id)
+        .set(challenge.toFirestore());
+  }
+
+  Future<void> completeDailyChallenge(
+    String userId,
+    String dateId,
+    int xp,
+    int crystals,
+  ) async {
+    final userRef = _db.collection('users').doc(userId);
+
+    await _db.runTransaction((transaction) async {
+      final userSnap = await transaction.get(userRef);
+      if (!userSnap.exists) return;
+
+      final data = userSnap.data()!;
+      final completedChallenges = List<String>.from(data['completedChallenges'] ?? []);
+
+      if (!completedChallenges.contains(dateId)) {
+        completedChallenges.add(dateId);
+
+        // Update XP, Crystals, and Streak
+        int currentStreak = data['streak'] ?? 0;
+        String? lastStreakDate = data['lastStreakDate'];
+
+        DateTime now = DateTime.now();
+        String today = dateId; // YYYY-MM-DD
+
+        if (lastStreakDate == null) {
+          currentStreak = 1;
+        } else {
+          DateTime lastDate = DateTime.parse(lastStreakDate);
+          DateTime yesterday = now.subtract(const Duration(days: 1));
+
+          if (lastDate.year == yesterday.year &&
+              lastDate.month == yesterday.month &&
+              lastDate.day == yesterday.day) {
+            currentStreak += 1;
+          } else if (lastDate.year == now.year &&
+              lastDate.month == now.month &&
+              lastDate.day == now.day) {
+            // Already updated today, don't increment streak again but we record completion
+          } else {
+            currentStreak = 1;
+          }
+        }
+
+        transaction.update(userRef, {
+          'xp': FieldValue.increment(xp),
+          'mistCrystals': FieldValue.increment(crystals),
+          'streak': currentStreak,
+          'lastStreakDate': today,
+          'completedChallenges': completedChallenges,
+        });
+      }
+    });
+  }
+
+  Future<List<LessonTask>> getRandomTasks(int count, {String? language}) async {
+    Query query = _db.collection('lessons').where('status', isEqualTo: 'PUBLISHED');
+    if (language != null) {
+      query = query.where('language', isEqualTo: language);
+    }
+
+    final lessonsSnap = await query.get();
+    if (lessonsSnap.docs.isEmpty) return [];
+
+    final allTasks = <LessonTask>[];
+    for (var doc in lessonsSnap.docs) {
+      final lesson = Lesson.fromFirestore(doc.data() as Map<String, dynamic>, doc.id);
+      allTasks.addAll(lesson.tasks);
+    }
+
+    if (allTasks.isEmpty) return [];
+
+    allTasks.shuffle();
+    return allTasks.take(math.min(count, allTasks.length)).toList();
   }
 
   // Community Recording Operations

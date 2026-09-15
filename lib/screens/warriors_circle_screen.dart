@@ -6,7 +6,10 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
+import '../widgets/brand_background.dart';
 import '../services/haptic_service.dart';
+
+import '../widgets/brand_search_bar.dart';
 
 class WarriorsCircleScreen extends ConsumerStatefulWidget {
   const WarriorsCircleScreen({super.key});
@@ -17,6 +20,7 @@ class WarriorsCircleScreen extends ConsumerStatefulWidget {
 }
 
 class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
+  String _searchQuery = '';
   final List<Map<String, dynamic>> _mockFriends = [
     {
       'name': 'Datu Bago',
@@ -50,24 +54,49 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final filtered = _mockFriends.where((f) => 
+      f['name'].toLowerCase().contains(_searchQuery.toLowerCase())
+    ).toList();
+
     return Scaffold(
-      backgroundColor: AppColors.forest900,
-      appBar: AppBar(
-        title: Text(
-          'WARRIORS CIRCLE',
-          style: AppTypography.h3.copyWith(color: AppColors.gold500),
+      backgroundColor: Colors.transparent,
+      body: BrandBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Center(
+                  child: Text(
+                    'WARRIORS CIRCLE',
+                    style: AppTypography.h3.copyWith(
+                      color: isDark ? AppColors.gold500 : AppColors.gold700,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: BrandSearchBar(
+                  hintText: 'Search members...',
+                  onChanged: (v) => setState(() => _searchQuery = v),
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(20),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final friend = filtered[index];
+                    return _buildFriendCard(friend, index);
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-      ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(20),
-        itemCount: _mockFriends.length,
-        itemBuilder: (context, index) {
-          final friend = _mockFriends[index];
-          return _buildFriendCard(friend, index);
-        },
       ),
       floatingActionButton:
           FloatingActionButton.extended(
@@ -94,8 +123,10 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
 
   Widget _buildFriendCard(Map<String, dynamic> friend, int index) {
     final isOnline = friend['isOnline'] as bool;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BrandCard(
+      theme: isDark ? BrandCardTheme.cream : BrandCardTheme.gold,
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       borderRadius: 24,
@@ -120,7 +151,7 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
                   decoration: BoxDecoration(
                     color: isOnline ? Colors.green : Colors.grey,
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.forest800, width: 2),
+                    border: Border.all(color: isDark ? AppColors.forest800 : AppColors.gold50, width: 2),
                   ),
                 ),
               ),
@@ -134,14 +165,14 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
                 Text(
                   friend['name'],
                   style: AppTypography.h3.copyWith(
-                    color: Colors.white,
+                    color: isDark ? Colors.white : AppColors.forest900,
                     fontSize: 18,
                   ),
                 ),
                 Text(
                   'LEVEL ${friend['level']} WARRIOR',
                   style: AppTypography.label.copyWith(
-                    color: Colors.white38,
+                    color: isDark ? Colors.white38 : AppColors.forest700.withValues(alpha: 0.6),
                     fontSize: 10,
                   ),
                 ),
@@ -153,7 +184,7 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
                     Text(
                       '${friend['streak']} DAY STREAK',
                       style: AppTypography.mono.copyWith(
-                        color: AppColors.gold500,
+                        color: isDark ? AppColors.gold500 : AppColors.forest900,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),

@@ -111,6 +111,33 @@ class LessonTask {
       'grammarExamples': grammarExamples,
     };
   }
+
+  factory LessonTask.fromFirestore(Map<String, dynamic> map) {
+    return LessonTask(
+      id: map['id'] ?? '',
+      type: TaskType.values.firstWhere(
+        (e) => e.toString().split('.').last == map['type'],
+        orElse: () => TaskType.multipleChoice,
+      ),
+      questionText: map['questionText'] ?? '',
+      options: List<String>.from(map['options'] ?? []),
+      correctAnswerIndex: map['correctAnswerIndex'] ?? 0,
+      pairs: (map['pairs'] as List?)
+              ?.map((p) => Map<String, String>.from(p))
+              .toList() ??
+          [],
+      sentenceParts: List<String>.from(map['sentenceParts'] ?? []),
+      expectedSentence: map['expectedSentence'] ?? '',
+      nativeWord: map['nativeWord'] ?? '',
+      phoneticGuide: map['phoneticGuide'] ?? '',
+      hintMetadata: map['hintMetadata'] ?? '',
+      audioUrl: map['audioUrl'],
+      imageUrl: map['imageUrl'],
+      grammarTitle: map['grammarTitle'],
+      grammarDescription: map['grammarDescription'],
+      grammarExamples: (map['grammarExamples'] as List?)?.cast<String>(),
+    );
+  }
 }
 
 

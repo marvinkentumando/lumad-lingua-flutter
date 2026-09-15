@@ -15,8 +15,9 @@ import '../models/lesson.dart';
 import '../models/dictionary_entry.dart';
 import '../models/scenario_models.dart';
 import '../models/admin_models.dart';
-import '../widgets/branded_empty_state.dart';
+import '../widgets/brand_search_bar.dart';
 import '../widgets/brand_background.dart';
+import '../widgets/branded_empty_state.dart';
 import '../services/haptic_service.dart';
 import '../services/auth_service.dart';
 
@@ -330,53 +331,11 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
 
   Widget _buildSearchBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      child: TextField(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: BrandSearchBar(
         controller: _searchCtrl,
+        hintText: 'Search terms or contributors...',
         onChanged: (v) => setState(() => _searchQuery = v),
-        decoration: InputDecoration(
-          hintText: 'Search terms or contributors...',
-          hintStyle: TextStyle(
-            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-            fontSize: 13,
-          ),
-          prefixIcon: const Icon(
-            Icons.search_rounded,
-            color: AppColors.gold500,
-            size: 20,
-          ),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(
-                    Icons.close_rounded,
-                    color: Colors.white38,
-                    size: 18,
-                  ),
-                  onPressed: () {
-                    _searchCtrl.clear();
-                    setState(() => _searchQuery = '');
-                  },
-                )
-              : null,
-          filled: true,
-          fillColor: isDark 
-              ? AppColors.forest800.withValues(alpha: 0.5)
-              : Colors.white,
-          contentPadding: const EdgeInsets.symmetric(vertical: 0),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(
-              color: isDark 
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : AppColors.creamBorder,
-            ),
-          ),
-        ),
-        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
       ),
     );
   }

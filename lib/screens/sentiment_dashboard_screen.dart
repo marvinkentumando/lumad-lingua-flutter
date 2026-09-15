@@ -72,7 +72,7 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
                 const SizedBox(height: 32),
                 _buildKeywordCloud(data, isDark),
                 const SizedBox(height: 32),
-                _buildSectionHeader('Live Sentiment Stream', isDark),
+                _buildSectionHeader('Linguistic Analysis Archive', isDark),
                 const SizedBox(height: 16),
               ],
             ),
@@ -114,26 +114,18 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
           children: [
             Row(
               children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: AppColors.semanticGreen,
-                    shape: BoxShape.circle,
-                  ),
-                ).animate(onPlay: (c) => c.repeat()).scale(
-                  begin: const Offset(1, 1),
-                  end: const Offset(1.5, 1.5),
-                  duration: 1000.ms,
-                  curve: Curves.easeInOut,
-                ).then().fadeOut(),
+                Icon(
+                  Icons.auto_awesome_rounded,
+                  color: AppColors.gold500,
+                  size: 10,
+                ),
                 const SizedBox(width: 8),
                 Text(
-                  'VITALITY MONITOR',
+                  'EMBEDDED VITALITY MONITOR',
                   style: AppTypography.label.copyWith(
                     color: AppColors.gold500,
                     letterSpacing: 2,
-                    fontSize: 10,
+                    fontSize: 8,
                   ),
                 ),
               ],
@@ -180,7 +172,7 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Based on keywords & usage patterns analyzed from the last 24h.',
+                    'Analysis based on internal linguistic models and archived digital footprints.',
                     style: AppTypography.body.copyWith(
                       color: Colors.white38,
                       fontSize: 12,
@@ -349,14 +341,17 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
               children: [
                 Row(
                   children: [
-                    const CircleAvatar(
-                      radius: 12,
-                      backgroundColor: Color(0xFF1877F2), // Facebook Blue
-                      child: Icon(Icons.facebook, color: Colors.white, size: 14),
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold500.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.storage_rounded, color: AppColors.gold500, size: 12),
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Social Post • $timeAgo',
+                      'Archived Entry • $timeAgo',
                       style: AppTypography.label.copyWith(
                         color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5),
                         fontSize: 10,

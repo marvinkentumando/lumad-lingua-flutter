@@ -53,7 +53,9 @@ import '../screens/sentiment_dashboard_screen.dart';
 import '../screens/data_privacy_screen.dart';
 import '../screens/offline_wisdom_screen.dart';
 import '../screens/admin_dictionary_screen.dart';
+import '../screens/daily_challenge_session_screen.dart';
 import '../models/artifact.dart';
+import '../models/daily_challenge.dart';
 
 class RouterNotifier extends ChangeNotifier {
   final Ref _ref;
@@ -283,6 +285,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/sentiment',
             builder: (context, state) => const SentimentDashboardScreen(),
+          ),
+          GoRoute(
+            path: '/daily-challenge',
+            builder: (context, state) {
+              final challenge = state.extra as DailyChallenge;
+              return DailyChallengeSessionScreen(challenge: challenge);
+            },
           ),
         ],
       ),

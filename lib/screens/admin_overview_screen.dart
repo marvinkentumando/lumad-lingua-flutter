@@ -13,7 +13,6 @@ import '../services/haptic_service.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/wotd_widget.dart';
 import '../services/auth_service.dart';
-import '../services/database_seeder.dart';
 import '../services/word_of_day_service.dart';
 import '../models/dictionary_entry.dart';
 import '../widgets/branded_empty_state.dart';
@@ -307,12 +306,12 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                             Row(
                               children: [
                                 const Icon(
-                                  Icons.auto_fix_high_rounded,
-                                  color: AppColors.semanticRed,
+                                  Icons.sync_rounded,
+                                  color: AppColors.gold500,
                                 ),
                                 const SizedBox(width: 12),
                                 Text(
-                                  'DATABASE SEEDER',
+                                  'METADATA ENGINE',
                                   style: AppTypography.h3.copyWith(
                                     color: Colors.white,
                                     fontSize: 16,
@@ -322,33 +321,21 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Reset or initialize core platform data (Lessons, Dictionary). Use with caution.',
+                              'Sync municipality data and update town-dialect mappings across the platform.',
                               style: AppTypography.body.copyWith(
                                 color: Colors.white60,
                                 fontSize: 12,
                               ),
                             ),
                             const SizedBox(height: 20),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: BrandButton(
-                                    text: 'SEED DATABASE',
-                                    onTap: () => _showSeedConfirmation(),
-                                    type: BrandButtonType.danger,
-                                    icon: Icons.auto_fix_high_rounded,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: BrandButton(
-                                    text: 'SYNC METADATA',
-                                    onTap: () => _syncMetadata(),
-                                    type: BrandButtonType.secondary,
-                                    icon: Icons.sync_rounded,
-                                  ),
-                                ),
-                              ],
+                            SizedBox(
+                              width: double.infinity,
+                              child: BrandButton(
+                                text: 'SYNC METADATA',
+                                onTap: () => _syncMetadata(),
+                                type: BrandButtonType.secondary,
+                                icon: Icons.sync_rounded,
+                              ),
                             ),
                           ],
                         ),
@@ -461,50 +448,6 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Sync failed: $e')),
-      );
-    }
-  }
-
-  void _showSeedConfirmation() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDark ? AppColors.forest800 : Colors.white,
-        title: const Text('Seed Database?'),
-        content: const Text(
-          'This will re-initialize core platform data and update municipality IDs. Existing records will be merged or updated. Proceed?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('CANCEL'),
-          ),
-          BrandButton(
-            text: 'PROCEED',
-            onTap: () async {
-              Navigator.pop(context);
-              _runSeeder();
-            },
-            type: BrandButtonType.danger,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _runSeeder() async {
-    try {
-      // Import the seeder service
-      // Note: We need to import database_seeder.dart at the top
-      await DatabaseSeeder.seedAll();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Database seeded successfully!')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Seeding failed: $e')),
       );
     }
   }
@@ -778,16 +721,15 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Column(
                   children: [
-                    if (isTapped)
-                      Text(
-                        '${values[i]}',
-                        style: AppTypography.mono.copyWith(
-                          color: color,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    Text(
+                      '${values[i]}',
+                      style: AppTypography.mono.copyWith(
+                        color: isTapped ? color : color.withValues(alpha: 0.7),
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
                       ),
-                    if (isTapped) const SizedBox(height: 4),
+                    ),
+                    const SizedBox(height: 6),
                     AnimatedContainer(
                       duration: Duration(milliseconds: 800 + i * 100),
                       curve: Curves.elasticOut,
@@ -823,7 +765,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                     Text(
                       labels[i],
                       style: AppTypography.mono.copyWith(
-                        color: isTapped ? color : Colors.white24,
+                        color: isTapped ? color : Colors.white60,
                         fontSize: 8,
                         fontWeight: FontWeight.w900,
                       ),

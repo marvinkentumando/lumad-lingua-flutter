@@ -11,6 +11,7 @@ import '../widgets/brand_background.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/profile_avatar.dart';
 import 'package:share_plus/share_plus.dart';
+import '../widgets/brand_search_bar.dart';
 import '../widgets/branded_empty_state.dart';
 import '../providers/admin_users_provider.dart';
 
@@ -76,51 +77,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   _buildHeader(context),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                    child: TextField(
+                    child: BrandSearchBar(
                       controller: _searchCtrl,
+                      hintText: 'Search by name or email...',
                       onChanged: (v) => setState(() => _userSearch = v),
-                      decoration: InputDecoration(
-                        hintText: 'Search by name or email...',
-                        hintStyle: TextStyle(
-                          color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
-                          fontSize: 13,
-                        ),
-                        prefixIcon: const Icon(
-                          Icons.search_rounded,
-                          color: AppColors.gold500,
-                          size: 20,
-                        ),
-                        suffixIcon: _userSearch.isNotEmpty
-                            ? IconButton(
-                                icon: Icon(
-                                  Icons.close_rounded,
-                                  color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5),
-                                  size: 18,
-                                ),
-                                onPressed: () {
-                                  HapticService.light();
-                                  _searchCtrl.clear();
-                                  setState(() => _userSearch = '');
-                                },
-                              )
-                            : null,
-                        filled: true,
-                        fillColor: isDark ? AppColors.forest800.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.5),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide(
-                            color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.forest900.withValues(alpha: 0.05),
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide(
-                            color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.forest900.withValues(alpha: 0.05),
-                          ),
-                        ),
-                      ),
-                      style: TextStyle(color: isDark ? Colors.white : AppColors.forest900),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -553,9 +513,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               Row(
                 children: [
                   _detailStat(
-                    'CONTRIBUTIONS',
-                    user.totalContributions.toString(),
-                    Icons.edit_rounded,
+                    'STREAK',
+                    '${user.streak} DAYS',
+                    Icons.local_fire_department_rounded,
                     isDark,
                   ),
                   const SizedBox(width: 12),

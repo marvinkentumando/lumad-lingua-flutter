@@ -1,6 +1,6 @@
 // No imports needed currently
 
-enum QuestType { xp, pronunciation, lesson, flashcard }
+enum QuestType { xp, pronunciation, lesson, flashcard, duel }
 
 class Quest {
   final String id;

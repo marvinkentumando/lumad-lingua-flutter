@@ -15,7 +15,8 @@ import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../services/haptic_service.dart';
 import 'package:go_router/go_router.dart';
-import '../widgets/brand_background.dart';
+import '../widgets/brand_search_bar.dart';
+import '../widgets/brand_background.dart' as bg;
 
 class LeaderboardEntry {
   final String name;
@@ -132,7 +133,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: BrandBackground(
+      body: bg.BrandBackground(
         child: Stack(
         children: [
 
@@ -337,34 +338,10 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
         const SizedBox(width: 12),
         // Search
         Expanded(
-          child: TextField(
+          child: BrandSearchBar(
+            hintText: 'Search...',
             onChanged: (v) => setState(() => _searchQuery = v),
-            decoration: InputDecoration(
-              hintText: 'Search...',
-              hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
-              prefixIcon: const Icon(
-                Icons.search_rounded,
-                color: Colors.white24,
-                size: 20,
-              ),
-              filled: true,
-              fillColor: AppColors.forest800,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.05),
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.05),
-                ),
-              ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 0),
-              isDense: true,
-            ),
-            style: const TextStyle(color: Colors.white, fontSize: 13),
+            isMinimal: true,
           ),
         ),
       ],
@@ -1094,6 +1071,3 @@ class _BouncyPressableState extends State<BouncyPressable> {
     );
   }
 }
-
-
-

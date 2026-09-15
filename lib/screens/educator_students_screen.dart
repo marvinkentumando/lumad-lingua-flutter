@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
-import '../models/educator_models.dart';
 import '../widgets/branded_empty_state.dart';
+import '../models/educator_models.dart';
+import '../widgets/brand_search_bar.dart';
 import '../providers/educator_provider.dart';
 import '../services/haptic_service.dart';
-import '../services/firebase_service.dart';
 
 enum StudentSort { name, progress, level }
 
@@ -125,50 +125,10 @@ class _EducatorStudentsScreenState
                 // Search bar
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.05)
-                            : AppColors.creamBorder,
-                      ),
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: (val) => setState(() => _searchQuery = val),
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                      decoration: InputDecoration(
-                        icon: const Icon(
-                          Icons.search_rounded,
-                          color: AppColors.gold500,
-                          size: 20,
-                        ),
-                        hintText: 'Search students...',
-                        hintStyle: AppTypography.body.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                          fontSize: 14,
-                        ),
-                        border: InputBorder.none,
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: Icon(
-                                  Icons.close_rounded,
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                                  size: 18,
-                                ),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() => _searchQuery = '');
-                                },
-                              )
-                            : null,
-                      ),
-                    ),
+                  child: BrandSearchBar(
+                    controller: _searchController,
+                    hintText: 'Search students...',
+                    onChanged: (val) => setState(() => _searchQuery = val),
                   ),
                 ),
                 const SizedBox(height: 16),

@@ -78,6 +78,8 @@ class QuestNotifier extends Notifier<void> {
 
     final now = DateTime.now();
     final todayDate = DateTime(now.year, now.month, now.day);
+    final dateStr =
+        "${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}";
 
     // Check if quests were already generated today to save on Firestore writes
     final lastGen = (profile?['lastQuestGeneration'] as Timestamp?)?.toDate();
@@ -88,12 +90,11 @@ class QuestNotifier extends Notifier<void> {
       }
     }
 
-    final dateStr =
-        "${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}";
     final types = [
       QuestType.flashcard,
       QuestType.pronunciation,
-      QuestType.lesson
+      QuestType.lesson,
+      QuestType.duel,
     ];
     final todayIds = types.map((t) => 'dyn_${t.name}_$dateStr').toSet();
 
@@ -158,7 +159,24 @@ class QuestNotifier extends Notifier<void> {
             isDynamic: true,
           );
           break;
-        default:
+        case QuestType.duel:
+          final varieties = [
+            {'title': 'Warrior Challenge', 'desc': 'Win 1 Lingua Duel against a peer.', 'target': 1, 'reward': 50},
+            {'title': 'Tribe Protector', 'desc': 'Participate in 3 duels.', 'target': 3, 'reward': 75},
+            {'title': 'Swift Strike', 'desc': 'Win a duel with more than 50% HP.', 'target': 1, 'reward': 60},
+          ];
+          final v = varieties[dayOffset % varieties.length];
+          quest = Quest(
+            id: questId,
+            title: v['title'] as String,
+            description: v['desc'] as String,
+            target: v['target'] as int,
+            reward: v['reward'] as int,
+            type: QuestType.duel,
+            isDynamic: true,
+          );
+          break;
+        case QuestType.xp:
           break;
       }
 

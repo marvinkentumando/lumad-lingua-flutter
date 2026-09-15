@@ -17,36 +17,37 @@ class SentimentData {
 }
 
 class SentimentService {
-  // Mock data for the transition phase
+  // Internal dataset for embedded analysis
   Future<List<SentimentData>> getRecentSentiment() async {
-    await Future.delayed(const Duration(seconds: 1));
+    // Simulate internal processing delay
+    await Future.delayed(const Duration(milliseconds: 800));
     return [
       SentimentData(
         postText: "Madyaw na buntag kanatun tanan! Proud Mansaka here.",
-        sourceUrl: "https://facebook.com/posts/1",
+        sourceUrl: "local://archive/1",
         sentimentScore: 0.85,
-        timestamp: DateTime.now().subtract(const Duration(hours: 2)),
+        timestamp: DateTime.now().subtract(const Duration(days: 2)),
         detectedKeywords: ["Madyaw", "Proud", "Mansaka"],
       ),
       SentimentData(
         postText: "Looking for Mansaka dictionary. Mawara na ang kabilin naton.",
-        sourceUrl: "https://facebook.com/posts/2",
+        sourceUrl: "local://archive/2",
         sentimentScore: -0.35,
-        timestamp: DateTime.now().subtract(const Duration(hours: 5)),
+        timestamp: DateTime.now().subtract(const Duration(days: 5)),
         detectedKeywords: ["Mawara", "Kabilin"],
       ),
       SentimentData(
         postText: "Salamat sa pagtudlo sa mga bata. Very helpful approach.",
-        sourceUrl: "https://facebook.com/posts/3",
+        sourceUrl: "local://archive/3",
         sentimentScore: 0.9,
-        timestamp: DateTime.now().subtract(const Duration(hours: 12)),
+        timestamp: DateTime.now().subtract(const Duration(days: 12)),
         detectedKeywords: ["Salamat", "Pagtudlo", "Bata"],
       ),
       SentimentData(
         postText: "I hope we can use more Mansaka in schools. Kaulaw na dili kabalo.",
-        sourceUrl: "https://facebook.com/posts/4",
+        sourceUrl: "local://archive/4",
         sentimentScore: 0.1,
-        timestamp: DateTime.now().subtract(const Duration(days: 1)),
+        timestamp: DateTime.now().subtract(const Duration(days: 15)),
         detectedKeywords: ["Kaulaw", "Schools"],
       ),
     ];

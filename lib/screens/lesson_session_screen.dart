@@ -507,19 +507,20 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
   }
 
   void _showQuitConfirmationDialog() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.forest900,
+        backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text(
+        title: Text(
           '\ud83c\udfc3 Leave Session?',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: isDark ? Colors.white : AppColors.forest900, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
-        content: const Text(
+        content: Text(
           'Your progress in this session will be lost. Are you sure you want to quit?',
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7)),
           textAlign: TextAlign.center,
         ),
         actions: [
@@ -579,31 +580,32 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     final studentState = ref.read(studentProvider);
     const crystalCost = 50;
     final canAfford = studentState.mistCrystals >= crystalCost;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.forest900,
+        backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text(
+        title: Text(
           "Out of Hearts! \ud83d\udc94",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: isDark ? Colors.white : AppColors.forest900, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               "Your journey has grown difficult. Would you like to restore your strength?",
-              style: TextStyle(color: Colors.white70),
+              style: TextStyle(color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7)),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
+                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: const Row(
@@ -641,9 +643,9 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
               Navigator.pop(ctx);
               context.pop(); 
             },
-            child: const Text(
+            child: Text(
               "End Session",
-              style: TextStyle(color: Colors.white54),
+              style: TextStyle(color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5)),
             ),
           ),
           ElevatedButton(

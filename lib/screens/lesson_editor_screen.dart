@@ -855,7 +855,9 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         backgroundColor: isDark ? AppColors.forestDarkCard : Colors.white,
         title: Text(
           'Add Activity',
-          style: AppTypography.h3.copyWith(color: Colors.white),
+          style: AppTypography.h3.copyWith(
+            color: isDark ? Colors.white : AppColors.creamText,
+          ),
         ),
         content: SizedBox(
           width: double.maxFinite,
@@ -939,7 +941,9 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
       leading: Icon(icon, color: AppColors.gold500),
       title: Text(
         title,
-        style: AppTypography.body.copyWith(color: Colors.white),
+        style: AppTypography.body.copyWith(
+          color: isDark ? Colors.white : AppColors.creamText,
+        ),
       ),
       onTap: () {
         Navigator.of(dialogContext).pop();
@@ -972,12 +976,16 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
             const SizedBox(height: 24),
             Text(
               'Select a step to edit',
-              style: AppTypography.h3.copyWith(color: Colors.white24),
+              style: AppTypography.h3.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'Your lesson content will appear here.',
-              style: AppTypography.body.copyWith(color: Colors.white10),
+              style: AppTypography.body.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+              ),
             ),
           ],
         ),
@@ -994,14 +1002,16 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                 children: [
                   Text(
                     _selectedStep!.title,
-                    style: AppTypography.h2.copyWith(color: Colors.white),
+                    style: AppTypography.h2.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Tooltip(
                     message: _getTooltipMessage(_selectedStep!.type),
-                    child: const Icon(
+                    child: Icon(
                       Icons.info_outline_rounded,
-                      color: Colors.white54,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                       size: 18,
                     ),
                   ),
@@ -1107,7 +1117,9 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
             const SizedBox(height: 4),
             Text(
               e.toString(),
-              style: AppTypography.label.copyWith(color: Colors.white70),
+              style: AppTypography.label.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -1155,7 +1167,9 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         const SizedBox(height: 16),
         Text(
           'Words to Find',
-          style: AppTypography.label.copyWith(color: Colors.white70),
+          style: AppTypography.label.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+          ),
         ),
         const SizedBox(height: 8),
         ...List.generate(options.length, (i) {
@@ -1174,7 +1188,10 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.remove_circle_outline, color: Colors.white24),
+                  icon: Icon(
+                    Icons.remove_circle_outline,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                  ),
                   onPressed: () {
                     setState(() {
                       options.removeAt(i);
@@ -1213,7 +1230,9 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         const SizedBox(height: 16),
         Text(
           'Correct Answer',
-          style: AppTypography.label.copyWith(color: Colors.white70),
+          style: AppTypography.label.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+          ),
         ),
         const SizedBox(height: 8),
         Row(
@@ -1277,7 +1296,9 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         const SizedBox(height: 16),
         Text(
           'Answer Keys (Words that go in the blanks)',
-          style: AppTypography.label.copyWith(color: Colors.white70),
+          style: AppTypography.label.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+          ),
         ),
         const SizedBox(height: 8),
         ...List.generate(parts.length, (i) {
@@ -1296,7 +1317,10 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.remove_circle_outline, color: Colors.white24),
+                  icon: Icon(
+                    Icons.remove_circle_outline,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                  ),
                   onPressed: () {
                     setState(() {
                       parts.removeAt(i);

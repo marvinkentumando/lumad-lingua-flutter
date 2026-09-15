@@ -321,6 +321,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       case QuestType.flashcard:
         icon = Icons.style_rounded;
         break;
+      case QuestType.duel:
+        icon = Icons.flash_on_rounded;
+        break;
     }
 
     return GestureDetector(
@@ -732,6 +735,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildLeaderboardHeader(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -747,7 +751,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Text(
               'The season\'s most active botanical archivists.',
               style: AppTypography.body.copyWith(
-                color: Colors.white24,
+                color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.5),
                 fontSize: 12,
               ),
             ),
@@ -917,7 +921,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               child: Text(
                 '$rank',
                 style: AppTypography.mono.copyWith(
-                  color: isDark ? Colors.white24 : AppColors.creamText3,
+                  color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -929,7 +933,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               height: 48,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                color: isDark ? Colors.white10 : Colors.black12,
+                color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
                 image: avatarUrl != null
                     ? DecorationImage(
                         image: avatarUrl.startsWith('http')
@@ -943,7 +947,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ? Center(
                       child: Text(
                         name[0].toUpperCase(),
-                        style: AppTypography.h3.copyWith(color: Colors.white24),
+                        style: AppTypography.h3.copyWith(
+                          color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.2),
+                        ),
                       ),
                     )
                   : null,
@@ -986,7 +992,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 Text(
                   'ARCHIVE XP',
                   style: AppTypography.label.copyWith(
-                    color: isDark ? Colors.white10 : Colors.black12,
+                    color: isDark ? Colors.white10 : AppColors.forest900.withValues(alpha: 0.1),
                     fontSize: 8,
                   ),
                 ),
