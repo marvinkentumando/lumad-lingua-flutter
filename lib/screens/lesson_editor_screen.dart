@@ -49,6 +49,8 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
   String? _currentLessonId;
   final List<LessonStep> _steps = [];
   LessonStep? _selectedStep;
+  bool _isPreviewSessionActive = false;
+  int _previewActivityIndex = 0;
   bool _isLoading = false;
 
   // Mobile Tabs
@@ -1345,13 +1347,76 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
   }
 
   // --- Pane 3: Live Preview ---
+  List<LessonStep> get _previewActivities =>
+      _steps.where((step) => step.type != ActivityType.configuration).toList();
+
+  void _startPreviewSession() {
+    final activities = _previewActivities;
+    if (activities.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Add an activity before starting the lesson preview.'),
+          backgroundColor: AppColors.terracotta,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isPreviewSessionActive = true;
+      _previewActivityIndex = 0;
+      _selectedStep = activities.first;
+    });
+  }
+
+  void _showPreviewActivity(int index) {
+    final activities = _previewActivities;
+    if (index < 0 || index >= activities.length) return;
+
+    setState(() {
+      _previewActivityIndex = index;
+      _selectedStep = activities[index];
+    });
+  }
+
+  void _exitPreviewSession() {
+    setState(() {
+      _isPreviewSessionActive = false;
+      _previewActivityIndex = 0;
+      _selectedStep = _steps.first;
+    });
+  }
+
   Widget _buildLivePreview() {
+    final activities = _previewActivities;
+    final previewIndex = activities.isEmpty
+        ? 0
+        : _previewActivityIndex.clamp(0, activities.length - 1) as int;
+    final previewStep = _isPreviewSessionActive && activities.isNotEmpty
+        ? activities[previewIndex]
+        : _selectedStep;
+
     return LessonPreviewPanel(
-      selectedStep: _selectedStep,
+      selectedStep: previewStep,
       title: _titleController.text,
       description: _descController.text,
       difficulty: _difficulty,
       dialect: _dialect,
+      onStart: _startPreviewSession,
+      onExitPreview: _exitPreviewSession,
+      onPreviousActivity: _isPreviewSessionActive && previewIndex > 0
+          ? () => _showPreviewActivity(previewIndex - 1)
+          : null,
+      onNextActivity: _isPreviewSessionActive &&
+              previewIndex < activities.length - 1
+          ? () => _showPreviewActivity(previewIndex + 1)
+          : null,
+      isPreviewSessionActive: _isPreviewSessionActive,
+      currentActivityNumber:
+          _isPreviewSessionActive && activities.isNotEmpty
+              ? previewIndex + 1
+              : 0,
+      totalActivities: activities.length,
     );
   }
 
