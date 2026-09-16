@@ -3,14 +3,67 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:math' as math;
+import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   Stream<User?> get authStateChanges => _auth.userChanges();
 
   User? get currentUser => _auth.currentUser;
+
+  Future<UserCredential?> signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null;
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential = await _auth.signInWithCredential(credential);
+      final user = userCredential.user;
+
+      if (user != null) {
+        // Check if user profile already exists
+        final doc = await firestore.collection('users').doc(user.uid).get();
+        
+        if (!doc.exists) {
+          // New user from Google, create profile
+          await firestore.collection('users').doc(user.uid).set({
+            'username': user.displayName ?? 'Tribe Member',
+            'email': user.email,
+            'location': 'Unknown',
+            'tribe': 'General Learner',
+            'avatar': user.photoURL ?? '👤',
+            'nativeLanguage': 'English',
+            'learningGoal': 'Culture',
+            'role': 'learner',
+            'xp': 0,
+            'mistCrystals': 0,
+            'streak': 0,
+            'wordCount': 0,
+            'createdAt': FieldValue.serverTimestamp(),
+            'lastLogin': FieldValue.serverTimestamp(),
+          });
+        } else {
+          await firestore
+              .collection('users')
+              .doc(user.uid)
+              .update({'lastLogin': FieldValue.serverTimestamp()});
+        }
+      }
+
+      return userCredential;
+    } catch (e) {
+      if (kDebugMode) debugPrint("Google Sign-In Error: $e");
+      throw Exception("Google sign-in failed: ${e.toString()}");
+    }
+  }
 
   Future<UserCredential?> signInWithEmail(String email, String password) async {
     try {

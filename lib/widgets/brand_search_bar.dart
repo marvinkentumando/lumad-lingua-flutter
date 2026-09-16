@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_typography.dart';
-import 'glass_box.dart';
 
 class BrandSearchBar extends StatefulWidget {
   final String hintText;

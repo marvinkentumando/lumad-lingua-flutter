@@ -139,6 +139,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   ];
 
   bool _acceptedTerms = false;
+  bool _isLoading = false;
   String? _errorMessage;
   Map<String, dynamic>? _detectedInvite;
 
@@ -245,6 +246,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     }
 
     setState(() {
+      _isLoading = true;
       _errorMessage = null;
     });
 
@@ -264,11 +266,36 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             villageCode: _villageCodeController.text.trim(),
           );
       if (mounted) {
+        setState(() => _isLoading = false);
         context.go('/');
       }
     } catch (e) {
       if (mounted) {
         setState(() {
+          _isLoading = false;
+          _errorMessage = e.toString().replaceAll('Exception: ', '');
+        });
+      }
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final credential = await ref.read(authServiceProvider).signInWithGoogle();
+      if (credential != null && mounted) {
+        context.go('/');
+      } else {
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
           _errorMessage = e.toString().replaceAll('Exception: ', '');
         });
       }
@@ -517,6 +544,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           keyboardType: TextInputType.emailAddress,
           showValidation: true,
           isValid: _emailController.text.contains('@'),
+          errorText: _emailController.text.isNotEmpty && !_emailController.text.contains('@')
+              ? "Sacred name (email) must be valid"
+              : null,
           onChanged: (_) => setState(() {}),
         ),
         if (_detectedInvite != null) _buildInviteBanner(),
@@ -528,6 +558,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           isPassword: true,
           showValidation: true,
           isValid: _passwordController.text.length >= 6,
+          errorText: _passwordController.text.isNotEmpty && _passwordController.text.length < 6
+              ? "Ancient chant (password) must be at least 6 notes"
+              : null,
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 16),
@@ -540,7 +573,51 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           isValid:
               _confirmPasswordController.text.isNotEmpty &&
               _confirmPasswordController.text == _passwordController.text,
+          errorText: _confirmPasswordController.text.isNotEmpty &&
+                  _confirmPasswordController.text != _passwordController.text
+              ? "The chants do not match"
+              : null,
           onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            const Expanded(child: Divider()),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                "OR",
+                style: AppTypography.label.copyWith(color: Colors.black26, fontSize: 10),
+              ),
+            ),
+            const Expanded(child: Divider()),
+          ],
+        ),
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _isLoading ? null : _handleGoogleSignIn,
+            icon: Image.network(
+              'https://img.icons8.com/color/48/000000/google-logo.png',
+              height: 20,
+              errorBuilder: (context, error, stackTrace) =>
+                  const Icon(Icons.account_circle_outlined, color: Colors.blue),
+            ),
+            label: const Text(
+              "Quick Join with Google",
+              style: TextStyle(
+                color: Colors.black87,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              side: const BorderSide(color: Colors.black12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              backgroundColor: Colors.white,
+            ),
+          ),
         ),
       ],
     ).animate().fadeIn();
@@ -601,6 +678,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           prefixIcon: Icons.person_outline,
           showValidation: true,
           isValid: _usernameController.text.length >= 3,
+          errorText: _usernameController.text.isNotEmpty && _usernameController.text.length < 3
+              ? "Tribe name must be at least 3 characters"
+              : null,
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 16),
@@ -898,9 +978,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           ),
         Expanded(
           child: BrandButton(
-            text: !isFormLastStep ? "Continue" : "Next: The Ritual",
+            text: _isLoading
+                ? "Waiting..."
+                : (!isFormLastStep ? "Continue" : "Next: The Ritual"),
             type: BrandButtonType.primary,
-            onTap: _nextStep,
+            onTap: _isLoading ? null : _nextStep,
           ),
         ),
       ],

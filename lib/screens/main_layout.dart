@@ -80,41 +80,44 @@ class MainLayout extends ConsumerWidget {
                 borderRadius: 20,
                 blur: 20,
                 opacity: 0.12,
-                child: BottomNavigationBar(
-                  backgroundColor: Colors.transparent,
-                  elevation: 0,
-                  type: BottomNavigationBarType.fixed,
-                  showSelectedLabels: true,
-                  showUnselectedLabels: true,
-                  selectedFontSize: 8,
-                  unselectedFontSize: 8,
-                  currentIndex: currentIndex,
-                  selectedItemColor: isDark ? culturalTheme.accentColor : AppColors.forest700,
-                  unselectedItemColor: isDark
-                      ? Colors.white.withValues(alpha: 0.3)
-                      : AppColors.forest900.withValues(alpha: 0.4),
-                  selectedLabelStyle: AppTypography.label.copyWith(
-                    fontSize: 8,
-                    fontWeight: FontWeight.w900,
-                    color: isDark ? culturalTheme.accentColor : AppColors.forest700,
-                  ),
-                  unselectedLabelStyle: AppTypography.label.copyWith(
-                    fontSize: 8,
-                    fontWeight: FontWeight.bold,
-                    color: isDark
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 10.0),
+                  child: BottomNavigationBar(
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    type: BottomNavigationBarType.fixed,
+                    showSelectedLabels: true,
+                    showUnselectedLabels: true,
+                    selectedFontSize: 10,
+                    unselectedFontSize: 10,
+                    currentIndex: currentIndex,
+                    selectedItemColor: isDark ? culturalTheme.accentColor : AppColors.forest700,
+                    unselectedItemColor: isDark
                         ? Colors.white.withValues(alpha: 0.3)
                         : AppColors.forest900.withValues(alpha: 0.4),
+                    selectedLabelStyle: AppTypography.label.copyWith(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: isDark ? culturalTheme.accentColor : AppColors.forest700,
+                    ),
+                    unselectedLabelStyle: AppTypography.label.copyWith(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.3)
+                          : AppColors.forest900.withValues(alpha: 0.4),
+                    ),
+                    onTap: (index) {
+                      if (index >= 0 && index < navItems.length) {
+                        HapticService.light();
+                        context.go(navItems[index].route);
+                      }
+                    },
+                    items: navItems.map((item) {
+                      final isSelected = navItems.indexOf(item) == currentIndex;
+                      return _buildNavItem(item.icon, item.label, isSelected);
+                    }).toList(),
                   ),
-                  onTap: (index) {
-                    if (index >= 0 && index < navItems.length) {
-                      HapticService.light();
-                      context.go(navItems[index].route);
-                    }
-                  },
-                  items: navItems.map((item) {
-                    final isSelected = navItems.indexOf(item) == currentIndex;
-                    return _buildNavItem(item.icon, item.label, isSelected);
-                  }).toList(),
                 ),
               ),
             ),
@@ -127,7 +130,10 @@ class MainLayout extends ConsumerWidget {
     bool isSelected,
   ) {
     return BottomNavigationBarItem(
-      icon: Icon(icon, size: 24),
+      icon: Padding(
+        padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
+        child: Icon(icon, size: 24),
+      ),
       label: label,
     );
   }

@@ -77,9 +77,16 @@ class SentenceReorderingView extends StatelessWidget {
                   child: Chip(
                     label: Text(
                       word,
-                      style: const TextStyle(color: Colors.black),
+                      style: TextStyle(
+                        color: isDark ? Colors.white : AppColors.forest900,
+                      ),
                     ),
-                    backgroundColor: Colors.white,
+                    backgroundColor: isDark
+                        ? AppColors.forest700
+                        : AppColors.creamShadow.withValues(alpha: 0.1),
+                    side: BorderSide(
+                      color: isDark ? Colors.white12 : AppColors.creamShadow.withValues(alpha: 0.2),
+                    ),
                   ),
                 ),
               )

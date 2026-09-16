@@ -745,91 +745,257 @@ class LearnerProfileScreen extends ConsumerWidget {
     final nameController = TextEditingController(
       text: profile?['username'] ?? '',
     );
-    final locationController = TextEditingController(
-      text: profile?['location'] ?? '',
-    );
     final bioController = TextEditingController(text: profile?['bio'] ?? '');
+
+    final Map<String, List<String>> regionData = {
+      'Davao del Sur': [
+        'Davao City',
+        'Digos City',
+        'Santa Cruz',
+        'Bansalan',
+        'Hagonoy',
+        'Magsaysay',
+        'Matanao',
+        'Padada',
+        'Santa Maria',
+        'Sulop',
+      ],
+      'Davao del Norte': [
+        'Tagum City',
+        'Panabo City',
+        'Island Garden City of Samal',
+        'Carmen',
+        'Kapalong',
+        'New Corella',
+        'Santo Tomas',
+        'Talaingod',
+      ],
+      'Davao de Oro': [
+        'Nabunturan',
+        'Compostela',
+        'Laak',
+        'Mabini',
+        'Maco',
+        'Maragusan',
+        'Mawab',
+        'Monkayo',
+        'Montevista',
+        'Pantukan',
+      ],
+      'Davao Oriental': [
+        'Mati City',
+        'Baganga',
+        'Banaybanay',
+        'Boston',
+        'Caraga',
+        'Cateel',
+        'Lupon',
+        'Manay',
+        'San Isidro',
+        'Tarragona',
+      ],
+      'Davao Occidental': [
+        'Malita',
+        'Don Marcelino',
+        'Jose Abad Santos',
+        'Sarangani',
+        'Santa Maria',
+      ],
+    };
+
+    String? selectedProvince;
+    String? selectedMunicipality;
+
+    final currentLocation = profile?['location'] as String?;
+    if (currentLocation != null && currentLocation.contains(', ')) {
+      final parts = currentLocation.split(', ');
+      if (parts.length == 2) {
+        final prov = parts[1].trim();
+        final muni = parts[0].trim();
+        if (regionData.containsKey(prov)) {
+          selectedProvince = prov;
+          if (regionData[prov]!.contains(muni)) {
+            selectedMunicipality = muni;
+          }
+        }
+      }
+    }
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Container(
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: AppColors.forest900.withValues(alpha: 0.95),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
-                const SizedBox(height: 24),
-                Text(
-                  'Edit Sacred Profile',
-                  style: AppTypography.h2.copyWith(color: AppColors.gold500),
-                ),
-                const SizedBox(height: 24),
-                _buildEditField('Tribe Name', nameController),
-                const SizedBox(height: 16),
-                _buildEditField(
-                  'Location (e.g. Pantukan, DDO)',
-                  locationController,
-                  enabled: true,
-                ),
-                const SizedBox(height: 16),
-                _buildEditField(
-                  'Statement/Bio',
-                  bioController,
-                  maxLines: 3,
-                  hint: 'Teaching philosophy or heritage goals...',
-                ),
-                const SizedBox(height: 32),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('CANCEL', style: TextStyle(color: Colors.white38)),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: AppColors.forest900.withValues(alpha: 0.95),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+              border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Edit Sacred Profile',
+                    style: AppTypography.h2.copyWith(color: AppColors.gold500),
+                  ),
+                  const SizedBox(height: 24),
+                  _buildEditField('Tribe Name', nameController),
+                  const SizedBox(height: 16),
+                  
+                  // Province Dropdown
+                  _buildLabel('Province', true),
+                  _buildDropdown(
+                    context,
+                    value: selectedProvince,
+                    hint: "Select Province",
+                    items: regionData.keys.toList(),
+                    onChanged: (val) {
+                      setDialogState(() {
+                        selectedProvince = val;
+                        selectedMunicipality = null;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Municipality Dropdown
+                  _buildLabel('Municipality', true),
+                  _buildDropdown(
+                    context,
+                    value: selectedMunicipality,
+                    hint: "Select Municipality",
+                    items: selectedProvince != null ? regionData[selectedProvince]! : [],
+                    onChanged: (val) {
+                      setDialogState(() {
+                        selectedMunicipality = val;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  _buildEditField(
+                    'Statement/Bio',
+                    bioController,
+                    maxLines: 3,
+                    hint: 'Teaching philosophy or heritage goals...',
+                  ),
+                  const SizedBox(height: 32),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('CANCEL', style: TextStyle(color: Colors.white38)),
+                        ),
                       ),
-                    ),
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500),
-                        onPressed: () async {
-                          try {
-                            await ref.read(firebaseServiceProvider).updateUserProfile(userId, {
-                              'username': nameController.text,
-                              'location': locationController.text,
-                              'bio': bioController.text,
-                            });
-                            if (context.mounted) Navigator.pop(context);
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Update failed: $e')),
-                              );
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500),
+                          onPressed: () async {
+                            try {
+                              final updates = {
+                                'username': nameController.text,
+                                'bio': bioController.text,
+                              };
+                              if (selectedProvince != null && selectedMunicipality != null) {
+                                updates['location'] = "$selectedMunicipality, $selectedProvince";
+                              }
+
+                              await ref.read(firebaseServiceProvider).updateUserProfile(userId, updates);
+                              if (context.mounted) Navigator.pop(context);
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Update failed: $e')),
+                                );
+                              }
                             }
-                          }
-                        },
-                        child: const Text(
-                          'SAVE',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontWeight: FontWeight.bold,
+                          },
+                          child: const Text(
+                            'SAVE',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLabel(String text, bool enabled) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8, left: 4),
+        child: Text(
+          text.toUpperCase(),
+          style: AppTypography.label.copyWith(
+            color: enabled ? AppColors.gold500 : Colors.white24,
+            fontSize: 10,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDropdown(
+    BuildContext context, {
+    required String? value,
+    required String hint,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          hint: Text(
+            hint,
+            style: const TextStyle(
+              color: Colors.white24,
+              fontSize: 14,
+            ),
+          ),
+          dropdownColor: AppColors.forest900,
+          isExpanded: true,
+          icon: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: AppColors.gold500,
+          ),
+          items: items.map((String item) {
+            return DropdownMenuItem<String>(
+              value: item,
+              child: Text(
+                item,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                ),
+              ),
+            );
+          }).toList(),
+          onChanged: onChanged,
         ),
       ),
     );

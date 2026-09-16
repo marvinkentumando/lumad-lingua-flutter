@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../models/daily_challenge.dart';
-import '../models/lesson_task.dart';
 import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 

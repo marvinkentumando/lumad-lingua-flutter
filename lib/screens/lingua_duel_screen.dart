@@ -1,31 +1,24 @@
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_typography.dart';
-import '../widgets/brand_button.dart';
-import '../widgets/brand_background.dart';
-import '../widgets/brand_card.dart';
-import '../services/haptic_service.dart';
-
+import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:async';
-import 'dart:math' as math;
-import '../theme/app_colors.dart';
-import '../theme/app_typography.dart';
-import '../widgets/brand_button.dart';
-import '../widgets/brand_background.dart';
-import '../widgets/brand_card.dart';
-import '../widgets/crystal_burst_animation.dart';
-import '../services/haptic_service.dart';
-import '../services/firebase_service.dart';
-import '../providers/quest_provider.dart';
-import '../models/quest.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../services/auth_service.dart';
+
+import 'package:lumad_lingua/theme/app_colors.dart';
+import 'package:lumad_lingua/theme/app_typography.dart';
+import 'package:lumad_lingua/widgets/brand_button.dart';
+import 'package:lumad_lingua/widgets/brand_background.dart';
+import 'package:lumad_lingua/widgets/brand_card.dart';
+import 'package:lumad_lingua/widgets/crystal_burst_animation.dart';
+import 'package:lumad_lingua/services/haptic_service.dart';
+import 'package:lumad_lingua/services/firebase_service.dart';
+import 'package:lumad_lingua/models/quest.dart';
+import 'package:lumad_lingua/services/auth_service.dart';
+import 'package:lumad_lingua/providers/quest_provider.dart';
+import 'package:lumad_lingua/providers/student_provider.dart';
+import 'package:lumad_lingua/models/dictionary_entry.dart';
 
 enum DuelPhase { idle, searching, matchFound, battling, results }
 
@@ -43,107 +36,116 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
   int _currentQuestionIndex = 0;
   bool _isPlayerWinning = true;
   
-  // Real-time & Game Logic
-  Timer? _roundTimer;
-  int _timeLeft = 10;
-  int _comboCount = 0;
-  String? _matchId;
-  final math.Random _random = math.Random();
-  List<Map<String, dynamic>> _battleQuestions = [];
+  final String _opponentTitle = "Ancestral Guardian";
   
-  // Opponent Mock Info (In real Firebase sync, this would come from the match doc)
-  String _opponentName = "DATU MATU";
-  String _opponentAvatar = "assets/images/lumad_character (1).png";
-  String _opponentTitle = "Ancestral Guardian";
-
-  StreamSubscription? _matchSubscription;
+  String? _matchId;
   bool _isHost = false;
+  StreamSubscription? _matchSubscription;
+  Timer? _roundTimer;
+  int _secondsLeft = 15;
+  bool _showDamageEffect = false;
+  List<Map<String, dynamic>> _battleQuestions = [];
 
-  void _startSearch() async {
-    final user = ref.read(authServiceProvider).currentUser;
+  void _startMatchmaking() async {
+    setState(() => _phase = DuelPhase.searching);
+    HapticService.light();
+
+    final user = ref.read(authStateProvider).value;
     if (user == null) return;
 
-    HapticService.medium();
-    setState(() => _phase = DuelPhase.searching);
-
-    final db = FirebaseFirestore.instance;
-    
     try {
-      // 1. Look for available matches
-      final availableMatches = await db.collection('duel_matchmaking')
+      final matchQuery = await FirebaseFirestore.instance
+          .collection('duel_matchmaking')
           .where('status', isEqualTo: 'waiting')
           .limit(1)
           .get();
 
-      if (availableMatches.docs.isNotEmpty) {
-        // Join existing match
-        final matchDoc = availableMatches.docs.first;
-        _matchId = matchDoc.id;
+      if (matchQuery.docs.isNotEmpty) {
+        final doc = matchQuery.docs.first;
+        _matchId = doc.id;
         _isHost = false;
 
-        await matchDoc.reference.update({
+        await doc.reference.update({
           'opponentId': user.uid,
           'opponentName': user.displayName ?? 'Warrior',
-          'status': 'matched',
+          'status': 'active',
+          'updatedAt': FieldValue.serverTimestamp(),
         });
       } else {
-        // Create new match
         _isHost = true;
-        final newMatch = await db.collection('duel_matchmaking').add({
+        final newDoc = await FirebaseFirestore.instance.collection('duel_matchmaking').add({
           'hostId': user.uid,
           'hostName': user.displayName ?? 'Warrior',
+          'opponentId': null,
+          'opponentName': null,
           'status': 'waiting',
           'createdAt': FieldValue.serverTimestamp(),
         });
-        _matchId = newMatch.id;
+        _matchId = newDoc.id;
       }
 
-      // 2. Listen for match updates
-      _matchSubscription = db.collection('duel_matchmaking').doc(_matchId).snapshots().listen((snap) {
-        if (!snap.exists) return;
-        final data = snap.data()!;
-        
-        if (data['status'] == 'matched' && _phase == DuelPhase.searching) {
-          if (!_isHost) {
-            setState(() {
-              _opponentName = data['hostName'] ?? "Opponent";
-            });
-          } else {
-            setState(() {
-              _opponentName = data['opponentName'] ?? "Opponent";
-            });
-          }
-          
-          _generateBattleQuestions();
-          setState(() => _phase = DuelPhase.matchFound);
-          HapticService.success();
-        }
-
-        // Real-time HP sync
-        if (_phase == DuelPhase.battling) {
-          setState(() {
-            if (_isHost) {
-              _opponentHp = (data['opponentHp'] ?? 1.0).toDouble();
-            } else {
-              _opponentHp = (data['hostHp'] ?? 1.0).toDouble();
-            }
-          });
-          
-          if (_opponentHp <= 0) {
-            _roundTimer?.cancel();
-            setState(() {
-               _isPlayerWinning = true;
-               _phase = DuelPhase.results;
-            });
-            _awardVictoryRewards();
-          }
-        }
-      });
-
+      _listenToMatch();
     } catch (e) {
       debugPrint("Matchmaking error: $e");
       setState(() => _phase = DuelPhase.idle);
     }
+  }
+
+  void _listenToMatch() {
+    if (_matchId == null) return;
+
+    _matchSubscription = FirebaseFirestore.instance
+        .collection('duel_matchmaking')
+        .doc(_matchId)
+        .snapshots()
+        .listen((snapshot) {
+      if (!snapshot.exists) return;
+      final data = snapshot.data() as Map<String, dynamic>;
+
+      if (data['status'] == 'active' && _phase == DuelPhase.searching) {
+        _roundTimer?.cancel();
+        setState(() => _phase = DuelPhase.matchFound);
+        HapticService.celebration();
+
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            _generateBattleQuestions();
+            setState(() {
+              _phase = DuelPhase.battling;
+              _playerHp = 1.0;
+              _opponentHp = 1.0;
+              _currentQuestionIndex = 0;
+            });
+            _startTimer();
+          }
+        });
+      } else if (_phase == DuelPhase.battling) {
+        final hostHp = (data['hostHp'] ?? 1.0).toDouble();
+        final oppHp = (data['opponentHp'] ?? 1.0).toDouble();
+
+        setState(() {
+          _playerHp = _isHost ? hostHp : oppHp;
+          _opponentHp = _isHost ? oppHp : hostHp;
+        });
+
+        if (_playerHp <= 0) {
+          _roundTimer?.cancel();
+          setState(() {
+            _isPlayerWinning = false;
+            _phase = DuelPhase.results;
+          });
+        }
+        
+        if (_opponentHp <= 0) {
+          _roundTimer?.cancel();
+          setState(() {
+             _isPlayerWinning = true;
+             _phase = DuelPhase.results;
+          });
+          _awardVictoryRewards();
+        }
+      }
+    });
   }
 
   void _generateBattleQuestions() {
@@ -151,13 +153,11 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
     
     List<Map<String, dynamic>> questions = [];
     
-    // Mix of dictionary and lesson terms
     if (dictionary.isNotEmpty) {
       final sample = List.from(dictionary)..shuffle();
       for (int i = 0; i < 5 && i < sample.length; i++) {
-        final entry = sample[i] as DictionaryEntry;
+        final DictionaryEntry entry = sample[i];
         
-        // Generate distractors
         List<String> options = [entry.translation];
         final distractors = dictionary.where((w) => w.id != entry.id).toList()..shuffle();
         options.addAll(distractors.take(3).map((w) => w.translation));
@@ -172,94 +172,73 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
     }
 
     if (questions.isEmpty) {
-      // Fallback
       questions = [
         {
           'question': 'How do you say "Good Morning" in Mansaka?',
           'options': ['Madyaw na gabi', 'Madyaw na allaw', 'Madyaw na amase', 'Madyaw na hapon'],
           'correct': 2,
         },
+        {
+          'question': 'What is the Mansaka word for "Land"?',
+          'options': ['Duta', 'Danaw', 'Allaw', 'Gabi'],
+          'correct': 0,
+        }
       ];
     }
-    
-    setState(() {
-      _battleQuestions = questions;
-    });
+
+    _battleQuestions = questions;
   }
 
   void _startTimer() {
     _roundTimer?.cancel();
-    _timeLeft = 10;
+    setState(() => _secondsLeft = 15);
     _roundTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) return;
-      setState(() {
-        if (_timeLeft > 0) {
-          _timeLeft--;
-        } else {
-          _handleAnswer(-1); // Timeout
-        }
-      });
-    });
-  }
-
-  void _beginBattle() {
-    HapticService.heavy();
-    setState(() {
-      _phase = DuelPhase.battling;
-      _playerHp = 1.0;
-      _opponentHp = 1.0;
-      _currentQuestionIndex = 0;
-      _comboCount = 0;
-    });
-    
-    // Sync initial HP to Firestore
-    if (_matchId != null) {
-      FirebaseFirestore.instance.collection('duel_matchmaking').doc(_matchId).update({
-        _isHost ? 'hostHp' : 'opponentHp': 1.0,
-      });
-    }
-    
-    _startTimer();
-  }
-
-  bool _showDamageEffect = false;
-
-  void _handleAnswer(int index) async {
-    _roundTimer?.cancel();
-    final q = _battleQuestions[_currentQuestionIndex];
-    final isCorrect = index == q['correct'];
-    
-    setState(() {
-      if (isCorrect) {
-        HapticService.light();
-        _comboCount++;
-        _showDamageEffect = true;
-        
-        // Calculate Damage: Base 0.2 + Speed Bonus (up to 0.1) + Combo (up to 0.1)
-        double speedBonus = (_timeLeft / 10.0) * 0.1;
-        double comboBonus = math.min(_comboCount - 1, 2) * 0.05;
-        double damage = 0.2 + speedBonus + comboBonus;
-        
-        _opponentHp = (_opponentHp - damage).clamp(0.0, 1.0);
+      if (_secondsLeft > 1) {
+        setState(() => _secondsLeft--);
       } else {
-        HapticService.error();
-        _comboCount = 0;
-        _playerHp = (_playerHp - 0.2).clamp(0.0, 1.0);
+        _handleAnswer(-1);
       }
+    });
+  }
 
-      // Sync HP to Firestore
-      if (_matchId != null) {
-        FirebaseFirestore.instance.collection('duel_matchmaking').doc(_matchId).update({
-          _isHost ? 'hostHp' : 'opponentHp': _playerHp,
-        });
-      }
+  void _handleAnswer(int selectedIndex) async {
+    _roundTimer?.cancel();
+    if (_battleQuestions.isEmpty) return;
+    
+    final q = _battleQuestions[_currentQuestionIndex];
+    final isCorrect = selectedIndex == q['correct'];
 
-      if (_opponentHp <= 0 || _playerHp <= 0 || _currentQuestionIndex >= _battleQuestions.length - 1) {
-        _isPlayerWinning = _playerHp >= _opponentHp;
+    if (isCorrect) {
+      HapticService.light();
+      _opponentHp = math.max(0.0, _opponentHp - 0.25);
+    } else {
+      HapticService.error();
+      _playerHp = math.max(0.0, _playerHp - 0.25);
+      _showDamageEffect = true;
+    }
+
+    if (_matchId != null) {
+      final updateData = _isHost
+          ? {'opponentHp': _opponentHp, 'hostHp': _playerHp}
+          : {'hostHp': _opponentHp, 'opponentHp': _playerHp};
+      FirebaseFirestore.instance.collection('duel_matchmaking').doc(_matchId).update(updateData);
+    }
+
+    setState(() {});
+
+    await Future.delayed(const Duration(seconds: 1));
+
+    if (!mounted) return;
+
+    setState(() {
+      if (_playerHp <= 0 || _opponentHp <= 0 || _currentQuestionIndex >= _battleQuestions.length - 1) {
         _phase = DuelPhase.results;
+        if (_playerHp > _opponentHp) _isPlayerWinning = true;
+        if (_playerHp < _opponentHp) _isPlayerWinning = false;
+        
         if (_isPlayerWinning) _awardVictoryRewards();
         
-        // Cleanup match doc
         if (_matchId != null && _isHost) {
           FirebaseFirestore.instance.collection('duel_matchmaking').doc(_matchId).delete();
         }
@@ -305,192 +284,197 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
   Widget _buildCurrentPhase() {
     switch (_phase) {
       case DuelPhase.idle:
-        return _buildLanding();
+        return _buildIdle();
       case DuelPhase.searching:
         return _buildSearching();
       case DuelPhase.matchFound:
         return _buildMatchFound();
       case DuelPhase.battling:
-        return _buildBattleArena();
+        return _buildBattling();
       case DuelPhase.results:
         return _buildResults();
     }
   }
 
-  Widget _buildLanding() {
-    return Column(
-      children: [
-        _buildHeader('BATTLE HUB'),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
-                _buildMainGraphic(),
-                const SizedBox(height: 40),
-                Text(
-                  'Lingua Duel',
-                  style: AppTypography.displayBold.copyWith(
-                    color: AppColors.gold500,
-                    fontSize: 36,
-                  ),
+  Widget _buildIdle() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Center(
+      key: const ValueKey('idle'),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: BrandCard(
+          theme: isDark ? BrandCardTheme.cream : BrandCardTheme.gold,
+          padding: const EdgeInsets.all(32),
+          borderRadius: 24,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.fort_rounded, size: 80, color: AppColors.gold500),
+              const SizedBox(height: 24),
+              Text(
+                'LINGUA DUEL',
+                style: AppTypography.displayBold.copyWith(
+                  color: isDark ? Colors.white : AppColors.forest900,
+                  fontSize: 28,
+                  letterSpacing: 2,
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Challenge warriors to a real-time language duel.',
-                  textAlign: TextAlign.center,
-                  style: AppTypography.body.copyWith(color: Colors.white60),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Challenge ancestral guardians or live learners to ritual combat. Answer quickly to defend your energy and claim ancient crystal rewards.',
+                textAlign: TextAlign.center,
+                style: AppTypography.body.copyWith(
+                  color: isDark ? Colors.white70 : AppColors.forest700,
                 ),
-                const SizedBox(height: 48),
-                _buildDuelModeCard(
-                  title: 'Quick Match',
-                  subtitle: 'Battle a random learner',
-                  icon: Icons.bolt_rounded,
-                  onTap: _startSearch,
-                ),
-                const SizedBox(height: 16),
-                _buildDuelModeCard(
-                  title: 'Warriors Circle',
-                  subtitle: 'Challenge a friend',
-                  icon: Icons.people_rounded,
-                  onTap: () => context.push('/warriors-circle'),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 32),
+              BrandButton(
+                text: 'ENTER ARENA',
+                onTap: _startMatchmaking,
+                type: BrandButtonType.primary,
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => context.pop(),
+                child: Text('RETREAT', style: TextStyle(color: isDark ? Colors.white60 : AppColors.forest600)),
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 
   Widget _buildSearching() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const CircularProgressIndicator(color: AppColors.gold500),
-        const SizedBox(height: 32),
-        Text(
-          'Summoning Opponents...',
-          style: AppTypography.h2.copyWith(color: AppColors.gold500),
-        ).animate(onPlay: (c) => c.repeat()).shimmer(duration: 2.seconds),
-        const SizedBox(height: 16),
-        const Text(
-          'Warriors are gathering at the spirit tree...',
-          style: TextStyle(color: Colors.white38),
-        ),
-        const SizedBox(height: 48),
-        BrandButton(
-          text: 'CANCEL',
-          onTap: () => setState(() => _phase = DuelPhase.idle),
-          type: BrandButtonType.text,
-        ),
-      ],
+    return Center(
+      key: const ValueKey('searching'),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const CircularProgressIndicator(color: AppColors.gold500)
+              .animate(onPlay: (c) => c.repeat())
+              .scale(begin: const Offset(1, 1), end: const Offset(1.3, 1.3), duration: 1.seconds, curve: Curves.easeInOut),
+          const SizedBox(height: 32),
+          Text(
+            'SEEKING OPPONENT...',
+            style: AppTypography.label.copyWith(color: AppColors.gold500, letterSpacing: 4),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Stirring the spirits of the arena...',
+            style: AppTypography.body.copyWith(color: Colors.white60),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildMatchFound() {
-    final userProfile = ref.watch(userProfileProvider).value;
-    final playerName = userProfile?['username'] ?? 'YOU';
-    final playerAvatar = userProfile?['avatar'] ?? 'assets/images/lumad_character.png';
-
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'MATCH FOUND',
-          style: AppTypography.label.copyWith(color: AppColors.gold500, letterSpacing: 4),
-        ),
-        const SizedBox(height: 40),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildCombatantInfo(playerName.toUpperCase(), playerAvatar, isPlayer: true),
-            Text('VS', style: AppTypography.displayBold.copyWith(color: AppColors.gold500, fontSize: 40)),
-            _buildCombatantInfo(_opponentName.toUpperCase(), _opponentAvatar, isPlayer: false),
-          ],
-        ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
-        const SizedBox(height: 60),
-        BrandButton(
-          text: 'START DUEL',
-          onTap: _beginBattle,
-          type: BrandButtonType.primary,
-        ).animate().fadeIn(delay: 800.ms),
-      ],
+    return Center(
+      key: const ValueKey('matchFound'),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.flash_on_rounded, size: 80, color: AppColors.gold500)
+              .animate()
+              .shake(duration: 500.ms),
+          const SizedBox(height: 24),
+          Text(
+            'MATCH FOUND!',
+            style: AppTypography.displayBold.copyWith(color: Colors.white, fontSize: 32),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Prepare your mind for ritual combat.',
+            style: AppTypography.body.copyWith(color: Colors.white60),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildBattleArena() {
+  Widget _buildBattling() {
+    if (_battleQuestions.isEmpty) return const SizedBox.shrink();
     final q = _battleQuestions[_currentQuestionIndex];
-    final userProfile = ref.watch(userProfileProvider).value;
-    final playerName = userProfile?['username'] ?? 'YOU';
 
     return Stack(
+      key: const ValueKey('battling'),
       children: [
         Column(
           children: [
             Padding(
               padding: const EdgeInsets.all(20),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(child: _buildHpBar(playerName.toUpperCase(), _playerHp, isPlayer: true)),
-                  const SizedBox(width: 40),
-                  Expanded(child: _buildHpBar(_opponentName.toUpperCase(), _opponentHp, isPlayer: false)),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('YOU', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      Container(
+                        width: 120,
+                        height: 12,
+                        decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(6)),
+                        child: FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: _playerHp,
+                          child: Container(decoration: BoxDecoration(color: AppColors.semanticGreen, borderRadius: BorderRadius.circular(6))),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: const BoxDecoration(color: AppColors.gold500, shape: BoxShape.circle),
+                    child: Text(
+                      '$_secondsLeft',
+                      style: AppTypography.mono.copyWith(color: AppColors.forest900, fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(_opponentTitle.toUpperCase(), style: const TextStyle(color: AppColors.gold500, fontWeight: FontWeight.bold, fontSize: 11)),
+                      const SizedBox(height: 4),
+                      Container(
+                        width: 120,
+                        height: 12,
+                        decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(6)),
+                        child: FractionallySizedBox(
+                          alignment: Alignment.centerRight,
+                          widthFactor: _opponentHp,
+                          child: Container(decoration: BoxDecoration(color: AppColors.semanticRed, borderRadius: BorderRadius.circular(6))),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
             
-            // Timer Bar
+            const Spacer(),
+            
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(2),
-                child: LinearProgressIndicator(
-                  value: _timeLeft / 10,
-                  minHeight: 2,
-                  backgroundColor: Colors.white10,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    _timeLeft > 3 ? AppColors.gold500 : AppColors.semanticRed,
-                  ),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: BrandCard(
+                theme: BrandCardTheme.gold,
+                padding: const EdgeInsets.all(24),
+                borderRadius: 24,
+                child: Text(
+                  q['question'],
+                  textAlign: TextAlign.center,
+                  style: AppTypography.h2.copyWith(color: Colors.white),
                 ),
               ),
             ),
-
-            const Spacer(),
+            
+            const SizedBox(height: 40),
+            
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'ROUND ${_currentQuestionIndex + 1}',
-                        style: AppTypography.label.copyWith(color: AppColors.gold500),
-                      ),
-                      if (_comboCount > 1) ...[
-                        const SizedBox(width: 12),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.semanticRed,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'COMBO X$_comboCount',
-                            style: AppTypography.label.copyWith(color: Colors.white, fontSize: 10),
-                          ),
-                        ).animate().shake(),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    q['question'],
-                    textAlign: TextAlign.center,
-                    style: AppTypography.h2.copyWith(color: Colors.white),
-                  ),
-                  const SizedBox(height: 40),
                   ...List.generate(q['options'].length, (index) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
@@ -507,10 +491,10 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
             const Spacer(),
           ],
         ),
-        
-        // Damage/Effect Overlay
         if (_showDamageEffect)
-           const Center(child: CrystalBurstAnimation()),
+           Center(child: CrystalBurstAnimation(onComplete: () {
+             if (mounted) setState(() => _showDamageEffect = false);
+           })),
       ],
     );
   }
@@ -534,184 +518,19 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
         ),
         const SizedBox(height: 12),
         Text(
-          _isPlayerWinning ? 'You have defended the ancestral honor.' : 'The mountain will remember your bravery.',
-          textAlign: TextAlign.center,
-          style: AppTypography.body.copyWith(color: Colors.white60),
+          _isPlayerWinning ? '+150 XP  •  +25 Mist Crystals' : 'Try again to calibrate your knowledge sparks.',
+          style: AppTypography.bodyLarge.copyWith(color: Colors.white70),
         ),
-        if (_isPlayerWinning) ...[
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildRewardBadge('+150 XP', Icons.trending_up_rounded),
-              const SizedBox(width: 16),
-              _buildRewardBadge('+25 CRYSTALS', Icons.auto_awesome_rounded),
-            ],
-          ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.2),
-        ],
         const SizedBox(height: 48),
-        BrandButton(
-          text: 'RETURN TO HUB',
-          onTap: () => setState(() => _phase = DuelPhase.idle),
-          type: BrandButtonType.primary,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRewardBadge(String text, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.gold500.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: AppColors.gold500, size: 16),
-          const SizedBox(width: 8),
-          Text(
-            text,
-            style: AppTypography.label.copyWith(color: AppColors.gold500, fontSize: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: BrandButton(
+            text: 'LEAVE ARENA',
+            onTap: () => context.pop(),
+            type: BrandButtonType.primary,
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHpBar(String label, double val, {required bool isPlayer}) {
-    return Column(
-      crossAxisAlignment: isPlayer ? CrossAxisAlignment.start : CrossAxisAlignment.end,
-      children: [
-        Text(label, style: AppTypography.label.copyWith(fontSize: 10, color: Colors.white70, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 4),
-        Stack(
-          children: [
-            Container(
-              height: 10,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.white10,
-                borderRadius: BorderRadius.circular(5),
-              ),
-            ),
-            AnimatedContainer(
-              duration: 300.ms,
-              height: 10,
-              width: (MediaQuery.of(context).size.width * 0.35) * val,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: val > 0.3 
-                      ? (isPlayer ? [Colors.greenAccent, Colors.green] : [Colors.orangeAccent, Colors.deepOrange]) 
-                      : [AppColors.semanticRed, Colors.red.shade900],
-                ),
-                borderRadius: BorderRadius.circular(5),
-                boxShadow: [
-                  BoxShadow(
-                    color: (val > 0.3 ? (isPlayer ? Colors.green : Colors.orange) : Colors.red).withValues(alpha: 0.5),
-                    blurRadius: 8,
-                  )
-                ],
-              ),
-            ),
-          ],
         ),
       ],
     );
-  }
-
-  Widget _buildCombatantInfo(String name, String avatar, {required bool isPlayer}) {
-    return Column(
-      children: [
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            Container(
-              width: 90,
-              height: 90,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3), width: 2),
-              ),
-            ).animate(onPlay: (c) => c.repeat()).rotate(duration: 10.seconds),
-            CircleAvatar(
-              radius: 40,
-              backgroundColor: AppColors.gold500.withValues(alpha: 0.1),
-              backgroundImage: avatar.startsWith('http') 
-                  ? NetworkImage(avatar) as ImageProvider 
-                  : (avatar.contains('👤') ? null : AssetImage(avatar)),
-              child: avatar.contains('👤') ? const Text('👤', style: TextStyle(fontSize: 40)) : null,
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Text(
-          name, 
-          style: AppTypography.h3.copyWith(color: Colors.white, fontSize: 14, letterSpacing: 1.2),
-        ),
-        Text(
-          isPlayer ? (ref.watch(studentProvider).levelTitle) : _opponentTitle,
-          style: AppTypography.label.copyWith(color: AppColors.gold500, fontSize: 8),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-          ),
-          const Spacer(),
-          Text(title, style: AppTypography.label.copyWith(color: Colors.white38, letterSpacing: 2)),
-          const Spacer(),
-          const SizedBox(width: 48),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMainGraphic() {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Container(
-          width: 200,
-          height: 200,
-          decoration: BoxDecoration(
-            color: AppColors.gold500.withValues(alpha: 0.05),
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.gold500.withValues(alpha: 0.1), width: 2),
-          ),
-        ).animate(onPlay: (c) => c.repeat()).scale(duration: 2.seconds, begin: const Offset(1, 1), end: const Offset(1.1, 1.1), curve: Curves.easeInOut),
-        const Icon(Icons.flash_on_rounded, size: 80, color: AppColors.gold500),
-      ],
-    );
-  }
-
-  Widget _buildDuelModeCard({required String title, required String subtitle, required IconData icon, required VoidCallback onTap}) {
-    return BrandCard(
-      theme: BrandCardTheme.vibrant,
-      child: ListTile(
-        onTap: onTap,
-        leading: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: AppColors.gold500.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-          child: Icon(icon, color: AppColors.gold500),
-        ),
-        title: Text(title, style: AppTypography.h3.copyWith(color: Colors.white)),
-        subtitle: Text(subtitle, style: AppTypography.body.copyWith(color: Colors.white38, fontSize: 12)),
-        trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white24, size: 16),
-      ),
-    ).animate().fadeIn().slideY(begin: 0.1);
   }
 }
-
-
-

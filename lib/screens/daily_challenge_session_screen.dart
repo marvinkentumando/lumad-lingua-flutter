@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_typography.dart';
 import '../models/daily_challenge.dart';
 import '../models/lesson_task.dart';
 import '../providers/learning_provider.dart';
@@ -14,20 +13,15 @@ import '../services/task_evaluator.dart';
 import '../widgets/progress_header.dart';
 import '../widgets/feedback_panel.dart';
 import '../widgets/xp_celebration.dart';
-import '../widgets/parallax_background.dart';
+import '../widgets/brand_background.dart';
 import '../widgets/elders_wisdom_panel.dart';
 import '../widgets/lesson_session/session_widgets.dart';
-import '../widgets/lesson_session/results_view.dart';
 import '../widgets/activity_views/mcq_view.dart';
 import '../widgets/activity_views/vocabulary_view.dart';
 import '../widgets/activity_views/sentence_reordering_view.dart';
 import '../widgets/activity_views/matching_view.dart';
 import '../widgets/activity_views/pronunciation_view.dart';
-import '../widgets/activity_views/scenario_view.dart';
 import '../widgets/activity_views/listening_view.dart';
-import '../widgets/activity_views/word_hunt_view.dart';
-import '../widgets/activity_views/true_false_view.dart';
-import '../widgets/activity_views/fill_blanks_view.dart';
 import '../providers/student_provider.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:audio_waveforms/audio_waveforms.dart';
@@ -61,10 +55,8 @@ class _DailyChallengeSessionScreenState
   String _feedbackSubtitle = "";
   bool _isCelebrating = false;
   int _currentTaskXp = 0;
-  int _bonusXp = 0;
   int _combo = 0;
   int _shakeCounter = 0;
-  DateTime _taskStartTime = DateTime.now();
 
   final stt.SpeechToText _speech = stt.SpeechToText();
   String _lastWords = "";
@@ -111,7 +103,6 @@ class _DailyChallengeSessionScreenState
       _hasRecorded = false;
       _flashcardFlipped = false;
       _showFeedback = false;
-      _taskStartTime = DateTime.now();
     });
   }
 
@@ -187,8 +178,7 @@ class _DailyChallengeSessionScreenState
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
-      body: ParallaxBackground(
-        backgroundImage: 'assets/images/onboarding_bg.png',
+      body: BrandBackground(
         child: Stack(
           children: [
             Column(

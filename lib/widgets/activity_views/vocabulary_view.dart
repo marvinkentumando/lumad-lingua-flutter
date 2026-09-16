@@ -75,7 +75,7 @@ class VocabularyView extends ConsumerWidget {
               height: 300,
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppColors.forestDarkCard,
+                color: isDark ? AppColors.forestDarkCard : Colors.white.withValues(alpha: 0.8),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                   color: AppColors.gold500.withValues(alpha: 0.3),
@@ -83,7 +83,7 @@ class VocabularyView extends ConsumerWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 10,
                     offset: const Offset(0, 5),
                   ),
@@ -97,7 +97,7 @@ class VocabularyView extends ConsumerWidget {
                           Text(
                             translation.isEmpty ? 'Translation' : translation,
                             style: AppTypography.h1ExtraBold.copyWith(
-                              color: AppColors.semanticBlue,
+                              color: isDark ? AppColors.semanticBlue : AppColors.semanticBlue,
                               fontSize: 32,
                             ),
                             textAlign: TextAlign.center,
@@ -106,7 +106,7 @@ class VocabularyView extends ConsumerWidget {
                           Text(
                             definition,
                             style: AppTypography.body.copyWith(
-                              color: Colors.white70,
+                              color: isDark ? Colors.white70 : AppColors.forest700,
                             ),
                             textAlign: TextAlign.center,
                           ),

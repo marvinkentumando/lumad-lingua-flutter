@@ -29,7 +29,7 @@ class ProgressHeader extends StatelessWidget {
         right: 20,
         bottom: 16,
       ),
-      color: isDark ? AppColors.forest700 : Colors.white,
+      color: isDark ? AppColors.forest900 : AppColors.creamBg,
       child: Row(
         children: [
           GestureDetector(

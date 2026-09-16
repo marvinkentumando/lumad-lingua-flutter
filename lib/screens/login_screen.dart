@@ -61,6 +61,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _handleGoogleSignIn() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final credential = await ref.read(authServiceProvider).signInWithGoogle();
+      if (credential != null && mounted) {
+        context.go('/');
+      } else {
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = e.toString().replaceAll('Exception: ', '');
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -131,6 +154,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 labelText: "Email Address",
                                 prefixIcon: Icons.email_outlined,
                                 keyboardType: TextInputType.emailAddress,
+                                errorText: _emailController.text.isNotEmpty && !_emailController.text.contains('@')
+                                    ? "Invalid email format"
+                                    : null,
+                                onChanged: (_) => setState(() {}),
                               ),
                               const SizedBox(height: 16),
                               BrandTextField(
@@ -138,6 +165,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 labelText: "Password",
                                 prefixIcon: Icons.lock_outline,
                                 isPassword: true,
+                                errorText: _passwordController.text.isNotEmpty && _passwordController.text.length < 6
+                                    ? "Password too short"
+                                    : null,
+                                onChanged: (_) => setState(() {}),
                               ),
                               const SizedBox(height: 24),
                               BrandButton(
@@ -145,6 +176,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 type: BrandButtonType.primary,
                                 onTap: _isLoading ? null : _handleLogin,
                               ),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  const Expanded(child: Divider(color: Colors.black12)),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    child: Text(
+                                      "OR",
+                                      style: AppTypography.label.copyWith(color: Colors.black38, fontSize: 10),
+                                    ),
+                                  ),
+                                  const Expanded(child: Divider(color: Colors.black12)),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              _buildGoogleButton(),
                             ],
                           ),
                         ),
@@ -177,6 +224,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         textAlign: TextAlign.center,
       ),
     ).animate().shake();
+  }
+
+  Widget _buildGoogleButton() {
+    return OutlinedButton.icon(
+      onPressed: _isLoading ? null : _handleGoogleSignIn,
+      icon: Image.network(
+        'https://img.icons8.com/color/48/000000/google-logo.png',
+        height: 20,
+        errorBuilder: (context, error, stackTrace) => const Icon(Icons.account_circle_outlined, color: Colors.blue),
+      ),
+      label: const Text(
+        "Sign in with Google",
+        style: TextStyle(
+          color: Colors.black87,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        side: const BorderSide(color: Colors.black12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundColor: Colors.white,
+      ),
+    );
   }
 
   Widget _buildFooter(bool isDark) {

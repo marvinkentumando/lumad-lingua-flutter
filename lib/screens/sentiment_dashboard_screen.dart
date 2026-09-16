@@ -144,7 +144,6 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
   }
 
   Widget _buildVitalityGauge(double percent, double score, bool isDark) {
-    final status = score > 0.4 ? 'Vibrant' : (score > 0 ? 'Healthy' : 'At Risk');
     final statusColor = score > 0.4 ? AppColors.semanticGreen : (score > 0 ? AppColors.gold500 : AppColors.semanticRed);
 
     return Theme(
@@ -160,19 +159,23 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Current State',
-                    style: AppTypography.label.copyWith(color: Colors.white60),
-                  ),
-                  Text(
-                    status.toUpperCase(),
-                    style: AppTypography.h1ExtraBold.copyWith(
-                      color: statusColor,
-                      fontSize: 32,
+                    'VITALITY SCORE',
+                    style: AppTypography.label.copyWith(
+                      color: statusColor.withValues(alpha: 0.7),
+                      letterSpacing: 2,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
                   Text(
-                    'Analysis based on internal linguistic models and archived digital footprints.',
+                    'Overall Index',
+                    style: AppTypography.h2.copyWith(
+                      color: Colors.white,
+                      fontSize: 24,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Aggregated analysis based on internal linguistic models and archived digital footprints.',
                     style: AppTypography.body.copyWith(
                       color: Colors.white38,
                       fontSize: 12,
@@ -222,28 +225,12 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
 
   Widget _buildInsightGrid(List<SentimentData> data, bool isDark) {
     final positiveCount = data.where((d) => d.sentimentScore > 0).length;
-    return Row(
-      children: [
-        Expanded(
-          child: _buildSmallStatCard(
-            'Positive Content',
-            '${(positiveCount / data.length * 100).toInt()}%',
-            Icons.trending_up_rounded,
-            AppColors.semanticGreen,
-            isDark,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildSmallStatCard(
-            'Daily Reach',
-            '${data.length * 24} users',
-            Icons.people_alt_rounded,
-            AppColors.gold500,
-            isDark,
-          ),
-        ),
-      ],
+    return _buildSmallStatCard(
+      'Positive Content Ratio',
+      '${(positiveCount / data.length * 100).toInt()}%',
+      Icons.trending_up_rounded,
+      AppColors.semanticGreen,
+      isDark,
     );
   }
 

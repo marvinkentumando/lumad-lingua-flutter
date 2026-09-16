@@ -154,7 +154,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     StudentState student,
   ) {
     return SizedBox(
-      height: 270,
+      height: 280,
       child: BrandCard(
         theme: BrandCardTheme.gold,
         padding: EdgeInsets.zero,
@@ -163,40 +163,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           children: [
             // Text Content
             Expanded(
-              flex: 3,
+              flex: 2,
               child: Padding(
-                padding: const EdgeInsets.only(left: 28, top: 32, bottom: 16),
+                padding: const EdgeInsets.only(left: 28, top: 32, bottom: 32),
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Madyaw na\nallaw,\n$displayName!',
+                      textAlign: TextAlign.left,
                       style: AppTypography.displayBold.copyWith(
                         color: AppColors.forest900,
-                        fontSize: 34,
+                        fontSize: 32,
                         height: 1.1,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'LEVEL ${student.level} \u2022 ${student.levelTitle.toUpperCase()}',
-                      style: AppTypography.label.copyWith(
-                        color: AppColors.forest700,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 11,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: student.levelProgress,
-                        backgroundColor: AppColors.forest900.withValues(alpha: 0.1),
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          AppColors.forest700,
-                        ),
-                        minHeight: 4,
                       ),
                     ),
                   ],
@@ -205,13 +185,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
             // Character Image / Waves GIF
             Expanded(
-              flex: 2,
-              child: Align(
-                alignment: Alignment.topRight,
+              flex: 3,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.horizontal(right: Radius.circular(32)),
                 child: Image.asset(
                   'assets/images/lumad_waves.gif',
-                  height: 260,
-                  fit: BoxFit.contain,
+                  height: 280,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.center,
                 ),
               ),
             ),

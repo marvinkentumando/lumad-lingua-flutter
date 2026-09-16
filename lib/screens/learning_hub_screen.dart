@@ -11,18 +11,15 @@ import '../providers/student_provider.dart';
 import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import '../models/lesson.dart';
-import '../models/srs_models.dart';
 import '../widgets/branded_empty_state.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/brand_background.dart';
 import '../widgets/mist_crystal_store.dart';
 import '../widgets/vine_progress_bar.dart';
-import '../widgets/memory_forest.dart';
 import '../services/haptic_service.dart';
 import '../widgets/dynamic_glass_box.dart';
 
 import '../providers/daily_challenge_provider.dart';
-import '../models/daily_challenge.dart';
 
 class LearningHubScreen extends ConsumerWidget {
   const LearningHubScreen({super.key});
@@ -30,6 +27,7 @@ class LearningHubScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final studentState = ref.watch(studentProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -125,7 +123,9 @@ class LearningHubScreen extends ConsumerWidget {
                                     ),
                                     child: Icon(
                                       isCompleted ? Icons.check_circle_rounded : Icons.auto_awesome_rounded,
-                                      color: isCompleted ? AppColors.forest900 : Colors.white,
+                                      color: isCompleted 
+                                          ? AppColors.forest900 
+                                          : (isDark ? Colors.white : AppColors.gold700),
                                       size: 28,
                                     ),
                                   ),
@@ -137,7 +137,9 @@ class LearningHubScreen extends ConsumerWidget {
                                         Text(
                                           isCompleted ? 'Challenge Completed' : challenge.title,
                                           style: AppTypography.h3.copyWith(
-                                            color: isCompleted ? AppColors.forest900 : Colors.white,
+                                            color: isCompleted 
+                                                ? AppColors.forest900 
+                                                : (isDark ? Colors.white : AppColors.forest900),
                                             fontWeight: FontWeight.w900,
                                           ),
                                         ),
@@ -146,7 +148,9 @@ class LearningHubScreen extends ConsumerWidget {
                                               ? 'Your spirit grows stronger. Come back in 24h.'
                                               : challenge.description,
                                           style: AppTypography.body.copyWith(
-                                            color: isCompleted ? AppColors.forest700 : Colors.white60,
+                                            color: isCompleted 
+                                                ? AppColors.forest700 
+                                                : (isDark ? Colors.white60 : AppColors.forest700),
                                             fontSize: 12,
                                           ),
                                         ),
@@ -154,9 +158,9 @@ class LearningHubScreen extends ConsumerWidget {
                                     ),
                                   ),
                                   if (!isCompleted)
-                                    const Icon(
+                                    Icon(
                                       Icons.arrow_forward_ios_rounded,
-                                      color: Colors.white,
+                                      color: isDark ? Colors.white : AppColors.forest900,
                                       size: 16,
                                     ),
                                 ],
@@ -208,42 +212,50 @@ class LearningHubScreen extends ConsumerWidget {
                                           shape: BoxShape.circle,
                                         ),
                                         child: Icon(
-                                          dueCount > 0 ? Icons.alarm_on_rounded : Icons.auto_graph_rounded,
-                                          color: dueCount > 0 ? Colors.white : Colors.black,
-                                          size: 28,
-                                        ),
+                                        dueCount > 0 ? Icons.alarm_on_rounded : Icons.auto_graph_rounded,
+                                        color: dueCount > 0 
+                                            ? (isDark ? Colors.white : AppColors.gold700) 
+                                            : AppColors.forest900,
+                                        size: 28,
                                       ),
-                                      const SizedBox(width: 20),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              dueCount > 0 ? 'Review Ready' : 'Learning Progress',
-                                              style: AppTypography.h3.copyWith(
-                                                color: dueCount > 0 ? Colors.white : Colors.black,
-                                                fontWeight: FontWeight.w900,
-                                              ),
+                                    ),
+                                    const SizedBox(width: 20),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            dueCount > 0 ? 'Review Ready' : 'Learning Progress',
+                                            style: AppTypography.h3.copyWith(
+                                              color: dueCount > 0 
+                                                  ? (isDark ? Colors.white : AppColors.forest900) 
+                                                  : AppColors.forest900,
+                                              fontWeight: FontWeight.w900,
                                             ),
-                                            Text(
-                                              dueCount > 0
-                                                  ? '$dueCount terms need your attention'
-                                                  : 'View your mastery trends and SRS analytics',
-                                              style: AppTypography.body.copyWith(
-                                                color: dueCount > 0 ? Colors.white60 : Colors.black54,
-                                                fontSize: 12,
-                                              ),
+                                          ),
+                                          Text(
+                                            dueCount > 0
+                                                ? '$dueCount terms need your attention'
+                                                : 'View your mastery trends and SRS analytics',
+                                            style: AppTypography.body.copyWith(
+                                              color: dueCount > 0 
+                                                  ? (isDark ? Colors.white60 : AppColors.forest700) 
+                                                  : AppColors.forest700,
+                                              fontSize: 12,
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
-                                      Icon(
-                                        Icons.arrow_forward_ios_rounded,
-                                        color: dueCount > 0 ? Colors.white : Colors.black54,
-                                        size: 16,
-                                      ),
-                                    ],
-                                  ),
+                                    ),
+                                    Icon(
+                                      Icons.arrow_forward_ios_rounded,
+                                      color: dueCount > 0 
+                                          ? (isDark ? Colors.white : AppColors.forest900) 
+                                          : AppColors.forest900,
+                                      size: 16,
+                                    ),
+                                  ],
+                                ),
                                 ),
                                 if (dueCount > 0)
                                   Positioned(

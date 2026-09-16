@@ -155,7 +155,7 @@ class SessionControlBar extends StatelessWidget {
         MediaQuery.of(context).padding.bottom + 16,
       ),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.forest700 : Colors.white,
+        color: isDark ? AppColors.forest900 : AppColors.creamBg,
         border: Border(
           top: BorderSide(
             color: isDark ? Colors.white.withValues(alpha: 0.1) : AppColors.creamBorder,

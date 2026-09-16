@@ -1391,7 +1391,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
     final activities = _previewActivities;
     final previewIndex = activities.isEmpty
         ? 0
-        : _previewActivityIndex.clamp(0, activities.length - 1) as int;
+        : _previewActivityIndex.clamp(0, activities.length - 1);
     final previewStep = _isPreviewSessionActive && activities.isNotEmpty
         ? activities[previewIndex]
         : _selectedStep;

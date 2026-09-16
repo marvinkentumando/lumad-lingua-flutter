@@ -36,6 +36,7 @@ import 'package:audio_waveforms/audio_waveforms.dart';
 import '../widgets/parallax_background.dart';
 import '../widgets/elders_wisdom_panel.dart';
 import '../utils/icon_utils.dart';
+import 'package:lumad_lingua/widgets/brand_button.dart';
 import '../services/task_evaluator.dart';
 import '../widgets/lesson_session/session_widgets.dart';
 import '../widgets/lesson_session/results_view.dart';
@@ -103,6 +104,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
   LessonTask? _suddenDeathTask;
   LessonTask? _lastTask;
   bool _showLeaderboardSnippet = false;
+  List<LessonTask> _allSessionTasks = [];
 
   @override
   void initState() {
@@ -132,6 +134,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
       if (lessonId != null) {
         ref.read(currentLessonProvider(lessonId).future).then((lesson) {
           if (lesson != null && mounted) {
+            _allSessionTasks = List.from(lesson.tasks);
             ref.read(quizSessionProvider.notifier).loadTasks(lesson.tasks);
             _initTaskState();
 
@@ -560,6 +563,8 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
       _confettiController.play();
     }
 
+    final lessonId = GoRouterState.of(context).uri.queryParameters['lessonId'];
+
     showGeneralDialog(
       context: context,
       barrierDismissible: false,
@@ -571,7 +576,13 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
         totalTasks: totalTasks,
         distinctMistakeTasks: distinctMistakeTasks,
         bonusXp: bonusXp,
-        onFinish: () => context.go('/'),
+        onFinish: () {
+          if (lessonId != null) {
+            context.go('/learning/path?lessonId=$lessonId');
+          } else {
+            context.go('/learning/path');
+          }
+        },
       ),
     );
   }
@@ -714,14 +725,269 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
         ),
       );
     } else {
-      context.pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('SUDDEN DEATH FAILED... Session Ended'),
-          backgroundColor: AppColors.semanticRed,
-        ),
-      );
+      _showSuddenDeathDefeatOverlay();
     }
+  }
+
+  void _showSuddenDeathDefeatOverlay() {
+    if (!mounted) return;
+    HapticService.heavy();
+    ref.read(audioServiceProvider).playSFX('error');
+
+    final studentState = ref.read(studentProvider);
+    const crystalCost = 50;
+    final canAfford = studentState.mistCrystals >= crystalCost;
+    
+    final failureQuotes = [
+      "Even the strongest tree bends in the storm to grow stronger.",
+      "A journey of a thousand miles has many rest stops.",
+      "Wisdom is not built in a day, but in the lessons of the fall.",
+      "The spirit is resilient, like the bamboo after the wind.",
+      "To learn is to fall and rise again, each time with more grace."
+    ];
+    final randomQuote = failureQuotes[DateTime.now().millisecond % failureQuotes.length];
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withValues(alpha: 0.95),
+      transitionDuration: const Duration(milliseconds: 500),
+      pageBuilder: (dialogContext, anim1, anim2) {
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.heart_broken_rounded,
+                    color: AppColors.semanticRed,
+                    size: 100,
+                  ).animate().shake(duration: 800.ms).fadeOut(delay: 1.seconds, duration: 1.seconds).then().fadeIn(),
+                  const SizedBox(height: 32),
+                  Text(
+                    'SPIRIT EXHAUSTED',
+                    style: AppTypography.displayBold.copyWith(
+                      color: AppColors.semanticRed,
+                      fontSize: 32,
+                      letterSpacing: 2,
+                    ),
+                    textAlign: TextAlign.center,
+                  ).animate().fadeIn(delay: 300.ms),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Your strength has faded before the ritual's end. But remember what the elders say:",
+                    style: AppTypography.body.copyWith(color: Colors.white70),
+                    textAlign: TextAlign.center,
+                  ).animate().fadeIn(delay: 500.ms),
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppColors.gold500.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
+                    ),
+                    child: Text(
+                      '"$randomQuote"',
+                      style: AppTypography.body.copyWith(
+                        color: AppColors.gold500,
+                        fontStyle: FontStyle.italic,
+                        height: 1.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ).animate().scale(delay: 800.ms, curve: Curves.elasticOut),
+                  const SizedBox(height: 48),
+                  
+                  // Action Buttons
+                  if (canAfford)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final user = ref.read(authServiceProvider).currentUser;
+                            if (user != null) {
+                              await ref.read(firebaseServiceProvider).spendMistCrystals(user.uid, crystalCost);
+                              ref.read(studentProvider.notifier).refillHearts();
+                              if (mounted && dialogContext.mounted) {
+                                Navigator.of(dialogContext).pop();
+                                setState(() {
+                                  _isSuddenDeath = false;
+                                  _suddenDeathTask = null;
+                                  _showFeedback = false;
+                                  _initTaskState();
+                                });
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.auto_awesome),
+                          label: const Text('SACRED REVIVAL (50 ✨)'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.gold500,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                        ),
+                      ),
+                    ).animate().slideY(begin: 0.5, delay: 1.seconds),
+                  
+                  if (_taskMistakes.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _showMistakesReviewDialog(dialogContext),
+                          icon: const Icon(Icons.menu_book_rounded),
+                          label: const Text('REVIEW SLIPPED TERMS'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.gold500,
+                            side: const BorderSide(color: AppColors.gold500),
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                        ),
+                      ),
+                    ).animate().slideY(begin: 0.5, delay: 1.1.seconds),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.pop(dialogContext);
+                        context.pop();
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white54,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                      ),
+                      child: const Text('RETURN TO VILLAGE'),
+                    ),
+                  ).animate().slideY(begin: 0.5, delay: 1.2.seconds),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showMistakesReviewDialog(BuildContext parentContext) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final mistakeTasks = _allSessionTasks.where((t) => _taskMistakes.containsKey(t.id)).toList();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        height: MediaQuery.of(context).size.height * 0.7,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'SLIPPED TERMS',
+              style: AppTypography.label.copyWith(color: AppColors.gold500, letterSpacing: 2),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Reflect on these before returning.',
+              style: AppTypography.body.copyWith(color: isDark ? Colors.white70 : AppColors.forest700),
+            ),
+            const SizedBox(height: 24),
+            Expanded(
+              child: ListView.builder(
+                itemCount: mistakeTasks.length,
+                itemBuilder: (context, index) {
+                  final task = mistakeTasks[index];
+                  String answer = "";
+                  switch (task.type) {
+                    case TaskType.multipleChoice:
+                    case TaskType.listening:
+                    case TaskType.trueOrFalse:
+                    case TaskType.scenario:
+                      answer = task.options[task.correctAnswerIndex];
+                      break;
+                    case TaskType.sentenceReordering:
+                    case TaskType.fillInTheBlanks:
+                      answer = task.expectedSentence;
+                      break;
+                    case TaskType.matching:
+                      answer = task.pairs.map((p) => "${p['native']} \u2192 ${p['meaning']}").join(", ");
+                      break;
+                    case TaskType.vocabulary:
+                    case TaskType.pronunciation:
+                      answer = task.nativeWord;
+                      break;
+                    case TaskType.wordHunt:
+                      answer = task.options.join(", ");
+                      break;
+                  }
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          task.questionText,
+                          style: AppTypography.body.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.check_circle_outline_rounded, color: AppColors.semanticGreen, size: 16),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                answer,
+                                style: AppTypography.body.copyWith(color: AppColors.semanticGreen),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: BrandButton(
+                text: 'GOT IT',
+                onTap: () => Navigator.pop(ctx),
+                type: BrandButtonType.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showBadgeUnlockedDialog() {
