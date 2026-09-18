@@ -10,6 +10,7 @@ import '../widgets/brand_background.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/branded_empty_state.dart';
 import '../widgets/graceful_image.dart';
+import '../utils/app_localization.dart';
 
 class AchievementsScreen extends ConsumerWidget {
   const AchievementsScreen({super.key});
@@ -19,11 +20,12 @@ class AchievementsScreen extends ConsumerWidget {
     final artifactsAsync = ref.watch(userArtifactsProvider);
     final stats = ref.watch(artifactStatsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Ancestral Honors',
+          l10n.translate('ancestral_honors'),
           style: AppTypography.h3.copyWith(
             color: isDark ? Colors.white : AppColors.forest900,
           ),
@@ -53,7 +55,7 @@ class AchievementsScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Your Legacy",
+                      l10n.translate('your_legacy'),
                       style: AppTypography.display.copyWith(
                         color: isDark ? Colors.white : AppColors.forest900,
                         fontSize: 32,
@@ -61,7 +63,7 @@ class AchievementsScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      "Tracing your journey through ancestral wisdom.",
+                      l10n.translate('legacy_desc'),
                       style: AppTypography.body.copyWith(
                         color: isDark
                             ? Colors.white.withValues(alpha: 0.5)
@@ -69,14 +71,14 @@ class AchievementsScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 32),
-                    _buildStatsRow(stats, isDark),
+                    _buildStatsRow(stats, isDark, l10n),
                     const SizedBox(height: 40),
-                    _buildSectionHeader("Ancestral Vault"),
+                    _buildSectionHeader(l10n.translate('ancestral_vault')),
                     const SizedBox(height: 16),
                     if (artifacts.isEmpty)
-                      const BrandedEmptyState(
-                        title: "Vault Locked",
-                        message: "Complete lessons to unlock cultural treasures.",
+                      BrandedEmptyState(
+                        title: l10n.translate('vault_locked'),
+                        message: l10n.translate('unlock_treasures'),
                         icon: Icons.lock_outline,
                       )
                     else
@@ -125,16 +127,16 @@ class AchievementsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatsRow(Map<String, dynamic> stats, bool isDark) {
+  Widget _buildStatsRow(Map<String, dynamic> stats, bool isDark, AppLocalization l10n) {
     return Row(
       children: [
-        _buildStatItem("Collected", "${stats['earned'] ?? 0}", Icons.auto_awesome, isDark),
+        _buildStatItem(l10n.translate('collected'), "${stats['earned'] ?? 0}", Icons.auto_awesome, isDark),
         const SizedBox(width: 16),
-        _buildStatItem("Total", "${stats['total'] ?? 0}", Icons.temple_hindu, isDark),
+        _buildStatItem(l10n.translate('total_label'), "${stats['total'] ?? 0}", Icons.temple_hindu, isDark),
         const SizedBox(width: 16),
         _buildStatItem(
-          "Rank",
-          (stats['earned'] ?? 0) >= 10 ? "Elder" : ((stats['earned'] ?? 0) >= 5 ? "Warrior" : "Novice"),
+          l10n.translate('rank_label'),
+          (stats['earned'] ?? 0) >= 10 ? l10n.translate('elder') : ((stats['earned'] ?? 0) >= 5 ? "Warrior" : l10n.translate('novice')),
           Icons.workspace_premium,
           isDark,
         ),
@@ -235,4 +237,3 @@ class AchievementsScreen extends ConsumerWidget {
     }
   }
 }
-

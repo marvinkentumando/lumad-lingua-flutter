@@ -16,6 +16,7 @@ import '../services/haptic_service.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/branded_empty_state.dart';
 import '../widgets/graceful_image.dart';
+import '../utils/app_localization.dart';
 
 class GalleryScreen extends ConsumerStatefulWidget {
   const GalleryScreen({super.key});
@@ -34,11 +35,12 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
         ? ref.watch(userBadgesStreamProvider(user.uid))
         : const AsyncValue<List<GalleryBadge>>.data([]);
     final artifactsAsync = ref.watch(artifactsStreamProvider);
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: AppColors.forest800,
       appBar: AppBar(
-        title: const Text('Ancestral Gallery'),
+        title: Text(l10n.translate('ancestral_gallery')),
         elevation: 0,
         backgroundColor: Colors.transparent,
       ),
@@ -465,6 +467,3 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
     },
   ];
 }
-
-
-

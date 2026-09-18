@@ -11,6 +11,7 @@ import '../services/auth_service.dart';
 import '../services/haptic_service.dart';
 import '../services/audio_service.dart';
 import '../widgets/spirit_particle_overlay.dart';
+import '../utils/app_localization.dart';
 
 
 class AncestralVaultShopScreen extends ConsumerWidget {
@@ -21,6 +22,7 @@ class AncestralVaultShopScreen extends ConsumerWidget {
     final artifactsAsync = ref.watch(artifactsStreamProvider);
     final userProfile = ref.watch(userProfileProvider).value;
     final crystals = userProfile?['mistCrystals'] ?? 0;
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: AppColors.forest900,
@@ -28,7 +30,7 @@ class AncestralVaultShopScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          'ANCESTRAL VAULT',
+          l10n.translate('ancestral_vault_caps'),
           style: AppTypography.label.copyWith(
             color: AppColors.gold500,
             letterSpacing: 2,
@@ -43,11 +45,11 @@ class AncestralVaultShopScreen extends ConsumerWidget {
               .toList();
 
           if (shopItems.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
-                "The vault is currently sealed.\nCheck back after your next ritual.",
+                l10n.translate('vault_sealed'),
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white24),
+                style: const TextStyle(color: Colors.white24),
               ),
             );
           }
@@ -62,7 +64,7 @@ class AncestralVaultShopScreen extends ConsumerWidget {
             ),
             itemCount: shopItems.length,
             itemBuilder: (context, index) =>
-                _buildShopCard(context, ref, shopItems[index], crystals),
+                _buildShopCard(context, ref, shopItems[index], crystals, l10n),
           );
         },
         loading: () => const Center(
@@ -124,6 +126,7 @@ class AncestralVaultShopScreen extends ConsumerWidget {
     WidgetRef ref,
     Artifact artifact,
     int userCrystals,
+    AppLocalization l10n,
   ) {
     final canAfford = userCrystals >= artifact.crystalCost;
     final tierColor = _getTierColor(artifact.tier);
@@ -167,7 +170,7 @@ class AncestralVaultShopScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            artifact.passiveBonus ?? "Ancestral blessing",
+            artifact.passiveBonus ?? l10n.translate('ancestral_blessing'),
             style: AppTypography.label.copyWith(
               color: AppColors.semanticGreen,
               fontSize: 10,
@@ -197,7 +200,7 @@ class AncestralVaultShopScreen extends ConsumerWidget {
               GestureDetector(
                 onTap: () {
                     HapticService.selection();
-                    _showExchangeDialog(context, ref, artifact, canAfford);
+                    _showExchangeDialog(context, ref, artifact, canAfford, l10n);
                 },
 
                 child: Container(
@@ -210,7 +213,7 @@ class AncestralVaultShopScreen extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    "UNLOCK",
+                    l10n.translate('unlock_caps'),
                     style: AppTypography.mono.copyWith(
                       color: canAfford ? Colors.black : Colors.white24,
                       fontSize: 10,
@@ -274,11 +277,12 @@ class AncestralVaultShopScreen extends ConsumerWidget {
     WidgetRef ref,
     Artifact artifact,
     bool canAfford,
+    AppLocalization l10n,
   ) {
     if (!canAfford) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("You require more Mist Crystals for this exchange."),
+        SnackBar(
+          content: Text(l10n.translate('not_enough_crystals_exchange')),
         ),
       );
       return;
@@ -299,10 +303,10 @@ class AncestralVaultShopScreen extends ConsumerWidget {
                   children: [
                     Text(artifact.emoji, style: const TextStyle(fontSize: 64)),
                     const SizedBox(height: 16),
-                    Text("Sacred Exchange", style: AppTypography.h2),
+                    Text(l10n.translate('sacred_exchange'), style: AppTypography.h2),
                     const SizedBox(height: 8),
                     Text(
-                      "Do you wish to spend ${artifact.crystalCost} Mist Crystals to unlock the ${artifact.title}?",
+                      l10n.translate('exchange_confirm', params: {'cost': artifact.crystalCost.toString(), 'item': artifact.title}),
                       textAlign: TextAlign.center,
                       style: AppTypography.body.copyWith(
                         color: AppColors.creamText3,
@@ -313,7 +317,7 @@ class AncestralVaultShopScreen extends ConsumerWidget {
                       children: [
                         Expanded(
                           child: BrandButton(
-                            text: "Cancel",
+                            text: l10n.translate('cancel'),
                             type: BrandButtonType.secondary,
                             onTap: isPurchasing
                                 ? null
@@ -323,7 +327,7 @@ class AncestralVaultShopScreen extends ConsumerWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: BrandButton(
-                            text: isPurchasing ? "Processing..." : "Unlock",
+                            text: isPurchasing ? l10n.translate('processing') : l10n.translate('unlock_caps').toLowerCase().capitalize(),
                             type: BrandButtonType.primary,
                             onTap: isPurchasing
                                 ? null
@@ -346,7 +350,7 @@ class AncestralVaultShopScreen extends ConsumerWidget {
                                         Navigator.pop(context);
                                         HapticService.artifactUnlock();
                                         ref.read(audioServiceProvider).playSFX('milestone');
-                                        _showSuccessOverlay(context, artifact);
+                                        _showSuccessOverlay(context, artifact, l10n);
 
                                       } catch (e) {
                                         setDialogState(
@@ -374,7 +378,7 @@ class AncestralVaultShopScreen extends ConsumerWidget {
     );
   }
 
-  void _showSuccessOverlay(BuildContext context, Artifact artifact) {
+  void _showSuccessOverlay(BuildContext context, Artifact artifact, AppLocalization l10n) {
     showSpiritParticles(context, duration: const Duration(seconds: 4));
     showDialog(
 
@@ -395,7 +399,7 @@ class AncestralVaultShopScreen extends ConsumerWidget {
                     .shimmer(duration: 1.seconds),
                 const SizedBox(height: 24),
                 Text(
-                  "LEGACY UNLOCKED",
+                  l10n.translate('legacy_unlocked'),
                   style: AppTypography.display.copyWith(
                     color: AppColors.gold500,
                     fontSize: 32,
@@ -408,7 +412,7 @@ class AncestralVaultShopScreen extends ConsumerWidget {
                 ).animate().fadeIn(delay: 500.ms),
                 const SizedBox(height: 40),
                 Text(
-                  "Tap to return to the vault",
+                  l10n.translate('tap_return_vault'),
                   style: AppTypography.mono.copyWith(
                     color: Colors.white24,
                     fontSize: 12,
@@ -423,5 +427,8 @@ class AncestralVaultShopScreen extends ConsumerWidget {
   }
 }
 
-
-
+extension StringExtension on String {
+    String capitalize() {
+      return "${this[0].toUpperCase()}${substring(1)}";
+    }
+}

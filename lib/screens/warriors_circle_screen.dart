@@ -8,6 +8,7 @@ import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/brand_background.dart';
 import '../services/haptic_service.dart';
+import '../utils/app_localization.dart';
 
 import '../widgets/brand_search_bar.dart';
 
@@ -55,6 +56,7 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
   @override
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = ref.watch(localizationProvider);
     final filtered = _mockFriends.where((f) => 
       f['name'].toLowerCase().contains(_searchQuery.toLowerCase())
     ).toList();
@@ -69,7 +71,7 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Center(
                   child: Text(
-                    'WARRIORS CIRCLE',
+                    l10n.translate('warriors_circle'),
                     style: AppTypography.h3.copyWith(
                       color: isDark ? AppColors.gold500 : AppColors.gold700,
                       fontWeight: FontWeight.bold,
@@ -80,7 +82,7 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: BrandSearchBar(
-                  hintText: 'Search members...',
+                  hintText: l10n.translate('search_members'),
                   onChanged: (v) => setState(() => _searchQuery = v),
                 ),
               ),
@@ -90,7 +92,7 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
                   itemCount: filtered.length,
                   itemBuilder: (context, index) {
                     final friend = filtered[index];
-                    return _buildFriendCard(friend, index);
+                    return _buildFriendCard(friend, index, l10n);
                   },
                 ),
               ),
@@ -107,7 +109,7 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
             backgroundColor: AppColors.gold500,
             icon: const Icon(Icons.person_add_rounded, color: Colors.black),
             label: Text(
-              'INVITE KIN',
+              l10n.translate('invite_kin'),
               style: AppTypography.label.copyWith(
                 color: Colors.black,
                 fontWeight: FontWeight.bold,
@@ -121,7 +123,7 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
     );
   }
 
-  Widget _buildFriendCard(Map<String, dynamic> friend, int index) {
+  Widget _buildFriendCard(Map<String, dynamic> friend, int index, AppLocalization l10n) {
     final isOnline = friend['isOnline'] as bool;
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -170,7 +172,7 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
                   ),
                 ),
                 Text(
-                  'LEVEL ${friend['level']} WARRIOR',
+                  'LEVEL ${friend['level']} ${l10n.translate('warrior_label')}',
                   style: AppTypography.label.copyWith(
                     color: isDark ? Colors.white38 : AppColors.forest700.withValues(alpha: 0.6),
                     fontSize: 10,
@@ -182,7 +184,7 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
                     const Text('🔥', style: TextStyle(fontSize: 12)),
                     const SizedBox(width: 4),
                     Text(
-                      '${friend['streak']} DAY STREAK',
+                      '${friend['streak']} ${l10n.translate('day_streak')}',
                       style: AppTypography.mono.copyWith(
                         color: isDark ? AppColors.gold500 : AppColors.forest900,
                         fontSize: 10,
@@ -197,7 +199,7 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
           Column(
             children: [
               BrandButton(
-                text: 'DUEL',
+                text: l10n.translate('duel_btn'),
                 onTap: () {
                   HapticService.selection();
                   context.push('/lingua-duel');
@@ -215,6 +217,3 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
     ).animate().fadeIn(delay: (index * 100).ms).slideX(begin: 0.1);
   }
 }
-
-
-

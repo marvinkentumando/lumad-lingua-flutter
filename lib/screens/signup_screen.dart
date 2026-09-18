@@ -14,6 +14,7 @@ import '../widgets/parallax_background.dart';
 
 import '../widgets/assessment_overlay.dart';
 import '../models/assessment.dart';
+import '../utils/app_localization.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -27,30 +28,35 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   int _currentStep = 0;
   Map<String, dynamic> _assessmentAnswers = {};
 
-  final List<AssessmentQuestion> _preTestQuestions = [
+  List<AssessmentQuestion> _getPreTestQuestions(AppLocalization l10n) => [
     AssessmentQuestion(
       id: 'heritage',
-      text: 'What is your connection to the Lumad languages?',
+      text: l10n.translate('connection_lumad'),
       options: [
-        'I am a heritage learner (it is my family language)',
-        'I am an L2 learner (learning it as a second language)',
-        'I am a researcher or educator',
-        'I am just curious about the culture'
+        l10n.translate('heritage_learner'),
+        l10n.translate('l2_learner'),
+        l10n.translate('researcher_educator'),
+        l10n.translate('curious_culture')
       ],
     ),
     AssessmentQuestion(
       id: 'exposure',
-      text: 'How often do you hear or speak your ancestral language?',
-      options: ['Daily', 'Occasionally', 'Rarely', 'Never'],
+      text: l10n.translate('exposure_question'),
+      options: [
+        l10n.translate('daily'),
+        l10n.translate('occasionally'),
+        l10n.translate('rarely'),
+        l10n.translate('never')
+      ],
     ),
     AssessmentQuestion(
       id: 'goal',
-      text: 'What is your main goal for using this app?',
+      text: l10n.translate('goal_question'),
       options: [
-        'To become fluent',
-        'To understand my elders better',
-        'To preserve the language for the next generation',
-        'To pass an assessment'
+        l10n.translate('fluent_goal'),
+        l10n.translate('elders_goal'),
+        l10n.translate('preserve_goal'),
+        l10n.translate('assessment_goal')
       ],
     ),
   ];
@@ -305,6 +311,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -366,7 +373,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   constraints: const BoxConstraints(maxWidth: 400),
                   child: Column(
                     children: [
-                      _buildHeader(),
+                      _buildHeader(l10n),
                       const SizedBox(height: 32),
                       _buildStepIndicator(),
                       const SizedBox(height: 24),
@@ -378,9 +385,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   if (_errorMessage != null) _buildError(),
-                                  _buildStepContent(),
+                                  _buildStepContent(l10n),
                                   const SizedBox(height: 32),
-                                  _buildNavigationButtons(),
+                                  _buildNavigationButtons(l10n),
                                 ],
                               ),
                             ),
@@ -410,7 +417,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                             duration: 2.seconds,
                           ),
                       const SizedBox(height: 24),
-                      if (_currentStep == 0) _buildFooter(isDark),
+                      if (_currentStep == 0) _buildFooter(isDark, l10n),
                     ],
                   ),
                 ),
@@ -422,7 +429,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(AppLocalization l10n) {
     return Column(
       children: [
         SizedBox(
@@ -440,7 +447,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         ),
         const SizedBox(height: 16),
         Text(
-          "Step ${_currentStep + 1}: ${_getStepTitle()}",
+          "${l10n.translate('step')} ${_currentStep + 1}: ${_getStepTitle(l10n)}",
           style: AppTypography.display.copyWith(
             color: AppColors.gold500,
             fontSize: 24,
@@ -450,15 +457,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     );
   }
 
-  String _getStepTitle() {
-    if (_currentStep == _assessmentStepIndex) return "Ritual";
+  String _getStepTitle(AppLocalization l10n) {
+    if (_currentStep == _assessmentStepIndex) return l10n.translate('ritual');
     switch (_currentStep) {
       case 0:
-        return "Identity";
+        return l10n.translate('identity');
       case 1:
-        return "Roots";
+        return l10n.translate('roots');
       case 2:
-        return "Path";
+        return l10n.translate('path');
       default:
         return "";
     }
@@ -503,26 +510,26 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     ).animate().shake();
   }
 
-  Widget _buildStepContent() {
-    if (_currentStep == _assessmentStepIndex) return _buildAssessmentStep();
+  Widget _buildStepContent(AppLocalization l10n) {
+    if (_currentStep == _assessmentStepIndex) return _buildAssessmentStep(l10n);
     switch (_currentStep) {
       case 0:
-        return _buildIdentityStep();
+        return _buildIdentityStep(l10n);
       case 1:
-        return _buildRootsStep();
+        return _buildRootsStep(l10n);
       case 2:
-        return _buildPathStep();
+        return _buildPathStep(l10n);
       default:
         return const SizedBox.shrink();
     }
   }
 
-  Widget _buildAssessmentStep() {
+  Widget _buildAssessmentStep(AppLocalization l10n) {
     return Column(
       children: [
         AssessmentOverlay(
           type: AssessmentType.preTest,
-          questions: _preTestQuestions,
+          questions: _getPreTestQuestions(l10n),
           onComplete: (answers) {
             setState(() {
               _assessmentAnswers = answers;
@@ -534,39 +541,39 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     ).animate().fadeIn();
   }
 
-  Widget _buildIdentityStep() {
+  Widget _buildIdentityStep(AppLocalization l10n) {
     return Column(
       children: [
         BrandTextField(
           controller: _emailController,
-          labelText: "Email Address",
+          labelText: l10n.translate('email_address'),
           prefixIcon: Icons.email_outlined,
           keyboardType: TextInputType.emailAddress,
           showValidation: true,
           isValid: _emailController.text.contains('@'),
           errorText: _emailController.text.isNotEmpty && !_emailController.text.contains('@')
-              ? "Sacred name (email) must be valid"
+              ? l10n.translate('valid_email')
               : null,
           onChanged: (_) => setState(() {}),
         ),
-        if (_detectedInvite != null) _buildInviteBanner(),
+        if (_detectedInvite != null) _buildInviteBanner(l10n),
         const SizedBox(height: 16),
         BrandTextField(
           controller: _passwordController,
-          labelText: "Password",
+          labelText: l10n.translate('password'),
           prefixIcon: Icons.lock_outline,
           isPassword: true,
           showValidation: true,
           isValid: _passwordController.text.length >= 6,
           errorText: _passwordController.text.isNotEmpty && _passwordController.text.length < 6
-              ? "Ancient chant (password) must be at least 6 notes"
+              ? l10n.translate('password_length')
               : null,
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 16),
         BrandTextField(
           controller: _confirmPasswordController,
-          labelText: "Confirm Password",
+          labelText: l10n.translate('confirm_password'),
           prefixIcon: Icons.lock_clock_outlined,
           isPassword: true,
           showValidation: true,
@@ -575,7 +582,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               _confirmPasswordController.text == _passwordController.text,
           errorText: _confirmPasswordController.text.isNotEmpty &&
                   _confirmPasswordController.text != _passwordController.text
-              ? "The chants do not match"
+              ? l10n.translate('passwords_dont_match')
               : null,
           onChanged: (_) => setState(() {}),
         ),
@@ -586,7 +593,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                "OR",
+                l10n.translate('or'),
                 style: AppTypography.label.copyWith(color: Colors.black26, fontSize: 10),
               ),
             ),
@@ -604,9 +611,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               errorBuilder: (context, error, stackTrace) =>
                   const Icon(Icons.account_circle_outlined, color: Colors.blue),
             ),
-            label: const Text(
-              "Quick Join with Google",
-              style: TextStyle(
+            label: Text(
+              l10n.translate('quick_join_google'),
+              style: const TextStyle(
                 color: Colors.black87,
                 fontWeight: FontWeight.bold,
               ),
@@ -623,8 +630,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     ).animate().fadeIn();
   }
 
-  Widget _buildInviteBanner() {
-    final role = _detectedInvite!['role']?.toString().toUpperCase() ?? 'STAFF';
+  Widget _buildInviteBanner(AppLocalization l10n) {
+    final roleKey = _detectedInvite!['role'] == 'validator' ? 'researcher_staff' : 'tribe_member';
+    final roleLabel = l10n.translate(roleKey).toUpperCase();
     final group = _detectedInvite!['indigenousGroup'];
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -645,7 +653,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Welcome, Honored Guest!",
+                  l10n.translate('welcome_guest'),
                   style: AppTypography.label.copyWith(
                     color: AppColors.semanticBlue,
                     fontWeight: FontWeight.w900,
@@ -653,7 +661,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   ),
                 ),
                 Text(
-                  "You've been invited as a $role${group != null ? ' for $group' : ''}.",
+                  "${l10n.translate('invited_as')} $roleLabel${group != null ? ' ${l10n.translate('for')} $group' : ''}.",
                   style: AppTypography.body.copyWith(
                     color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7),
                     fontSize: 11,
@@ -667,25 +675,25 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     ).animate().fadeIn().slideY(begin: -0.1);
   }
 
-  Widget _buildRootsStep() {
+  Widget _buildRootsStep(AppLocalization l10n) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         BrandTextField(
           controller: _usernameController,
-          labelText: "Display Name",
+          labelText: l10n.translate('display_name'),
           prefixIcon: Icons.person_outline,
           showValidation: true,
           isValid: _usernameController.text.length >= 3,
           errorText: _usernameController.text.isNotEmpty && _usernameController.text.length < 3
-              ? "Tribe name must be at least 3 characters"
+              ? l10n.translate('tribe_name_length')
               : null,
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 16),
         Text(
-          "Province",
+          l10n.translate('province'),
           style: AppTypography.label.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 12,
@@ -694,7 +702,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         const SizedBox(height: 8),
         _buildDropdown(
           value: _selectedProvince,
-          hint: "Select Province",
+          hint: l10n.translate('select_province'),
           items: _regionData.keys.toList(),
           onChanged: (val) {
             setState(() {
@@ -705,7 +713,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         ),
         const SizedBox(height: 16),
         Text(
-          "Municipality",
+          l10n.translate('municipality'),
           style: AppTypography.label.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 12,
@@ -714,7 +722,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         const SizedBox(height: 8),
         _buildDropdown(
           value: _selectedMunicipality,
-          hint: "Select Municipality",
+          hint: l10n.translate('select_municipality'),
           items: _selectedProvince != null ? _regionData[_selectedProvince]! : [],
           onChanged: (val) {
             setState(() {
@@ -725,12 +733,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         const SizedBox(height: 24),
         BrandTextField(
           controller: _villageCodeController,
-          labelText: "Village Code (Optional)",
+          labelText: l10n.translate('village_code_optional'),
           prefixIcon: Icons.fort_rounded,
           onChanged: (_) => setState(() {}),
         ),
         Text(
-          "Enter a code from your educator to join their specific community village.",
+          l10n.translate('village_code_hint'),
           style: AppTypography.label.copyWith(
             color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
             fontSize: 9,
@@ -738,7 +746,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         ),
         if (_isValidatorInvite) ...[
           const SizedBox(height: 24),
-          _buildTermsCheckbox(),
+          _buildTermsCheckbox(l10n),
         ],
       ],
     ).animate().fadeIn();
@@ -793,7 +801,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     );
   }
 
-  Widget _buildPathStep() {
+  Widget _buildPathStep(AppLocalization l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -817,7 +825,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         ),
         const SizedBox(height: 24),
         Text(
-          "Learning Goal",
+          l10n.translate('learning_goal'),
           style: AppTypography.label.copyWith(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
@@ -830,7 +838,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           children: _goals.map((goal) {
             final isSelected = _learningGoal == goal;
             return ChoiceChip(
-              label: Text(goal),
+              label: Text(l10n.translate(goal.toLowerCase())),
               selected: isSelected,
               onSelected: (val) {
             HapticService.selection();
@@ -846,12 +854,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           }).toList(),
         ),
         const SizedBox(height: 24),
-        _buildTermsCheckbox(),
+        _buildTermsCheckbox(l10n),
       ],
     ).animate().fadeIn();
   }
 
-  Widget _buildTermsCheckbox() {
+  Widget _buildTermsCheckbox(AppLocalization l10n) {
     return Row(
       children: [
         SizedBox(
@@ -874,7 +882,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         Expanded(
           child: Text.rich(
             TextSpan(
-              text: "I agree to the ",
+              text: "${l10n.translate('agree_to')} ",
               style: AppTypography.body.copyWith(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -884,12 +892,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   alignment: PlaceholderAlignment.middle,
                   child: GestureDetector(
                     onTap: () => _showLegalDialog(
-                      "Terms & Conditions",
-                      "By using Lumad Lingua, you agree to respect the cultural heritage of the Mansaka and other Lumad tribes. Users are prohibited from misusing, misrepresenting, or commercializing traditional knowledge without proper tribal consent...",
+                      l10n.translate('terms_conditions'),
+                      l10n.translate('legal_mansaka'),
+                      l10n,
                     ),
-                    child: const Text(
-                      "Terms",
-                      style: TextStyle(
+                    child: Text(
+                      l10n.translate('terms'),
+                      style: const TextStyle(
                         color: AppColors.gold500,
                         fontWeight: FontWeight.bold,
                         decoration: TextDecoration.underline,
@@ -897,17 +906,18 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     ),
                   ),
                 ),
-                const TextSpan(text: " and "),
+                TextSpan(text: " ${l10n.translate('and')} "),
                 WidgetSpan(
                   alignment: PlaceholderAlignment.middle,
                   child: GestureDetector(
                     onTap: () => _showLegalDialog(
-                      "Privacy Policy",
-                      "We value your privacy. Your data (name, email, and location) is used solely to enhance your learning experience and track your progress. We do not sell your personal information to third parties...",
+                      l10n.translate('privacy_policy'),
+                      l10n.translate('legal_privacy'),
+                      l10n,
                     ),
-                    child: const Text(
-                      "Privacy Policy",
-                      style: TextStyle(
+                    child: Text(
+                      l10n.translate('privacy_policy'),
+                      style: const TextStyle(
                         color: AppColors.gold500,
                         fontWeight: FontWeight.bold,
                         decoration: TextDecoration.underline,
@@ -923,7 +933,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     );
   }
 
-  void _showLegalDialog(String title, String content) {
+  void _showLegalDialog(String title, String content, AppLocalization l10n) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
@@ -948,7 +958,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              "CLOSE",
+              l10n.translate('close'),
               style: TextStyle(color: isDark ? AppColors.gold500 : AppColors.gold700),
             ),
           ),
@@ -957,7 +967,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     );
   }
 
-  Widget _buildNavigationButtons() {
+  Widget _buildNavigationButtons(AppLocalization l10n) {
     final isFormLastStep = _isValidatorInvite ? _currentStep == 1 : _currentStep == 2;
     final isAssessmentStep = _currentStep == _assessmentStepIndex;
 
@@ -970,7 +980,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             child: Padding(
               padding: const EdgeInsets.only(right: 16),
               child: BrandButton(
-                text: "Back",
+                text: l10n.translate('back'),
                 type: BrandButtonType.secondary,
                 onTap: _prevStep,
               ),
@@ -979,8 +989,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         Expanded(
           child: BrandButton(
             text: _isLoading
-                ? "Waiting..."
-                : (!isFormLastStep ? "Continue" : "Next: The Ritual"),
+                ? l10n.translate('waiting')
+                : (!isFormLastStep ? l10n.translate('continue') : l10n.translate('next_ritual')),
             type: BrandButtonType.primary,
             onTap: _isLoading ? null : _nextStep,
           ),
@@ -989,12 +999,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     );
   }
 
-  Widget _buildFooter(bool isDark) {
+  Widget _buildFooter(bool isDark, AppLocalization l10n) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          "Already have an account?",
+          l10n.translate('already_have_account'),
           style: AppTypography.body.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
@@ -1005,7 +1015,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             context.push('/login');
           },
           child: Text(
-            "Sign In",
+            l10n.translate('sign_in'),
             style: AppTypography.body.copyWith(
               color: AppColors.gold500,
               fontWeight: FontWeight.bold,

@@ -15,6 +15,7 @@ import '../widgets/skeleton.dart';
 import '../widgets/brand_search_bar.dart';
 import '../providers/search_history_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import '../utils/app_localization.dart';
 
 class DictionaryScreen extends ConsumerStatefulWidget {
   const DictionaryScreen({super.key});
@@ -79,6 +80,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
     final srsAsync = user != null
         ? ref.watch(srsProgressStreamProvider(user.uid))
         : const AsyncValue.data(<SRSProgress>[]);
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -116,6 +118,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                             _buildSearchBar(
                               Theme.of(context).brightness == Brightness.dark,
                               savedIds.length,
+                              l10n,
                             ),
                             const SizedBox(height: 16),
                           ],
@@ -125,6 +128,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                         child: items.isEmpty
                             ? SingleChildScrollView(
                                 child: _buildNoResultsState(
+                                  l10n,
                                   isSavedTab: _selectedCategory == 'SAVED',
                                 ),
                               )
@@ -139,6 +143,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                                     entry: entry,
                                     isExpanded: _expandedWordId == entry.id,
                                     masteryLevel: srs?.mastery,
+                                    l10n: l10n,
                                     onToggleExpanded: () {
                                       setState(() {
                                         _expandedWordId = _expandedWordId == entry.id ? null : entry.id;
@@ -178,7 +183,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
     );
   }
 
-  Widget _buildNoResultsState({bool isSavedTab = false}) {
+  Widget _buildNoResultsState(AppLocalization l10n, {bool isSavedTab = false}) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 40),
@@ -191,7 +196,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              isSavedTab ? 'You haven\'t saved any words yet.' : 'No words match your search.',
+              isSavedTab ? l10n.translate('no_saved_words') : l10n.translate('no_search_results'),
               style: AppTypography.body.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
               ),
@@ -202,13 +207,13 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
     );
   }
 
-  Widget _buildSearchBar(bool isDark, int savedCount) {
+  Widget _buildSearchBar(bool isDark, int savedCount, AppLocalization l10n) {
     return Row(
       children: [
         Expanded(
           child: BrandSearchBar(
             controller: _searchController,
-            hintText: 'Search words...',
+            hintText: l10n.translate('search_dictionary'),
             isMinimal: true,
             onChanged: (val) => setState(() => _searchQuery = val),
             onSubmitted: (val) {
@@ -221,7 +226,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
         const SizedBox(width: 12),
         _buildSavedWordsButton(isDark, savedCount),
         const SizedBox(width: 12),
-        _buildSortMenu(isDark),
+        _buildSortMenu(isDark, l10n),
       ],
     );
   }
@@ -280,7 +285,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
     );
   }
 
-  Widget _buildSortMenu(bool isDark) {
+  Widget _buildSortMenu(bool isDark, AppLocalization l10n) {
     return PopupMenuButton<_DictionarySort>(
       initialValue: _selectedSort,
       onSelected: (sort) => setState(() => _selectedSort = sort),
@@ -302,10 +307,10 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       itemBuilder: (context) => [
-        _buildSortItem(_DictionarySort.alphabetical, 'A - Z', Icons.sort_by_alpha, isDark),
-        _buildSortItem(_DictionarySort.reverseAlphabetical, 'Z - A', Icons.sort_by_alpha, isDark),
-        _buildSortItem(_DictionarySort.newest, 'Newest First', Icons.new_releases_outlined, isDark),
-        _buildSortItem(_DictionarySort.oldest, 'Oldest First', Icons.history_rounded, isDark),
+        _buildSortItem(_DictionarySort.alphabetical, l10n.translate('sort_az'), Icons.sort_by_alpha, isDark),
+        _buildSortItem(_DictionarySort.reverseAlphabetical, l10n.translate('sort_za'), Icons.sort_by_alpha, isDark),
+        _buildSortItem(_DictionarySort.newest, l10n.translate('sort_newest'), Icons.new_releases_outlined, isDark),
+        _buildSortItem(_DictionarySort.oldest, l10n.translate('sort_oldest'), Icons.history_rounded, isDark),
       ],
     );
   }
@@ -339,12 +344,14 @@ class _DictionaryEntryCard extends ConsumerStatefulWidget {
   final DictionaryEntry entry;
   final bool isExpanded;
   final MasteryLevel? masteryLevel;
+  final AppLocalization l10n;
   final VoidCallback onToggleExpanded;
 
   const _DictionaryEntryCard({
     required this.entry,
     required this.isExpanded,
     this.masteryLevel,
+    required this.l10n,
     required this.onToggleExpanded,
   });
 
@@ -536,12 +543,12 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard> with
               const SizedBox(height: 24),
               Divider(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
               const SizedBox(height: 20),
-              Text('DEFINITION', style: AppTypography.label.copyWith(color: Theme.of(context).colorScheme.primary, fontSize: 10)),
+              Text(widget.l10n.translate('definition'), style: AppTypography.label.copyWith(color: Theme.of(context).colorScheme.primary, fontSize: 10)),
               const SizedBox(height: 8),
               Text(widget.entry.usageContext, style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurface, fontSize: 14, height: 1.5)),
               if (widget.entry.usageExampleNative != null && widget.entry.usageExampleNative!.isNotEmpty) ...[
                 const SizedBox(height: 24),
-                Text('USAGE EXAMPLE', style: AppTypography.label.copyWith(color: isDark ? AppColors.gold500 : AppColors.forest500, fontSize: 10)),
+                Text(widget.l10n.translate('usage_example'), style: AppTypography.label.copyWith(color: isDark ? AppColors.gold500 : AppColors.forest500, fontSize: 10)),
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.only(left: 16),
@@ -561,7 +568,7 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard> with
                 children: [
                   Expanded(
                     child: BrandButton(
-                      text: 'SHARE',
+                      text: widget.l10n.translate('share_label'),
                       icon: Icons.share_outlined,
                       type: BrandButtonType.secondary,
                       onTap: () {
@@ -573,7 +580,7 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard> with
                   const SizedBox(width: 12),
                   Expanded(
                     child: BrandButton(
-                      text: ref.watch(savedWordsProvider).contains(widget.entry.id) ? 'SAVED' : 'SAVE',
+                      text: ref.watch(savedWordsProvider).contains(widget.entry.id) ? widget.l10n.translate('saved_caps') : widget.l10n.translate('save_label'),
                       icon: ref.watch(savedWordsProvider).contains(widget.entry.id) ? Icons.bookmark : Icons.bookmark_border,
                       type: ref.watch(savedWordsProvider).contains(widget.entry.id) ? BrandButtonType.primary : BrandButtonType.secondary,
                       onTap: () => ref.read(savedWordsProvider.notifier).toggleSave(widget.entry.id, context: context),

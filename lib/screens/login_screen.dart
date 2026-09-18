@@ -10,6 +10,7 @@ import '../widgets/brand_text_field.dart';
 import '../services/auth_service.dart';
 import '../services/haptic_service.dart';
 import '../widgets/parallax_background.dart';
+import '../utils/app_localization.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -87,6 +88,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -134,7 +136,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ).animate().fadeIn().scale(),
                       const SizedBox(height: 16),
                       Text(
-                        "Lumad Lingua",
+                        l10n.translate('app_name'),
                         style: AppTypography.display.copyWith(
                           color: AppColors.gold500,
                           fontSize: 32,
@@ -151,28 +153,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               if (_errorMessage != null) _buildError(),
                               BrandTextField(
                                 controller: _emailController,
-                                labelText: "Email Address",
+                                labelText: l10n.translate('email_address'),
                                 prefixIcon: Icons.email_outlined,
                                 keyboardType: TextInputType.emailAddress,
                                 errorText: _emailController.text.isNotEmpty && !_emailController.text.contains('@')
-                                    ? "Invalid email format"
+                                    ? l10n.translate('invalid_email_format')
                                     : null,
                                 onChanged: (_) => setState(() {}),
                               ),
                               const SizedBox(height: 16),
                               BrandTextField(
                                 controller: _passwordController,
-                                labelText: "Password",
+                                labelText: l10n.translate('password'),
                                 prefixIcon: Icons.lock_outline,
                                 isPassword: true,
                                 errorText: _passwordController.text.isNotEmpty && _passwordController.text.length < 6
-                                    ? "Password too short"
+                                    ? l10n.translate('password_too_short')
                                     : null,
                                 onChanged: (_) => setState(() {}),
                               ),
                               const SizedBox(height: 24),
                               BrandButton(
-                                text: _isLoading ? "Signing In..." : "Sign In",
+                                text: _isLoading ? l10n.translate('signing_in') : l10n.translate('sign_in'),
                                 type: BrandButtonType.primary,
                                 onTap: _isLoading ? null : _handleLogin,
                               ),
@@ -183,7 +185,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   Padding(
                                     padding: const EdgeInsets.symmetric(horizontal: 16),
                                     child: Text(
-                                      "OR",
+                                      l10n.translate('or'),
                                       style: AppTypography.label.copyWith(color: Colors.black38, fontSize: 10),
                                     ),
                                   ),
@@ -191,13 +193,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ],
                               ),
                               const SizedBox(height: 16),
-                              _buildGoogleButton(),
+                              _buildGoogleButton(l10n),
                             ],
                           ),
                         ),
                       ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1),
                       const SizedBox(height: 24),
-                      _buildFooter(isDark),
+                      _buildFooter(isDark, l10n),
                     ],
                   ),
                 ),
@@ -208,6 +210,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
+
 
   Widget _buildError() {
     return Container(
@@ -226,7 +229,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     ).animate().shake();
   }
 
-  Widget _buildGoogleButton() {
+  Widget _buildGoogleButton(AppLocalization l10n) {
     return OutlinedButton.icon(
       onPressed: _isLoading ? null : _handleGoogleSignIn,
       icon: Image.network(
@@ -234,9 +237,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         height: 20,
         errorBuilder: (context, error, stackTrace) => const Icon(Icons.account_circle_outlined, color: Colors.blue),
       ),
-      label: const Text(
-        "Sign in with Google",
-        style: TextStyle(
+      label: Text(
+        l10n.translate('sign_in_google'),
+        style: const TextStyle(
           color: Colors.black87,
           fontWeight: FontWeight.bold,
         ),
@@ -250,12 +253,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Widget _buildFooter(bool isDark) {
+  Widget _buildFooter(bool isDark, AppLocalization l10n) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          "Don't have an account?",
+          l10n.translate('dont_have_account'),
           style: AppTypography.body.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
@@ -266,7 +269,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             context.push('/signup');
           },
           child: Text(
-            "Sign Up",
+            l10n.translate('sign_up'),
             style: AppTypography.body.copyWith(
               color: AppColors.gold500,
               fontWeight: FontWeight.bold,
@@ -277,6 +280,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     ).animate().fadeIn(delay: 600.ms);
   }
 }
+
 
 
 

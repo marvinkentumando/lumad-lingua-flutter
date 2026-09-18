@@ -16,7 +16,7 @@ import '../services/auth_service.dart';
 import '../services/word_of_day_service.dart';
 import '../models/dictionary_entry.dart';
 import '../widgets/branded_empty_state.dart';
-import '../widgets/skeleton.dart';
+import '../utils/app_localization.dart';
 
 class AdminOverviewScreen extends ConsumerStatefulWidget {
   const AdminOverviewScreen({super.key});
@@ -60,6 +60,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
   Widget build(BuildContext context) {
     final healthAsync = ref.watch(systemHealthProvider);
     final activityAsync = ref.watch(platformActivityProvider);
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -72,8 +73,8 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                 await Future.delayed(const Duration(seconds: 1));
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Platform stats refreshed.'),
+                  SnackBar(
+                    content: Text(l10n.translate('stats_refreshed')),
                   ),
                 );
               },
@@ -85,15 +86,15 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildHeroBanner(context),
+                    _buildHeroBanner(context, l10n),
                     const SizedBox(height: 24),
-                    _sectionLabel('VILLAGE PULSE'),
+                    _sectionLabel(l10n.translate('village_pulse')),
                     const SizedBox(height: 16),
                     const WotdWidget(),
                     const SizedBox(height: 12),
-                    _buildWotdAdminControls(),
+                    _buildWotdAdminControls(l10n),
                     const SizedBox(height: 32),
-                    _sectionLabel('PLATFORM STATS'),
+                    _sectionLabel(l10n.translate('platform_stats')),
                     const SizedBox(height: 16),
                     GridView.count(
                       crossAxisCount: 2,
@@ -106,20 +107,20 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                         ref.watch(totalUsersCountProvider).when(
                               data: (count) => _statCard(
                                 count.toString(),
-                                'Total Users',
+                                l10n.translate('total_users'),
                                 Icons.people_outline,
                                 AppColors.semanticBlue,
                               ),
                               loading: () => _statCard(
                                 '',
-                                'Total Users',
+                                l10n.translate('total_users'),
                                 Icons.people_outline,
                                 AppColors.semanticBlue,
                                 isLoading: true,
                               ),
                               error: (_, __) => _statCard(
                                 '!',
-                                'Total Users',
+                                l10n.translate('total_users'),
                                 Icons.people_outline,
                                 AppColors.semanticBlue,
                               ),
@@ -127,20 +128,20 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                         ref.watch(totalWordsCountProvider).when(
                               data: (count) => _statCard(
                                 count.toString(),
-                                'Words Added',
+                                l10n.translate('words_added'),
                                 Icons.library_books_outlined,
                                 AppColors.semanticGreen,
                               ),
                               loading: () => _statCard(
                                 '',
-                                'Words Added',
+                                l10n.translate('words_added'),
                                 Icons.library_books_outlined,
                                 AppColors.semanticGreen,
                                 isLoading: true,
                               ),
                               error: (_, __) => _statCard(
                                 '!',
-                                'Words Added',
+                                l10n.translate('words_added'),
                                 Icons.library_books_outlined,
                                 AppColors.semanticGreen,
                               ),
@@ -148,20 +149,20 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                         ref.watch(totalAudioClipsCountProvider).when(
                               data: (count) => _statCard(
                                 count.toString(),
-                                'Audio Clips',
+                                l10n.translate('audio_clips'),
                                 Icons.mic_outlined,
                                 AppColors.semanticRed,
                               ),
                               loading: () => _statCard(
                                 '',
-                                'Audio Clips',
+                                l10n.translate('audio_clips'),
                                 Icons.mic_outlined,
                                 AppColors.semanticRed,
                                 isLoading: true,
                               ),
                               error: (_, __) => _statCard(
                                 '!',
-                                'Audio Clips',
+                                l10n.translate('audio_clips'),
                                 Icons.mic_outlined,
                                 AppColors.semanticRed,
                               ),
@@ -172,8 +173,8 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                             context.push('/admin/dictionary');
                           },
                           child: _statCard(
-                            'MANAGE',
-                            'Dictionary',
+                            l10n.translate('manage_label'),
+                            l10n.translate('dictionary_label'),
                             Icons.book_rounded,
                             AppColors.gold500,
                           ),
@@ -184,8 +185,8 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                             context.push('/admin/lessons');
                           },
                           child: _statCard(
-                            'MANAGE',
-                            'Lessons',
+                            l10n.translate('manage_label'),
+                            l10n.translate('lessons_label'),
                             Icons.library_books_rounded,
                             AppColors.semanticBlue,
                           ),
@@ -199,14 +200,14 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: BrandButton(
-                        text: "ADVANCED PEDAGOGICAL ANALYTICS",
+                        text: l10n.translate('advanced_analytics'),
                         type: BrandButtonType.primary,
                         icon: Icons.analytics_rounded,
                         onTap: () => context.push('/admin/analytics'),
                       ),
                     ).animate().fadeIn(delay: 200.ms),
                     const SizedBox(height: 32),
-                    _sectionLabel('SYSTEM HEALTH'),
+                    _sectionLabel(l10n.translate('system_health_label')),
                     const SizedBox(height: 16),
                     healthAsync.when(
                       data: (health) => _buildSystemHealthGrid(health),
@@ -214,7 +215,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                       error: (_, __) => _buildSystemHealthGrid(null),
                     ),
                     const SizedBox(height: 32),
-                    _sectionLabel('USER GROWTH (last 7 days)'),
+                    _sectionLabel(l10n.translate('user_growth_label')),
                     const SizedBox(height: 16),
                     activityAsync.when(
                       data: (data) => BrandCard(
@@ -240,7 +241,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                       error: (_, __) => const Text('Error loading growth data'),
                     ),
                     const SizedBox(height: 32),
-                    _sectionLabel('GAMIFICATION & ECONOMICS'),
+                    _sectionLabel(l10n.translate('gamification_economics')),
                     const SizedBox(height: 16),
                     BrandCard(
                       theme: BrandCardTheme.gold,
@@ -260,14 +261,14 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'WARRIOR CIRCLE OPS',
+                                        l10n.translate('warrior_circle_ops'),
                                         style: AppTypography.h3.copyWith(
                                           color: AppColors.forest900,
                                           fontSize: 16,
                                         ),
                                       ),
                                       Text(
-                                        'Manage seasons, shop prices, and duel moderation.',
+                                        l10n.translate('manage_seasons_desc'),
                                         style: AppTypography.body.copyWith(
                                           color: AppColors.forest700,
                                           fontSize: 12,
@@ -282,7 +283,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                             SizedBox(
                               width: double.infinity,
                               child: BrandButton(
-                                text: 'GO TO ECONOMICS HUB',
+                                text: l10n.translate('go_economics_hub'),
                                 onTap: () =>
                                     context.push('/admin/gamification'),
                                 type: BrandButtonType.primary,
@@ -294,7 +295,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                       ),
                     ),
                     const SizedBox(height: 32),
-                    _sectionLabel('SYSTEM MAINTENANCE'),
+                    _sectionLabel(l10n.translate('system_maintenance')),
                     const SizedBox(height: 16),
                     BrandCard(
                       theme: BrandCardTheme.vibrant,
@@ -311,7 +312,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                                 ),
                                 const SizedBox(width: 12),
                                 Text(
-                                  'METADATA ENGINE',
+                                  l10n.translate('metadata_engine'),
                                   style: AppTypography.h3.copyWith(
                                     color: Colors.white,
                                     fontSize: 16,
@@ -321,7 +322,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Sync municipality data and update town-dialect mappings across the platform.',
+                              l10n.translate('sync_metadata_desc'),
                               style: AppTypography.body.copyWith(
                                 color: Colors.white60,
                                 fontSize: 12,
@@ -331,7 +332,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                             SizedBox(
                               width: double.infinity,
                               child: BrandButton(
-                                text: 'SYNC METADATA',
+                                text: l10n.translate('sync_metadata_btn'),
                                 onTap: () => _syncMetadata(),
                                 type: BrandButtonType.secondary,
                                 icon: Icons.sync_rounded,
@@ -351,7 +352,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
     );
   }
 
-  Widget _buildWotdAdminControls() {
+  Widget _buildWotdAdminControls(AppLocalization l10n) {
     final metadataAsync = ref.watch(wotdMetadataProvider);
 
     return metadataAsync.when(
@@ -361,7 +362,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
           children: [
             Expanded(
               child: BrandButton(
-                text: "FORCE ROTATION",
+                text: l10n.translate('force_rotation'),
                 type: BrandButtonType.secondary,
                 icon: Icons.refresh_rounded,
                 onTap: () => _forceWotdRotation(),
@@ -370,7 +371,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: BrandButton(
-                text: isManual ? "RESUME AUTO" : "PICK MANUALLY",
+                text: isManual ? l10n.translate('resume_auto') : l10n.translate('pick_manually'),
                 type: isManual
                     ? BrandButtonType.primary
                     : BrandButtonType.secondary,
@@ -395,11 +396,12 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
   }
 
   Future<void> _forceWotdRotation() async {
+    final l10n = ref.read(localizationProvider);
     try {
       await ref.read(wordOfDayServiceProvider).forceNewWord();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Word of the Day rotated.')),
+        SnackBar(content: Text(l10n.translate('wotd_rotated'))),
       );
     } catch (e) {
       if (!mounted) return;
@@ -452,7 +454,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
     }
   }
 
-  Widget _buildHeroBanner(BuildContext context) {
+  Widget _buildHeroBanner(BuildContext context, AppLocalization l10n) {
     final profileAsync = ref.watch(userProfileProvider);
     final profile = profileAsync.value;
     final name = profile?['username'] ?? 'Admin';
@@ -470,7 +472,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Maayong\nAdlaw,\n$name!',
+                    l10n.translate('good_morning_name', params: {'name': name}),
                     style: AppTypography.displayBold.copyWith(
                       color: Colors.black,
                       fontSize: 32,
@@ -488,7 +490,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      'SYSTEM OVERSEER  •  COMMANDER',
+                      '${l10n.translate('system_overseer')}  •  COMMANDER',
                       style: AppTypography.label.copyWith(
                         color: Colors.black,
                         fontWeight: FontWeight.w900,
@@ -984,16 +986,17 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
   }
 
   void _confirmSelection(DictionaryEntry word) {
+    final l10n = ref.read(localizationProvider);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirm WOTD'),
+        title: Text(l10n.translate('confirm_wotd')),
         content: Text(
             'Set "${word.indigenousWord}" as the Word of the Day? This will override automatic rotation.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('CANCEL'),
+            child: Text(l10n.translate('cancel').toUpperCase()),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1003,7 +1006,7 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500),
             child:
-                const Text('SET AS WOTD', style: TextStyle(color: Colors.black)),
+                Text(l10n.translate('save').toUpperCase(), style: const TextStyle(color: Colors.black)),
           ),
         ],
       ),

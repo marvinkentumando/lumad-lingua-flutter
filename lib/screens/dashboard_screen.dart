@@ -25,6 +25,7 @@ import '../models/quest.dart';
 import '../services/haptic_service.dart';
 import '../providers/learning_provider.dart';
 import '../models/app_config.dart';
+import '../utils/app_localization.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -55,15 +56,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     super.dispose();
   }
 
+  String _getGreeting(AppLocalization l10n) {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return l10n.translate('good_morning');
+    return l10n.translate('welcome_back');
+  }
+
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(userProfileProvider);
     final student = ref.watch(studentProvider);
     final questsAsync = ref.watch(dailyQuestsProvider);
     final currentRole = ref.watch(roleProvider);
+    final l10n = ref.watch(localizationProvider);
 
     final profile = profileAsync.value;
-    final displayName = profile?['username'] ?? 'Tribe Member';
+    final displayName = profile?['username'] ?? l10n.translate('tribe_member');
 
     return Stack(
       children: [
@@ -78,27 +86,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 16),
-                    _buildSyncIndicator(ref),
+                    _buildSyncIndicator(ref, l10n),
                     const SizedBox(height: 16),
-                    _buildHeroBanner(context, displayName, student),
+                    _buildHeroBanner(context, displayName, student, l10n),
                     const SizedBox(height: 24),
                     if (currentRole == UserRole.learner) ...[
-                      _buildStreakSummaryCard(context, student),
+                      _buildStreakSummaryCard(context, student, l10n),
                       const SizedBox(height: 24),
                     ],
                     const WotdWidget(),
                     const SizedBox(height: 24),
                     if (currentRole == UserRole.learner) ...[
-                      _buildDailyQuests(context, questsAsync, ref),
+                      _buildDailyQuests(context, questsAsync, ref, l10n),
                       const SizedBox(height: 24),
-                      _buildCurrentLessonCard(context),
+                      _buildCurrentLessonCard(context, l10n),
                       const SizedBox(height: 24),
-                      _buildChallengeHub(context),
+                      _buildChallengeHub(context, l10n),
                       const SizedBox(height: 24),
                     ],
-                    _buildLeaderboardHeader(context),
+                    _buildLeaderboardHeader(context, l10n),
                     const SizedBox(height: 16),
-                    _buildClimbersList(context, ref),
+                    _buildClimbersList(context, ref, l10n),
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -114,7 +122,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildSyncIndicator(WidgetRef ref) {
+  Widget _buildSyncIndicator(WidgetRef ref, AppLocalization l10n) {
     final isSyncing = ref.watch(uploadQueueProvider);
     if (!isSyncing) return const SizedBox.shrink();
 
@@ -137,7 +145,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           const SizedBox(width: 12),
           Text(
-            'Syncing offline changes...',
+            l10n.translate('saved_locally_sync'),
             style: AppTypography.label.copyWith(
               color: AppColors.gold500,
               fontSize: 12,
@@ -152,7 +160,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     BuildContext context,
     String displayName,
     StudentState student,
+    AppLocalization l10n,
   ) {
+    final greeting = _getGreeting(l10n);
     return SizedBox(
       height: 280,
       child: BrandCard(
@@ -171,7 +181,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Madyaw na\nallaw,\n$displayName!',
+                      '$greeting,\n$displayName!',
                       textAlign: TextAlign.left,
                       style: AppTypography.displayBold.copyWith(
                         color: AppColors.forest900,
@@ -206,6 +216,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     BuildContext context,
     AsyncValue<List<Quest>> questsAsync,
     WidgetRef ref,
+    AppLocalization l10n,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,7 +225,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'TRIBAL CHALLENGES',
+              l10n.translate('daily_rituals'),
               style: AppTypography.label.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 letterSpacing: 2,
@@ -225,7 +236,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Row(
               children: [
                 Text(
-                  'RESET IN ${_getTimeUntilReset()}',
+                  l10n.translate('reset_in', params: {'time': _getTimeUntilReset()}),
                   style: AppTypography.label.copyWith(
                     color: AppColors.gold500.withValues(alpha: 0.3),
                     fontSize: 9,
@@ -251,9 +262,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         questsAsync.when(
           data: (quests) {
             if (quests.isEmpty) {
-              return const BrandedEmptyState(
-                title: 'No Rituals',
-                message: 'No rituals today. Check back soon for more tribal challenges!',
+              return BrandedEmptyState(
+                title: l10n.translate('no_treasures'),
+                message: l10n.translate('ritual_empty_desc'),
                 icon: Icons.event_busy_rounded,
               );
             }
@@ -433,12 +444,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildChallengeHub(BuildContext context) {
+  Widget _buildChallengeHub(BuildContext context, AppLocalization l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'CHALLENGE HUB',
+          l10n.translate('challenge_hub'),
           style: AppTypography.label.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
             letterSpacing: 2,
@@ -454,8 +465,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             children: [
               _buildChallengeCard(
                 context,
-                title: 'Scenario Stories',
-                subtitle: 'Choose your path',
+                title: l10n.translate('scenario_stories'),
+                subtitle: l10n.translate('choose_path_desc'),
                 icon: Icons.auto_stories_rounded,
                 color: const Color(0xFF2D4F3C),
                 route: '/scenario-hub',
@@ -463,7 +474,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const SizedBox(width: 16),
               _buildChallengeCard(
                 context,
-                title: 'Lingua Duel',
+                title: l10n.translate('lingua_duel'),
                 subtitle: 'P2P Battle',
                 icon: Icons.bolt_rounded,
                 color: const Color(0xFF4F3422),
@@ -556,14 +567,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildCurrentLessonCard(BuildContext context) {
+  Widget _buildCurrentLessonCard(BuildContext context, AppLocalization l10n) {
     final latestAsync = ref.watch(latestLessonProvider);
     final detailsAsync = ref.watch(latestLessonDetailsProvider);
 
     return detailsAsync.when(
       data: (lesson) {
         if (lesson == null) {
-          return _buildStartJourneyCard(context);
+          return _buildStartJourneyCard(context, l10n);
         }
 
         final progressData = latestAsync.value?['data'] ?? {};
@@ -592,7 +603,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                     ),
                     child: Text(
-                      'CURRENT LESSON',
+                      l10n.translate('current_lesson'),
                       style: AppTypography.label.copyWith(
                         color: AppColors.gold500,
                         fontSize: 11,
@@ -633,7 +644,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Lesson Progress',
+                    l10n.translate('lesson_progress'),
                     style: AppTypography.label.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                       fontSize: 12,
@@ -655,7 +666,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               SizedBox(
                 width: double.infinity,
                 child: BrandButton(
-                  text: progress >= 1.0 ? 'REVIEW ASCENT' : 'CONTINUE ASCENT',
+                  text: progress >= 1.0 ? l10n.translate('review_ascent') : l10n.translate('continue_ascent'),
                   onTap: () {
                     HapticService.light();
                     context.go('/learning/path');
@@ -678,7 +689,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildStartJourneyCard(BuildContext context) {
+  Widget _buildStartJourneyCard(BuildContext context, AppLocalization l10n) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return BrandCard(
       padding: const EdgeInsets.all(24),
@@ -687,7 +698,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Start Your Journey',
+            l10n.translate('start_your_journey'),
             style: AppTypography.h1ExtraBold.copyWith(
               color: isDark ? Colors.white : AppColors.forest700,
               fontSize: 28,
@@ -695,7 +706,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Begin your ascent into the highlands and discover the Lumad heritage.',
+            l10n.translate('begin_ascent_desc'),
             style: AppTypography.body.copyWith(
               color: isDark ? Colors.white38 : AppColors.creamText2,
             ),
@@ -704,7 +715,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           SizedBox(
             width: double.infinity,
             child: BrandButton(
-              text: 'START UNIT 1',
+              text: l10n.translate('start_unit_1'),
               onTap: () => context.go('/learning'),
               type: BrandButtonType.primary,
               icon: Icons.explore_rounded,
@@ -715,7 +726,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildLeaderboardHeader(BuildContext context) {
+  Widget _buildLeaderboardHeader(BuildContext context, AppLocalization l10n) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -724,13 +735,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Top Climbers',
+              l10n.translate('top_climbers'),
               style: AppTypography.h2ExtraBold.copyWith(
                 color: AppColors.gold500,
               ),
             ),
             Text(
-              'The season\'s most active botanical archivists.',
+              l10n.translate('botanical_archivists'),
               style: AppTypography.body.copyWith(
                 color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.5),
                 fontSize: 12,
@@ -741,7 +752,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         TextButton(
           onPressed: () => context.push('/leaderboard'),
           child: Text(
-            'VIEW ALL',
+            l10n.translate('view_all'),
             style: AppTypography.label.copyWith(
               color: AppColors.gold500,
               fontWeight: FontWeight.w900,
@@ -752,7 +763,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildClimbersList(BuildContext context, WidgetRef ref) {
+  Widget _buildClimbersList(BuildContext context, WidgetRef ref, AppLocalization l10n) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final topLearnersAsync = ref.watch(topLearnersProvider);
     final config = ref.watch(appConfigProvider).value;
@@ -766,9 +777,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       child: topLearnersAsync.when(
         data: (users) {
           if (users.isEmpty) {
-            return const BrandedEmptyState(
-              title: 'Quiet Mountains',
-              message: 'No climbers yet! Be the first to start the ascent.',
+            return BrandedEmptyState(
+              title: l10n.translate('quiet_mountains'),
+              message: l10n.translate('no_climbers'),
               icon: Icons.terrain_rounded,
             );
           }
@@ -776,7 +787,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           final top3 = users.take(3).toList();
           return Column(
             children: top3.asMap().entries.map((entry) {
-              return _buildClimberRow(context, entry.value, entry.key + 1, config);
+              return _buildClimberRow(context, entry.value, entry.key + 1, config, l10n);
             }).toList(),
           );
         },
@@ -877,6 +888,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     Map<String, dynamic> user,
     int rank,
     AppConfig? config,
+    AppLocalization l10n,
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final name = user['username'] ?? user['name'] ?? 'Anonymous';
@@ -971,7 +983,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                 ),
                 Text(
-                  'ARCHIVE XP',
+                  l10n.translate('archive_xp'),
                   style: AppTypography.label.copyWith(
                     color: isDark ? Colors.white10 : AppColors.forest900.withValues(alpha: 0.1),
                     fontSize: 8,
@@ -985,7 +997,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildStreakSummaryCard(BuildContext context, StudentState student) {
+  Widget _buildStreakSummaryCard(BuildContext context, StudentState student, AppLocalization l10n) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: () {
@@ -1018,14 +1030,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${student.displayedStreak} DAYS',
+                    '${student.displayedStreak} ${l10n.translate('day_streak').split(' ').last.toUpperCase()}',
                     style: AppTypography.h3.copyWith(
                       color: isDark ? Colors.white : AppColors.forest900, 
                       fontSize: 16,
                     ),
                   ),
                   Text(
-                    'Keep the flame alive!',
+                    l10n.translate('keep_flame_alive'),
                     style: AppTypography.body.copyWith(
                       color: isDark ? Colors.white70 : AppColors.forest700, 
                       fontSize: 12,
@@ -1055,4 +1067,3 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return '${minutes}M';
   }
 }
-

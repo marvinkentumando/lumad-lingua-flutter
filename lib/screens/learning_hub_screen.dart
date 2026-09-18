@@ -18,6 +18,7 @@ import '../widgets/mist_crystal_store.dart';
 import '../widgets/vine_progress_bar.dart';
 import '../services/haptic_service.dart';
 import '../widgets/dynamic_glass_box.dart';
+import '../utils/app_localization.dart';
 
 import '../providers/daily_challenge_provider.dart';
 
@@ -28,6 +29,7 @@ class LearningHubScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final studentState = ref.watch(studentProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -101,8 +103,8 @@ class LearningHubScreen extends ConsumerWidget {
                               HapticService.selection();
                               if (isCompleted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('You have already completed today\'s challenge! Come back tomorrow.'),
+                                  SnackBar(
+                                    content: Text(l10n.translate('challenge_completed')),
                                   ),
                                 );
                               } else {
@@ -541,6 +543,45 @@ class LearningHubScreen extends ConsumerWidget {
     );
   }
 
+  bool _isLessonLocked(Lesson lesson, Map<String, dynamic> lessonProgress) {
+    if (lesson.prerequisiteId == null || lesson.prerequisiteId!.isEmpty) {
+      return false;
+    }
+    final prereqProgress = lessonProgress[lesson.prerequisiteId];
+    return (prereqProgress?['bestScore'] ?? 0) < 100;
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'basics':
+        return const Color(0xFFC84E1A);
+      case 'nature':
+        return const Color(0xFF65A870);
+      default:
+        return AppColors.gold500;
+    }
+  }
+
+  Color _getLanguageColor(String language) {
+    switch (language.toLowerCase()) {
+      case 'mansaka':
+        return AppColors.gold500;
+      default:
+        return AppColors.semanticBlue;
+    }
+  }
+
+  IconData _getIconData(String iconName) {
+    switch (iconName) {
+      case 'psychology':
+        return Icons.psychology;
+      case 'local_florist':
+        return Icons.local_florist;
+      default:
+        return Icons.school;
+    }
+  }
+
   Widget _buildXpRow(BuildContext context, String label, String value, IconData icon) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -769,47 +810,4 @@ class LearningHubScreen extends ConsumerWidget {
       ),
     );
   }
-
-  bool _isLessonLocked(Lesson lesson, Map<String, dynamic> lessonProgress) {
-    if (lesson.prerequisiteId == null || lesson.prerequisiteId!.isEmpty) {
-      return false;
-    }
-    final prereqProgress = lessonProgress[lesson.prerequisiteId];
-    return (prereqProgress?['bestScore'] ?? 0) < 100;
-  }
-
-  Color _getCategoryColor(String category) {
-    switch (category.toLowerCase()) {
-      case 'basics':
-        return const Color(0xFFC84E1A);
-      case 'nature':
-        return const Color(0xFF65A870);
-      default:
-        return AppColors.gold500;
-    }
-  }
-
-  Color _getLanguageColor(String language) {
-    switch (language.toLowerCase()) {
-      case 'mansaka':
-        return AppColors.gold500;
-      default:
-        return AppColors.semanticBlue;
-    }
-  }
-
-  IconData _getIconData(String iconName) {
-    switch (iconName) {
-      case 'psychology':
-        return Icons.psychology;
-      case 'local_florist':
-        return Icons.local_florist;
-      default:
-        return Icons.school;
-    }
-  }
-
 }
-
-
-

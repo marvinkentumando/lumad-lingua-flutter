@@ -9,6 +9,7 @@ import '../widgets/brand_card.dart';
 import '../widgets/branded_empty_state.dart';
 import '../widgets/brand_background.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../utils/app_localization.dart';
 
 class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
   const AdminAdvancedAnalyticsScreen({super.key});
@@ -17,12 +18,13 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final analyticsAsync = ref.watch(advancedAnalyticsProvider);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text(
-          'PEDAGOGICAL ANALYTICS',
+          l10n.translate('pedagogical_analytics'),
           style: GoogleFonts.outfit(
             color: isDark ? Colors.white : AppColors.forest900,
             fontWeight: FontWeight.bold,
@@ -50,23 +52,24 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _sectionLabel(context, 'LEARNING ECOSYSTEM HEALTH'),
+                  _sectionLabel(context, l10n.translate('learning_eco_health')),
                   const SizedBox(height: 16),
-                  _buildSystemMetrics(context, data['srsHealth'] as Map<String, dynamic>? ?? {}),
+                  _buildSystemMetrics(context, data['srsHealth'] as Map<String, dynamic>? ?? {}, l10n),
                   
                   const SizedBox(height: 40),
-                  _sectionLabel(context, 'LESSON HEATMAPS (STUMBLE POINTS)'),
+                  _sectionLabel(context, l10n.translate('lesson_heatmaps')),
                   const SizedBox(height: 16),
                   _buildLessonHeatmaps(
                     context,
                     data['lessonStruggles'] as Map<String, dynamic>? ?? {},
                     data['lessonNames'] as Map<String, dynamic>? ?? {},
+                    l10n,
                   ),
                   
                   const SizedBox(height: 40),
-                  _sectionLabel(context, 'SPACED REPETITION (SRS) MASTERY'),
+                  _sectionLabel(context, l10n.translate('srs_mastery_title')),
                   const SizedBox(height: 16),
-                  _buildSRSMasteryChart(context, data['srsHealth'] as Map<String, dynamic>? ?? {}),
+                  _buildSRSMasteryChart(context, data['srsHealth'] as Map<String, dynamic>? ?? {}, l10n),
                   
                   const SizedBox(height: 100),
                 ],
@@ -80,13 +83,13 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
               children: [
                 const Icon(Icons.error_outline_rounded, color: AppColors.semanticRed, size: 48),
                 const SizedBox(height: 16),
-                Text('Failed to sync wisdom: $e', style: TextStyle(color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7))),
+                Text(l10n.translate('failed_sync_wisdom', params: {'error': e.toString()}), style: TextStyle(color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7))),
                 TextButton(
                   onPressed: () {
                     HapticService.selection();
                     ref.invalidate(advancedAnalyticsProvider);
                   },
-                  child: const Text('RETRY SYNC'),
+                  child: Text(l10n.translate('retry_sync')),
                 ),
               ],
             ),
@@ -109,7 +112,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSystemMetrics(BuildContext context, Map<String, dynamic> health) {
+  Widget _buildSystemMetrics(BuildContext context, Map<String, dynamic> health, AppLocalization l10n) {
     final rate = (health['retentionRate'] as num? ?? 0.0).toDouble() * 100;
     final total = (health['totalCards'] as num? ?? 0).toInt();
 
@@ -118,7 +121,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
         Expanded(
           child: _metricCard(
             context,
-            'Retention Rate',
+            l10n.translate('retention_rate'),
             '${rate.toStringAsFixed(1)}%',
             rate > 85 ? AppColors.semanticGreen : AppColors.gold500,
             Icons.auto_awesome_rounded,
@@ -128,7 +131,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
         Expanded(
           child: _metricCard(
             context,
-            'Active Terms',
+            l10n.translate('active_terms'),
             total.toString(),
             AppColors.semanticBlue,
             Icons.menu_book_rounded,
@@ -138,9 +141,9 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildLessonHeatmaps(BuildContext context, Map<String, dynamic> struggles, Map<String, dynamic> names) {
+  Widget _buildLessonHeatmaps(BuildContext context, Map<String, dynamic> struggles, Map<String, dynamic> names, AppLocalization l10n) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    if (struggles.isEmpty) return _emptyState('The trail is fresh. No student stumbles recorded yet.');
+    if (struggles.isEmpty) return _emptyState(l10n.translate('student_stumbles_empty'), l10n);
 
     final sortedLessons = struggles.entries.toList()
       ..sort((a, b) {
@@ -153,7 +156,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
       children: sortedLessons.take(5).map((entry) {
         final lessonId = entry.key;
         final taskStruggles = Map<String, int>.from(entry.value as Map);
-        final lessonName = names[lessonId] ?? 'Ancestral Lesson';
+        final lessonName = names[lessonId] ?? l10n.translate('ancestral_lesson_default');
         
         return BrandCard(
           theme: BrandCardTheme.vibrant,
@@ -228,7 +231,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSRSMasteryChart(BuildContext context, Map<String, dynamic> health) {
+  Widget _buildSRSMasteryChart(BuildContext context, Map<String, dynamic> health, AppLocalization l10n) {
     final dist = Map<int, int>.from(health['masteryDistribution'] as Map? ?? {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0});
     final maxDist = dist.values.isEmpty ? 1 : dist.values.reduce((a, b) => a > b ? a : b);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -241,7 +244,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Mastery Box Distribution', 
+              l10n.translate('mastery_box_dist'), 
               style: AppTypography.h3.copyWith(
                 color: isDark ? Colors.white : AppColors.forest900, 
                 fontSize: 14
@@ -291,7 +294,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'BOX ${e.key}', 
+                        '${l10n.translate('box_label')} ${e.key}', 
                         style: AppTypography.label.copyWith(
                           color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3), 
                           fontSize: 8,
@@ -358,7 +361,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
     return AppColors.semanticGreen;
   }
 
-  Widget _emptyState(String message) => BrandedEmptyState(
+  Widget _emptyState(String message, AppLocalization l10n) => BrandedEmptyState(
     title: 'Trail is Fresh',
     message: message,
     icon: Icons.analytics_outlined,

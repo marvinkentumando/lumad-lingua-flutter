@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
 import '../providers/quest_provider.dart';
 import '../models/quest.dart';
+import '../utils/app_localization.dart';
 
 class SakaGameScreen extends ConsumerStatefulWidget {
   const SakaGameScreen({super.key});
@@ -258,6 +259,7 @@ class _SakaGameScreenState extends ConsumerState<SakaGameScreen> with TickerProv
   }
 
   void _updateLore(double dt) {
+    final l10n = ref.read(localizationProvider);
     bool isNearWaterfall = (playerX - 1500).abs() < 100;
     bool isNearTree = (playerX - 2800).abs() < 100;
     bool isNearTotem = (playerX - 3500).abs() < 100;
@@ -276,11 +278,11 @@ class _SakaGameScreenState extends ConsumerState<SakaGameScreen> with TickerProv
       standingStillTime += dt;
       if (standingStillTime > 2.0) {
         if (isNearWaterfall) {
-          currentLore = "The daliyog's song is the memory of our first breath. It washes the dust of the world from the spirit.";
+          currentLore = l10n.translate('lore_waterfall');
         } else if (isNearTree) {
-          currentLore = "The diwata sleep in the roots of the daku. To pass is to be judged by the silence of the forest.";
+          currentLore = l10n.translate('lore_tree');
         } else if (isNearTotem) {
-          currentLore = "The ancestors carved their names in the stone. They watch your ascent, Baylan.";
+          currentLore = l10n.translate('lore_totem');
         } else if (isNearShrine) {
           currentLore = _getShrineLore(nearestShrine);
         }
@@ -292,14 +294,8 @@ class _SakaGameScreenState extends ConsumerState<SakaGameScreen> with TickerProv
   }
 
   String _getShrineLore(int index) {
-    switch (index) {
-      case 0: return "The first step is always the heaviest. Remember your roots.";
-      case 1: return "The mountain provides, but it also tests. Patience is your shield.";
-      case 2: return "The clouds gather below you. The world is small from here.";
-      case 3: return "The air grows thin, but the spirit grows strong.";
-      case 4: return "The summit is near. The ancestors await your arrival.";
-      default: return "Echoes of the elders whisper in the wind.";
-    }
+    final l10n = ref.read(localizationProvider);
+    return l10n.translate('shrine_lore_$index');
   }
 
   void _triggerTransition(Color color) {
@@ -466,6 +462,7 @@ class _SakaGameScreenState extends ConsumerState<SakaGameScreen> with TickerProv
 
   @override
   Widget build(BuildContext context) {
+    final l10n = ref.watch(localizationProvider);
     return Scaffold(
       body: Stack(
         children: [
@@ -536,9 +533,9 @@ class _SakaGameScreenState extends ConsumerState<SakaGameScreen> with TickerProv
               padding: const EdgeInsets.all(20.0),
               child: Column(
                 children: [
-                  _buildTopHUD(),
+                  _buildTopHUD(l10n),
                   const Spacer(),
-                  _buildNarrativeOverlay(),
+                  _buildNarrativeOverlay(l10n),
                   const SizedBox(height: 20),
                   _buildControls(),
                 ],
@@ -568,7 +565,7 @@ class _SakaGameScreenState extends ConsumerState<SakaGameScreen> with TickerProv
     }
   }
 
-  Widget _buildTopHUD() {
+  Widget _buildTopHUD(AppLocalization l10n) {
     int distance = (targetX - playerX).toInt();
     int distanceKey = (distance / 100).floor(); // Animate every 100m
     
@@ -578,11 +575,11 @@ class _SakaGameScreenState extends ConsumerState<SakaGameScreen> with TickerProv
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('SCORE: ${score.toInt()}', style: GoogleFonts.fredoka(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))
+            Text('${l10n.translate('score_label')}: ${score.toInt()}', style: GoogleFonts.fredoka(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))
               .animate(key: ValueKey(score.toInt()))
               .scale(begin: const Offset(1.2, 1.2), end: const Offset(1.0, 1.0), duration: 300.ms, curve: Curves.easeOutBack),
             const SizedBox(height: 4),
-            Text('DISTANCE: ${distance > 0 ? distance : 0}m', style: GoogleFonts.fredoka(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2))
+            Text('${l10n.translate('distance_label')}: ${distance > 0 ? distance : 0}m', style: GoogleFonts.fredoka(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2))
               .animate(key: ValueKey(distanceKey))
               .scale(begin: const Offset(1.2, 1.2), end: const Offset(1.0, 1.0), duration: 200.ms, curve: Curves.easeOut),
             const SizedBox(height: 8),
@@ -650,8 +647,8 @@ class _SakaGameScreenState extends ConsumerState<SakaGameScreen> with TickerProv
     );
   }
 
-  Widget _buildNarrativeOverlay() {
-    final stageInfo = _getStageInfo(currentStage);
+  Widget _buildNarrativeOverlay(AppLocalization l10n) {
+    final stageInfo = _getStageInfo(currentStage, l10n);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white.withValues(alpha: 0.1))),
@@ -687,16 +684,16 @@ class _SakaGameScreenState extends ConsumerState<SakaGameScreen> with TickerProv
     );
   }
 
-  SakaStageInfo _getStageInfo(int stage) {
+  SakaStageInfo _getStageInfo(int stage, AppLocalization l10n) {
     final stageFallbacks = {
-      1: SakaStageInfo(mansaka: "Palakawon pa yagwakat da, minang pyagabalibali ing daliyog.", english: "Dawn yet already awaken—rattan-working diligently."),
-      2: SakaStageInfo(mansaka: "Manubong sang baboy aw manok, magabalin sang carabao.", english: "Feed the pig and chicken, pasture the carabao."),
-      3: SakaStageInfo(mansaka: "Managkas sang bula sang kagulangan aw maglakar sa mga abot.", english: "Get rattan from the timberland and load it for goods."),
-      4: SakaStageInfo(mansaka: "Ing mangayso dag bukid tig akbas, maglabon nang tangsangawlaw.", english: "A child goes to the mountain farm to weed grasses."),
-      5: SakaStageInfo(mansaka: "Ampan way kyakatagtagaan nang taga mambukid tungod sang kalayo nang banwa.", english: "Far from the town—yet the mountain people carry ancient wisdom."),
+      1: SakaStageInfo(mansaka: "Palakawon pa yagwakat da, minang pyagabalibali ing daliyog.", english: l10n.translate('stage_1_desc')),
+      2: SakaStageInfo(mansaka: "Manubong sang baboy aw manok, magabalin sang carabao.", english: l10n.translate('stage_2_desc')),
+      3: SakaStageInfo(mansaka: "Managkas sang bula sang kagulangan aw maglakar sa mga abot.", english: l10n.translate('stage_3_desc')),
+      4: SakaStageInfo(mansaka: "Ing mangayso dag bukid tig akbas, maglabon nang tangsangawlaw.", english: l10n.translate('stage_4_desc')),
+      5: SakaStageInfo(mansaka: "Ampan way kyakatagtagaan nang taga mambukid tungod sang kalayo nang banwa.", english: l10n.translate('stage_5_desc')),
     };
-    if (playerX > 1400 && playerX < 1600) return SakaStageInfo(mansaka: "Bagus nang daliyog, dumaan sang gubatan.", english: "The waterfall speaks of ancestors' breath—refreshing the soul.");
-    if (playerX > 2700 && playerX < 2900) return SakaStageInfo(mansaka: "Balete na daku, tagoanan nang diwata.", english: "The Great Balete watches; its roots are the veins of the earth.");
+    if (playerX > 1400 && playerX < 1600) return SakaStageInfo(mansaka: "Bagus nang daliyog, dumaan sang gubatan.", english: l10n.translate('lore_waterfall_2'));
+    if (playerX > 2700 && playerX < 2900) return SakaStageInfo(mansaka: "Balete na daku, tagoanan nang diwata.", english: l10n.translate('lore_tree_2'));
     return stageFallbacks[stage] ?? SakaStageInfo(mansaka: "", english: "");
   }
 
@@ -749,11 +746,12 @@ class SakaStageInfo {
 
 
 
-class SakaIntroScreen extends StatelessWidget {
+class SakaIntroScreen extends ConsumerWidget {
   final VoidCallback onStart;
   const SakaIntroScreen({super.key, required this.onStart});
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = ref.watch(localizationProvider);
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
@@ -762,11 +760,11 @@ class SakaIntroScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('PROLOGUE: THE AWAKENING', style: GoogleFonts.fredoka(color: AppColors.gold500, fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(l10n.translate('prologue_title'), style: GoogleFonts.fredoka(color: AppColors.gold500, fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
-            Text("\"The stars are still sharp over Davao de Oro when young Baylan stirs. The air in the valley is thick with the scent of damp earth and woodsmoke. For the Mansaka, the mountain is not just land—it is a living ancestor.\n\nTo reach the summit of Mount Hamiguitan is to retrace the steps of the elders. Every vine cut, every seed planted, and every word spoken is a thread in the poem of our people.\n\nRise, Baylan. The climb begins before the sun.\"", style: GoogleFonts.nunito(color: Colors.white, fontSize: 14, height: 1.5), textAlign: TextAlign.center),
+            Text(l10n.translate('prologue_text'), style: GoogleFonts.nunito(color: Colors.white, fontSize: 14, height: 1.5), textAlign: TextAlign.center),
             const SizedBox(height: 30),
-            ElevatedButton(onPressed: onStart, style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: Text('BEGIN CLIMB', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold))),
+            ElevatedButton(onPressed: onStart, style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: Text(l10n.translate('begin_climb'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold))),
           ],
         ),
       ),
@@ -774,18 +772,19 @@ class SakaIntroScreen extends StatelessWidget {
   }
 }
 
-class SakaQuizPanel extends StatefulWidget {
+class SakaQuizPanel extends ConsumerStatefulWidget {
   final SakaQuestion question;
   final VoidCallback onSuccess;
   const SakaQuizPanel({super.key, required this.question, required this.onSuccess});
   @override
-  State<SakaQuizPanel> createState() => _SakaQuizPanelState();
+  ConsumerState<SakaQuizPanel> createState() => _SakaQuizPanelState();
 }
 
-class _SakaQuizPanelState extends State<SakaQuizPanel> {
+class _SakaQuizPanelState extends ConsumerState<SakaQuizPanel> {
   int selectedOption = -1;
   @override
   Widget build(BuildContext context) {
+    final l10n = ref.watch(localizationProvider);
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20),
@@ -803,7 +802,7 @@ class _SakaQuizPanelState extends State<SakaQuizPanel> {
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               const Icon(Icons.architecture, color: Color(0xFFD7CCC8), size: 16),
               const SizedBox(width: 8),
-              Text('SHRINE REFLECTION', style: GoogleFonts.fredoka(color: const Color(0xFFD7CCC8), fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 2)),
+              Text(l10n.translate('shrine_reflection'), style: GoogleFonts.fredoka(color: const Color(0xFFD7CCC8), fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 2)),
               const SizedBox(width: 8),
               const Icon(Icons.architecture, color: Color(0xFFD7CCC8), size: 16),
             ]),
@@ -818,11 +817,11 @@ class _SakaQuizPanelState extends State<SakaQuizPanel> {
                   if (selectedOption == widget.question.correctIndex) {
                     widget.onSuccess();
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: const Color(0xFF5D4037), content: Text('Try again, reflect on the words of the elders.', style: GoogleFonts.nunito(color: Colors.white))));
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: const Color(0xFF5D4037), content: Text(l10n.translate('try_again_elder'), style: GoogleFonts.nunito(color: Colors.white))));
                   }
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500, foregroundColor: Colors.black, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16), shape: const RoundedRectangleBorder()),
-                child: Text('SUBMIT', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+                child: Text(l10n.translate('submit_btn'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
               ),
           ],
         ),
@@ -849,11 +848,12 @@ class _SakaQuizPanelState extends State<SakaQuizPanel> {
 }
 
 
-class SakaWinScreen extends StatelessWidget {
+class SakaWinScreen extends ConsumerWidget {
   final VoidCallback onClose;
   const SakaWinScreen({super.key, required this.onClose});
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = ref.watch(localizationProvider);
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
@@ -864,13 +864,13 @@ class SakaWinScreen extends StatelessWidget {
           children: [
             const Icon(Icons.stars, color: AppColors.gold500, size: 60).animate().scale().shimmer(),
             const SizedBox(height: 20),
-            Text('NAABOT ANG TUKTOK!', style: GoogleFonts.fredoka(color: AppColors.gold500, fontSize: 22, fontWeight: FontWeight.bold)),
+            Text(l10n.translate('summit_reached_title'), style: GoogleFonts.fredoka(color: AppColors.gold500, fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
-            Text('THE SUMMIT IS REACHED', style: GoogleFonts.fredoka(color: Colors.white70, fontSize: 12, letterSpacing: 2)),
+            Text(l10n.translate('summit_reached_subtitle'), style: GoogleFonts.fredoka(color: Colors.white70, fontSize: 12, letterSpacing: 2)),
             const SizedBox(height: 20),
-            Text("You stand where the earth meets the sky. You have carried the poem of the Mansaka from the forest floor to the sacred height. The words you learned are not just vocabulary—they are the breath of the mountain.\n\nYou are Man-saka. You are the one who climbs.", textAlign: TextAlign.center, style: GoogleFonts.nunito(color: Colors.white, fontSize: 14, height: 1.5)),
+            Text(l10n.translate('summit_reached_text'), textAlign: TextAlign.center, style: GoogleFonts.nunito(color: Colors.white, fontSize: 14, height: 1.5)),
             const SizedBox(height: 30),
-            ElevatedButton(onPressed: onClose, style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15)), child: const Text('CONTINUE JOURNEY')),
+            ElevatedButton(onPressed: onClose, style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15)), child: Text(l10n.translate('continue_journey'))),
           ],
         ),
       ),
@@ -878,7 +878,7 @@ class SakaWinScreen extends StatelessWidget {
   }
 }
 
-class SakaGlossaryPanel extends StatelessWidget {
+class SakaGlossaryPanel extends ConsumerWidget {
   final Set<int> clearedShrines;
   const SakaGlossaryPanel({super.key, required this.clearedShrines});
 
@@ -894,7 +894,8 @@ class SakaGlossaryPanel extends StatelessWidget {
   };
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = ref.watch(localizationProvider);
     final collected = words.entries.toList();
 
     return Dialog(
@@ -909,7 +910,7 @@ class SakaGlossaryPanel extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('MANSAKA GLOSSARY', style: GoogleFonts.fredoka(color: AppColors.gold500, fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(l10n.translate('mansaka_glossary'), style: GoogleFonts.fredoka(color: AppColors.gold500, fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             Flexible(
               child: ListView.builder(
@@ -934,7 +935,7 @@ class SakaGlossaryPanel extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('CLOSE', style: TextStyle(color: AppColors.gold500))),
+            TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.translate('close'), style: const TextStyle(color: AppColors.gold500))),
           ],
         ),
       ),

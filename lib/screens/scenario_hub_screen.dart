@@ -9,6 +9,7 @@ import '../widgets/brand_background.dart';
 import '../providers/student_provider.dart';
 import '../services/haptic_service.dart';
 import '../services/firebase_service.dart';
+import '../utils/app_localization.dart';
 
 import '../widgets/brand_search_bar.dart';
 
@@ -27,6 +28,7 @@ class _ScenarioHubScreenState extends ConsumerState<ScenarioHubScreen> {
     final student = ref.watch(studentProvider);
     final completedScenarios = student.lessonProgress;
     final scenariosAsync = ref.watch(scenariosProvider);
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       body: Stack(
@@ -54,7 +56,7 @@ class _ScenarioHubScreenState extends ConsumerState<ScenarioHubScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Scenario Stories',
+                                    l10n.translate('scenario_stories'),
                                     style: AppTypography.displayBold.copyWith(
                                       color: AppColors.gold500,
                                       fontSize: 32,
@@ -62,14 +64,14 @@ class _ScenarioHubScreenState extends ConsumerState<ScenarioHubScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Choose your path. Every word matters.',
+                                    l10n.translate('choose_path_desc'),
                                     style: AppTypography.body.copyWith(
                                       color: Colors.white60,
                                     ),
                                   ),
                                   const SizedBox(height: 24),
                                   BrandSearchBar(
-                                    hintText: 'Search stories...',
+                                    hintText: l10n.translate('search_stories'),
                                     onChanged: (v) => setState(() => _searchQuery = v),
                                   ),
                                   const SizedBox(height: 32),
@@ -82,6 +84,7 @@ class _ScenarioHubScreenState extends ConsumerState<ScenarioHubScreen> {
                               padding: const EdgeInsets.only(bottom: 16),
                               child: _buildScenarioCard(
                                 context,
+                                l10n,
                                 title: scenario.title,
                                 description: scenario.description,
                                 difficulty: scenario.difficulty,
@@ -127,7 +130,8 @@ class _ScenarioHubScreenState extends ConsumerState<ScenarioHubScreen> {
   }
 
   Widget _buildScenarioCard(
-    BuildContext context, {
+    BuildContext context,
+    AppLocalization l10n, {
     required String title,
     required String description,
     required String difficulty,
@@ -185,7 +189,7 @@ class _ScenarioHubScreenState extends ConsumerState<ScenarioHubScreen> {
                             ),
                           ),
                           child: Text(
-                            isCompleted ? 'MASTERED' : difficulty.toUpperCase(),
+                            isCompleted ? l10n.translate('mastered') : difficulty.toUpperCase(),
                             style: AppTypography.label.copyWith(
                               color: isCompleted ? Colors.black : AppColors.gold500,
                               fontSize: 10,
@@ -234,7 +238,7 @@ class _ScenarioHubScreenState extends ConsumerState<ScenarioHubScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          isCompleted ? 'REPLAY STORY' : 'START SCENARIO',
+                          isCompleted ? l10n.translate('replay_story') : l10n.translate('start_scenario'),
                           style: AppTypography.label.copyWith(
                             color: isCompleted ? Colors.black : AppColors.gold500,
                             fontWeight: FontWeight.bold,
@@ -254,6 +258,3 @@ class _ScenarioHubScreenState extends ConsumerState<ScenarioHubScreen> {
     ).animate().fadeIn().slideX(begin: 0.1);
   }
 }
-
-
-

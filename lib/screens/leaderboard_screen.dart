@@ -17,6 +17,7 @@ import '../services/haptic_service.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/brand_search_bar.dart';
 import '../widgets/brand_background.dart' as bg;
+import '../utils/app_localization.dart';
 
 class LeaderboardEntry {
   final String name;
@@ -114,6 +115,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).value;
+    final l10n = ref.watch(localizationProvider);
 
     final leaderboardData = ref.watch(topLearnersProvider).value;
 
@@ -148,7 +150,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                 elevation: 0,
                 centerTitle: true,
                 title: Text(
-                  'COMMUNITY PEAK',
+                  l10n.translate('top_learners'),
                   style: AppTypography.display.copyWith(
                     color: AppColors.gold500,
                     letterSpacing: 6,
@@ -240,7 +242,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                 delegate: _SliverAppBarDelegate(
                   minHeight: 80,
                   maxHeight: 80,
-                  child: _buildFilterRow(),
+                  child: _buildFilterRow(l10n),
                 ),
               ),
 
@@ -283,6 +285,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                                       entry,
                                       'XP',
                                       entry.uid == user?.uid,
+                                      l10n,
                                     )
                                     .animate()
                                     .fadeIn(
@@ -320,6 +323,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                 user.photoURL,
                 myEntry,
                 nextEntry,
+                l10n,
               ),
             ),
         ],
@@ -328,7 +332,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
   );
 }
 
-  Widget _buildFilterRow() {
+  Widget _buildFilterRow(AppLocalization l10n) {
     return Row(
       children: [
         // Time filter tabs
@@ -608,7 +612,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     );
   }
 
-  Future<void> _sendCheer(String targetUid, String targetName) async {
+  Future<void> _sendCheer(String targetUid, String targetName, AppLocalization l10n) async {
     final user = ref.read(authStateProvider).value;
     if (user == null) return;
 
@@ -631,7 +635,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
         HapticService.light();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Salute sent to $targetName!'),
+            content: Text(l10n.translate('salute_sent', params: {'name': targetName})),
             duration: const Duration(seconds: 2),
             backgroundColor: AppColors.gold500,
             behavior: SnackBarBehavior.floating,
@@ -641,13 +645,13 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to send salute.')),
+          SnackBar(content: Text(l10n.translate('salute_failed'))),
         );
       }
     }
   }
 
-  Widget _buildRankRow(LeaderboardEntry e, String label, bool isMe) {
+  Widget _buildRankRow(LeaderboardEntry e, String label, bool isMe, AppLocalization l10n) {
     return BouncyPressable(
       onTap: () {
         if (isMe) {
@@ -773,7 +777,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               if (!isMe && e.uid != null) ...[
                 const SizedBox(width: 8),
                 IconButton(
-                  onPressed: () => _sendCheer(e.uid!, e.name),
+                  onPressed: () => _sendCheer(e.uid!, e.name, l10n),
                   icon: const Icon(Icons.auto_awesome_rounded),
                   color: AppColors.gold500.withValues(alpha: 0.6),
                   iconSize: 20,
@@ -796,6 +800,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     String? photoUrl,
     LeaderboardEntry? myEntry,
     LeaderboardEntry? nextEntry,
+    AppLocalization l10n,
   ) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),

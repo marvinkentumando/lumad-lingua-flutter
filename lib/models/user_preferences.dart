@@ -5,6 +5,7 @@ class UserPreferences {
   final String preferredDialect;
   final String learningPathView;
   final bool hasCompletedPreTest;
+  final String appLanguage; // 'en', 'tl', 'bis'
 
   const UserPreferences({
     this.audioAutoplay = true,
@@ -13,6 +14,7 @@ class UserPreferences {
     this.preferredDialect = 'ALL',
     this.learningPathView = 'MOUNTAIN',
     this.hasCompletedPreTest = false,
+    this.appLanguage = 'en',
   });
 
   UserPreferences copyWith({
@@ -22,6 +24,7 @@ class UserPreferences {
     String? preferredDialect,
     String? learningPathView,
     bool? hasCompletedPreTest,
+    String? appLanguage,
   }) {
     return UserPreferences(
       audioAutoplay: audioAutoplay ?? this.audioAutoplay,
@@ -30,6 +33,7 @@ class UserPreferences {
       preferredDialect: preferredDialect ?? this.preferredDialect,
       learningPathView: learningPathView ?? this.learningPathView,
       hasCompletedPreTest: hasCompletedPreTest ?? this.hasCompletedPreTest,
+      appLanguage: appLanguage ?? this.appLanguage,
     );
   }
 
@@ -40,6 +44,7 @@ class UserPreferences {
         'preferredDialect': preferredDialect,
         'learningPathView': learningPathView,
         'hasCompletedPreTest': hasCompletedPreTest,
+        'appLanguage': appLanguage,
       };
 
   factory UserPreferences.fromJson(Map<String, dynamic> json) => UserPreferences(
@@ -49,5 +54,7 @@ class UserPreferences {
         preferredDialect: json['preferredDialect'] ?? 'ALL',
         learningPathView: json['learningPathView'] ?? 'MOUNTAIN',
         hasCompletedPreTest: json['hasCompletedPreTest'] ?? false,
+        appLanguage: json['appLanguage'] ?? 'en',
       );
 }
+

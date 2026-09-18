@@ -17,6 +17,7 @@ import '../services/auth_service.dart';
 import '../services/haptic_service.dart';
 import '../widgets/brand_background.dart';
 import '../widgets/branded_empty_state.dart';
+import '../utils/app_localization.dart';
 
 
 class FlashcardsScreen extends ConsumerStatefulWidget {
@@ -108,7 +109,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
     }
   }
 
-  Future<void> _updateSRS(bool wasCorrect) async {
+  Future<void> _updateSRS(bool wasCorrect, AppLocalization l10n) async {
     HapticService.medium();
 
     final user = ref.read(authStateProvider).value;
@@ -176,7 +177,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
             children: [
               const Icon(Icons.check_circle, color: Colors.white, size: 16),
               const SizedBox(width: 8),
-              Text('Mastery Level Up! +${config.cardReviewXp} XP', style: AppTypography.label.copyWith(color: Colors.white)),
+              Text('${l10n.translate('mastery_level_up')} +${config.cardReviewXp} XP', style: AppTypography.label.copyWith(color: Colors.white)),
             ],
           ),
           backgroundColor: AppColors.semanticGreen,
@@ -193,6 +194,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
     final dictionaryAsync = ref.watch(dictionaryStreamProvider);
     final bookmarksAsync = user != null ? ref.watch(userBookmarksStreamProvider(user.uid)) : const AsyncValue.data(<String>[]);
     final srsAsync = user != null ? ref.watch(srsProgressStreamProvider(user.uid)) : const AsyncValue.data(<SRSProgress>[]);
+    final l10n = ref.watch(localizationProvider);
 
     return dictionaryAsync.when(
       loading: () => const Scaffold(backgroundColor: Colors.transparent, body: BrandBackground(child: Center(child: CircularProgressIndicator(color: AppColors.gold500)))),
@@ -246,7 +248,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
               appBar: AppBar(
                 backgroundColor: Colors.transparent,
                 elevation: 0,
-                title: Text('DAILY REVIEW', style: AppTypography.label.copyWith(color: AppColors.gold500, letterSpacing: 2)),
+                title: Text(l10n.translate('daily_review'), style: AppTypography.label.copyWith(color: AppColors.gold500, letterSpacing: 2)),
                 actions: [
                   Padding(
                     padding: const EdgeInsets.only(right: 16),
@@ -288,7 +290,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
                               return Transform(
                                 alignment: Alignment.center,
                                 transform: Matrix4.identity()..setEntry(3, 2, 0.001)..rotateY(angle),
-                                child: isShowingFront ? _buildFront(entry, isDark) : Transform(alignment: Alignment.center, transform: Matrix4.identity()..rotateY(pi), child: _buildBack(entry)),
+                                child: isShowingFront ? _buildFront(entry, isDark) : Transform(alignment: Alignment.center, transform: Matrix4.identity()..rotateY(pi), child: _buildBack(entry, l10n)),
                               );
                             },
                           ),
@@ -307,9 +309,9 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
                           _navControl(icon: Icons.chevron_left_rounded, label: 'PREV', onTap: _currentIndex > 0 ? _previous : null, isDark: isDark),
                           const SizedBox(width: 12),
                           if (_isFlipped) ...[
-                            Expanded(child: BrandButton(text: 'Hard', type: BrandButtonType.secondary, onTap: () => _updateSRS(false))),
+                            Expanded(child: BrandButton(text: 'Hard', type: BrandButtonType.secondary, onTap: () => _updateSRS(false, l10n))),
                             const SizedBox(width: 12),
-                            Expanded(child: BrandButton(text: isLast ? 'Finish ✓' : 'Easy ✓', type: BrandButtonType.primary, onTap: isLast ? _showCompletionModal : () => _updateSRS(true))),
+                            Expanded(child: BrandButton(text: isLast ? 'Finish ✓' : 'Easy ✓', type: BrandButtonType.primary, onTap: isLast ? () => _showCompletionModal(l10n) : () => _updateSRS(true, l10n))),
                           ] else
                             Expanded(child: BrandButton(text: 'Flip Card  ↕', type: BrandButtonType.primary, onTap: _flipCard)),
                           const SizedBox(width: 12),
@@ -410,7 +412,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
     );
   }
 
-  Widget _buildBack(DictionaryEntry entry) {
+  Widget _buildBack(DictionaryEntry entry, AppLocalization l10n) {
     return BrandCard(
       theme: BrandCardTheme.cream,
       child: SizedBox(
@@ -419,12 +421,12 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text('TRANSLATION', style: AppTypography.mono.copyWith(color: AppColors.gold700, fontSize: 9, letterSpacing: 2)),
+            Text(l10n.translate('translation'), style: AppTypography.mono.copyWith(color: AppColors.gold700, fontSize: 9, letterSpacing: 2)),
             const SizedBox(height: 16),
             Text(entry.translation, style: AppTypography.display.copyWith(color: AppColors.creamText, fontSize: 36, height: 1.1), textAlign: TextAlign.center),
             if (entry.usageContext.isNotEmpty) ...[
               const Padding(padding: EdgeInsets.symmetric(vertical: 20), child: Divider(color: AppColors.creamBorder)),
-              Text('EXAMPLE USAGE', style: AppTypography.mono.copyWith(color: AppColors.creamText3, fontSize: 9, letterSpacing: 2)),
+              Text(l10n.translate('example_usage'), style: AppTypography.mono.copyWith(color: AppColors.creamText3, fontSize: 9, letterSpacing: 2)),
               const SizedBox(height: 10),
               Text('"${entry.usageContext}"', style: AppTypography.body.copyWith(color: AppColors.creamText2, fontStyle: FontStyle.italic, height: 1.5), textAlign: TextAlign.center),
             ],
@@ -478,7 +480,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
     );
   }
 
-  void _showCompletionModal() {
+  void _showCompletionModal(AppLocalization l10n) {
     HapticService.celebration();
     final config = ref.read(appConfigProvider).value ?? AppConfig.fromFirestore({});
     final bonusXp = _deck!.length * config.cardCompletionBonusXp;
@@ -496,9 +498,9 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
             children: [
               const Text('🏆', style: TextStyle(fontSize: 56)).animate(onPlay: (c) => c.repeat(reverse: true)).scaleXY(end: 1.1, duration: 600.ms),
               const SizedBox(height: 16),
-              Text('Session Complete!', style: AppTypography.display.copyWith(fontSize: 24)),
+              Text(l10n.translate('session_complete_msg'), style: AppTypography.display.copyWith(fontSize: 24)),
               const SizedBox(height: 8),
-              Text('You studied all ${_deck!.length} cards.', style: AppTypography.body.copyWith(color: AppColors.creamText3)),
+              Text("${l10n.translate('studied_all_cards').replaceAll('all cards.', 'all')} ${_deck!.length} cards.", style: AppTypography.body.copyWith(color: AppColors.creamText3)),
               const SizedBox(height: 8),
               Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), decoration: BoxDecoration(color: AppColors.gold100, borderRadius: BorderRadius.circular(12)), child: Text('+$bonusXp XP EARNED', style: AppTypography.mono.copyWith(color: AppColors.gold700, fontWeight: FontWeight.bold))),
               const SizedBox(height: 24),

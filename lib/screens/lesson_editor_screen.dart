@@ -24,6 +24,7 @@ import '../widgets/lesson_editors/listening_editor.dart';
 import '../widgets/lesson_editors/scenario_editor.dart';
 import '../widgets/lesson_editors/editor_utils.dart';
 import '../widgets/lesson_previews/lesson_preview_panel.dart';
+import '../utils/app_localization.dart';
 
 class LessonEditorScreen extends ConsumerStatefulWidget {
   final String? lessonId;
@@ -88,9 +89,10 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
       if (previous == true && next == false) {
         // Sync finished
         if (mounted) {
+          final l10n = ref.read(localizationProvider);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Offline drafts synced successfully!'),
+            SnackBar(
+              content: Text(l10n.translate('offline_synced')),
             ),
           );
         }
@@ -400,6 +402,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
   }
 
   void _saveLesson({bool isDraft = false, bool isAutoSave = false}) async {
+    final l10n = ref.read(localizationProvider);
     if (!isDraft) {
       if (_titleController.text.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -499,8 +502,8 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         if (!isAutoSave && mounted) {
           if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Saved locally. Will sync when online.'),
+            SnackBar(
+              content: Text(l10n.translate('saved_locally_sync')),
             ),
           );
           Navigator.pop(context, true);
@@ -566,6 +569,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width >= 800;
+    final l10n = ref.watch(localizationProvider);
 
     return PopScope(
       canPop: false,
@@ -576,33 +580,24 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
           context: context,
           builder: (context) => AlertDialog(
             backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-            title: Text(
+            title: const Text(
               'Unsaved Changes',
-              style: AppTypography.h3.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
             ),
-            content: Text(
+            content: const Text(
               'You may have unsaved changes. Are you sure you want to exit?',
-              style: AppTypography.body.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
                 child: Text(
-                  'CANCEL',
-                  style: AppTypography.label.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                  ),
+                  l10n.translate('cancel').toUpperCase(),
                 ),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: Text(
+                child: const Text(
                   'EXIT',
-                  style: AppTypography.label.copyWith(
+                  style: TextStyle(
                     color: AppColors.semanticRed,
                   ),
                 ),
@@ -662,7 +657,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                 const SizedBox(width: 10),
               ],
             ),
-            body: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
+            body: isDesktop ? _buildDesktopLayout(l10n) : _buildMobileLayout(l10n),
           ),
           if (_isLoading)
             Container(
@@ -676,7 +671,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
     );
   }
 
-  Widget _buildDesktopLayout() {
+  Widget _buildDesktopLayout(AppLocalization l10n) {
     return Row(
       children: [
         // Pane 1: Steps List
@@ -688,7 +683,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                 right: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
               ),
             ),
-            child: _buildStepsList(),
+            child: _buildStepsList(l10n),
           ),
         ),
         // Pane 2: Content Editor
@@ -700,16 +695,16 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                 right: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
               ),
             ),
-            child: _buildContentEditor(),
+            child: _buildContentEditor(l10n),
           ),
         ),
         // Pane 3: Live Preview
-        Expanded(flex: 3, child: _buildLivePreview()),
+        Expanded(flex: 3, child: _buildLivePreview(l10n)),
       ],
     );
   }
 
-  Widget _buildMobileLayout() {
+  Widget _buildMobileLayout(AppLocalization l10n) {
     return Column(
       children: [
         TabBar(
@@ -728,9 +723,9 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
             controller: _tabController,
             physics: const BouncingScrollPhysics(),
             children: [
-              _buildStepsList().animate().fadeIn(duration: 400.ms),
-              _buildContentEditor().animate().fadeIn(duration: 400.ms),
-              _buildLivePreview().animate().fadeIn(duration: 400.ms),
+              _buildStepsList(l10n).animate().fadeIn(duration: 400.ms),
+              _buildContentEditor(l10n).animate().fadeIn(duration: 400.ms),
+              _buildLivePreview(l10n).animate().fadeIn(duration: 400.ms),
             ],
           ),
         ),
@@ -739,7 +734,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
   }
 
   // --- Pane 1: Steps List ---
-  Widget _buildStepsList() {
+  Widget _buildStepsList(AppLocalization l10n) {
     return Column(
       children: [
         Padding(
@@ -955,7 +950,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
   }
 
   // --- Pane 2: Content Editor ---
-  Widget _buildContentEditor() {
+  Widget _buildContentEditor(AppLocalization l10n) {
     if (_selectedStep == null) {
       return Center(
         child: Column(
@@ -1020,7 +1015,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                 ],
               ),
               const SizedBox(height: 24),
-              _buildSelectedEditor(),
+              _buildSelectedEditor(l10n),
             ],
           ),
         )
@@ -1029,7 +1024,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         .slideX(begin: 0.02, curve: Curves.easeOut);
   }
 
-  Widget _buildSelectedEditor() {
+  Widget _buildSelectedEditor(AppLocalization l10n) {
     try {
       switch (_selectedStep!.type) {
         case ActivityType.configuration:
@@ -1087,11 +1082,11 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
             onUpdated: () => setState(() {}),
           );
         case ActivityType.wordHunt:
-          return _buildWordHuntEditor();
+          return _buildWordHuntEditor(l10n);
         case ActivityType.trueOrFalse:
-          return _buildTrueOrFalseEditor();
+          return _buildTrueOrFalseEditor(l10n);
         case ActivityType.fillInTheBlanks:
-          return _buildFillInTheBlanksEditor();
+          return _buildFillInTheBlanksEditor(l10n);
       }
     } catch (e) {
       return Container(
@@ -1153,7 +1148,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
     }
   }
 
-    Widget _buildWordHuntEditor() {
+    Widget _buildWordHuntEditor(AppLocalization l10n) {
     final options = _selectedStep!.data['options'] as List;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1206,7 +1201,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         }),
         TextButton.icon(
           icon: const Icon(Icons.add, color: AppColors.gold500),
-          label: const Text('Add Word', style: TextStyle(color: AppColors.gold500)),
+          label: Text(l10n.translate('add_word'), style: const TextStyle(color: AppColors.gold500)),
           onPressed: () {
             setState(() {
               options.add('');
@@ -1217,7 +1212,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
     );
   }
 
-  Widget _buildTrueOrFalseEditor() {
+  Widget _buildTrueOrFalseEditor(AppLocalization l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1241,7 +1236,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
           children: [
             Expanded(
               child: ChoiceChip(
-                label: const Text('TRUE'),
+                label: Text(l10n.translate('true_label')),
                 selected: _selectedStep!.data['correctIndex'] == 0,
                 onSelected: (selected) {
                   if (selected) {
@@ -1255,7 +1250,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
             const SizedBox(width: 12),
             Expanded(
               child: ChoiceChip(
-                label: const Text('FALSE'),
+                label: Text(l10n.translate('false_label')),
                 selected: _selectedStep!.data['correctIndex'] == 1,
                 onSelected: (selected) {
                   if (selected) {
@@ -1272,7 +1267,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
     );
   }
 
-  Widget _buildFillInTheBlanksEditor() {
+  Widget _buildFillInTheBlanksEditor(AppLocalization l10n) {
     final parts = _selectedStep!.data['parts'] as List;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1335,7 +1330,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         }),
         TextButton.icon(
           icon: const Icon(Icons.add, color: AppColors.gold500),
-          label: const Text('Add Blank Answer', style: TextStyle(color: AppColors.gold500)),
+          label: Text(l10n.translate('add_blank'), style: const TextStyle(color: AppColors.gold500)),
           onPressed: () {
             setState(() {
               parts.add('');
@@ -1350,7 +1345,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
   List<LessonStep> get _previewActivities =>
       _steps.where((step) => step.type != ActivityType.configuration).toList();
 
-  void _startPreviewSession() {
+  void _startPreviewSession(AppLocalization l10n) {
     final activities = _previewActivities;
     if (activities.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1387,7 +1382,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
     });
   }
 
-  Widget _buildLivePreview() {
+  Widget _buildLivePreview(AppLocalization l10n) {
     final activities = _previewActivities;
     final previewIndex = activities.isEmpty
         ? 0
@@ -1402,7 +1397,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
       description: _descController.text,
       difficulty: _difficulty,
       dialect: _dialect,
-      onStart: _startPreviewSession,
+      onStart: () => _startPreviewSession(l10n),
       onExitPreview: _exitPreviewSession,
       onPreviousActivity: _isPreviewSessionActive && previewIndex > 0
           ? () => _showPreviewActivity(previewIndex - 1)
@@ -1447,6 +1442,3 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
     }
   }
 }
-
-
-

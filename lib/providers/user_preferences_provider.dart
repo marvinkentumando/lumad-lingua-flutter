@@ -53,6 +53,11 @@ class UserPreferencesNotifier extends Notifier<UserPreferences> {
     await _save();
   }
 
+  Future<void> setAppLanguage(String languageCode) async {
+    state = state.copyWith(appLanguage: languageCode);
+    await _save();
+  }
+
   Future<void> _save() async {
     try {
       _prefs = await SharedPreferences.getInstance();

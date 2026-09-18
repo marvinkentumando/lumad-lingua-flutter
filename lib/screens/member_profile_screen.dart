@@ -14,6 +14,7 @@ import '../widgets/branded_empty_state.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/brand_background.dart';
+import '../utils/app_localization.dart';
 
 final validatorActivityCountProvider = StreamProvider.family<int, String>((ref, userId) {
   return ref.watch(firebaseServiceProvider).getValidatorActivityCount(userId);
@@ -31,6 +32,7 @@ class MemberProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(otherUserProfileProvider(userId));
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -42,7 +44,7 @@ class MemberProfileScreen extends ConsumerWidget {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'TRIBE MEMBER',
+          l10n.translate('tribe_member_caps'),
           style: AppTypography.label.copyWith(
             color: AppColors.gold500,
             letterSpacing: 2,
@@ -67,7 +69,7 @@ class MemberProfileScreen extends ConsumerWidget {
             final streak = profile['streak'] as int? ?? 0;
             final wordsLearned = profile['wordCount'] as int? ?? 0;
             final displayName =
-                profile['username'] ?? profile['displayName'] ?? 'Tribe Member';
+                profile['username'] ?? profile['displayName'] ?? l10n.translate('tribe_member');
             final photoUrl = profile['photoURL'];
 
             return SafeArea(
@@ -83,6 +85,7 @@ class MemberProfileScreen extends ConsumerWidget {
                       role,
                       photoUrl,
                       profile,
+                      l10n,
                     ),
                     if (profile['bio'] != null &&
                         (profile['bio'] as String).isNotEmpty) ...[
@@ -103,10 +106,10 @@ class MemberProfileScreen extends ConsumerWidget {
                       ),
                     ],
                     const SizedBox(height: 40),
-                    _buildStatsRow(context, ref, role, userId, xp, streak, wordsLearned),
+                    _buildStatsRow(context, ref, role, userId, xp, streak, wordsLearned, l10n),
                     const SizedBox(height: 40),
                     if (role == UserRole.learner)
-                      _buildArtifactsSection(context, ref, userId),
+                      _buildArtifactsSection(context, ref, userId, l10n),
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -134,17 +137,17 @@ class MemberProfileScreen extends ConsumerWidget {
     }
   }
 
-  String _getRoleBadge(UserRole role, Map<String, dynamic> profile) {
-    final location = profile['location'] ?? 'Unknown';
+  String _getRoleBadge(UserRole role, Map<String, dynamic> profile, AppLocalization l10n) {
+    final location = profile['location'] ?? l10n.translate('unknown');
     switch (role) {
       case UserRole.admin:
-        return 'SYSTEM OVERSEER  •  $location';
+        return '${l10n.translate('system_overseer')}  •  $location';
       case UserRole.staff:
-        return 'RESEARCHER STAFF  •  $location';
+        return '${l10n.translate('researcher_staff')}  •  $location';
       case UserRole.educator:
-        return 'WISDOM GUIDE  •  $location';
+        return '${l10n.translate('wisdom_guide')}  •  $location';
       case UserRole.learner:
-        return 'ELDER PATHFINDER  •  $location';
+        return '${l10n.translate('elder_pathfinder')}  •  $location';
     }
   }
 
@@ -154,6 +157,7 @@ class MemberProfileScreen extends ConsumerWidget {
     UserRole role,
     String? photoUrl,
     Map<String, dynamic> profile,
+    AppLocalization l10n,
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
@@ -184,7 +188,7 @@ class MemberProfileScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          _getRoleBadge(role, profile),
+          _getRoleBadge(role, profile, l10n),
           style: AppTypography.label.copyWith(
             color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5),
             fontSize: 12,
@@ -203,18 +207,19 @@ class MemberProfileScreen extends ConsumerWidget {
     int xp,
     int streak,
     int wordsLearned,
+    AppLocalization l10n,
   ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        _buildMetricCircle(context, Icons.flash_on, xp.toString(), 'TOTAL XP'),
+        _buildMetricCircle(context, Icons.flash_on, xp.toString(), l10n.translate('total_xp')),
         _buildMetricCircle(
           context,
           Icons.local_fire_department_rounded,
           streak.toString(),
-          'STREAK',
+          l10n.translate('day_streak'),
         ),
-        _buildMetricCircle(context, Icons.menu_book_rounded, wordsLearned.toString(), 'WORDS'),
+        _buildMetricCircle(context, Icons.menu_book_rounded, wordsLearned.toString(), l10n.translate('words')),
       ],
     ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1);
   }
@@ -266,6 +271,7 @@ class MemberProfileScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     String userId,
+    AppLocalization l10n,
   ) {
     final artifactsAsync = ref.watch(otherUserArtifactsProvider(userId));
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -274,7 +280,7 @@ class MemberProfileScreen extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Earned Artifacts',
+          l10n.translate('earned_artifacts'),
           style: AppTypography.h3.copyWith(
             color: isDark ? AppColors.gold500 : AppColors.gold700,
             fontWeight: FontWeight.bold,
@@ -285,9 +291,9 @@ class MemberProfileScreen extends ConsumerWidget {
           data: (artifacts) {
             final earned = artifacts.where((a) => a.isEarned).toList();
             if (earned.isEmpty) {
-              return const BrandedEmptyState(
-                title: 'No Treasures',
-                message: 'No artifacts discovered by this member yet.',
+              return BrandedEmptyState(
+                title: l10n.translate('no_treasures'),
+                message: l10n.translate('no_artifacts_desc'),
                 icon: Icons.temple_hindu_rounded,
               );
             }
@@ -307,10 +313,10 @@ class MemberProfileScreen extends ConsumerWidget {
           loading: () => const Center(
             child: Skeleton(height: 160, borderRadius: 24),
           ),
-          error: (e, _) => const Center(
+          error: (e, _) => Center(
             child: Text(
-              'Error loading artifacts',
-              style: TextStyle(color: AppColors.semanticRed),
+              l10n.translate('error_artifacts'),
+              style: const TextStyle(color: AppColors.semanticRed),
             ),
           ),
         ),

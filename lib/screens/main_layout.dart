@@ -17,6 +17,7 @@ import '../config/role_nav_config.dart';
 import '../services/cultural_theme_service.dart';
 import '../services/haptic_service.dart';
 import '../widgets/profile_avatar.dart';
+import '../utils/app_localization.dart';
 
 class MainLayout extends ConsumerWidget {
   final Widget child;
@@ -27,6 +28,7 @@ class MainLayout extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentRole = ref.watch(roleProvider);
     final navItems = getNavItemsForRole(currentRole);
+    final l10n = ref.watch(localizationProvider);
 
     final String location = GoRouterState.of(context).uri.path;
     final bool hideBottomNav = location.startsWith('/scenario-session') ||
@@ -63,6 +65,7 @@ class MainLayout extends ConsumerWidget {
                 userAsync,
                 culturalTheme,
                 currentRole,
+                l10n,
               ),
             ),
       body: BrandBackground(child: child),
@@ -115,7 +118,7 @@ class MainLayout extends ConsumerWidget {
                     },
                     items: navItems.map((item) {
                       final isSelected = navItems.indexOf(item) == currentIndex;
-                      return _buildNavItem(item.icon, item.label, isSelected);
+                      return _buildNavItem(item.icon, item.label, isSelected, l10n);
                     }).toList(),
                   ),
                 ),
@@ -128,13 +131,16 @@ class MainLayout extends ConsumerWidget {
     IconData icon,
     String label,
     bool isSelected,
+    AppLocalization l10n,
   ) {
+    // Localize label if possible. Labels from role_nav_config are keys.
+    final String localizedLabel = l10n.translate(label.toLowerCase());
     return BottomNavigationBarItem(
       icon: Padding(
         padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
         child: Icon(icon, size: 24),
       ),
-      label: label,
+      label: localizedLabel != label.toLowerCase() ? localizedLabel : label,
     );
   }
 
@@ -144,6 +150,7 @@ class MainLayout extends ConsumerWidget {
     AsyncValue authState,
     CulturalTheme culturalTheme,
     UserRole role,
+    AppLocalization l10n,
   ) {
     final profile = ref.watch(userProfileProvider).value;
     String label = '';
@@ -160,14 +167,14 @@ class MainLayout extends ConsumerWidget {
       label = '${student.xp} XP';
       icon = Icons.flash_on_rounded;
     } else if (role == UserRole.staff) {
-      label = 'STAFF';
+      label = l10n.translate('researcher_staff');
       icon = Icons.admin_panel_settings_rounded;
     } else if (role == UserRole.educator) {
       final count = ref.watch(totalUsersCountProvider).value ?? 0;
-      label = '$count STUDENTS';
+      label = '$count ${l10n.translate('students')}';
       icon = Icons.people_rounded;
     } else if (role == UserRole.admin) {
-      label = 'SYSTEM OVERSEER';
+      label = l10n.translate('system_overseer');
       icon = Icons.admin_panel_settings_rounded;
     } else {
       final xp = ref.watch(xpProvider);
@@ -226,7 +233,7 @@ class MainLayout extends ConsumerWidget {
             GestureDetector(
               onTap: () {
                 HapticService.selection();
-                _showSystemGuide(context);
+                _showSystemGuide(context, l10n);
               },
               child: Container(
                 padding: const EdgeInsets.all(8),
@@ -343,7 +350,7 @@ class MainLayout extends ConsumerWidget {
     ).animate().fadeIn().slideX(begin: 0.2);
   }
 
-  void _showSystemGuide(BuildContext context) {
+  void _showSystemGuide(BuildContext context, AppLocalization l10n) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
@@ -376,7 +383,7 @@ class MainLayout extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'SYSTEM NAVIGATION GUIDE',
+                        l10n.translate('system_nav_guide'),
                         style: AppTypography.label.copyWith(
                           color: AppColors.gold500,
                           fontWeight: FontWeight.w900,
@@ -385,7 +392,7 @@ class MainLayout extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Welcome to Lumad Lingua',
+                        l10n.translate('welcome_lumad_lingua'),
                         style: AppTypography.h2.copyWith(
                           color: isDark ? Colors.white : AppColors.forest900,
                         ),
@@ -406,38 +413,38 @@ class MainLayout extends ConsumerWidget {
                 children: [
                   _buildGuideItem(
                     icon: Icons.auto_stories_rounded,
-                    title: '1. Cultural Heritage Orientation',
-                    description: 'An overview of our specific indigenous community (e.g., Mansaka), explaining the vital importance of preserving our sacred ancestral dialects, oral literature, and ancient traditions.',
+                    title: l10n.translate('guide_title_1'),
+                    description: l10n.translate('guide_desc_1'),
                     isDark: isDark,
                   ),
                   _buildGuideItem(
                     icon: Icons.map_rounded,
-                    title: '2. Learning Path Roadmap',
-                    description: 'Walkthrough of the interactive step-by-step progress loop. Advance through structured tribal units, visit localized scenario hubs, and complete specialized vocabulary challenges.',
+                    title: l10n.translate('guide_title_2'),
+                    description: l10n.translate('guide_desc_2'),
                     isDark: isDark,
                   ),
                   _buildGuideItem(
                     icon: Icons.mic_external_on_rounded,
-                    title: '3. Pronunciation & Audio Guidelines',
-                    description: 'Learn how to utilize the microphone for live pronunciation analysis. Listen carefully to accurate accent references and mimic elder pronunciations to calibrate your voice scores.',
+                    title: l10n.translate('guide_title_3'),
+                    description: l10n.translate('guide_desc_3'),
                     isDark: isDark,
                   ),
                   _buildGuideItem(
                     icon: Icons.translate_rounded,
-                    title: '4. Dictionary & Archive Navigation',
-                    description: 'Effortlessly search through our deep indigenous word vaults. Explore comprehensive usage contexts, examples, and instant translations into English or Filipino.',
+                    title: l10n.translate('guide_title_4'),
+                    description: l10n.translate('guide_desc_4'),
                     isDark: isDark,
                   ),
                   _buildGuideItem(
                     icon: Icons.workspace_premium_rounded,
-                    title: '5. Community Peak & Engagement',
-                    description: 'Understand the XP reward cycle, tribal progression ranks, and unique merit badges. Challenge peers in ritual duels and tap the spark icon to send a "Tribal Salute" to fellow learners.',
+                    title: l10n.translate('guide_title_5'),
+                    description: l10n.translate('guide_desc_5'),
                     isDark: isDark,
                   ),
                   _buildGuideItem(
                     icon: Icons.gavel_rounded,
-                    title: '6. Data Privacy & Verification Transparency',
-                    description: 'Total clarity on community custodianship. Discover how native terms, audio tips, and submitted records are protected, filtered, and officially verified by our tribal council and elders.',
+                    title: l10n.translate('guide_title_6'),
+                    description: l10n.translate('guide_desc_6'),
                     isDark: isDark,
                   ),
                   const SizedBox(height: 40),
@@ -463,7 +470,7 @@ class MainLayout extends ConsumerWidget {
         color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+          color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
         ),
       ),
       child: Row(
@@ -506,4 +513,3 @@ class MainLayout extends ConsumerWidget {
     );
   }
 }
-

@@ -20,6 +20,8 @@ import '../widgets/skeleton.dart';
 import '../services/haptic_service.dart';
 import '../widgets/artifacts/artifact_inventory_section.dart';
 import '../providers/theme_provider.dart';
+import '../utils/app_localization.dart';
+import '../providers/user_preferences_provider.dart';
 
 class StaffProfileScreen extends ConsumerWidget {
   const StaffProfileScreen({super.key});
@@ -30,6 +32,7 @@ class StaffProfileScreen extends ConsumerWidget {
     final currentXp = ref.watch(xpProvider);
     final currentRole = ref.watch(roleProvider);
     final profile = ref.watch(userProfileProvider).value;
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -45,7 +48,7 @@ class StaffProfileScreen extends ConsumerWidget {
                 child: Column(
                   children: [
                     const SizedBox(height: 40),
-                    _buildAvatarSection(context, ref, user, currentRole, profile),
+                    _buildAvatarSection(context, ref, user, currentRole, profile, l10n),
                     if (profile?['bio'] != null &&
                         (profile?['bio'] as String).isNotEmpty) ...[
                       const SizedBox(height: 16),
@@ -72,6 +75,7 @@ class StaffProfileScreen extends ConsumerWidget {
                       user?.uid ?? '',
                       currentXp,
                       profile,
+                      l10n,
                     ),
                     const SizedBox(height: 40),
                     if (currentRole != UserRole.admin && currentRole != UserRole.educator) ...[
@@ -84,6 +88,7 @@ class StaffProfileScreen extends ConsumerWidget {
                       currentRole,
                       user,
                       profile,
+                      l10n,
                     ),
                     const SizedBox(height: 40),
                   ],
@@ -96,17 +101,17 @@ class StaffProfileScreen extends ConsumerWidget {
     );
   }
 
-  String _getRoleBadge(UserRole role, Map<String, dynamic>? profile) {
-    final location = profile?['location'] ?? 'PHILIPPINES';
+  String _getRoleBadge(UserRole role, Map<String, dynamic>? profile, AppLocalization l10n) {
+    final location = profile?['location'] ?? l10n.translate('philippines');
     switch (role) {
       case UserRole.admin:
-        return 'SYSTEM OVERSEER  \u2022  $location';
+        return '${l10n.translate('system_overseer')}  \u2022  $location';
       case UserRole.staff:
-        return 'RESEARCHER STAFF  \u2022  $location';
+        return '${l10n.translate('researcher_staff')}  \u2022  $location';
       case UserRole.educator:
-        return 'WISDOM GUIDE  \u2022  $location';
+        return '${l10n.translate('wisdom_guide')}  \u2022  $location';
       case UserRole.learner:
-        return 'ELDER PATHFINDER  \u2022  $location';
+        return '${l10n.translate('elder_pathfinder')}  \u2022  $location';
     }
   }
 
@@ -116,6 +121,7 @@ class StaffProfileScreen extends ConsumerWidget {
     dynamic user,
     UserRole role,
     Map<String, dynamic>? profile,
+    AppLocalization l10n,
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
@@ -151,7 +157,7 @@ class StaffProfileScreen extends ConsumerWidget {
                     bottom: 0,
                     right: 8,
                     child: GestureDetector(
-                      onTap: () => _pickAndUploadImage(context, ref, user?.uid),
+                      onTap: () => _pickAndUploadImage(context, ref, user?.uid, l10n),
                       child: Container(
                         padding: const EdgeInsets.all(6),
                         decoration: const BoxDecoration(
@@ -177,7 +183,7 @@ class StaffProfileScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 24),
         Text(
-          user?.displayName ?? profile?['username'] ?? 'Tribe Member',
+          user?.displayName ?? profile?['username'] ?? l10n.translate('tribe_member'),
           style: AppTypography.h1ExtraBold.copyWith(
             color: isDark ? AppColors.gold500 : AppColors.forest500,
             fontSize: 32,
@@ -185,7 +191,7 @@ class StaffProfileScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          _getRoleBadge(role, profile),
+          _getRoleBadge(role, profile, l10n),
           style: AppTypography.label.copyWith(
             color: isDark ? Colors.white38 : AppColors.creamText3,
             fontSize: 12,
@@ -199,7 +205,7 @@ class StaffProfileScreen extends ConsumerWidget {
               onTap: () {
                 final code = profile?['villageCode'] as String;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Village Code $code copied to clipboard!')),
+                  SnackBar(content: Text('${l10n.translate('village_code_label')} $code')),
                 );
               },
               child: Container(
@@ -215,7 +221,7 @@ class StaffProfileScreen extends ConsumerWidget {
                     const Icon(Icons.fort_rounded, size: 14, color: AppColors.gold500),
                     const SizedBox(width: 8),
                     Text(
-                      'VILLAGE CODE: ${profile?['villageCode']}',
+                      '${l10n.translate('village_code_label')} ${profile?['villageCode']}',
                       style: AppTypography.label.copyWith(
                         color: AppColors.gold500,
                         fontWeight: FontWeight.bold,
@@ -227,13 +233,13 @@ class StaffProfileScreen extends ConsumerWidget {
               ),
             )
           else
-            _buildSetupVillageButton(context, ref, user?.uid),
+            _buildSetupVillageButton(context, ref, user?.uid, l10n),
         ],
       ],
     );
   }
 
-  Widget _buildSetupVillageButton(BuildContext context, WidgetRef ref, String? userId) {
+  Widget _buildSetupVillageButton(BuildContext context, WidgetRef ref, String? userId, AppLocalization l10n) {
     return GestureDetector(
       onTap: () async {
         if (userId == null) return;
@@ -243,8 +249,8 @@ class StaffProfileScreen extends ConsumerWidget {
           await ref.read(firebaseServiceProvider).updateUserProfile(userId, {'villageCode': code});
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Village activated! Students can now join your tribe. 🌿'),
+              SnackBar(
+                content: Text(l10n.translate('village_activated')),
                 backgroundColor: AppColors.semanticGreen,
               ),
             );
@@ -252,7 +258,7 @@ class StaffProfileScreen extends ConsumerWidget {
         } catch (e) {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Activation failed: $e'), backgroundColor: AppColors.semanticRed),
+              SnackBar(content: Text('${l10n.translate('activation_failed')} $e'), backgroundColor: AppColors.semanticRed),
             );
           }
         }
@@ -270,7 +276,7 @@ class StaffProfileScreen extends ConsumerWidget {
             const Icon(Icons.add_home_rounded, size: 14, color: AppColors.semanticGreen),
             const SizedBox(width: 8),
             Text(
-              'ACTIVATE VILLAGE CODE',
+              l10n.translate('activate_village'),
               style: AppTypography.label.copyWith(
                 color: AppColors.semanticGreen,
                 fontWeight: FontWeight.bold,
@@ -290,13 +296,14 @@ class StaffProfileScreen extends ConsumerWidget {
     String userId,
     int xp,
     Map<String, dynamic>? profile,
+    AppLocalization l10n,
   ) {
     if (role == UserRole.learner) {
       final streak = profile?['streak'] as int? ?? 0;
       final words = profile?['wordCount'] as int? ?? 0;
-      return _ProfileStatsRow(xp: xp, streak: streak, words: words);
+      return _ProfileStatsRow(xp: xp, streak: streak, words: words, l10n: l10n);
     }
-    return _StaffStatsRow(role: role, userId: userId);
+    return _StaffStatsRow(role: role, userId: userId, xp: xp, l10n: l10n);
   }
 
   Widget _buildJourneyManagement(
@@ -305,12 +312,13 @@ class StaffProfileScreen extends ConsumerWidget {
     UserRole role,
     dynamic user,
     Map<String, dynamic>? profile,
+    AppLocalization l10n,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Journey Management',
+          l10n.translate('journey_management'),
           style: AppTypography.h3.copyWith(
             color: AppColors.gold500,
             fontWeight: FontWeight.bold,
@@ -320,30 +328,39 @@ class StaffProfileScreen extends ConsumerWidget {
         _buildManagementTile(
           context,
           Icons.settings_suggest_rounded,
-          'Edit Profile',
-          'Update your location and bio',
+          l10n.translate('edit_profile'),
+          l10n.translate('update_location_bio'),
           onTap: () => _showEditProfileDialog(
             context,
             ref,
             userId: user?.uid ?? '',
             profile: profile,
+            l10n: l10n,
           ),
+        ),
+        const SizedBox(height: 12),
+        _buildManagementTile(
+          context,
+          Icons.translate_rounded,
+          'App Language',
+          ref.watch(userPreferencesProvider).appLanguage.toUpperCase(),
+          onTap: () => _showLanguageSelector(context, ref, l10n),
         ),
         const SizedBox(height: 12),
         if (profile?['role']?.toString().toLowerCase() != 'admin') ...[
           _buildManagementTile(
             context,
             Icons.trending_up_rounded,
-            'Wisdom Progression',
-            'View requirements for your next rank and titles',
+            l10n.translate('wisdom_progression'),
+            l10n.translate('wisdom_requirements'),
             onTap: () => context.push('/wisdom-progression'),
           ),
           const SizedBox(height: 12),
           _buildManagementTile(
             context,
             Icons.notifications_active_rounded,
-            'Notification Sanctuary',
-            'Manage alerts for daily goals and community messages',
+            l10n.translate('notification_sanctuary'),
+            l10n.translate('notification_desc'),
             onTap: () => context.push('/notifications'),
           ),
           const SizedBox(height: 12),
@@ -351,16 +368,16 @@ class StaffProfileScreen extends ConsumerWidget {
         _buildManagementTile(
           context,
           Icons.security_rounded,
-          'Data & Privacy',
-          'Export your contributions or manage account security',
+          l10n.translate('data_privacy'),
+          l10n.translate('data_privacy_desc'),
           onTap: () => context.push('/privacy-settings'),
         ),
         const SizedBox(height: 12),
         _buildManagementTile(
           context,
           Icons.cloud_download_rounded,
-          'Offline Wisdom',
-          'Manage cached lessons and audio files for offline use',
+          l10n.translate('offline_wisdom'),
+          l10n.translate('offline_wisdom_desc'),
           onTap: () => context.push('/offline-wisdom'),
         ),
         const SizedBox(height: 12),
@@ -370,9 +387,9 @@ class StaffProfileScreen extends ConsumerWidget {
               ? Icons.light_mode_rounded
               : Icons.dark_mode_rounded,
           Theme.of(context).brightness == Brightness.dark
-              ? 'Light Sanctuary'
-              : 'Dark Forest',
-          'Switch between light and dark themes',
+              ? l10n.translate('light_sanctuary')
+              : l10n.translate('dark_forest'),
+          l10n.translate('switch_themes'),
           onTap: () => ref.read(themeProvider.notifier).toggleTheme(),
         ),
         const SizedBox(height: 12),
@@ -380,14 +397,14 @@ class StaffProfileScreen extends ConsumerWidget {
           _buildManagementTile(
             context,
             Icons.supervised_user_circle_rounded,
-            'Simulation Mode',
-            'Switch to Learner view to test content',
+            l10n.translate('simulation_mode'),
+            l10n.translate('test_content_desc'),
             onTap: () => ref.read(isSimulatingProvider.notifier).state = true,
           ),
           const SizedBox(height: 12),
         ],
         const SizedBox(height: 40),
-        _buildLogOut(context, ref),
+        _buildLogOut(context, ref, l10n),
         const SizedBox(height: 40),
       ],
     ).animate().fadeIn(delay: 600.ms).slideY(begin: 0.1);
@@ -478,7 +495,7 @@ class StaffProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildLogOut(BuildContext context, WidgetRef ref) {
+  Widget _buildLogOut(BuildContext context, WidgetRef ref, AppLocalization l10n) {
     return Center(
       child: TextButton(
         onPressed: () async {
@@ -491,7 +508,7 @@ class StaffProfileScreen extends ConsumerWidget {
           }
         },
         child: Text(
-          'LOG  OUT',
+          l10n.translate('log_out'),
           style: AppTypography.label.copyWith(
             color: Theme.of(context).brightness == Brightness.dark
                 ? AppColors.gold500
@@ -508,6 +525,7 @@ class StaffProfileScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     String? userId,
+    AppLocalization l10n,
   ) async {
     if (userId == null) return;
 
@@ -523,17 +541,17 @@ class StaffProfileScreen extends ConsumerWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.face_retouching_natural_rounded, color: AppColors.gold500),
-              title: const Text('Choose Ancestral Totem', style: TextStyle(color: Colors.white)),
+              title: Text(l10n.translate('choose_totem'), style: const TextStyle(color: Colors.white)),
               onTap: () => Navigator.pop(context, 'character'),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library, color: AppColors.gold500),
-              title: const Text('Upload New Picture', style: TextStyle(color: Colors.white)),
+              title: Text(l10n.translate('upload_picture'), style: const TextStyle(color: Colors.white)),
               onTap: () => Navigator.pop(context, 'upload'),
             ),
             ListTile(
               leading: const Icon(Icons.delete, color: AppColors.semanticRed),
-              title: const Text('Remove Picture', style: TextStyle(color: AppColors.semanticRed)),
+              title: Text(l10n.translate('remove_picture'), style: const TextStyle(color: AppColors.semanticRed)),
               onTap: () => Navigator.pop(context, 'remove'),
             ),
           ],
@@ -542,7 +560,7 @@ class StaffProfileScreen extends ConsumerWidget {
     );
 
     if (action == 'character') {
-      if (context.mounted) _showCharacterPicker(context, ref, userId);
+      if (context.mounted) _showCharacterPicker(context, ref, userId, l10n);
       return;
     }
 
@@ -553,7 +571,7 @@ class StaffProfileScreen extends ConsumerWidget {
         });
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Profile picture removed.'), backgroundColor: AppColors.semanticGreen),
+            SnackBar(content: Text(l10n.translate('pic_removed')), backgroundColor: AppColors.semanticGreen),
           );
         }
       } catch (e) {
@@ -578,7 +596,7 @@ class StaffProfileScreen extends ConsumerWidget {
       try {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Uploading ancestral totem...')),
+            SnackBar(content: Text(l10n.translate('uploading_totem'))),
           );
         }
 
@@ -591,8 +609,8 @@ class StaffProfileScreen extends ConsumerWidget {
 
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Profile picture updated!'),
+            SnackBar(
+              content: Text(l10n.translate('pic_updated')),
               backgroundColor: AppColors.semanticGreen,
             ),
           );
@@ -601,7 +619,7 @@ class StaffProfileScreen extends ConsumerWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Upload failed: $e'),
+              content: Text("${l10n.translate('upload_failed')} $e"),
               backgroundColor: AppColors.semanticRed,
             ),
           );
@@ -610,7 +628,7 @@ class StaffProfileScreen extends ConsumerWidget {
     }
   }
 
-  void _showCharacterPicker(BuildContext context, WidgetRef ref, String userId) {
+  void _showCharacterPicker(BuildContext context, WidgetRef ref, String userId, AppLocalization l10n) {
     final characters = [
       'assets/images/lumad_character.png',
       'assets/images/lumad_character (1).png',
@@ -641,7 +659,7 @@ class StaffProfileScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'Choose Your Ancestral Totem',
+              l10n.translate('choose_your_totem'),
               style: AppTypography.h3.copyWith(color: AppColors.gold500),
             ),
             const SizedBox(height: 24),
@@ -674,7 +692,7 @@ class StaffProfileScreen extends ConsumerWidget {
                       } catch (e) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Failed to update: $e')),
+                            SnackBar(content: Text("${l10n.translate('failed_update')} $e")),
                           );
                         }
                       }
@@ -706,11 +724,56 @@ class StaffProfileScreen extends ConsumerWidget {
     );
   }
 
+  void _showLanguageSelector(BuildContext context, WidgetRef ref, AppLocalization l10n) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.forest900,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 24),
+            Text(l10n.translate('select_language'), style: AppTypography.h3.copyWith(color: AppColors.gold500)),
+            const SizedBox(height: 16),
+            ListTile(
+              title: Text(l10n.translate('english'), style: const TextStyle(color: Colors.white)),
+              trailing: ref.watch(userPreferencesProvider).appLanguage == 'en' ? const Icon(Icons.check, color: AppColors.gold500) : null,
+              onTap: () {
+                ref.read(userPreferencesProvider.notifier).setAppLanguage('en');
+                Navigator.pop(ctx);
+              },
+            ),
+            ListTile(
+              title: Text(l10n.translate('filipino'), style: const TextStyle(color: Colors.white)),
+              trailing: ref.watch(userPreferencesProvider).appLanguage == 'tl' ? const Icon(Icons.check, color: AppColors.gold500) : null,
+              onTap: () {
+                ref.read(userPreferencesProvider.notifier).setAppLanguage('tl');
+                Navigator.pop(ctx);
+              },
+            ),
+            ListTile(
+              title: Text(l10n.translate('bisaya'), style: const TextStyle(color: Colors.white)),
+              trailing: ref.watch(userPreferencesProvider).appLanguage == 'bis' ? const Icon(Icons.check, color: AppColors.gold500) : null,
+              onTap: () {
+                ref.read(userPreferencesProvider.notifier).setAppLanguage('bis');
+                Navigator.pop(ctx);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showEditProfileDialog(
     BuildContext context,
     WidgetRef ref, {
     required String userId,
     Map<String, dynamic>? profile,
+    required AppLocalization l10n,
   }) {
     final nameController = TextEditingController(
       text: profile?['username'] ?? '',
@@ -815,27 +878,27 @@ class StaffProfileScreen extends ConsumerWidget {
                   Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
                   const SizedBox(height: 24),
                   Text(
-                    'Edit Sacred Profile',
+                    l10n.translate('edit_sacred_profile'),
                     style: AppTypography.h2.copyWith(color: AppColors.gold500),
                   ),
                   const SizedBox(height: 24),
-                  _buildEditField('Tribe Name', nameController),
+                  _buildEditField(l10n.translate('tribe_name'), nameController),
                   const SizedBox(height: 16),
                   
                   if (isLocationLocked)
                     _buildEditField(
-                      'Location',
+                      l10n.translate('location'),
                       TextEditingController(text: currentLocation),
                       enabled: false,
-                      hint: 'Location is locked',
+                      hint: l10n.translate('location_locked'),
                     )
                   else ...[
                     // Province Dropdown
-                    _buildLabel('Province', true),
+                    _buildLabel(l10n.translate('province'), true),
                     _buildDropdown(
                       context,
                       value: selectedProvince,
-                      hint: "Select Province",
+                      hint: l10n.translate('select_province'),
                       items: regionData.keys.toList(),
                       onChanged: (val) {
                         setDialogState(() {
@@ -847,11 +910,11 @@ class StaffProfileScreen extends ConsumerWidget {
                     const SizedBox(height: 16),
 
                     // Municipality Dropdown
-                    _buildLabel('Municipality', true),
+                    _buildLabel(l10n.translate('municipality'), true),
                     _buildDropdown(
                       context,
                       value: selectedMunicipality,
-                      hint: "Select Municipality",
+                      hint: l10n.translate('select_municipality'),
                       items: selectedProvince != null ? regionData[selectedProvince]! : [],
                       onChanged: (val) {
                         setDialogState(() {
@@ -863,10 +926,10 @@ class StaffProfileScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                   
                   _buildEditField(
-                    'Statement/Bio',
+                    l10n.translate('bio'),
                     bioController,
                     maxLines: 3,
-                    hint: 'Teaching philosophy or heritage goals...',
+                    hint: l10n.translate('bio_hint'),
                   ),
                   const SizedBox(height: 32),
                   Row(
@@ -874,7 +937,7 @@ class StaffProfileScreen extends ConsumerWidget {
                       Expanded(
                         child: TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text('CANCEL', style: TextStyle(color: Colors.white38)),
+                          child: Text(l10n.translate('close').toUpperCase(), style: const TextStyle(color: Colors.white38)),
                         ),
                       ),
                       Expanded(
@@ -900,9 +963,9 @@ class StaffProfileScreen extends ConsumerWidget {
                               }
                             }
                           },
-                          child: const Text(
-                            'SAVE',
-                            style: TextStyle(
+                          child: Text(
+                            l10n.translate('save'),
+                            style: const TextStyle(
                               color: Colors.black,
                               fontWeight: FontWeight.bold,
                             ),
@@ -917,6 +980,44 @@ class StaffProfileScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildEditField(
+    String label,
+    TextEditingController controller, {
+    int maxLines = 1,
+    String? hint,
+    bool enabled = true,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: AppTypography.label.copyWith(
+            color: enabled ? AppColors.gold500 : Colors.white24,
+            fontSize: 10,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          maxLines: maxLines,
+          enabled: enabled,
+          style: TextStyle(color: enabled ? Colors.white : Colors.white38),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(color: Colors.white24),
+            filled: true,
+            fillColor: Colors.black.withValues(alpha: enabled ? 0.2 : 0.1),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -982,44 +1083,6 @@ class StaffProfileScreen extends ConsumerWidget {
       ),
     );
   }
-
-  Widget _buildEditField(
-    String label,
-    TextEditingController controller, {
-    int maxLines = 1,
-    String? hint,
-    bool enabled = true,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: AppTypography.label.copyWith(
-            color: enabled ? AppColors.gold500 : Colors.white24,
-            fontSize: 10,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          maxLines: maxLines,
-          enabled: enabled,
-          style: TextStyle(color: enabled ? Colors.white : Colors.white38),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: const TextStyle(color: Colors.white24),
-            filled: true,
-            fillColor: Colors.black.withValues(alpha: enabled ? 0.2 : 0.1),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 // \u2500\u2500\u2500 Animated Stats Row \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -1029,7 +1092,8 @@ class _ProfileStatsRow extends ConsumerStatefulWidget {
   final int xp;
   final int streak;
   final int words;
-  const _ProfileStatsRow({required this.xp, required this.streak, required this.words});
+  final AppLocalization l10n;
+  const _ProfileStatsRow({required this.xp, required this.streak, required this.words, required this.l10n});
 
   @override
   ConsumerState<_ProfileStatsRow> createState() => _ProfileStatsRowState();
@@ -1126,7 +1190,7 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow>
             context,
             Icons.local_fire_department_rounded,
             _streakAnim,
-            'DAY STREAK',
+            widget.l10n.translate('day_streak'),
             isInt: true,
           ),
         ),
@@ -1134,7 +1198,7 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow>
           context,
           Icons.menu_book_rounded,
           _wordsAnim,
-          'WORDS',
+          widget.l10n.translate('words'),
           isInt: true,
         ),
       ],
@@ -1171,7 +1235,7 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow>
                 ),
               ),
               Text(
-                'TOTAL XP',
+                widget.l10n.translate('total_xp'),
                 style: AppTypography.label.copyWith(
                   color: isDark ? Colors.white24 : AppColors.creamText3,
                   fontSize: 8,
@@ -1238,37 +1302,71 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow>
 class _StaffStatsRow extends ConsumerWidget {
   final UserRole role;
   final String userId;
+  final int xp;
+  final AppLocalization l10n;
 
-  const _StaffStatsRow({required this.role, required this.userId});
+  const _StaffStatsRow({
+    required this.role,
+    required this.userId,
+    required this.xp,
+    required this.l10n,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (role == UserRole.admin || role == UserRole.educator) return const SizedBox.shrink();
+    // Fetch stats based on role
+    final studentCount = role == UserRole.educator
+        ? ref.watch(totalUsersCountProvider).value ?? 0
+        : 0;
+
+    final impactAsync = ref.watch(userImpactMetricsProvider(userId));
+
+    if (role == UserRole.admin) return const SizedBox.shrink();
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         if (role == UserRole.staff)
-          GestureDetector(
-            onTap: () => context.push('/sentiment'),
-            child: _buildMetricCircle(
-              context,
-              Icons.insights_rounded,
-              'VITALITY',
-              'MONITOR',
-            ),
+          _buildMetricCircle(
+            context,
+            Icons.insights_rounded,
+            l10n.translate('vitality'),
+            l10n.translate('monitor'),
+          )
+        else if (role == UserRole.educator)
+          _buildMetricCircle(
+            context,
+            Icons.people_rounded,
+            studentCount.toString(),
+            l10n.translate('students'),
           ),
 
-        _buildMetricCircle(context, Icons.star_rounded, '4.9', 'RATING'),
+        impactAsync.when(
+          data: (impact) => _buildMetricCircle(
+            context,
+            Icons.star_rounded,
+            (impact['accuracy'] * 5).toStringAsFixed(1),
+            l10n.translate('accuracy'),
+          ),
+          loading: () => _buildMetricCircle(context, Icons.star_rounded, '...', l10n.translate('rating')),
+          error: (_, __) => _buildMetricCircle(context, Icons.star_rounded, l10n.translate('na'), l10n.translate('rating')),
+        ),
 
         _buildMetricCircle(
           context,
           Icons.workspace_premium_rounded,
-          'ELITE',
-          'RANK',
+          _getStaffRank(xp),
+          l10n.translate('rank'),
         ),
       ],
     ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1);
+  }
+
+  String _getStaffRank(int xp) {
+    if (xp < 500) return l10n.translate('novice');
+    if (xp < 2000) return l10n.translate('guardian');
+    if (xp < 5000) return l10n.translate('elder');
+    return l10n.translate('elite');
   }
 
   Widget _buildMetricCircle(

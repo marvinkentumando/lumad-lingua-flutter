@@ -8,6 +8,7 @@ import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../widgets/brand_background.dart';
+import '../utils/app_localization.dart';
 
 class CommunityFeedScreen extends ConsumerWidget {
   const CommunityFeedScreen({super.key});
@@ -15,13 +16,14 @@ class CommunityFeedScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final feedAsync = ref.watch(communityFeedProvider);
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       body: BrandBackground(
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(context),
+              _buildHeader(context, l10n),
               Expanded(
                 child: feedAsync.when(
                   data: (activities) {
@@ -29,7 +31,7 @@ class CommunityFeedScreen extends ConsumerWidget {
                       final isDark = Theme.of(context).brightness == Brightness.dark;
                       return Center(
                         child: Text(
-                          "The community is quiet... for now. 🌿",
+                          l10n.translate('community_quiet'),
                           style: TextStyle(
                             color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.2),
                           ),
@@ -44,7 +46,7 @@ class CommunityFeedScreen extends ConsumerWidget {
                       itemCount: activities.length,
                       itemBuilder: (context, index) {
                         final activity = activities[index];
-                        return _FeedItemWidget(activity: activity)
+                        return _FeedItemWidget(activity: activity, l10n: l10n)
                             .animate()
                             .fadeIn(delay: Duration(milliseconds: index * 100))
                             .slideY(begin: 0.1, curve: Curves.easeOutCubic);
@@ -69,14 +71,14 @@ class CommunityFeedScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, AppLocalization l10n) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Row(
         children: [
           Text(
-            'LIVING FEED',
+            l10n.translate('living_feed'),
             style: AppTypography.h1ExtraBold.copyWith(
               color: AppColors.gold500,
               fontSize: 32,
@@ -103,8 +105,9 @@ class CommunityFeedScreen extends ConsumerWidget {
 
 class _FeedItemWidget extends ConsumerStatefulWidget {
   final CommunityActivity activity;
+  final AppLocalization l10n;
 
-  const _FeedItemWidget({required this.activity});
+  const _FeedItemWidget({required this.activity, required this.l10n});
 
   @override
   ConsumerState<_FeedItemWidget> createState() => _FeedItemWidgetState();
@@ -313,7 +316,7 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                'Sharing update by ${widget.activity.userName}...',
+                                widget.l10n.translate('sharing_update', params: {'name': widget.activity.userName}),
                               ),
                               backgroundColor: AppColors.semanticBlue,
                             ),
@@ -363,17 +366,17 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Comments",
+              widget.l10n.translate('comments_label'),
               style: AppTypography.h3.copyWith(color: AppColors.gold500),
             ),
             const SizedBox(height: 16),
             // We'd add a StreamBuilder for comments here later
-            const Center(
+            Center(
               child: Padding(
-                padding: EdgeInsets.all(20),
+                padding: const EdgeInsets.all(20),
                 child: Text(
-                  "Conversation starting soon... 🌿",
-                  style: TextStyle(color: Colors.white24, fontSize: 12),
+                  widget.l10n.translate('conversation_soon'),
+                  style: const TextStyle(color: Colors.white24, fontSize: 12),
                 ),
               ),
             ),
@@ -385,7 +388,7 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
                     controller: _commentController,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      hintText: 'Add a comment...',
+                      hintText: widget.l10n.translate('add_comment_hint'),
                       hintStyle: const TextStyle(color: Colors.white38),
                       filled: true,
                       fillColor: AppColors.forest900,
@@ -448,6 +451,3 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
     );
   }
 }
-
-
-

@@ -30,7 +30,6 @@ import '../models/quest.dart';
 import '../models/assessment.dart';
 import '../services/haptic_service.dart';
 import '../widgets/assessment_overlay.dart';
-
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:audio_waveforms/audio_waveforms.dart';
 import '../widgets/parallax_background.dart';
@@ -41,6 +40,7 @@ import '../services/task_evaluator.dart';
 import '../widgets/lesson_session/session_widgets.dart';
 import '../widgets/lesson_session/results_view.dart';
 import 'package:confetti/confetti.dart';
+import '../utils/app_localization.dart';
 
 class LessonSessionScreen extends ConsumerStatefulWidget {
   const LessonSessionScreen({super.key});
@@ -350,6 +350,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     _isContinuing = true;
 
     final state = ref.read(quizSessionProvider);
+    final l10n = ref.read(localizationProvider);
 
     final uri = GoRouterState.of(context).uri;
     final lessonId = uri.queryParameters['lessonId'] ?? '';
@@ -398,9 +399,9 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                   result['droppedArtifact'] as Artifact?;
 
               if (droppedArtifact != null) {
-                _showArtifactDropDialog(droppedArtifact, unlockedBadge);
+                _showArtifactDropDialog(droppedArtifact, unlockedBadge, l10n);
               } else if (unlockedBadge) {
-                _showBadgeUnlockedDialog();
+                _showBadgeUnlockedDialog(l10n);
               }
               
               // Increment daily streak on lesson completion
@@ -413,18 +414,18 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
               final bool shouldShowPostTest = stars == 3 && (DateTime.now().millisecond % 5 == 0);
               
               if (shouldShowPostTest) {
-                _showPostTestAssessment(onFinish: () {
+                _showPostTestAssessment(l10n, onFinish: () {
                   if (droppedArtifact != null) {
-                    _showArtifactDropDialog(droppedArtifact, unlockedBadge);
+                    _showArtifactDropDialog(droppedArtifact, unlockedBadge, l10n);
                   } else if (unlockedBadge) {
-                    _showBadgeUnlockedDialog();
+                    _showBadgeUnlockedDialog(l10n);
                   }
                 });
               } else {
                 if (droppedArtifact != null) {
-                  _showArtifactDropDialog(droppedArtifact, unlockedBadge);
+                  _showArtifactDropDialog(droppedArtifact, unlockedBadge, l10n);
                 } else if (unlockedBadge) {
-                  _showBadgeUnlockedDialog();
+                  _showBadgeUnlockedDialog(l10n);
                 }
               }
             })
@@ -447,7 +448,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
         _isContinuing = false;
       }
     } else if (hearts == 0) {
-      _showSuddenDeathChallenge();
+      _showSuddenDeathChallenge(l10n);
       _isContinuing = false;
     } else {
       setState(() {
@@ -457,7 +458,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     }
   }
 
-  void _showPostTestAssessment({required VoidCallback onFinish}) {
+  void _showPostTestAssessment(AppLocalization l10n, {required VoidCallback onFinish}) {
     final user = ref.read(authServiceProvider).currentUser;
     if (user == null) {
       onFinish();
@@ -467,18 +468,33 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     final List<AssessmentQuestion> postTestQuestions = [
       AssessmentQuestion(
         id: 'confidence',
-        text: 'How confident do you feel about the words you just learned?',
-        options: ['Very confident', 'Somewhat confident', 'A bit confused', 'I need more practice'],
+        text: l10n.translate('confidence_question'),
+        options: [
+          l10n.translate('very_confident'),
+          l10n.translate('somewhat_confident'),
+          l10n.translate('bit_confused'),
+          l10n.translate('need_practice')
+        ],
       ),
       AssessmentQuestion(
         id: 'difficulty',
-        text: 'Was the difficulty of this lesson appropriate?',
-        options: ['Too easy', 'Just right', 'Too hard', 'Very challenging'],
+        text: l10n.translate('difficulty_question'),
+        options: [
+          l10n.translate('too_easy'),
+          l10n.translate('just_right'),
+          l10n.translate('too_hard'),
+          l10n.translate('very_challenging')
+        ],
       ),
       AssessmentQuestion(
         id: 'utility',
-        text: 'How likely are you to use these words in a conversation?',
-        options: ['Very likely', 'Possibly', 'Not sure', 'Unlikely'],
+        text: l10n.translate('utility_question'),
+        options: [
+          l10n.translate('very_likely'),
+          l10n.translate('possibly'),
+          l10n.translate('not_sure'),
+          l10n.translate('unlikely')
+        ],
       ),
     ];
 
@@ -509,7 +525,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     );
   }
 
-  void _showQuitConfirmationDialog() {
+  void _showQuitConfirmationDialog(AppLocalization l10n) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
@@ -517,21 +533,21 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
         backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text(
-          '\ud83c\udfc3 Leave Session?',
+          "\ud83c\udfc3 ${l10n.translate('leave_session')}",
           style: TextStyle(color: isDark ? Colors.white : AppColors.forest900, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
         content: Text(
-          'Your progress in this session will be lost. Are you sure you want to quit?',
+          l10n.translate('leave_session_desc'),
           style: TextStyle(color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7)),
           textAlign: TextAlign.center,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              'Keep Going',
-              style: TextStyle(color: AppColors.gold500),
+            child: Text(
+              l10n.translate('keep_going'),
+              style: const TextStyle(color: AppColors.gold500),
             ),
           ),
           TextButton(
@@ -539,9 +555,9 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
               Navigator.pop(ctx);
               context.pop();
             },
-            child: const Text(
-              'Quit',
-              style: TextStyle(color: AppColors.semanticRed),
+            child: Text(
+              l10n.translate('quit'),
+              style: const TextStyle(color: AppColors.semanticRed),
             ),
           ),
         ],
@@ -587,7 +603,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     );
   }
 
-  void _showHeartRecoveryDialog() {
+  void _showHeartRecoveryDialog(AppLocalization l10n) {
     final studentState = ref.read(studentProvider);
     const crystalCost = 50;
     final canAfford = studentState.mistCrystals >= crystalCost;
@@ -600,7 +616,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
         backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text(
-          "Out of Hearts! \ud83d\udc94",
+          l10n.translate('out_of_hearts'),
           style: TextStyle(color: isDark ? Colors.white : AppColors.forest900, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
@@ -608,7 +624,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              "Your journey has grown difficult. Would you like to restore your strength?",
+              l10n.translate('restore_strength'),
               style: TextStyle(color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7)),
               textAlign: TextAlign.center,
             ),
@@ -619,18 +635,18 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                 color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text("Cost: ", style: TextStyle(color: Colors.white54)),
+                  Text("${l10n.translate('cost')} ", style: const TextStyle(color: Colors.white54)),
                   Text(
                     "$crystalCost ",
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.gold500,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Icon(
+                  const Icon(
                     Icons.auto_awesome,
                     color: AppColors.gold500,
                     size: 18,
@@ -639,11 +655,11 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
               ),
             ),
             if (!canAfford)
-              const Padding(
-                padding: EdgeInsets.only(top: 12),
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
                 child: Text(
-                  "Not enough crystals!",
-                  style: TextStyle(color: AppColors.semanticRed, fontSize: 12),
+                  l10n.translate('not_enough_crystals'),
+                  style: const TextStyle(color: AppColors.semanticRed, fontSize: 12),
                 ),
               ),
           ],
@@ -655,7 +671,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
               context.pop(); 
             },
             child: Text(
-              "End Session",
+              l10n.translate('end_session'),
               style: TextStyle(color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5)),
             ),
           ),
@@ -680,9 +696,9 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text(
-              "Restore Hearts",
-              style: TextStyle(fontWeight: FontWeight.bold),
+            child: Text(
+              l10n.translate('restore_hearts'),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -690,7 +706,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     );
   }
 
-  void _showSuddenDeathChallenge() {
+  void _showSuddenDeathChallenge(AppLocalization l10n) {
     final state = ref.read(quizSessionProvider);
     final tasks = state.totalTasks > 0
         ? state.currentTask != null
@@ -698,7 +714,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
               : []
         : [];
     if (tasks.isEmpty) {
-      _showHeartRecoveryDialog();
+      _showHeartRecoveryDialog(l10n);
       return;
     }
 
@@ -710,6 +726,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
   }
 
   void _handleSuddenDeathResult(bool isCorrect) {
+    final l10n = ref.read(localizationProvider);
     if (isCorrect) {
       ref.read(studentProvider.notifier).gainHeart(1); 
       setState(() {
@@ -719,17 +736,17 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
         _initTaskState();
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('SUDDEN DEATH SURVIVED! +1 Heart'),
+        SnackBar(
+          content: Text(l10n.translate('sudden_death_survived')),
           backgroundColor: AppColors.semanticGreen,
         ),
       );
     } else {
-      _showSuddenDeathDefeatOverlay();
+      _showSuddenDeathDefeatOverlay(l10n);
     }
   }
 
-  void _showSuddenDeathDefeatOverlay() {
+  void _showSuddenDeathDefeatOverlay(AppLocalization l10n) {
     if (!mounted) return;
     HapticService.heavy();
     ref.read(audioServiceProvider).playSFX('error');
@@ -739,11 +756,11 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     final canAfford = studentState.mistCrystals >= crystalCost;
     
     final failureQuotes = [
-      "Even the strongest tree bends in the storm to grow stronger.",
-      "A journey of a thousand miles has many rest stops.",
-      "Wisdom is not built in a day, but in the lessons of the fall.",
-      "The spirit is resilient, like the bamboo after the wind.",
-      "To learn is to fall and rise again, each time with more grace."
+      l10n.translate('quote_1'),
+      l10n.translate('quote_2'),
+      l10n.translate('quote_3'),
+      l10n.translate('quote_4'),
+      l10n.translate('quote_5'),
     ];
     final randomQuote = failureQuotes[DateTime.now().millisecond % failureQuotes.length];
 
@@ -768,7 +785,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                   ).animate().shake(duration: 800.ms).fadeOut(delay: 1.seconds, duration: 1.seconds).then().fadeIn(),
                   const SizedBox(height: 32),
                   Text(
-                    'SPIRIT EXHAUSTED',
+                    l10n.translate('spirit_exhausted'),
                     style: AppTypography.displayBold.copyWith(
                       color: AppColors.semanticRed,
                       fontSize: 32,
@@ -778,7 +795,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                   ).animate().fadeIn(delay: 300.ms),
                   const SizedBox(height: 16),
                   Text(
-                    "Your strength has faded before the ritual's end. But remember what the elders say:",
+                    l10n.translate('strength_faded'),
                     style: AppTypography.body.copyWith(color: Colors.white70),
                     textAlign: TextAlign.center,
                   ).animate().fadeIn(delay: 500.ms),
@@ -826,7 +843,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                             }
                           },
                           icon: const Icon(Icons.auto_awesome),
-                          label: const Text('SACRED REVIVAL (50 ✨)'),
+                          label: Text(l10n.translate('sacred_revival')),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.gold500,
                             foregroundColor: Colors.black,
@@ -843,9 +860,9 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                       child: SizedBox(
                         width: double.infinity,
                         child: OutlinedButton.icon(
-                          onPressed: () => _showMistakesReviewDialog(dialogContext),
+                          onPressed: () => _showMistakesReviewDialog(dialogContext, l10n),
                           icon: const Icon(Icons.menu_book_rounded),
-                          label: const Text('REVIEW SLIPPED TERMS'),
+                          label: Text(l10n.translate('review_slipped')),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.gold500,
                             side: const BorderSide(color: AppColors.gold500),
@@ -867,7 +884,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                         foregroundColor: Colors.white54,
                         padding: const EdgeInsets.symmetric(vertical: 18),
                       ),
-                      child: const Text('RETURN TO VILLAGE'),
+                      child: Text(l10n.translate('return_village')),
                     ),
                   ).animate().slideY(begin: 0.5, delay: 1.2.seconds),
                 ],
@@ -879,7 +896,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     );
   }
 
-  void _showMistakesReviewDialog(BuildContext parentContext) {
+  void _showMistakesReviewDialog(BuildContext parentContext, AppLocalization l10n) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final mistakeTasks = _allSessionTasks.where((t) => _taskMistakes.containsKey(t.id)).toList();
 
@@ -903,12 +920,12 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'SLIPPED TERMS',
+              l10n.translate('slipped_terms'),
               style: AppTypography.label.copyWith(color: AppColors.gold500, letterSpacing: 2),
             ),
             const SizedBox(height: 8),
             Text(
-              'Reflect on these before returning.',
+              l10n.translate('reflect_before_return'),
               style: AppTypography.body.copyWith(color: isDark ? Colors.white70 : AppColors.forest700),
             ),
             const SizedBox(height: 24),
@@ -979,7 +996,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
             SizedBox(
               width: double.infinity,
               child: BrandButton(
-                text: 'GOT IT',
+                text: l10n.translate('got_it'),
                 onTap: () => Navigator.pop(ctx),
                 type: BrandButtonType.primary,
               ),
@@ -990,7 +1007,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     );
   }
 
-  void _showBadgeUnlockedDialog() {
+  void _showBadgeUnlockedDialog(AppLocalization l10n) {
     if (!mounted) return;
     showDialog(
       context: context,
@@ -1005,9 +1022,9 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
               color: AppColors.gold500,
             ).animate().scale(duration: 500.ms, curve: Curves.elasticOut),
             const SizedBox(height: 16),
-            const Text(
-              'Badge Unlocked!',
-              style: TextStyle(
+            Text(
+              l10n.translate('badge_unlocked'),
+              style: const TextStyle(
                 color: AppColors.gold500,
                 fontWeight: FontWeight.bold,
               ),
@@ -1015,18 +1032,18 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
             ),
           ],
         ),
-        content: const Text(
-          'You earned the Perfect Scholar badge for your flawless performance!',
-          style: TextStyle(color: Colors.white70),
+        content: Text(
+          l10n.translate('perfect_scholar_desc'),
+          style: const TextStyle(color: Colors.white70),
           textAlign: TextAlign.center,
         ),
         actions: [
           Center(
             child: TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text(
-                'Awesome!',
-                style: TextStyle(color: AppColors.gold500),
+              child: Text(
+                l10n.translate('awesome'),
+                style: const TextStyle(color: AppColors.gold500),
               ),
             ),
           ),
@@ -1035,7 +1052,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     );
   }
 
-  void _showArtifactDropDialog(Artifact artifact, bool alsoUnlockedBadge) {
+  void _showArtifactDropDialog(Artifact artifact, bool alsoUnlockedBadge, AppLocalization l10n) {
     if (!mounted) return;
 
     HapticService.celebration();
@@ -1075,9 +1092,9 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
         ),
         title: Column(
           children: [
-            const Text(
-              'Loot Drop!',
-              style: TextStyle(
+            Text(
+              l10n.translate('loot_drop'),
+              style: const TextStyle(
                 color: AppColors.gold500,
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
@@ -1142,7 +1159,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
               onPressed: () {
                 Navigator.pop(ctx);
                 if (alsoUnlockedBadge) {
-                  _showBadgeUnlockedDialog();
+                  _showBadgeUnlockedDialog(l10n);
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -1152,9 +1169,9 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text(
-                'Add to Vault',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              child: Text(
+                l10n.translate('add_vault'),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -1340,6 +1357,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     final task = (_isSuddenDeath && _suddenDeathTask != null)
         ? _suddenDeathTask!
         : baseTask;
+    final l10n = ref.watch(localizationProvider);
 
     if (task != null) {
       _lastTask = task;
@@ -1368,7 +1386,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        _showQuitConfirmationDialog();
+        _showQuitConfirmationDialog(l10n);
       },
       child: Scaffold(
         backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
@@ -1435,7 +1453,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                     icon: lessonObj != null ? IconUtils.getIconData(lessonObj.icon) : null,
                   ),
                   if (_showLeaderboardSnippet)
-                    _buildLeaderboardSnippet(),
+                    _buildLeaderboardSnippet(l10n),
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
@@ -1482,7 +1500,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         if (effectiveTask.hintMetadata.isNotEmpty)
-                                          _buildEldersWisdomButton(context, effectiveTask),
+                                          _buildEldersWisdomButton(context, effectiveTask, l10n),
                                         _buildTaskContent(effectiveTask)
                                             .animate(key: ValueKey(_shakeCounter))
                                             .shakeX(
@@ -1516,7 +1534,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                   right: 0,
                   child: FeedbackPanel(
                     isCorrect: _lastAnswerCorrect,
-                    title: _lastAnswerCorrect ? "Correct!" : "Slipped!",
+                    title: _lastAnswerCorrect ? l10n.translate('correct') : l10n.translate('slipped'),
                     subtitle: _feedbackSubtitle,
                     onContinue: _handleContinue,
                     xpEarned: _lastAnswerCorrect ? _currentTaskXp : null,
@@ -1562,7 +1580,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     return path;
   }
 
-  Widget _buildLeaderboardSnippet() {
+  Widget _buildLeaderboardSnippet(AppLocalization l10n) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -1582,7 +1600,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              "YOU'RE IN THE TOP 3! 🔥",
+              l10n.translate('top_3'),
               style: AppTypography.label.copyWith(
                 color: AppColors.forest900,
                 fontWeight: FontWeight.bold,
@@ -1594,7 +1612,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     ).animate().slideY(begin: -1.0).fadeIn();
   }
 
-  Widget _buildEldersWisdomButton(BuildContext context, LessonTask task) {
+  Widget _buildEldersWisdomButton(BuildContext context, LessonTask task, AppLocalization l10n) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
       child: GestureDetector(
@@ -1615,7 +1633,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
               const Icon(Icons.auto_awesome, size: 16, color: AppColors.gold500),
               const SizedBox(width: 8),
               Text(
-                "ELDERS' WISDOM",
+                l10n.translate('elders_wisdom'),
                 style: AppTypography.label.copyWith(
                   color: AppColors.gold500,
                   fontSize: 10,
@@ -1630,4 +1648,3 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     );
   }
 }
-

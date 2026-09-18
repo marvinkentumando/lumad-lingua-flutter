@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lumad_lingua/theme/app_colors.dart';
 import 'package:lumad_lingua/theme/app_typography.dart';
 import 'package:lumad_lingua/widgets/brand_button.dart';
 import 'package:lumad_lingua/widgets/brand_card.dart';
 import 'package:lumad_lingua/models/artifact.dart';
+import '../utils/app_localization.dart';
 
-class ArtifactDetailScreen extends StatelessWidget {
+class ArtifactDetailScreen extends ConsumerWidget {
   final Artifact artifact;
 
   const ArtifactDetailScreen({super.key, required this.artifact});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = ref.watch(localizationProvider);
+
     return Scaffold(
       backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
       body: CustomScrollView(
@@ -179,7 +183,7 @@ class ArtifactDetailScreen extends StatelessWidget {
                   // Legend Section
                   _buildSectionHeader(
                     context,
-                    "Lore & Legend",
+                    l10n.translate('lore_legend'),
                     Icons.auto_stories_outlined,
                   ),
                   const SizedBox(height: 16),
@@ -189,7 +193,7 @@ class ArtifactDetailScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          artifact.legend ?? "No legend yet. Uncover more rituals to reveal the full story of this sacred object.",
+                          artifact.legend ?? l10n.translate('no_legend_yet'),
                           style: AppTypography.bodyLarge.copyWith(
                             color: isDark ? Colors.white : AppColors.forest900,
                             fontSize: 16,
@@ -202,7 +206,7 @@ class ArtifactDetailScreen extends StatelessWidget {
                           Divider(color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
                           const SizedBox(height: 12),
                           Text(
-                            "ELDERS' NOTE",
+                            l10n.translate('elders_wisdom'),
                             style: AppTypography.label.copyWith(
                               color: isDark ? AppColors.gold500 : AppColors.gold700,
                               fontSize: 10,
@@ -227,7 +231,7 @@ class ArtifactDetailScreen extends StatelessWidget {
                   // Material & Origin Section
                   _buildSectionHeader(
                     context,
-                    "Origin & Craft",
+                    l10n.translate('origin_craft'),
                     Icons.token_outlined,
                   ),
                   const SizedBox(height: 16),
@@ -250,13 +254,13 @@ class ArtifactDetailScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: BrandButton(
-                          text: "SHARE HERITAGE",
+                          text: l10n.translate('share_heritage'),
                           type: BrandButtonType.primary,
                           icon: Icons.share_outlined,
                           onTap: () {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Sharing lineage story..."),
+                              SnackBar(
+                                content: Text(l10n.translate('sharing_lineage')),
                               ),
                             );
                           },
@@ -367,6 +371,3 @@ class ArtifactDetailScreen extends StatelessWidget {
     }
   }
 }
-
-
-

@@ -19,6 +19,7 @@ import 'package:lumad_lingua/services/auth_service.dart';
 import 'package:lumad_lingua/providers/quest_provider.dart';
 import 'package:lumad_lingua/providers/student_provider.dart';
 import 'package:lumad_lingua/models/dictionary_entry.dart';
+import 'package:lumad_lingua/utils/app_localization.dart';
 
 enum DuelPhase { idle, searching, matchFound, battling, results }
 
@@ -35,8 +36,6 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
   double _opponentHp = 1.0;
   int _currentQuestionIndex = 0;
   bool _isPlayerWinning = true;
-  
-  final String _opponentTitle = "Ancestral Guardian";
   
   String? _matchId;
   bool _isHost = false;
@@ -150,6 +149,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
 
   void _generateBattleQuestions() {
     final dictionary = ref.read(allWordsProvider).value ?? [];
+    final l10n = ref.read(localizationProvider);
     
     List<Map<String, dynamic>> questions = [];
     
@@ -164,7 +164,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
         options.shuffle();
 
         questions.add({
-          'question': 'What does "${entry.indigenousWord}" mean?',
+          'question': l10n.translate('duel_question_prefix', params: {'word': entry.indigenousWord}),
           'options': options,
           'correct': options.indexOf(entry.translation),
         });
@@ -174,12 +174,12 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
     if (questions.isEmpty) {
       questions = [
         {
-          'question': 'How do you say "Good Morning" in Mansaka?',
+          'question': l10n.translate('duel_question_gm'),
           'options': ['Madyaw na gabi', 'Madyaw na allaw', 'Madyaw na amase', 'Madyaw na hapon'],
           'correct': 2,
         },
         {
-          'question': 'What is the Mansaka word for "Land"?',
+          'question': l10n.translate('duel_question_land'),
           'options': ['Duta', 'Danaw', 'Allaw', 'Gabi'],
           'correct': 0,
         }
@@ -269,34 +269,35 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = ref.watch(localizationProvider);
     return Scaffold(
       body: BrandBackground(
         child: SafeArea(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 500),
-            child: _buildCurrentPhase(),
+            child: _buildCurrentPhase(l10n),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildCurrentPhase() {
+  Widget _buildCurrentPhase(AppLocalization l10n) {
     switch (_phase) {
       case DuelPhase.idle:
-        return _buildIdle();
+        return _buildIdle(l10n);
       case DuelPhase.searching:
-        return _buildSearching();
+        return _buildSearching(l10n);
       case DuelPhase.matchFound:
-        return _buildMatchFound();
+        return _buildMatchFound(l10n);
       case DuelPhase.battling:
-        return _buildBattling();
+        return _buildBattling(l10n);
       case DuelPhase.results:
-        return _buildResults();
+        return _buildResults(l10n);
     }
   }
 
-  Widget _buildIdle() {
+  Widget _buildIdle(AppLocalization l10n) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       key: const ValueKey('idle'),
@@ -312,7 +313,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
               const Icon(Icons.fort_rounded, size: 80, color: AppColors.gold500),
               const SizedBox(height: 24),
               Text(
-                'LINGUA DUEL',
+                l10n.translate('lingua_duel'),
                 style: AppTypography.displayBold.copyWith(
                   color: isDark ? Colors.white : AppColors.forest900,
                   fontSize: 28,
@@ -321,7 +322,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Challenge ancestral guardians or live learners to ritual combat. Answer quickly to defend your energy and claim ancient crystal rewards.',
+                l10n.translate('duel_desc'),
                 textAlign: TextAlign.center,
                 style: AppTypography.body.copyWith(
                   color: isDark ? Colors.white70 : AppColors.forest700,
@@ -329,14 +330,14 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
               ),
               const SizedBox(height: 32),
               BrandButton(
-                text: 'ENTER ARENA',
+                text: l10n.translate('enter_arena'),
                 onTap: _startMatchmaking,
                 type: BrandButtonType.primary,
               ),
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () => context.pop(),
-                child: Text('RETREAT', style: TextStyle(color: isDark ? Colors.white60 : AppColors.forest600)),
+                child: Text(l10n.translate('retreat'), style: TextStyle(color: isDark ? Colors.white60 : AppColors.forest600)),
               ),
             ],
           ),
@@ -345,7 +346,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
     );
   }
 
-  Widget _buildSearching() {
+  Widget _buildSearching(AppLocalization l10n) {
     return Center(
       key: const ValueKey('searching'),
       child: Column(
@@ -356,12 +357,12 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
               .scale(begin: const Offset(1, 1), end: const Offset(1.3, 1.3), duration: 1.seconds, curve: Curves.easeInOut),
           const SizedBox(height: 32),
           Text(
-            'SEEKING OPPONENT...',
+            l10n.translate('seeking_opponent'),
             style: AppTypography.label.copyWith(color: AppColors.gold500, letterSpacing: 4),
           ),
           const SizedBox(height: 12),
           Text(
-            'Stirring the spirits of the arena...',
+            l10n.translate('stirring_spirits'),
             style: AppTypography.body.copyWith(color: Colors.white60),
           ),
         ],
@@ -369,7 +370,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
     );
   }
 
-  Widget _buildMatchFound() {
+  Widget _buildMatchFound(AppLocalization l10n) {
     return Center(
       key: const ValueKey('matchFound'),
       child: Column(
@@ -380,12 +381,12 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
               .shake(duration: 500.ms),
           const SizedBox(height: 24),
           Text(
-            'MATCH FOUND!',
+            l10n.translate('match_found'),
             style: AppTypography.displayBold.copyWith(color: Colors.white, fontSize: 32),
           ),
           const SizedBox(height: 8),
           Text(
-            'Prepare your mind for ritual combat.',
+            l10n.translate('prepare_combat'),
             style: AppTypography.body.copyWith(color: Colors.white60),
           ),
         ],
@@ -393,7 +394,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
     );
   }
 
-  Widget _buildBattling() {
+  Widget _buildBattling(AppLocalization l10n) {
     if (_battleQuestions.isEmpty) return const SizedBox.shrink();
     final q = _battleQuestions[_currentQuestionIndex];
 
@@ -410,7 +411,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('YOU', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      Text(l10n.translate('you_label'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
                       Container(
                         width: 120,
@@ -435,7 +436,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(_opponentTitle.toUpperCase(), style: const TextStyle(color: AppColors.gold500, fontWeight: FontWeight.bold, fontSize: 11)),
+                      Text(l10n.translate('ancestral_guardian').toUpperCase(), style: const TextStyle(color: AppColors.gold500, fontWeight: FontWeight.bold, fontSize: 11)),
                       const SizedBox(height: 4),
                       Container(
                         width: 120,
@@ -499,7 +500,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
     );
   }
 
-  Widget _buildResults() {
+  Widget _buildResults(AppLocalization l10n) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -510,7 +511,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
         ).animate().scale(duration: 1.seconds, curve: Curves.bounceOut),
         const SizedBox(height: 24),
         Text(
-          _isPlayerWinning ? 'VICTORY!' : 'DEFEAT',
+          _isPlayerWinning ? l10n.translate('victory') : l10n.translate('defeat'),
           style: AppTypography.displayBold.copyWith(
             color: _isPlayerWinning ? AppColors.gold500 : AppColors.semanticRed,
             fontSize: 48,
@@ -518,14 +519,14 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
         ),
         const SizedBox(height: 12),
         Text(
-          _isPlayerWinning ? '+150 XP  •  +25 Mist Crystals' : 'Try again to calibrate your knowledge sparks.',
+          _isPlayerWinning ? l10n.translate('victory_reward') : l10n.translate('defeat_desc'),
           style: AppTypography.bodyLarge.copyWith(color: Colors.white70),
         ),
         const SizedBox(height: 48),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40),
           child: BrandButton(
-            text: 'LEAVE ARENA',
+            text: l10n.translate('leave_arena'),
             onTap: () => context.pop(),
             type: BrandButtonType.primary,
           ),
