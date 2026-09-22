@@ -189,7 +189,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
               '${DateFormat('MMM d').format(season.startDate)} - ${DateFormat('MMM d, y').format(season.endDate)}',
               style: const TextStyle(color: Colors.white70),
             ),
-            Text('Badge ID: ${season.badgeId}', style: const TextStyle(color: Colors.white60, fontSize: 12)),ze: 10)),
+            Text('Badge ID: ${season.badgeId}', style: const TextStyle(color: Colors.white60, fontSize: 12)),
           ],
         ),
         trailing: Row(

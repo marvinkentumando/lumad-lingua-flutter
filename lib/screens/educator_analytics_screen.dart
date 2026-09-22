@@ -410,7 +410,7 @@ class _EducatorAnalyticsScreenState
                       Text(
                         '$val',
                         style: AppTypography.label.copyWith(
-                          color: isTapped ? AppColors.gold500 : (isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.4)),.forest900.withValues(alpha: 0.3)),
+                          color: isTapped ? AppColors.gold500 : (isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.4)),
                           fontSize: 9,
                           fontWeight: isTapped ? FontWeight.bold : FontWeight.normal,
                         ),

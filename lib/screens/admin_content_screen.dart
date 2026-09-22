@@ -520,7 +520,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                     children: [
                       Text(
                         'by ${log.actorName} · ${log.timeAgo}',
-                        style: AppTypography.label.copyWith(color: isDark ? Colors.white60 : AppColors.creamText3),rs.creamText3, fontSize: 11),
+                        style: AppTypography.label.copyWith(color: isDark ? Colors.white60 : AppColors.creamText3, fontSize: 11),
                       ),
                       if (log.metadata != null)
                          Text(
@@ -1010,7 +1010,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                             ),
                             subtitle: Text(
                               'Modified by: ${item['actorId'] ?? 'System'}',
-                              style: AppTypography.label.copyWith(color: isDark ? Colors.white60 : AppColors.creamText3),ppColors.creamText3),
+                              style: AppTypography.label.copyWith(color: isDark ? Colors.white60 : AppColors.creamText3),
                             ),
                             trailing: IconButton(
                               icon: const Icon(Icons.visibility_outlined, color: AppColors.gold500),
@@ -1115,7 +1115,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: TextStyle(color: isDark ? Colors.white60 : AppColors.creamText3)),ext3)),
+            child: Text('Cancel', style: TextStyle(color: isDark ? Colors.white60 : AppColors.creamText3)),
           ),
           BrandButton(
             text: 'Confirm Delete',

@@ -7,6 +7,7 @@ import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/brand_background.dart';
 import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/firebase_service.dart';
 import '../services/haptic_service.dart';
@@ -68,260 +69,259 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
         child: SafeArea(
           child: RefreshIndicator(
             onRefresh: () async {
-                ref.invalidate(systemHealthProvider);
-                ref.invalidate(platformActivityProvider);
-                await Future.delayed(const Duration(seconds: 1));
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(l10n.translate('stats_refreshed')),
+              ref.invalidate(systemHealthProvider);
+              ref.invalidate(platformActivityProvider);
+              await Future.delayed(const Duration(seconds: 1));
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(l10n.translate('stats_refreshed')),
+                ),
+              );
+            },
+            color: AppColors.gold500,
+            backgroundColor:
+                Theme.of(context).colorScheme.surfaceContainerHighest,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeroBanner(context, l10n),
+                  const SizedBox(height: 24),
+                  _sectionLabel(l10n.translate('village_pulse')),
+                  const SizedBox(height: 16),
+                  const WotdWidget(),
+                  const SizedBox(height: 12),
+                  _buildWotdAdminControls(l10n),
+                  const SizedBox(height: 32),
+                  _sectionLabel(l10n.translate('platform_stats')),
+                  const SizedBox(height: 16),
+                  GridView.count(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 1.45,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      ref.watch(totalUsersCountProvider).when(
+                            data: (count) => _statCard(
+                              count.toString(),
+                              l10n.translate('total_users'),
+                              Icons.people_outline,
+                              AppColors.semanticBlue,
+                            ),
+                            loading: () => _statCard(
+                              '',
+                              l10n.translate('total_users'),
+                              Icons.people_outline,
+                              AppColors.semanticBlue,
+                              isLoading: true,
+                            ),
+                            error: (_, __) => _statCard(
+                              '!',
+                              l10n.translate('total_users'),
+                              Icons.people_outline,
+                              AppColors.semanticBlue,
+                            ),
+                          ),
+                      ref.watch(totalWordsCountProvider).when(
+                            data: (count) => _statCard(
+                              count.toString(),
+                              l10n.translate('words_added'),
+                              Icons.library_books_outlined,
+                              AppColors.semanticGreen,
+                            ),
+                            loading: () => _statCard(
+                              '',
+                              l10n.translate('words_added'),
+                              Icons.library_books_outlined,
+                              AppColors.semanticGreen,
+                              isLoading: true,
+                            ),
+                            error: (_, __) => _statCard(
+                              '!',
+                              l10n.translate('words_added'),
+                              Icons.library_books_outlined,
+                              AppColors.semanticGreen,
+                            ),
+                          ),
+                      ref.watch(totalAudioClipsCountProvider).when(
+                            data: (count) => _statCard(
+                              count.toString(),
+                              l10n.translate('audio_clips'),
+                              Icons.mic_outlined,
+                              AppColors.semanticRed,
+                            ),
+                            loading: () => _statCard(
+                              '',
+                              l10n.translate('audio_clips'),
+                              Icons.mic_outlined,
+                              AppColors.semanticRed,
+                              isLoading: true,
+                            ),
+                            error: (_, __) => _statCard(
+                              '!',
+                              l10n.translate('audio_clips'),
+                              Icons.mic_outlined,
+                              AppColors.semanticRed,
+                            ),
+                          ),
+                      GestureDetector(
+                        onTap: () {
+                          HapticService.selection();
+                          context.push('/admin/dictionary');
+                        },
+                        child: _statCard(
+                          l10n.translate('manage_label'),
+                          l10n.translate('dictionary_label'),
+                          Icons.book_rounded,
+                          AppColors.gold500,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          HapticService.selection();
+                          context.push('/admin/algorithm-selection');
+                        },
+                        child: _statCard(
+                          'AI MODELS',
+                          'DEPLOYMENT',
+                          Icons.psychology_rounded,
+                          AppColors.semanticBlue,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          HapticService.selection();
+                          context.push('/admin/lessons');
+                        },
+                        child: _statCard(
+                          l10n.translate('manage_label'),
+                          l10n.translate('lessons_label'),
+                          Icons.library_books_rounded,
+                          AppColors.gold500,
+                        ),
+                      ),
+                    ]
+                        .animate(interval: 80.ms)
+                        .fadeIn(delay: 100.ms)
+                        .scale(begin: const Offset(0.92, 0.92)),
                   ),
-                );
-              },
-              color: AppColors.gold500,
-              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeroBanner(context, l10n),
-                    const SizedBox(height: 24),
-                    _sectionLabel(l10n.translate('village_pulse')),
-                    const SizedBox(height: 16),
-                    const WotdWidget(),
-                    const SizedBox(height: 12),
-                    _buildWotdAdminControls(l10n),
-                    const SizedBox(height: 32),
-                    _sectionLabel(l10n.translate('platform_stats')),
-                    const SizedBox(height: 16),
-                    GridView.count(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 1.45,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: Column(
                       children: [
-                        ref.watch(totalUsersCountProvider).when(
-                              data: (count) => _statCard(
-                                count.toString(),
-                                l10n.translate('total_users'),
-                                Icons.people_outline,
-                                AppColors.semanticBlue,
-                              ),
-                              loading: () => _statCard(
-                                '',
-                                l10n.translate('total_users'),
-                                Icons.people_outline,
-                                AppColors.semanticBlue,
-                                isLoading: true,
-                              ),
-                              error: (_, __) => _statCard(
-                                '!',
-                                l10n.translate('total_users'),
-                                Icons.people_outline,
-                                AppColors.semanticBlue,
-                              ),
-                            ),
-                        ref.watch(totalWordsCountProvider).when(
-                              data: (count) => _statCard(
-                                count.toString(),
-                                l10n.translate('words_added'),
-                                Icons.library_books_outlined,
-                                AppColors.semanticGreen,
-                              ),
-                              loading: () => _statCard(
-                                '',
-                                l10n.translate('words_added'),
-                                Icons.library_books_outlined,
-                                AppColors.semanticGreen,
-                                isLoading: true,
-                              ),
-                              error: (_, __) => _statCard(
-                                '!',
-                                l10n.translate('words_added'),
-                                Icons.library_books_outlined,
-                                AppColors.semanticGreen,
-                              ),
-                            ),
-                        ref.watch(totalAudioClipsCountProvider).when(
-                              data: (count) => _statCard(
-                                count.toString(),
-                                l10n.translate('audio_clips'),
-                                Icons.mic_outlined,
-                                AppColors.semanticRed,
-                              ),
-                              loading: () => _statCard(
-                                '',
-                                l10n.translate('audio_clips'),
-                                Icons.mic_outlined,
-                                AppColors.semanticRed,
-                                isLoading: true,
-                              ),
-                              error: (_, __) => _statCard(
-                                '!',
-                                l10n.translate('audio_clips'),
-                                Icons.mic_outlined,
-                                AppColors.semanticRed,
-                              ),
-                            ),
-                        GestureDetector(
-                          onTap: () {
-                            HapticService.selection();
-                            context.push('/admin/dictionary');
-                          },
-                          child: _statCard(
-                            l10n.translate('manage_label'),
-                            l10n.translate('dictionary_label'),
-                            Icons.book_rounded,
-                            AppColors.gold500,
-                          ),
+                        BrandButton(
+                          text: l10n.translate('advanced_analytics'),
+                          type: BrandButtonType.primary,
+                          icon: Icons.analytics_rounded,
+                          onTap: () => context.push('/admin/analytics'),
                         ),
-                        GestureDetector(
-                          onTap: () {
-                            HapticService.selection();
-                            context.push('/admin/algorithm-selection');
-                          },
-                          child: _statCard(
-                            'AI MODELS',
-                            'DEPLOYMENT',
-                            Icons.psychology_rounded,
-                            AppColors.semanticBlue,
-                          ),
+                        const SizedBox(height: 12),
+                        BrandButton(
+                          text: 'VIEW TEST ASSESSMENTS',
+                          type: BrandButtonType.secondary,
+                          icon: Icons.assignment_turned_in_rounded,
+                          onTap: () => context.push('/admin/assessments'),
                         ),
-                        GestureDetector(
-                          onTap: () {
-                            HapticService.selection();
-                            context.push('/admin/lessons');
-                          },
-                          child: _statCard(
-                            l10n.translate('manage_label'),
-                            l10n.translate('lessons_label'),
-                            Icons.library_books_rounded,
-                            AppColors.gold500,
-                          ),
-                        ),
-                      ]
-                          .animate(interval: 80.ms)
-                          .fadeIn(delay: 100.ms)
-                          .scale(begin: const Offset(0.92, 0.92)),
+                      ],
                     ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
+                  ).animate().fadeIn(delay: 200.ms),
+                  const SizedBox(height: 32),
+                  _sectionLabel(l10n.translate('system_health_label')),
+                  const SizedBox(height: 16),
+                  healthAsync.when(
+                    data: (health) => _buildSystemHealthGrid(health),
+                    loading: () => _buildSystemHealthGrid(null),
+                    error: (_, __) => _buildSystemHealthGrid(null),
+                  ),
+                  const SizedBox(height: 32),
+                  _sectionLabel(l10n.translate('user_growth_label')),
+                  const SizedBox(height: 16),
+                  activityAsync.when(
+                    data: (data) => BrandCard(
+                      theme: BrandCardTheme.vibrant,
+                      child: _buildInteractiveBarChart(
+                        values: data['growth'] ?? [0, 0, 0, 0, 0, 0, 0],
+                        labels: [
+                          'Mon',
+                          'Tue',
+                          'Wed',
+                          'Thu',
+                          'Fri',
+                          'Sat',
+                          'Sun'
+                        ],
+                        color: AppColors.semanticBlue,
+                        tappedIndex: _tappedGrowthBar,
+                        onTap: (i) => setState(() => _tappedGrowthBar =
+                            _tappedGrowthBar == i ? null : i),
+                      ),
+                    ).animate().fadeIn(delay: 400.ms),
+                    loading: () => _buildChartAppShimmerSkeleton(),
+                    error: (_, __) => const Text('Error loading growth data'),
+                  ),
+                  const SizedBox(height: 32),
+                  _sectionLabel(l10n.translate('gamification_economics')),
+                  const SizedBox(height: 16),
+                  BrandCard(
+                    theme: BrandCardTheme.gold,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
                       child: Column(
                         children: [
-                          BrandButton(
-                            text: l10n.translate('advanced_analytics'),
-                            type: BrandButtonType.primary,
-                            icon: Icons.analytics_rounded,
-                            onTap: () => context.push('/admin/analytics'),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.auto_awesome_rounded,
+                                color: AppColors.forest900,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      l10n.translate('warrior_circle_ops'),
+                                      style: AppTypography.h3.copyWith(
+                                        color: AppColors.forest900,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    Text(
+                                      l10n.translate('manage_seasons_desc'),
+                                      style: AppTypography.body.copyWith(
+                                        color: AppColors.forest700,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 12),
-                          BrandButton(
-                            text: 'VIEW TEST ASSESSMENTS',
-                            type: BrandButtonType.secondary,
-                            icon: Icons.assignment_turned_in_rounded,
-                            onTap: () => context.push('/admin/assessments'),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: double.infinity,
+                            child: BrandButton(
+                              text: l10n.translate('go_economics_hub'),
+                              onTap: () => context.push('/admin/gamification'),
+                              type: BrandButtonType.primary,
+                              icon: Icons.auto_awesome_rounded,
+                            ),
                           ),
                         ],
                       ),
-                    ).animate().fadeIn(delay: 200.ms),
-                    const SizedBox(height: 32),
-                    _sectionLabel(l10n.translate('system_health_label')),
-                    const SizedBox(height: 16),
-                    healthAsync.when(
-                      data: (health) => _buildSystemHealthGrid(health),
-                      loading: () => _buildSystemHealthGrid(null),
-                      error: (_, __) => _buildSystemHealthGrid(null),
                     ),
-                    const SizedBox(height: 32),
-                    _sectionLabel(l10n.translate('user_growth_label')),
-                    const SizedBox(height: 16),
-                    activityAsync.when(
-                      data: (data) => BrandCard(
-                        theme: BrandCardTheme.vibrant,
-                        child: _buildInteractiveBarChart(
-                          values: data['growth'] ?? [0, 0, 0, 0, 0, 0, 0],
-                          labels: [
-                            'Mon',
-                            'Tue',
-                            'Wed',
-                            'Thu',
-                            'Fri',
-                            'Sat',
-                            'Sun'
-                          ],
-                          color: AppColors.semanticBlue,
-                          tappedIndex: _tappedGrowthBar,
-                          onTap: (i) => setState(() =>
-                              _tappedGrowthBar = _tappedGrowthBar == i ? null : i),
-                        ),
-                      ).animate().fadeIn(delay: 400.ms),
-                      loading: () => _buildChartAppShimmerSkeleton(),
-                      error: (_, __) => const Text('Error loading growth data'),
-                    ),
-                    const SizedBox(height: 32),
-                    _sectionLabel(l10n.translate('gamification_economics')),
-                    const SizedBox(height: 16),
-                    BrandCard(
-                      theme: BrandCardTheme.gold,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.auto_awesome_rounded,
-                                  color: AppColors.forest900,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        l10n.translate('warrior_circle_ops'),
-                                        style: AppTypography.h3.copyWith(
-                                          color: AppColors.forest900,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                      Text(
-                                        l10n.translate('manage_seasons_desc'),
-                                        style: AppTypography.body.copyWith(
-                                          color: AppColors.forest700,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            SizedBox(
-                              width: double.infinity,
-                              child: BrandButton(
-                                text: l10n.translate('go_economics_hub'),
-                                onTap: () =>
-                                    context.push('/admin/gamification'),
-                                type: BrandButtonType.primary,
-                                icon: Icons.auto_awesome_rounded,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 100),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 100),
+                ],
               ),
+            ),
           ),
         ),
       ),
@@ -347,7 +347,9 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: BrandButton(
-                text: isManual ? l10n.translate('resume_auto') : l10n.translate('pick_manually'),
+                text: isManual
+                    ? l10n.translate('resume_auto')
+                    : l10n.translate('pick_manually'),
                 type: isManual
                     ? BrandButtonType.primary
                     : BrandButtonType.secondary,
@@ -521,7 +523,8 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                   size: 20,
                 )
                     .animate(
-                      onPlay: (c) => isPulsing ? c.repeat(reverse: true) : c.stop(),
+                      onPlay: (c) =>
+                          isPulsing ? c.repeat(reverse: true) : c.stop(),
                     )
                     .tint(
                       color: (h['color'] as Color).withValues(alpha: 0.4),
@@ -536,7 +539,8 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                   ),
                 )
                     .animate(
-                      onPlay: (c) => isPulsing ? c.repeat(reverse: true) : c.stop(),
+                      onPlay: (c) =>
+                          isPulsing ? c.repeat(reverse: true) : c.stop(),
                     )
                     .custom(
                       duration: 2.seconds,
@@ -571,22 +575,25 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
         padding: const EdgeInsets.all(24.0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
-          children: List.generate(7, (i) => Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AppShimmerSkeleton(
-                    height: 30 + (i * 12.0) % 60.0,
-                    borderRadius: 6,
-                  ),
-                  const SizedBox(height: 10),
-                  const AppShimmerSkeleton(height: 8, width: 24, borderRadius: 2),
-                ],
-              ),
-            ),
-          )),
+          children: List.generate(
+              7,
+              (i) => Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AppShimmerSkeleton(
+                            height: 30 + (i * 12.0) % 60.0,
+                            borderRadius: 6,
+                          ),
+                          const SizedBox(height: 10),
+                          const AppShimmerSkeleton(
+                              height: 8, width: 24, borderRadius: 2),
+                        ],
+                      ),
+                    ),
+                  )),
         ),
       ),
     ).animate().fadeIn();
@@ -601,18 +608,25 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
         ),
       );
 
-  Widget _statCard(String value, String label, IconData icon, Color color, {bool isLoading = false}) {
+  Widget _statCard(String value, String label, IconData icon, Color color,
+      {bool isLoading = false}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.forest700.withValues(alpha: 0.5) : AppColors.gold500,
+        color: isDark
+            ? AppColors.forest700.withValues(alpha: 0.5)
+            : AppColors.gold500,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isDark ? color.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.1),
+          color: isDark
+              ? color.withValues(alpha: 0.1)
+              : Colors.black.withValues(alpha: 0.1),
         ),
         boxShadow: [
           BoxShadow(
-            color: isDark ? color.withValues(alpha: 0.05) : AppColors.gold700.withValues(alpha: 0.2),
+            color: isDark
+                ? color.withValues(alpha: 0.05)
+                : AppColors.gold700.withValues(alpha: 0.2),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -625,10 +639,13 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: isDark ? color.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.1),
+              color: isDark
+                  ? color.withValues(alpha: 0.1)
+                  : Colors.black.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: isDark ? color : AppColors.forest900, size: 20),
+            child: Icon(icon,
+                color: isDark ? color : AppColors.forest900, size: 20),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -796,7 +813,10 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -840,13 +860,17 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
               decoration: InputDecoration(
                 hintText: 'Search for a word...',
                 hintStyle: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
                       .withValues(alpha: 0.5),
                 ),
                 prefixIcon: const Icon(Icons.search_rounded),
                 filled: true,
-                fillColor:
-                    Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+                fillColor: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.05),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
@@ -897,7 +921,9 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
 
                 if (approvedWords.isEmpty) {
                   return BrandedEmptyState(
-                    title: _search.isNotEmpty ? 'Word Not Found' : 'No Sacred Words',
+                    title: _search.isNotEmpty
+                        ? 'Word Not Found'
+                        : 'No Sacred Words',
                     message: _search.isNotEmpty
                         ? 'Try a different search term.'
                         : 'No approved words available for rotation.',
@@ -910,7 +936,8 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
                   itemBuilder: (context, i) {
                     final w = approvedWords[i];
                     return Card(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      color:
+                          Theme.of(context).colorScheme.surfaceContainerHighest,
                       margin: const EdgeInsets.only(bottom: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -927,7 +954,8 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
                         subtitle: Text(
                           '${w.language} \u2022 ${w.translation}',
                           style: AppTypography.body.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
                         ),
@@ -966,8 +994,8 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
               _setWord(word);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500),
-            child:
-                Text(l10n.translate('save').toUpperCase(), style: const TextStyle(color: Colors.black)),
+            child: Text(l10n.translate('save').toUpperCase(),
+                style: const TextStyle(color: Colors.black)),
           ),
         ],
       ),
@@ -980,7 +1008,8 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text('"${word.indigenousWord}" is now the Word of the Day.')),
+            content:
+                Text('"${word.indigenousWord}" is now the Word of the Day.')),
       );
     } catch (e) {
       if (!mounted) return;

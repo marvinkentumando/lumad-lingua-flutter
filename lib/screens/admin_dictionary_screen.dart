@@ -6,6 +6,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../models/dictionary_entry.dart';
 import '../services/firebase_service.dart';
+import '../services/haptic_service.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/brand_search_bar.dart';
