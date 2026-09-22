@@ -4,9 +4,13 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_typography.dart';
 import '../theme/app_colors.dart';
-import '../services/sentiment_service.dart';
+import 'package:lumad_lingua/services/sentiment_service.dart';
+import 'package:lumad_lingua/services/firebase_service.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_background.dart';
+import '../widgets/app_shimmer_skeleton.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 
 class SentimentDashboardScreen extends ConsumerStatefulWidget {
   const SentimentDashboardScreen({super.key});
@@ -31,7 +35,8 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
 
   @override
   Widget build(BuildContext context) {
-    final sentimentAsync = ref.watch(recentSentimentProvider);
+    final allModelsAsync = ref.watch(allModelsSentimentProvider);
+    final configAsync = ref.watch(appConfigProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -39,20 +44,31 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
       body: BrandBackground(
         child: SafeArea(
           bottom: false,
-          child: sentimentAsync.when(
-            data: (data) => _buildMainContent(data, isDark),
-            loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
-            error: (e, _) => Center(child: Text('Monitor Error: $e', style: TextStyle(color: isDark ? Colors.white : AppColors.forest900))),
+          child: configAsync.when(
+            data: (config) => allModelsAsync.when(
+              data: (allData) => _buildMainContent(allData, config.activeSentimentAlgorithm, isDark),
+              loading: () => _buildDashboardSkeleton(isDark),
+              error: (e, _) => Center(child: Text('Monitor Error: $e', style: TextStyle(color: isDark ? Colors.white : AppColors.forest900))),
+            ),
+            loading: () => _buildDashboardSkeleton(isDark),
+            error: (e, _) => Center(child: Text('Config Error: $e')),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildMainContent(List<SentimentData> data, bool isDark) {
+  Widget _buildMainContent(Map<SentimentModelType, List<SentimentData>> allData, String activeModelName, bool isDark) {
+    final activeModel = SentimentModelType.values.firstWhere(
+      (e) => e.name == activeModelName,
+      orElse: () => SentimentModelType.naiveBayes,
+    );
+    final data = allData[activeModel] ?? [];
+    final bool hasData = data.isNotEmpty;
+
     // Calculate aggregate vitality
-    final avgScore = data.isEmpty ? 0.0 : data.fold(0.0, (sum, item) => sum + item.sentimentScore) / data.length;
-    final vitalityPercent = (avgScore + 1) / 2; // Map -1..1 to 0..1
+    final avgScore = !hasData ? 0.0 : data.fold(0.0, (sum, item) => sum + item.sentimentScore) / data.length;
+    final vitalityPercent = !hasData ? 0.0 : (avgScore + 1) / 2; // Map -1..1 to 0..1
 
     return CustomScrollView(
       controller: _scrollController,
@@ -66,30 +82,40 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 20),
-                _buildVitalityGauge(vitalityPercent, avgScore, true),
+                _buildVitalityGauge(vitalityPercent, avgScore, hasData, true),
                 const SizedBox(height: 32),
-                _buildInsightGrid(data, isDark),
-                const SizedBox(height: 32),
-                _buildKeywordCloud(data, isDark),
-                const SizedBox(height: 32),
-                _buildSectionHeader('Linguistic Analysis Archive', isDark),
-                const SizedBox(height: 16),
+                if (hasData) ...[
+                  _buildInsightGrid(data, isDark),
+                  const SizedBox(height: 32),
+                  _buildSectionHeader('Multi-Model Health Trends', isDark),
+                  const SizedBox(height: 16),
+                  _buildVitalityChart(allData, isDark),
+                  const SizedBox(height: 12),
+                  _buildLegend(isDark),
+                  const SizedBox(height: 32),
+                  _buildKeywordCloud(data, isDark),
+                  const SizedBox(height: 32),
+                  _buildSectionHeader('Community Analysis Archive (${_getSentimentModelName(activeModel)})', isDark),
+                  const SizedBox(height: 16),
+                ] else
+                  _buildNoDataState(isDark),
               ],
             ),
           ),
         ),
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          sliver: SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) => _buildSentimentCard(data[index], index, true)
-                  .animate(delay: (100 * index).ms)
-                  .fadeIn()
-                  .slideX(begin: 0.1),
-              childCount: data.length,
+        if (hasData)
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => _buildSentimentCard(data[index], index, true)
+                    .animate(delay: (100 * index).ms)
+                    .fadeIn()
+                    .slideX(begin: 0.1),
+                childCount: data.length,
+              ),
             ),
           ),
-        ),
         const SliverToBoxAdapter(child: SizedBox(height: 100)),
       ],
     );
@@ -114,14 +140,14 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
           children: [
             Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.auto_awesome_rounded,
                   color: AppColors.gold500,
                   size: 10,
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'EMBEDDED VITALITY MONITOR',
+                  'COMMUNITY HEALTH MONITOR',
                   style: AppTypography.label.copyWith(
                     color: AppColors.gold500,
                     letterSpacing: 2,
@@ -143,8 +169,10 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
     );
   }
 
-  Widget _buildVitalityGauge(double percent, double score, bool isDark) {
-    final statusColor = score > 0.4 ? AppColors.semanticGreen : (score > 0 ? AppColors.gold500 : AppColors.semanticRed);
+  Widget _buildVitalityGauge(double percent, double score, bool hasData, bool isDark) {
+    final statusColor = !hasData 
+        ? Colors.white12 
+        : (score > 0.4 ? AppColors.semanticGreen : (score > 0 ? AppColors.gold500 : AppColors.semanticRed));
 
     return Theme(
       data: Theme.of(context).copyWith(brightness: Brightness.dark),
@@ -161,7 +189,7 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
                   Text(
                     'VITALITY SCORE',
                     style: AppTypography.label.copyWith(
-                      color: statusColor.withValues(alpha: 0.7),
+                      color: hasData ? statusColor.withValues(alpha: 0.7) : Colors.white24,
                       letterSpacing: 2,
                     ),
                   ),
@@ -175,9 +203,11 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Aggregated analysis based on internal linguistic models and archived digital footprints.',
+                    hasData 
+                      ? 'Aggregated analysis based on internal linguistic models and archived digital footprints.'
+                      : 'Linguistic monitoring system active. Awaiting community data retrieval for analysis.',
                     style: AppTypography.body.copyWith(
-                      color: Colors.white38,
+                      color: Colors.white60,
                       fontSize: 12,
                     ),
                   ),
@@ -192,7 +222,7 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
                   width: 100,
                   height: 100,
                   child: CircularProgressIndicator(
-                    value: percent,
+                    value: hasData ? percent : 0,
                     strokeWidth: 12,
                     backgroundColor: Colors.white10,
                     color: statusColor,
@@ -203,7 +233,7 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '${(percent * 100).toInt()}',
+                      hasData ? '${(percent * 100).toInt()}' : '--',
                       style: AppTypography.h2.copyWith(color: Colors.white),
                     ),
                     Text(
@@ -216,6 +246,38 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
                   ],
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoDataState(bool isDark) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 60),
+        child: Column(
+          children: [
+            Icon(
+              Icons.sensors_off_rounded,
+              size: 48,
+              color: isDark ? Colors.white10 : Colors.black12,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Awaiting Community Pulse',
+              style: AppTypography.h3.copyWith(
+                color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.2),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'No linguistic data entries found for this period.',
+              style: AppTypography.body.copyWith(
+                color: isDark ? Colors.white10 : AppColors.forest900.withValues(alpha: 0.1),
+                fontSize: 12,
+              ),
             ),
           ],
         ),
@@ -254,7 +316,7 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
           Text(
             label,
             style: AppTypography.label.copyWith(
-              color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5),
+              color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.5),
               fontSize: 10,
             ),
           ),
@@ -340,7 +402,7 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
                     Text(
                       'Archived Entry • $timeAgo',
                       style: AppTypography.label.copyWith(
-                        color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5),
+                        color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.5),
                         fontSize: 10,
                       ),
                     ),
@@ -400,6 +462,194 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
     );
   }
 
+  Widget _buildVitalityChart(Map<SentimentModelType, List<SentimentData>> allData, bool isDark) {
+    if (allData.isEmpty) return const SizedBox.shrink();
+
+    // Use Naive Bayes as reference for time axis
+    final referenceData = allData[SentimentModelType.naiveBayes] ?? [];
+    if (referenceData.isEmpty) return const SizedBox.shrink();
+    
+    final sortedRef = List<SentimentData>.from(referenceData)..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+    return Container(
+      height: 260,
+      padding: const EdgeInsets.only(right: 20, top: 20, bottom: 10),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.02) : AppColors.forest900.withValues(alpha: 0.02),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.forest900.withValues(alpha: 0.05)),
+      ),
+      child: LineChart(
+        LineChartData(
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            horizontalInterval: 0.5,
+            getDrawingHorizontalLine: (value) => FlLine(
+              color: isDark ? Colors.white10 : AppColors.forest900.withValues(alpha: 0.05),
+              strokeWidth: 1,
+            ),
+          ),
+          titlesData: FlTitlesData(
+            show: true,
+            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 30,
+                interval: 1,
+                getTitlesWidget: (value, meta) {
+                  final index = value.toInt();
+                  if (index >= 0 && index < sortedRef.length) {
+                    if (index == 0 || index == sortedRef.length - 1 || index == (sortedRef.length / 2).floor()) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          DateFormat('MM/dd').format(sortedRef[index].timestamp),
+                          style: TextStyle(
+                            color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.5),
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      );
+                    }
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+            ),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                interval: 0.5,
+                getTitlesWidget: (value, meta) {
+                  return Text(
+                    value.toStringAsFixed(1),
+                    style: TextStyle(
+                      color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.5),
+                      fontSize: 10,
+                    ),
+                  );
+                },
+                reservedSize: 35,
+              ),
+            ),
+          ),
+          borderData: FlBorderData(show: false),
+          minX: 0,
+          maxX: (sortedRef.length - 1).toDouble(),
+          minY: -1.1,
+          maxY: 1.1,
+          lineBarsData: allData.entries.map((entry) {
+            final model = entry.key;
+            final data = entry.value;
+            final sortedModelData = List<SentimentData>.from(data)..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+            final spots = sortedModelData.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.sentimentScore)).toList();
+
+            final color = _getModelColor(model);
+            
+            return LineChartBarData(
+              spots: spots,
+              isCurved: true,
+              color: color,
+              barWidth: model == SentimentModelType.naiveBayes ? 4 : 2,
+              isStrokeCapRound: true,
+              dotData: FlDotData(
+                show: model == SentimentModelType.naiveBayes,
+                getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                  radius: 3,
+                  color: color,
+                  strokeWidth: 1,
+                  strokeColor: Colors.white,
+                ),
+              ),
+              belowBarData: BarAreaData(
+                show: model == SentimentModelType.naiveBayes,
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    color.withValues(alpha: 0.15),
+                    color.withValues(alpha: 0),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+          lineTouchData: LineTouchData(
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipColor: (spot) => isDark ? AppColors.forest800 : Colors.white,
+              tooltipRoundedRadius: 12,
+              fitInsideHorizontally: true,
+              fitInsideVertically: true,
+              getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
+                return touchedBarSpots.map((barSpot) {
+                  final model = SentimentModelType.values[barSpot.barIndex];
+                  return LineTooltipItem(
+                    '${_getSentimentModelName(model)}: ${barSpot.y.toStringAsFixed(2)}',
+                    TextStyle(
+                      color: _getModelColor(model),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  );
+                }).toList();
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLegend(bool isDark) {
+    return Wrap(
+      spacing: 16,
+      runSpacing: 8,
+      children: SentimentModelType.values.map((model) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: _getModelColor(model),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              _getSentimentModelName(model),
+              style: AppTypography.label.copyWith(
+                color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.6),
+                fontSize: 10,
+              ),
+            ),
+          ],
+        );
+      }).toList(),
+    );
+  }
+
+  Color _getModelColor(SentimentModelType type) {
+    switch (type) {
+      case SentimentModelType.naiveBayes: return AppColors.gold500;
+      case SentimentModelType.svm: return AppColors.semanticBlue;
+      case SentimentModelType.biLstm: return AppColors.terracotta;
+    }
+  }
+
+  String _getSentimentModelName(SentimentModelType type) {
+    switch (type) {
+      case SentimentModelType.naiveBayes: return 'Naïve Bayes';
+      case SentimentModelType.svm: return 'SVM';
+      case SentimentModelType.biLstm: return 'BiLSTM';
+    }
+  }
+
   Widget _buildSectionHeader(String title, bool isDark) {
     return Text(
       title.toUpperCase(),
@@ -417,5 +667,74 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
     if (diff.inHours > 0) return '${diff.inHours}h ago';
     if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
     return 'Just now';
+  }
+
+  Widget _buildDashboardSkeleton(bool isDark) {
+    return CustomScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      slivers: [
+        _buildSliverAppBar(isDark),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+                const AppShimmerSkeleton(height: 160, borderRadius: 40),
+                const SizedBox(height: 32),
+                const AppShimmerSkeleton(height: 90, borderRadius: 24),
+                const SizedBox(height: 32),
+                const AppShimmerSkeleton(width: 180, height: 14, borderRadius: 4),
+                const SizedBox(height: 16),
+                const AppShimmerSkeleton(height: 260, borderRadius: 24),
+                const SizedBox(height: 12),
+                Row(
+                  children: List.generate(3, (i) => Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 16.0),
+                      child: Row(
+                        children: [
+                          const AppShimmerSkeleton(width: 12, height: 12, isCircle: true),
+                          const SizedBox(width: 6),
+                          Expanded(child: const AppShimmerSkeleton(height: 10, borderRadius: 2)),
+                        ],
+                      ),
+                    ),
+                  )),
+                ),
+                const SizedBox(height: 32),
+                const AppShimmerSkeleton(width: 140, height: 14, borderRadius: 4),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: List.generate(6, (i) => AppShimmerSkeleton(
+                    width: (60 + (i * 15) % 50).toDouble(),
+                    height: 32,
+                    borderRadius: 30,
+                  )),
+                ),
+                const SizedBox(height: 32),
+                const AppShimmerSkeleton(width: 220, height: 14, borderRadius: 4),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => const Padding(
+                padding: EdgeInsets.only(bottom: 16.0),
+                child: AppShimmerSkeleton(height: 140, borderRadius: 24),
+              ),
+              childCount: 3,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

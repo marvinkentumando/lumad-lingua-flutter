@@ -34,13 +34,16 @@ class DictionaryEntryAdapter extends TypeAdapter<DictionaryEntry> {
       validatorFeedback: fields[14] as String?,
       contributorName: fields[15] as String?,
       contributorId: fields[16] as String?,
+      validatedAt: fields[17] as DateTime?,
+      submittedAt: fields[18] as DateTime?,
+      validatorAudioTipUrl: fields[19] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, DictionaryEntry obj) {
     writer
-      ..writeByte(17)
+      ..writeByte(20)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -74,7 +77,13 @@ class DictionaryEntryAdapter extends TypeAdapter<DictionaryEntry> {
       ..writeByte(15)
       ..write(obj.contributorName)
       ..writeByte(16)
-      ..write(obj.contributorId);
+      ..write(obj.contributorId)
+      ..writeByte(17)
+      ..write(obj.validatedAt)
+      ..writeByte(18)
+      ..write(obj.submittedAt)
+      ..writeByte(19)
+      ..write(obj.validatorAudioTipUrl);
   }
 
   @override
@@ -185,6 +194,3 @@ class ValidationStatusAdapter extends TypeAdapter<ValidationStatus> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
-
-
-

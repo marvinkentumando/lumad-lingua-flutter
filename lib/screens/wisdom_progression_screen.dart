@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../providers/student_provider.dart';
@@ -55,7 +56,7 @@ class WisdomProgressionScreen extends ConsumerWidget {
       child: Row(
         children: [
           IconButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
             icon: const Icon(
               Icons.arrow_back_ios_new_rounded,
               color: AppColors.gold500,

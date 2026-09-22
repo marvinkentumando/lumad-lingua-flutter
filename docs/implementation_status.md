@@ -44,4 +44,16 @@ This document tracks the progress of features and requirements defined in `objec
 | **Glassmorphism UI** | ✅ Implemented | `DynamicGlassBox` used across dashboards for a modern "Ancestral Tech" feel. |
 
 ---
-**Last Updated:** $(Get-Date -Format 'yyyy-MM-dd')
+
+## 🗺️ Future Roadmap
+
+For a detailed breakdown of upcoming phases and pending technical requirements, please refer to the [Project Roadmap](project_roadmap.md).
+
+**Key Pending Areas:**
+1.  **Algorithmic Evaluation**: Implementation and comparison of Naïve Bayes, SVM, BiLSTM (Sentiment) and HMM, Cosine Similarity (Pronunciation).
+2.  **External Integrations**: Real-time Facebook Graph API data retrieval.
+3.  **Security**: Migration to Firebase Auth Custom Claims for RBAC.
+4.  **Formal Testing**: Modules for effectiveness assessments and validator review.
+
+---
+**Last Updated:** 2024-05-20

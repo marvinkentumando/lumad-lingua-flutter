@@ -9,7 +9,7 @@ import '../../providers/artifact_provider.dart';
 import '../brand_card.dart';
 import '../branded_empty_state.dart';
 import '../graceful_image.dart';
-import '../skeleton.dart';
+import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 
 class ArtifactInventorySection extends ConsumerWidget {
   final String? userId; // If null, shows current user's artifacts
@@ -49,7 +49,7 @@ class ArtifactInventorySection extends ConsumerWidget {
                   Text(
                     '${stats['earned']} of ${stats['total']} recovered',
                     style: AppTypography.body.copyWith(
-                      color: isDark ? Colors.white38 : AppColors.creamText2,
+                      color: isDark ? Colors.white60 : AppColors.creamText2,
                       fontSize: 13,
                     ),
                   ),
@@ -104,7 +104,7 @@ class ArtifactInventorySection extends ConsumerWidget {
               ),
             );
           },
-          loading: () => _buildSkeleton(),
+          loading: () => _buildAppShimmerSkeleton(),
           error: (e, _) => Text(
             'Error loading archives',
             style: TextStyle(color: AppColors.semanticRed.withValues(alpha: 0.5)),
@@ -114,7 +114,7 @@ class ArtifactInventorySection extends ConsumerWidget {
     ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1);
   }
 
-  Widget _buildSkeleton() {
+  Widget _buildAppShimmerSkeleton() {
     return SizedBox(
       height: 160,
       child: ListView.separated(
@@ -122,7 +122,7 @@ class ArtifactInventorySection extends ConsumerWidget {
         physics: const NeverScrollableScrollPhysics(),
         itemCount: 3,
         separatorBuilder: (context, _) => const SizedBox(width: 16),
-        itemBuilder: (context, index) => const Skeleton(width: 110, height: 160, borderRadius: 24),
+        itemBuilder: (context, index) => const AppShimmerSkeleton(width: 110, height: 160, borderRadius: 24),
       ),
     );
   }
@@ -197,7 +197,7 @@ class _ArtifactInventoryCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTypography.label.copyWith(
-                    color: isEarned ? Colors.white : Colors.white38,
+                    color: isEarned ? Colors.white : Colors.white60,
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                   ),

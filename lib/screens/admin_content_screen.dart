@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_button.dart';
@@ -519,7 +520,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                     children: [
                       Text(
                         'by ${log.actorName} · ${log.timeAgo}',
-                        style: AppTypography.label.copyWith(color: isDark ? Colors.white38 : AppColors.creamText3, fontSize: 11),
+                        style: AppTypography.label.copyWith(color: isDark ? Colors.white60 : AppColors.creamText3),rs.creamText3, fontSize: 11),
                       ),
                       if (log.metadata != null)
                          Text(
@@ -892,7 +893,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                       Text(
                         subtitle,
                         style: AppTypography.label.copyWith(
-                          color: isDark ? Colors.white38 : AppColors.forest700,
+                          color: isDark ? Colors.white60 : AppColors.forest700,
                           fontSize: 11,
                         ),
                       ),
@@ -1009,7 +1010,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                             ),
                             subtitle: Text(
                               'Modified by: ${item['actorId'] ?? 'System'}',
-                              style: AppTypography.label.copyWith(color: isDark ? Colors.white38 : AppColors.creamText3),
+                              style: AppTypography.label.copyWith(color: isDark ? Colors.white60 : AppColors.creamText3),ppColors.creamText3),
                             ),
                             trailing: IconButton(
                               icon: const Icon(Icons.visibility_outlined, color: AppColors.gold500),
@@ -1114,7 +1115,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: TextStyle(color: isDark ? Colors.white38 : AppColors.creamText3)),
+            child: Text('Cancel', style: TextStyle(color: isDark ? Colors.white60 : AppColors.creamText3)),ext3)),
           ),
           BrandButton(
             text: 'Confirm Delete',
@@ -1219,7 +1220,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
               Text(
                 'SYSTEM ACTIONS',
                 style: AppTypography.label.copyWith(
-                  color: isDark ? Colors.white38 : AppColors.creamText3,
+                  color: isDark ? Colors.white60 : AppColors.creamText3,
                   letterSpacing: 2,
                 ),
               ),
@@ -1435,7 +1436,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
       subtitle: Text(
         subtitle,
         style: AppTypography.label.copyWith(
-          color: isDark ? Colors.white38 : AppColors.creamText3,
+          color: isDark ? Colors.white60 : AppColors.creamText3,
           fontSize: 11,
         ),
       ),
@@ -1465,7 +1466,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
             child: Text(
               'Cancel',
               style: TextStyle(color: isDark ? Colors.white54 : AppColors.creamText3),
@@ -1475,7 +1476,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
             text: 'Confirm',
             type: BrandButtonType.primary,
             onTap: () {
-              Navigator.pop(context);
+              context.pop();
               onConfirm();
             },
           ),

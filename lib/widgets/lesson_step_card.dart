@@ -120,7 +120,7 @@ class LessonStepCard extends StatelessWidget {
                     Text(
                       time,
                       style: AppTypography.body.copyWith(
-                        color: isDark ? Colors.white38 : Colors.black38,
+                        color: isDark ? Colors.white60 : Colors.black38,
                         fontSize: 11,
                       ),
                     ),

@@ -9,7 +9,7 @@ import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_background.dart';
-import '../widgets/skeleton.dart';
+import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 
 class MasteryDashboardScreen extends ConsumerWidget {
   const MasteryDashboardScreen({super.key});
@@ -54,7 +54,7 @@ class MasteryDashboardScreen extends ConsumerWidget {
       child: Row(
         children: [
           IconButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
             icon: Icon(
               Icons.arrow_back_ios_new_rounded,
               color: textColor,
@@ -315,7 +315,7 @@ class MasteryDashboardScreen extends ConsumerWidget {
                           Text(
                             hasDue ? 'Keep your streak alive!' : 'Come back later for more reviews.',
                             style: AppTypography.body.copyWith(
-                              color: hasDue ? Colors.white38 : AppColors.forest700,
+                              color: hasDue ? Colors.white60 : AppColors.forest700,
                               fontSize: 12,
                             ),
                           ),
@@ -329,7 +329,7 @@ class MasteryDashboardScreen extends ConsumerWidget {
               ),
             ).animate(target: hasDue ? 1 : 0).shimmer(duration: 2.seconds);
           },
-          loading: () => Skeleton(height: 80, borderRadius: 24),
+          loading: () => AppShimmerSkeleton(height: 80, borderRadius: 24),
           error: (_, __) => const SizedBox.shrink(),
         );
       },

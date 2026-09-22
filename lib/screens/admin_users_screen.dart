@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../services/firebase_service.dart';
 import '../services/haptic_service.dart';
@@ -364,7 +365,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                       user.name,
                       style: AppTypography.body.copyWith(
                         color: isSuspended 
-                            ? (isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.38)) 
+                            ? (isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.38))
                             : (isDark ? Colors.white : AppColors.forest900),
                         fontWeight: FontWeight.w900,
                         fontSize: 16,
@@ -500,7 +501,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                     Text(
                       user.email,
                       style: AppTypography.body.copyWith(
-                        color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5),
+                        color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.5),
                         fontSize: 12,
                       ),
                     ),
@@ -547,7 +548,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                     Text(
                       'Last active: ${_formatLastActive(user.lastActive)}',
                       style: AppTypography.body.copyWith(
-                        color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5),
+                        color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.5),
                         fontSize: 12,
                       ),
                     ),
@@ -715,7 +716,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(ctx),
+              onPressed: () => context.pop(),
               child: Text(
                 'Cancel',
                 style: TextStyle(color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5)),
@@ -728,7 +729,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 final email = emailCtrl.text.trim();
                 if (email.isEmpty) return;
 
-                Navigator.pop(ctx);
+                context.pop();
                 try {
                   await ref.read(firebaseServiceProvider).createInvitation(
                         email,
@@ -750,8 +751,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                         ),
                         actions: [
                           TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: Text('LATER', style: TextStyle(color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.4))),
+                            onPressed: () => context.pop(),
+                            child: Text('LATER', style: TextStyle(color: isDark ? Colors.white60 : AppColors.gold500)),ppColors.forest900.withValues(alpha: 0.4))),
                           ),
                           BrandButton(
                             text: 'SHARE INVITE',
@@ -765,7 +766,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                   subject: 'Lumad Lingua Staff Invitation',
                                 ),
                               );
-                              Navigator.pop(context);
+                              context.pop();
                             },
                           ),
                         ],
@@ -1008,7 +1009,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(ctx),
+              onPressed: () => context.pop(),
               child: const Text(
                 'Cancel',
                 style: TextStyle(color: Colors.white54),
@@ -1018,7 +1019,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               text: 'Suspend',
               type: BrandButtonType.primary,
               onTap: () async {
-                Navigator.pop(ctx);
+                context.pop();
                 await ref
                     .read(firebaseServiceProvider)
                     .updateUserStatus(

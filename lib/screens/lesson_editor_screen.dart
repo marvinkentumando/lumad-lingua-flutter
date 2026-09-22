@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import '../services/haptic_service.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../theme/app_colors.dart';
@@ -25,6 +26,9 @@ import '../widgets/lesson_editors/scenario_editor.dart';
 import '../widgets/lesson_editors/editor_utils.dart';
 import '../widgets/lesson_previews/lesson_preview_panel.dart';
 import '../utils/app_localization.dart';
+import 'package:intl/intl.dart';
+
+enum SaveStatus { idle, saving, saved, error }
 
 class LessonEditorScreen extends ConsumerStatefulWidget {
   final String? lessonId;
@@ -53,6 +57,11 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
   bool _isPreviewSessionActive = false;
   int _previewActivityIndex = 0;
   bool _isLoading = false;
+
+  // Save status
+  SaveStatus _saveStatus = SaveStatus.idle;
+  DateTime? _lastSavedAt;
+  bool _isDirty = false;
 
   // Mobile Tabs
   late TabController _tabController;
@@ -86,7 +95,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
 
     // Listen to upload queue
     ref.listenManual(uploadQueueProvider, (previous, next) {
-      if (previous == true && next == false) {
+      if (previous?.isSyncing == true && next.isSyncing == false) {
         // Sync finished
         if (mounted) {
           final l10n = ref.read(localizationProvider);
@@ -255,6 +264,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
 
   void _addStep(ActivityType type, String title) {
     setState(() {
+      _isDirty = true;
       final newStep = LessonStep(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         type: type,
@@ -467,6 +477,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
     }
 
     if (!isAutoSave) setState(() => _isLoading = true);
+    setState(() => _saveStatus = SaveStatus.saving);
 
     try {
       final lesson = Lesson(
@@ -499,6 +510,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
       if (connectivityResult.contains(ConnectivityResult.none)) {
         // Offline: Save to Hive draft box
         await offlineService.saveDraftLesson(lesson);
+        setState(() => _isDirty = false);
         if (!isAutoSave && mounted) {
           if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
@@ -506,7 +518,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
               content: Text(l10n.translate('saved_locally_sync')),
             ),
           );
-          Navigator.pop(context, true);
+          context.pop(true);
         }
       } else {
         // Online: Save to Firebase
@@ -518,26 +530,21 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         if (mounted) {
           setState(() {
             _currentLessonId = savedId;
+            _isDirty = false;
           });
 
           // Remove from local drafts if it was there
           await offlineService.removeDraftLesson(lesson.id);
 
           if (isAutoSave) {
-            if (mounted && context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Auto-saved at ${TimeOfDay.now().format(context)}',
-                    style: const TextStyle(color: Colors.white54),
-                  ),
-                  backgroundColor: AppColors.forest800,
-                  duration: const Duration(seconds: 1),
-                ),
-              );
-            }
+            setState(() {
+              _saveStatus = SaveStatus.saved;
+              _lastSavedAt = DateTime.now();
+              _isDirty = false;
+            });
           } else {
             if (mounted && context.mounted) {
+              HapticService.success();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
@@ -547,13 +554,15 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                   ),
                 ),
               );
-              Navigator.pop(context, true);
+              context.pop(true);
             }
           }
         }
       }
     } catch (e) {
+      setState(() => _saveStatus = SaveStatus.error);
       if (mounted && !isAutoSave) {
+        HapticService.error();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error saving lesson: $e'),
@@ -572,7 +581,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
     final l10n = ref.watch(localizationProvider);
 
     return PopScope(
-      canPop: false,
+      canPop: !_isDirty,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
 
@@ -588,13 +597,13 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context, false),
+                onPressed: () => context.pop(false),
                 child: Text(
                   l10n.translate('cancel').toUpperCase(),
                 ),
               ),
               TextButton(
-                onPressed: () => Navigator.pop(context, true),
+                onPressed: () => context.pop(true),
                 child: const Text(
                   'EXIT',
                   style: TextStyle(
@@ -607,7 +616,10 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         );
 
         if (shouldPop ?? false) {
-          if (context.mounted) Navigator.pop(context);
+          if (context.mounted) {
+            setState(() => _isDirty = false);
+            context.pop();
+          }
         }
       },
       child: Stack(
@@ -617,12 +629,20 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
             appBar: AppBar(
               backgroundColor: Colors.transparent,
               elevation: 0,
-              title: Text(
-                'Lesson Weaver',
-                style: GoogleFonts.outfit(
-                  color: AppColors.gold500,
-                  fontWeight: FontWeight.bold,
-                ),
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Lesson Weaver',
+                    style: GoogleFonts.outfit(
+                      color: AppColors.gold500,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  _buildSaveStatusIndicator(),
+                ],
               ),
               leading: IconButton(
                 icon: Icon(
@@ -630,7 +650,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   size: 20,
                 ),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => context.pop(),
               ),
               actions: [
                 TextButton(
@@ -756,6 +776,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
             onReorder: (oldIndex, newIndex) {
               HapticService.medium();
               setState(() {
+                _isDirty = true;
                 if (newIndex > oldIndex) newIndex -= 1;
                 final step = _steps.removeAt(oldIndex);
                 _steps.insert(newIndex, step);
@@ -821,6 +842,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                         ),
                         onPressed: () {
                           setState(() {
+                            _isDirty = true;
                             _steps.remove(step);
                             if (_selectedStep == step) {
                               _selectedStep = _steps.first;
@@ -943,7 +965,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         ),
       ),
       onTap: () {
-        Navigator.of(dialogContext).pop();
+        dialogContext.pop();
         _addStep(type, title);
       },
     );
@@ -1039,47 +1061,91 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
             difficulty: _difficulty,
             step: _selectedStep!,
             onPrerequisiteChanged: (val) =>
-                setState(() => _prerequisiteId = val),
-            onCategoryChanged: (val) => setState(() => _category = val!),
-            onDialectChanged: (val) => setState(() => _dialect = val!),
-            onUnitNumberChanged: (val) => setState(() => _unitNumber = val),
-            onDifficultyChanged: (val) => setState(() => _difficulty = val!),
-            onUpdated: () => setState(() {}),
+                setState(() {
+                  _prerequisiteId = val;
+                  _saveStatus = SaveStatus.idle;
+                  _isDirty = true;
+                }),
+            onCategoryChanged: (val) => setState(() {
+              _category = val!;
+              _saveStatus = SaveStatus.idle;
+              _isDirty = true;
+            }),
+            onDialectChanged: (val) => setState(() {
+              _dialect = val!;
+              _saveStatus = SaveStatus.idle;
+              _isDirty = true;
+            }),
+            onUnitNumberChanged: (val) => setState(() {
+              _unitNumber = val;
+              _saveStatus = SaveStatus.idle;
+              _isDirty = true;
+            }),
+            onDifficultyChanged: (val) => setState(() {
+              _difficulty = val!;
+              _saveStatus = SaveStatus.idle;
+              _isDirty = true;
+            }),
+            onUpdated: () => setState(() {
+              _saveStatus = SaveStatus.idle;
+              _isDirty = true;
+            }),
           );
         case ActivityType.vocabulary:
           return VocabularyEditor(
             step: _selectedStep!,
-            onUpdated: () => setState(() {}),
+            onUpdated: () => setState(() {
+              _saveStatus = SaveStatus.idle;
+              _isDirty = true;
+            }),
           );
         case ActivityType.mcq:
           return MCQEditor(
             step: _selectedStep!,
-            onUpdated: () => setState(() {}),
+            onUpdated: () => setState(() {
+              _saveStatus = SaveStatus.idle;
+              _isDirty = true;
+            }),
           );
         case ActivityType.pronunciation:
           return PronunciationEditor(
             step: _selectedStep!,
-            onUpdated: () => setState(() {}),
+            onUpdated: () => setState(() {
+              _saveStatus = SaveStatus.idle;
+              _isDirty = true;
+            }),
           );
         case ActivityType.matching:
           return MatchingEditor(
             step: _selectedStep!,
-            onUpdated: () => setState(() {}),
+            onUpdated: () => setState(() {
+              _saveStatus = SaveStatus.idle;
+              _isDirty = true;
+            }),
           );
         case ActivityType.sentenceReordering:
           return SentenceReorderingEditor(
             step: _selectedStep!,
-            onUpdated: () => setState(() {}),
+            onUpdated: () => setState(() {
+              _saveStatus = SaveStatus.idle;
+              _isDirty = true;
+            }),
           );
         case ActivityType.listening:
           return ListeningEditor(
             step: _selectedStep!,
-            onUpdated: () => setState(() {}),
+            onUpdated: () => setState(() {
+              _saveStatus = SaveStatus.idle;
+              _isDirty = true;
+            }),
           );
         case ActivityType.scenario:
           return ScenarioEditor(
             step: _selectedStep!,
-            onUpdated: () => setState(() {}),
+            onUpdated: () => setState(() {
+              _saveStatus = SaveStatus.idle;
+              _isDirty = true;
+            }),
           );
         case ActivityType.wordHunt:
           return _buildWordHuntEditor(l10n);
@@ -1158,7 +1224,10 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
           initialValue: _selectedStep!.data['question'] ?? '',
           onChanged: (val) {
             _selectedStep!.data['question'] = val;
-            setState(() {});
+            setState(() {
+              _saveStatus = SaveStatus.idle;
+              _isDirty = true;
+            });
           },
         ),
         const SizedBox(height: 16),
@@ -1180,7 +1249,10 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                     initialValue: options[i],
                     onChanged: (val) {
                       options[i] = val;
-                      setState(() {});
+                      setState(() {
+                        _saveStatus = SaveStatus.idle;
+                        _isDirty = true;
+                      });
                     },
                   ),
                 ),
@@ -1192,6 +1264,8 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                   onPressed: () {
                     setState(() {
                       options.removeAt(i);
+                      _saveStatus = SaveStatus.idle;
+                      _isDirty = true;
                     });
                   },
                 ),
@@ -1205,6 +1279,8 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
           onPressed: () {
             setState(() {
               options.add('');
+              _saveStatus = SaveStatus.idle;
+              _isDirty = true;
             });
           },
         ),
@@ -1221,7 +1297,10 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
           initialValue: _selectedStep!.data['question'] ?? '',
           onChanged: (val) {
             _selectedStep!.data['question'] = val;
-            setState(() {});
+            setState(() {
+              _saveStatus = SaveStatus.idle;
+              _isDirty = true;
+            });
           },
         ),
         const SizedBox(height: 16),
@@ -1242,6 +1321,8 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                   if (selected) {
                     setState(() {
                       _selectedStep!.data['correctIndex'] = 0;
+                      _saveStatus = SaveStatus.idle;
+                      _isDirty = true;
                     });
                   }
                 },
@@ -1256,6 +1337,8 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                   if (selected) {
                     setState(() {
                       _selectedStep!.data['correctIndex'] = 1;
+                      _saveStatus = SaveStatus.idle;
+                      _isDirty = true;
                     });
                   }
                 },
@@ -1277,7 +1360,10 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
           initialValue: _selectedStep!.data['question'] ?? '',
           onChanged: (val) {
             _selectedStep!.data['question'] = val;
-            setState(() {});
+            setState(() {
+              _saveStatus = SaveStatus.idle;
+              _isDirty = true;
+            });
           },
         ),
         const SizedBox(height: 16),
@@ -1287,7 +1373,10 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
           onChanged: (val) {
             _selectedStep!.data['expectedSentence'] = val;
             // Auto-extract parts if we wanted to, but let's keep it manual for now or simple
-            setState(() {});
+            setState(() {
+              _saveStatus = SaveStatus.idle;
+              _isDirty = true;
+            });
           },
         ),
         const SizedBox(height: 16),
@@ -1309,7 +1398,10 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                     initialValue: parts[i],
                     onChanged: (val) {
                       parts[i] = val;
-                      setState(() {});
+                      setState(() {
+                        _saveStatus = SaveStatus.idle;
+                        _isDirty = true;
+                      });
                     },
                   ),
                 ),
@@ -1321,6 +1413,8 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                   onPressed: () {
                     setState(() {
                       parts.removeAt(i);
+                      _saveStatus = SaveStatus.idle;
+                      _isDirty = true;
                     });
                   },
                 ),
@@ -1334,6 +1428,8 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
           onPressed: () {
             setState(() {
               parts.add('');
+              _saveStatus = SaveStatus.idle;
+              _isDirty = true;
             });
           },
         ),
@@ -1440,5 +1536,56 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
       case ActivityType.fillInTheBlanks:
         return Icons.space_bar_rounded;
     }
+  }
+
+  Widget _buildSaveStatusIndicator() {
+    String text = '';
+    Color color = isDark ? Colors.white70 : AppColors.creamText3;
+    IconData? icon;
+
+    switch (_saveStatus) {
+      case SaveStatus.idle:
+        if (_lastSavedAt != null) {
+          text = 'Last saved ${DateFormat.jm().format(_lastSavedAt!)}';
+        }
+        break;
+      case SaveStatus.saving:
+        text = 'Saving...';
+        color = AppColors.gold500.withValues(alpha: 0.7);
+        icon = Icons.sync_rounded;
+        break;
+      case SaveStatus.saved:
+        text = 'All changes saved';
+        color = AppColors.semanticGreen.withValues(alpha: 0.7);
+        icon = Icons.cloud_done_rounded;
+        break;
+      case SaveStatus.error:
+        text = 'Save failed';
+        color = AppColors.semanticRed.withValues(alpha: 0.7);
+        icon = Icons.error_outline_rounded;
+        break;
+    }
+
+    if (text.isEmpty) return const SizedBox.shrink();
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (icon != null) ...[
+          Icon(icon, size: 10, color: color)
+              .animate(onPlay: (c) => _saveStatus == SaveStatus.saving ? c.repeat() : c.stop())
+              .rotate(duration: 2.seconds),
+          const SizedBox(width: 4),
+        ],
+        Text(
+          text.toUpperCase(),
+          style: AppTypography.label.copyWith(
+            color: color,
+            fontSize: 9,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ],
+    );
   }
 }

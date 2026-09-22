@@ -109,7 +109,7 @@ class _BrandSearchBarState extends State<BrandSearchBar> {
               ? IconButton(
                   icon: Icon(
                     Icons.close_rounded,
-                    color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5),
+                    color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.5),
                     size: 18,
                   ),
                   onPressed: () {

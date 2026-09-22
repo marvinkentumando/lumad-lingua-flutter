@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../services/firebase_service.dart';
 import '../models/contributor_request.dart';
@@ -127,7 +128,7 @@ class AdminRequestsScreen extends ConsumerWidget {
               color: Colors.white,
               size: 20,
             ),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -209,7 +210,7 @@ class AdminRequestsScreen extends ConsumerWidget {
                             Text(
                               request.userEmail,
                               style: AppTypography.body.copyWith(
-                                color: Colors.white38,
+                                color: Colors.white60,
                                 fontSize: 12,
                               ),
                             ),
@@ -314,7 +315,7 @@ class AdminRequestsScreen extends ConsumerWidget {
                 Text(
                   request.userEmail,
                   style: AppTypography.body.copyWith(
-                    color: Colors.white38,
+                    color: Colors.white60,
                     fontSize: 11,
                   ),
                 ),

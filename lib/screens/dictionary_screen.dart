@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/dictionary_entry.dart';
@@ -11,9 +12,10 @@ import '../services/audio_service.dart';
 import '../services/auth_service.dart';
 import '../services/haptic_service.dart';
 import '../providers/saved_words_provider.dart';
-import '../widgets/skeleton.dart';
+import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 import '../widgets/brand_search_bar.dart';
 import '../providers/search_history_provider.dart';
+import '../providers/dictionary_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../utils/app_localization.dart';
 
@@ -25,56 +27,30 @@ class DictionaryScreen extends ConsumerStatefulWidget {
 }
 
 class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
-  String _searchQuery = '';
-  String _selectedCategory = 'ALL';
+  Timer? _debounce;
   String? _expandedWordId;
-  _DictionarySort _selectedSort = _DictionarySort.alphabetical;
   final _searchController = TextEditingController();
 
   @override
   void dispose() {
     _searchController.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
-  List<DictionaryEntry> _applySort(List<DictionaryEntry> entries) {
-    var filtered = List<DictionaryEntry>.from(entries);
-    switch (_selectedSort) {
-      case _DictionarySort.alphabetical:
-        filtered.sort(
-          (a, b) => a.indigenousWord.toLowerCase().compareTo(
-            b.indigenousWord.toLowerCase(),
-          ),
-        );
-        break;
-      case _DictionarySort.reverseAlphabetical:
-        filtered.sort(
-          (a, b) => b.indigenousWord.toLowerCase().compareTo(
-            a.indigenousWord.toLowerCase(),
-          ),
-        );
-        break;
-      case _DictionarySort.newest:
-        filtered.sort(
-          (a, b) => (b.validatedAt ?? DateTime(0)).compareTo(
-            a.validatedAt ?? DateTime(0),
-          ),
-        );
-        break;
-      case _DictionarySort.oldest:
-        filtered.sort(
-          (a, b) => (a.validatedAt ?? DateTime(0)).compareTo(
-            b.validatedAt ?? DateTime(0),
-          ),
-        );
-        break;
-    }
-    return filtered;
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        ref.read(dictionaryFilterProvider.notifier).update((s) => s.copyWith(query: query));
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final dictionaryAsync = ref.watch(dictionaryStreamProvider);
+    final filteredAsync = ref.watch(filteredDictionaryProvider);
+    final filter = ref.watch(dictionaryFilterProvider);
     final savedIds = ref.watch(savedWordsProvider);
     final user = ref.watch(authStateProvider).value;
     final srsAsync = user != null
@@ -86,26 +62,11 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
       backgroundColor: Colors.transparent,
       body: BrandBackground(
         child: SafeArea(
-          child: dictionaryAsync.when(
-            data: (entries) {
+          child: filteredAsync.when(
+            data: (items) {
               return srsAsync.when(
                 data: (srsList) {
                   final srsMap = {for (var s in srsList) s.wordId: s};
-
-                  var items = entries;
-                  if (_selectedCategory == 'SAVED') {
-                    items = items.where((e) => savedIds.contains(e.id)).toList();
-                  }
-
-                  if (_searchQuery.isNotEmpty) {
-                    items = items.where(
-                      (e) =>
-                          e.indigenousWord.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                          e.translation.toLowerCase().contains(_searchQuery.toLowerCase()),
-                    ).toList();
-                  }
-
-                  items = _applySort(items);
 
                   return Column(
                     children: [
@@ -119,6 +80,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                               Theme.of(context).brightness == Brightness.dark,
                               savedIds.length,
                               l10n,
+                              filter,
                             ),
                             const SizedBox(height: 16),
                           ],
@@ -129,7 +91,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                             ? SingleChildScrollView(
                                 child: _buildNoResultsState(
                                   l10n,
-                                  isSavedTab: _selectedCategory == 'SAVED',
+                                  isSavedTab: filter.category == 'SAVED',
                                 ),
                               )
                             : ListView.builder(
@@ -169,7 +131,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
               itemCount: 5,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               separatorBuilder: (_, __) => const SizedBox(height: 16),
-              itemBuilder: (_, __) => const Skeleton(height: 80, borderRadius: 24),
+              itemBuilder: (_, __) => const AppShimmerSkeleton(height: 80, borderRadius: 24),
             ),
             error: (err, stack) => Center(
               child: Text(
@@ -207,7 +169,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
     );
   }
 
-  Widget _buildSearchBar(bool isDark, int savedCount, AppLocalization l10n) {
+  Widget _buildSearchBar(bool isDark, int savedCount, AppLocalization l10n, DictionaryFilter filter) {
     return Row(
       children: [
         Expanded(
@@ -215,7 +177,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
             controller: _searchController,
             hintText: l10n.translate('search_dictionary'),
             isMinimal: true,
-            onChanged: (val) => setState(() => _searchQuery = val),
+            onChanged: _onSearchChanged,
             onSubmitted: (val) {
               if (val.isNotEmpty) {
                 ref.read(searchHistoryProvider.notifier).addTerm(val);
@@ -224,21 +186,20 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
           ),
         ),
         const SizedBox(width: 12),
-        _buildSavedWordsButton(isDark, savedCount),
+        _buildSavedWordsButton(isDark, savedCount, filter.category == 'SAVED'),
         const SizedBox(width: 12),
-        _buildSortMenu(isDark, l10n),
+        _buildSortMenu(isDark, l10n, filter.sort),
       ],
     );
   }
 
-  Widget _buildSavedWordsButton(bool isDark, int savedCount) {
-    final isSelected = _selectedCategory == 'SAVED';
+  Widget _buildSavedWordsButton(bool isDark, int savedCount, bool isSelected) {
     return GestureDetector(
       onTap: () {
         HapticService.selection();
-        setState(() {
-          _selectedCategory = isSelected ? 'ALL' : 'SAVED';
-        });
+        ref.read(dictionaryFilterProvider.notifier).update(
+          (s) => s.copyWith(category: isSelected ? 'ALL' : 'SAVED'),
+        );
       },
       child: Container(
         padding: const EdgeInsets.all(12),
@@ -285,10 +246,10 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
     );
   }
 
-  Widget _buildSortMenu(bool isDark, AppLocalization l10n) {
-    return PopupMenuButton<_DictionarySort>(
-      initialValue: _selectedSort,
-      onSelected: (sort) => setState(() => _selectedSort = sort),
+  Widget _buildSortMenu(bool isDark, AppLocalization l10n, DictionarySort selectedSort) {
+    return PopupMenuButton<DictionarySort>(
+      initialValue: selectedSort,
+      onSelected: (sort) => ref.read(dictionaryFilterProvider.notifier).update((s) => s.copyWith(sort: sort)),
       icon: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -307,16 +268,16 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       itemBuilder: (context) => [
-        _buildSortItem(_DictionarySort.alphabetical, l10n.translate('sort_az'), Icons.sort_by_alpha, isDark),
-        _buildSortItem(_DictionarySort.reverseAlphabetical, l10n.translate('sort_za'), Icons.sort_by_alpha, isDark),
-        _buildSortItem(_DictionarySort.newest, l10n.translate('sort_newest'), Icons.new_releases_outlined, isDark),
-        _buildSortItem(_DictionarySort.oldest, l10n.translate('sort_oldest'), Icons.history_rounded, isDark),
+        _buildSortItem(DictionarySort.alphabetical, l10n.translate('sort_az'), Icons.sort_by_alpha, isDark, selectedSort),
+        _buildSortItem(DictionarySort.reverseAlphabetical, l10n.translate('sort_za'), Icons.sort_by_alpha, isDark, selectedSort),
+        _buildSortItem(DictionarySort.newest, l10n.translate('sort_newest'), Icons.new_releases_outlined, isDark, selectedSort),
+        _buildSortItem(DictionarySort.oldest, l10n.translate('sort_oldest'), Icons.history_rounded, isDark, selectedSort),
       ],
     );
   }
 
-  PopupMenuItem<_DictionarySort> _buildSortItem(_DictionarySort value, String label, IconData icon, bool isDark) {
-    final isSelected = _selectedSort == value;
+  PopupMenuItem<DictionarySort> _buildSortItem(DictionarySort value, String label, IconData icon, bool isDark, DictionarySort selectedSort) {
+    final isSelected = selectedSort == value;
     return PopupMenuItem(
       value: value,
       child: Row(
@@ -595,5 +556,3 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard> with
     );
   }
 }
-
-enum _DictionarySort { alphabetical, reverseAlphabetical, newest, oldest }

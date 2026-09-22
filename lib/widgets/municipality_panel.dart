@@ -154,7 +154,7 @@ class _MunicipalityPanelState extends ConsumerState<MunicipalityPanel> {
                     Text(
                       widget.rec.province,
                       style: AppTypography.body.copyWith(
-                        color: isDark ? Colors.white38 : AppColors.creamText2,
+                        color: isDark ? Colors.white60 : AppColors.creamText2,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -164,7 +164,7 @@ class _MunicipalityPanelState extends ConsumerState<MunicipalityPanel> {
                 Text(
                   'Explore the authentic voices and linguistic heritage of ${widget.rec.title}, located in the province of ${widget.rec.province}.',
                   style: AppTypography.body.copyWith(
-                    color: isDark ? Colors.white38 : AppColors.creamText2,
+                    color: isDark ? Colors.white60 : AppColors.creamText2,
                     fontSize: 14,
                     height: 1.5,
                   ),

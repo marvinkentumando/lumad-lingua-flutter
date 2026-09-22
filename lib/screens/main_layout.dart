@@ -400,7 +400,7 @@ class MainLayout extends ConsumerWidget {
                     ],
                   ),
                   IconButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => context.pop(),
                     icon: const Icon(Icons.close_rounded),
                     color: isDark ? Colors.white70 : AppColors.forest900,
                   ),

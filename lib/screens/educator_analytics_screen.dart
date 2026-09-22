@@ -410,7 +410,7 @@ class _EducatorAnalyticsScreenState
                       Text(
                         '$val',
                         style: AppTypography.label.copyWith(
-                          color: isTapped ? AppColors.gold500 : (isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.3)),
+                          color: isTapped ? AppColors.gold500 : (isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.4)),.forest900.withValues(alpha: 0.3)),
                           fontSize: 9,
                           fontWeight: isTapped ? FontWeight.bold : FontWeight.normal,
                         ),
@@ -433,7 +433,7 @@ class _EducatorAnalyticsScreenState
                         style: AppTypography.label.copyWith(
                           color: isTapped
                               ? AppColors.gold500
-                              : (isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.4)),
+                              : (isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.4)),
                         ),
                       ),
                     ],
@@ -1081,7 +1081,7 @@ class _EducatorAnalyticsScreenState
                 Text(
                   municipality,
                   style: AppTypography.label.copyWith(
-                    color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.4),
+                    color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.4),
                     fontSize: 10,
                   ),
                 ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 
@@ -88,7 +89,7 @@ class DailyCheckInBoard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 ),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => context.pop(),
                 child: Text('CONTINUE JOURNEY', style: AppTypography.label.copyWith(color: Colors.black, fontWeight: FontWeight.w900)),
               ),
             ),

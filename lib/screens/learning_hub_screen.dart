@@ -12,7 +12,7 @@ import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import '../models/lesson.dart';
 import '../widgets/branded_empty_state.dart';
-import '../widgets/skeleton.dart';
+import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 import '../widgets/brand_background.dart';
 import '../widgets/mist_crystal_store.dart';
 import '../widgets/vine_progress_bar.dart';
@@ -170,7 +170,7 @@ class LearningHubScreen extends ConsumerWidget {
                             ),
                           ).animate().fadeIn(delay: 220.ms).slideX(begin: -0.1);
                         },
-                        loading: () => Skeleton(height: 100, borderRadius: 32),
+                        loading: () => AppShimmerSkeleton(height: 100, borderRadius: 32),
                         error: (_, __) => const SizedBox.shrink(),
                       ),
 
@@ -289,7 +289,7 @@ class LearningHubScreen extends ConsumerWidget {
                               ],
                             );
                           },
-                          loading: () => Skeleton(height: 100, borderRadius: 32),
+                          loading: () => AppShimmerSkeleton(height: 100, borderRadius: 32),
                           error: (_, __) => const SizedBox.shrink(),
                         ),
                       ).animate().fadeIn(delay: 250.ms).slideX(begin: 0.1),
@@ -531,7 +531,7 @@ class LearningHubScreen extends ConsumerWidget {
                 width: double.infinity,
                 child: BrandButton(
                   text: 'CLOSE',
-                  onTap: () => Navigator.pop(context),
+                  onTap: () => context.pop(),
                   type: BrandButtonType.secondary,
                 ),
               ),
@@ -800,7 +800,7 @@ class LearningHubScreen extends ConsumerWidget {
               Text(
                 'Unlock previous lessons to start this journey',
                 style: AppTypography.label.copyWith(
-                  color: isDark ? Colors.white38 : AppColors.forest700.withValues(alpha: 0.5),
+                  color: isDark ? Colors.white60 : AppColors.forest700.withValues(alpha: 0.5),
                   fontStyle: FontStyle.italic,
                 ),
               ),

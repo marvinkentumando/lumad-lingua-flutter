@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -8,6 +9,7 @@ import 'dart:io';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import '../../utils/audio_validator.dart';
 
 class EditorUtils {
   static Widget buildTextField({
@@ -43,7 +45,7 @@ class EditorUtils {
             filled: true,
             fillColor: isDark ? AppColors.forestDarkCard : Colors.white,
             counterStyle: TextStyle(
-              color: isDark ? Colors.white38 : AppColors.creamText3,
+              color: isDark ? Colors.white60 : AppColors.creamText3,
               fontSize: 10,
             ),
             border: OutlineInputBorder(
@@ -143,7 +145,7 @@ class EditorUtils {
                   Text(
                     'upload a new visual artifact',
                     style: AppTypography.label.copyWith(
-                      color: isDark ? Colors.white38 : AppColors.creamText3,
+                      color: isDark ? Colors.white60 : AppColors.creamText3,
                       fontSize: 11,
                     ),
                   ),
@@ -211,7 +213,7 @@ class EditorUtils {
                         ? 'Tap to replace audio artifact'
                         : 'Speak clearly for the students',
                     style: AppTypography.label.copyWith(
-                      color: isDark ? Colors.white38 : AppColors.creamText3,
+                      color: isDark ? Colors.white60 : AppColors.creamText3,
                       fontSize: 11,
                     ),
                   ),
@@ -254,7 +256,7 @@ class EditorUtils {
                 ),
               ),
               onTap: () {
-                Navigator.pop(context);
+                context.pop();
                 _showRecordingDialog(context, onComplete);
               },
             ),
@@ -267,7 +269,7 @@ class EditorUtils {
                 ),
               ),
               onTap: () {
-                Navigator.pop(context);
+                context.pop();
                 _pickAndUpload(
                   context: context,
                   path: 'lesson_assets/audio',
@@ -306,6 +308,23 @@ class EditorUtils {
       );
 
       if (result != null && result.files.single.path != null) {
+        final filePath = result.files.single.path!;
+        final isAudio = path.contains('audio');
+        
+        if (isAudio) {
+          final error = await AudioValidator.validate(filePath);
+          if (error != null) {
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(error),
+                backgroundColor: AppColors.semanticRed,
+              ),
+            );
+            return;
+          }
+        }
+
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -314,12 +333,12 @@ class EditorUtils {
           ),
         );
 
-        final String bucket = path.contains('audio') ? 'audio' : 'images';
+        final String bucket = isAudio ? 'audio' : 'images';
         final String fileName = '${DateTime.now().millisecondsSinceEpoch}_${result.files.single.name}';
         
         await Supabase.instance.client.storage.from(bucket).upload(
           fileName,
-          File(result.files.single.path!),
+          File(filePath),
           fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
         );
 
@@ -418,7 +437,7 @@ class _SafeDataTextFieldState extends State<SafeDataTextField> {
             filled: true,
             fillColor: isDark ? AppColors.forestDarkCard : Colors.white,
             counterStyle: TextStyle(
-              color: isDark ? Colors.white38 : AppColors.creamText3,
+              color: isDark ? Colors.white60 : AppColors.creamText3,
               fontSize: 10,
             ),
             border: OutlineInputBorder(
@@ -492,6 +511,23 @@ class _AudioRecorderDialogState extends State<AudioRecorderDialog> {
   Future<void> _uploadAndComplete(String path) async {
     try {
       if (!mounted) return;
+
+      // Validate recording
+      final error = await AudioValidator.validate(path);
+      if (error != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(error),
+              backgroundColor: AppColors.semanticRed,
+            ),
+          );
+          Navigator.pop(context);
+        }
+        return;
+      }
+
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Uploading recording...')));
@@ -507,7 +543,7 @@ class _AudioRecorderDialogState extends State<AudioRecorderDialog> {
       final url = Supabase.instance.client.storage.from('audio').getPublicUrl(fileName);
 
       widget.onComplete(url);
-      if (mounted) Navigator.pop(context);
+      if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -577,7 +613,7 @@ class _AudioRecorderDialogState extends State<AudioRecorderDialog> {
           const SizedBox(height: 20),
           if (!_isRecording)
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => context.pop(),
               child: Text(
                 'CANCEL',
                 style: TextStyle(

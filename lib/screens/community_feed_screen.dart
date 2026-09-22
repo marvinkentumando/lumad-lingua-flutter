@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
@@ -389,7 +390,7 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       hintText: widget.l10n.translate('add_comment_hint'),
-                      hintStyle: const TextStyle(color: Colors.white38),
+                      hintStyle: const TextStyle(color: Colors.white60),
                       filled: true,
                       fillColor: AppColors.forest900,
                       border: OutlineInputBorder(
@@ -419,7 +420,7 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
                                   userPhotoUrl: profile['photoURL'],
                                 );
                             _commentController.clear();
-                            if (context.mounted) Navigator.pop(context);
+                            if (context.mounted) context.pop();
                           }
                         },
                         icon: const Icon(

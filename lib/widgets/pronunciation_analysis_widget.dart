@@ -91,8 +91,8 @@ class PronunciationAnalysisWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildWaveLabel(
-          'NATIVE FINGERPRINT',
-          isDark ? Colors.white38 : AppColors.creamText2,
+          'ANCESTRAL PATTERN',
+          isDark ? Colors.white60 : AppColors.creamText2,
         ),
         const SizedBox(height: 8),
         _buildWaveform(
@@ -100,7 +100,7 @@ class PronunciationAnalysisWidget extends StatelessWidget {
           AppColors.gold500.withValues(alpha: 0.5),
         ),
         const SizedBox(height: 16),
-        _buildWaveLabel('YOUR FINGERPRINT', AppColors.semanticBlue),
+        _buildWaveLabel('YOUR ECHO', AppColors.semanticBlue),
         const SizedBox(height: 8),
         _buildWaveform(score.studentWaveform, AppColors.semanticBlue),
       ],

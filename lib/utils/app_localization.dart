@@ -255,9 +255,9 @@ class AppLocalization {
       'victory_reward': '+150 XP  \u2022  +25 Mist Crystals',
       'defeat_desc': 'Try again to calibrate your knowledge sparks.',
       'leave_arena': 'LEAVE ARENA',
-      'duel_question_prefix': 'What does \"{word}\" mean?',
-      'duel_question_gm': 'How do you say \"Good Morning\" in Mansaka?',
-      'duel_question_land': 'What is the Mansaka word for \"Land\"?',
+      'duel_question_prefix': 'What does "{word}" mean?',
+      'duel_question_gm': 'How do you say Good Morning in Mansaka?',
+      'duel_question_land': 'What is the Mansaka word for Land?',
 
       // 6. Scenario Hub & Stories
       'scenario_stories': 'Scenario Stories',
@@ -337,6 +337,12 @@ class AppLocalization {
       'retry_sync': 'RETRY SYNC',
       'ancestral_lesson_default': 'Ancestral Lesson',
       'box_label': 'BOX',
+      'xp_growth_trends': 'USER XP GROWTH TRENDS (7 DAYS)',
+      'pronunciation_by_dialect': 'PRONUNCIATION ACCURACY BY DIALECT',
+      'pronunciation_by_location': 'PRONUNCIATION ACCURACY BY LOCATION',
+      'aggregate_xp_growth': 'AGGREGATE XP GROWTH',
+      'insufficient_voice_data': 'Insufficient voice data.',
+      'no_xp_activity': 'No XP activity recorded.',
 
       // 11. Miscellaneous
       'no_audio': 'No audio available',
@@ -345,8 +351,6 @@ class AppLocalization {
       'view_sacred_artifacts': 'View Sacred Artifacts',
       'saved_locally_sync': 'Saved locally. Will sync when online.',
       'offline_synced': 'Offline drafts synced successfully!',
-      'offline_wisdom': 'Offline Wisdom',
-      'offline_wisdom_desc': 'Manage cached lessons and audio files for offline use',
 
       // 12. Achievements
       'ancestral_honors': 'Ancestral Honors',
@@ -384,36 +388,7 @@ class AppLocalization {
       'legacy_unlocked': 'LEGACY UNLOCKED',
       'tap_return_vault': 'Tap to return to the vault',
 
-      // 16. Saka Game
-      'score_label': 'SCORE',
-      'distance_label': 'DISTANCE',
-      'prologue_title': 'PROLOGUE: THE AWAKENING',
-      'prologue_text': '\"The stars are still sharp over Davao de Oro when young Baylan stirs. The air in the valley is thick with the scent of damp earth and woodsmoke. For the Mansaka, the mountain is not just land—it is a living ancestor.\n\nTo reach the summit of Mount Hamiguitan is to retrace the steps of the elders. Every vine cut, every seed planted, and every word spoken is a thread in the poem of our people.\n\nRise, Baylan. The climb begins before the sun.\"',
-      'begin_climb': 'BEGIN CLIMB',
-      'shrine_reflection': 'SHRINE REFLECTION',
-      'submit_btn': 'SUBMIT',
-      'try_again_elder': 'Try again, reflect on the words of the elders.',
-      'summit_reached_title': 'NAABOT ANG TUKTOK!',
-      'summit_reached_subtitle': 'THE SUMMIT IS REACHED',
-      'summit_reached_text': 'You stand where the earth meets the sky. You have carried the poem of the Mansaka from the forest floor to the sacred height. The words you learned are not just vocabulary—they are the breath of the mountain.\n\nYou are Man-saka. You are the one who climbs.',
-      'continue_journey': 'CONTINUE JOURNEY',
-      'mansaka_glossary': 'MANSAKA GLOSSARY',
-      'lore_waterfall': "The daliyog's song is the memory of our first breath. It washes the dust of the world from the spirit.",
-      'lore_tree': "The diwata sleep in the roots of the daku. To pass is to be judged by the silence of the forest.",
-      'lore_totem': "The ancestors carved their names in the stone. They watch your ascent, Baylan.",
-      'shrine_lore_0': "The first step is always the heaviest. Remember your roots.",
-      'shrine_lore_1': "The mountain provides, but it also tests. Patience is your shield.",
-      'shrine_lore_2': "The clouds gather below you. The world is small from here.",
-      'shrine_lore_3': "The air grows thin, but the spirit grows strong.",
-      'shrine_lore_4': "The summit is near. The ancestors await your arrival.",
-      'shrine_lore_default': "Echoes of the elders whisper in the wind.",
-      'stage_1_desc': "Dawn yet already awaken—rattan-working diligently.",
-      'stage_2_desc': "Feed the pig and chicken, pasture the carabao.",
-      'stage_3_desc': "Get rattan from the timberland and load it for goods.",
-      'stage_4_desc': "A child goes to the mountain farm to weed grasses.",
-      'stage_5_desc': "Far from the town—yet the mountain people carry ancient wisdom.",
-      'lore_waterfall_2': "The waterfall speaks of ancestors' breath—refreshing the soul.",
-      'lore_tree_2': "The Great Balete watches; its roots are the veins of the earth.",
+
 
       // 17. Streak History
       'streak_journey': 'STREAK JOURNEY',
@@ -455,10 +430,6 @@ class AppLocalization {
       'warrior_circle_ops': 'WARRIOR CIRCLE OPS',
       'manage_seasons_desc': 'Manage seasons, shop prices, and duel moderation.',
       'go_economics_hub': 'GO TO ECONOMICS HUB',
-      'system_maintenance': 'SYSTEM MAINTENANCE',
-      'metadata_engine': 'METADATA ENGINE',
-      'sync_metadata_desc': 'Sync municipality data and update town-dialect mappings across the platform.',
-      'sync_metadata_btn': 'SYNC METADATA',
       'force_rotation': 'FORCE ROTATION',
       'resume_auto': 'RESUME AUTO',
       'pick_manually': 'PICK MANUALLY',
@@ -480,7 +451,7 @@ class AppLocalization {
       'guide_title_4': '4. Dictionary & Archive Navigation',
       'guide_desc_4': 'Effortlessly search through our deep indigenous word vaults. Explore comprehensive usage contexts, examples, and instant translations into English or Filipino.',
       'guide_title_5': '5. Community Peak & Engagement',
-      'guide_desc_5': 'Understand the XP reward cycle, tribal progression ranks, and unique merit badges. Challenge peers in ritual duels and tap the spark icon to send a \"Tribal Salute\" to fellow learners.',
+      'guide_desc_5': 'Understand the XP reward cycle, tribal progression ranks, and unique merit badges. Challenge peers in ritual duels and tap the spark icon to send a "Tribal Salute" to fellow learners.',
       'guide_title_6': '6. Data Privacy & Verification Transparency',
       'guide_desc_6': 'Total clarity on community custodianship. Discover how native terms, audio tips, and submitted records are protected, filtered, and officially verified by our tribal council and elders.',
 
@@ -511,6 +482,19 @@ class AppLocalization {
       'archive_xp': 'ARCHIVE XP',
       'keep_flame_alive': 'Keep the flame alive!',
       'ritual_empty_desc': 'No rituals today. Check back soon for more tribal challenges!',
+
+      // 22. Offline & Sync
+      'saved_offline_desc': 'Saved offline. We will sync your progress once you are back online.',
+      'sync_conflicts': 'Sync Conflicts',
+      'conflicts_desc': 'You have {count} lesson progress conflicts that need attention.',
+      'resolve_now': 'RESOLVE NOW',
+      'resolve_conflicts': 'Resolve Conflicts',
+      'conflict_detected_desc': 'We found different progress data on this device and in the cloud. Which one would you like to keep?',
+      'local_device': 'LOCAL DEVICE',
+      'cloud_server': 'CLOUD SERVER',
+      'keep_cloud': 'KEEP CLOUD',
+      'use_local': 'USE LOCAL',
+      'done': 'DONE',
     },
     'tl': {
       // 1. Onboarding & Auth
@@ -760,9 +744,9 @@ class AppLocalization {
       'victory_reward': '+150 XP  \u2022  +25 Mist Crystals',
       'defeat_desc': 'Subukan muli para ayusin ang iyong kaalaman.',
       'leave_arena': 'LUMABAS SA ARENA',
-      'duel_question_prefix': 'Ano ang ibig sabihin ng \"{word}\"?',
-      'duel_question_gm': 'Paano sabihin ang \"Magandang Umaga\" sa Mansaka?',
-      'duel_question_land': 'Ano ang salitang Mansaka para sa \"Lupa\"?',
+      'duel_question_prefix': 'Ano ang ibig sabihin ng "{word}"?',
+      'duel_question_gm': 'Paano sabihin ang "Magandang Umaga" sa Mansaka?',
+      'duel_question_land': 'Ano ang salitang Mansaka para sa "Lupa"?',
 
       // 6. Scenario Hub & Stories
       'scenario_stories': 'Mga Kuwento ng Scenario',
@@ -842,6 +826,12 @@ class AppLocalization {
       'retry_sync': 'SUBUKAN MULI ANG SYNC',
       'ancestral_lesson_default': 'Sinaunang Lesson',
       'box_label': 'BOX',
+      'xp_growth_trends': 'PAGLAKI NG XP NG MGA USER (7 ARAW)',
+      'pronunciation_by_dialect': 'KAWASTUHAN NG PAGBIGKAS AYON SA DIYALEKTO',
+      'pronunciation_by_location': 'KAWASTUHAN NG PAGBIGKAS AYON SA LOKASYON',
+      'aggregate_xp_growth': 'KABUUANG PAGLAKI NG XP',
+      'insufficient_voice_data': 'Kulang ang data ng boses.',
+      'no_xp_activity': 'Walang naitalang aktibidad ng XP.',
 
       // 11. Miscellaneous
       'no_audio': 'Walang available na audio',
@@ -850,8 +840,6 @@ class AppLocalization {
       'view_sacred_artifacts': 'Tingnan ang mga Sagradong Artifact',
       'saved_locally_sync': 'Na-save nang lokal. Mag-sync kapag online na.',
       'offline_synced': 'Matagumpay na na-sync ang mga offline draft!',
-      'offline_wisdom': 'Offline Lessons',
-      'offline_wisdom_desc': 'Pamahalaan ang naka-cache na lessons at audio files para magamit offline',
 
       // 12. Achievements
       'ancestral_honors': 'Mga Karangalan ng Ninuno',
@@ -889,20 +877,7 @@ class AppLocalization {
       'legacy_unlocked': 'NA-UNLOCK NA ANG PAMANA',
       'tap_return_vault': 'Pindutin para bumalik sa vault',
 
-      // 16. Saka Game
-      'score_label': 'ISKOR',
-      'distance_label': 'LAYO',
-      'prologue_title': 'PROLOGO: ANG PAGGISING',
-      'prologue_text': '\"Ang mga bituin ay matalas pa rin sa Davao de Oro nang magising ang batang si Baylan. Ang hangin sa lambak ay makapal sa amoy ng basang lupa at usok ng kahoy. Para sa mga Mansaka, ang bundok ay hindi lamang lupa—ito ay isang buhay na ninuno.\n\nAng pag-abot sa tuktok ng Bundok Hamiguitan ay muling pagtahak sa mga hakbang ng mga nakatatanda. Bawat baging na pinutol, bawat binhi na itinanim, at bawat salitang binigkas ay isang hibla sa tula ng ating bayan.\n\nBumangon ka, Baylan. Magsisimula ang pag-akyat bago sumikat ang araw.\"',
-      'begin_climb': 'SIMULAN ANG PAG-AKYAT',
-      'shrine_reflection': 'PAGNINILAY SA DAMBANA',
-      'submit_btn': 'IPASA',
-      'try_again_elder': 'Subukan muli, pagnilayan ang mga salita ng mga nakatatanda.',
-      'summit_reached_title': 'NAABOT ANG TUKTOK!',
-      'summit_reached_subtitle': 'NARATING NA ANG TUKTOK',
-      'summit_reached_text': 'Nakatayo ka kung saan nagtatagpo ang lupa at langit. Dinala mo ang tula ng mga Mansaka mula sa sahig ng kagubatan hanggang sa sagradong taas. Ang mga salitang natutunan mo ay hindi lamang bokabularyo—sila ang hininga ng bundok.\n\nIkaw ay Man-saka. Ikaw ang siyang umaakyat.',
-      'continue_journey': 'IPAGPATULOY ANG PAGLALAKBAY',
-      'mansaka_glossary': 'MANSAKA GLOSSARY',
+
 
       // 17. Streak History
       'streak_journey': 'PAGLALAKBAY NG STREAK',
@@ -944,10 +919,7 @@ class AppLocalization {
       'warrior_circle_ops': 'OPS NG WARRIOR CIRCLE',
       'manage_seasons_desc': 'Pamahalaan ang mga season, presyo sa shop, at duel moderation.',
       'go_economics_hub': 'PUMUNTA SA ECONOMICS HUB',
-      'system_maintenance': 'MAINTENANCE NG SYSTEM',
-      'metadata_engine': 'METADATA ENGINE',
-      'sync_metadata_desc': 'I-sync ang data ng munisipyo at i-update ang town-dialect mappings.',
-      'sync_metadata_btn': 'I-SYNC ANG METADATA',
+
       'force_rotation': 'PWERSAHING PALITAN',
       'resume_auto': 'IBALIK SA AUTO',
       'pick_manually': 'PUMILI NANG MANWAL',
@@ -1249,9 +1221,9 @@ class AppLocalization {
       'victory_reward': '+150 XP  \u2022  +25 Mist Crystals',
       'defeat_desc': 'Sulayi pag-usab para mapaayo ang imong kaalam.',
       'leave_arena': 'GAWAS SA ARENA',
-      'duel_question_prefix': 'Unsa ang pasabot sa \"{word}\"?',
-      'duel_question_gm': 'Unsaon pag-ingon og \"Maayong Buntag\" sa Mansaka?',
-      'duel_question_land': 'Unsa ang pulong nga Mansaka para sa \"Yuta\"?',
+      'duel_question_prefix': 'Unsa ang pasabot sa "{word}"?',
+      'duel_question_gm': 'Unsaon pag-ingon og "Maayong Buntag" sa Mansaka?',
+      'duel_question_land': 'Unsa ang pulong nga Mansaka para sa "Yuta"?',
 
       // 6. Scenario Hub & Stories
       'scenario_stories': 'Mga Sugilanon sa Scenario',
@@ -1331,6 +1303,12 @@ class AppLocalization {
       'retry_sync': 'SULAYI PAG-USAB ANG SYNC',
       'ancestral_lesson_default': 'Karaan nga Lesson',
       'box_label': 'BOX',
+      'xp_growth_trends': 'PAGDAGHAN SA XP SA MGA USER (7 KA ADLAW)',
+      'pronunciation_by_dialect': 'KASAKTO SA PAGLITOK PINASIKAD SA DIYALEKTO',
+      'pronunciation_by_location': 'KASAKTO SA PAGLITOK PINASIKAD SA LOKASYON',
+      'aggregate_xp_growth': 'KINATIBUK-ANG PAGDAGHAN SA XP',
+      'insufficient_voice_data': 'Dili sapat ang data sa tingog.',
+      'no_xp_activity': 'Walay natala nga aktibidad sa XP.',
 
       // 11. Miscellaneous
       'no_audio': 'Walay available nga audio',
@@ -1339,8 +1317,6 @@ class AppLocalization {
       'view_sacred_artifacts': 'Tan-awa ang mga Sagradong Artifact',
       'saved_locally_sync': 'Na-save locally. Mag-sync kung online na.',
       'offline_synced': 'Malampusong na-sync ang mga offline draft!',
-      'offline_wisdom': 'Offline Lessons',
-      'offline_wisdom_desc': 'I-manage ang cached lessons ug audio files para magamit offline',
 
       // 12. Achievements
       'ancestral_honors': 'Mga Dungog sa Kagikanan',
@@ -1378,20 +1354,7 @@ class AppLocalization {
       'legacy_unlocked': 'NA-UNLOCK NA ANG KABILIN',
       'tap_return_vault': 'Pinduta para mubalik sa vault',
 
-      // 16. Saka Game
-      'score_label': 'ISKOR',
-      'distance_label': 'KALAY-ON',
-      'prologue_title': 'PROLOGO: ANG PAGMATA',
-      'prologue_text': '\"Ang mga bituon hait pa gihapon sa Davao de Oro sa dihang mimata ang batan-ong Baylan. Ang hangin sa walog baga sa baho sa basa nga yuta ug aso sa kahoy. Para sa mga Mansaka, ang bukid dili lang yuta—kini usa ka buhi nga katigulangan.\n\nAng pag-abot sa tumoy sa Bukid Hamiguitan mao ang pagsubay pag-usab sa mga lakang sa mga katigulangan. Matag paras nga giputol, matag liso nga gitanom, ug matag pulong nga gisulti usa ka lugas sa balak sa atong katawhan.\n\nMata na, Baylan. Sugdan ang pagsaka sa dili pa mosubang ang adlaw.\"',
-      'begin_climb': 'SUGDAN ANG PAGSAKA',
-      'shrine_reflection': 'PAMALANDONG SA SHRINE',
-      'submit_btn': 'IPASA',
-      'try_again_elder': 'Sulayi pag-usab, pamalandungi ang mga pulong sa mga katigulangan.',
-      'summit_reached_title': 'NAABOT ANG TUKTOK!',
-      'summit_reached_subtitle': 'NARATING NA ANG TUMOY',
-      'summit_reached_text': 'Nagbarog ka diin nagtagbo ang yuta ug langit. Gidala nimo ang balak sa mga Mansaka gikan sa salog sa lasang hangtod sa sagradong kahitas-on. Ang mga pulong nga imong nakat-onan dili lang bokabularyo—sila ang gininhawa sa bukid.\n\nIkaw si Man-saka. Ikaw ang usa nga mosaka.',
-      'continue_journey': 'PADAYON SA PANAW',
-      'mansaka_glossary': 'MANSAKA GLOSSARY',
+
 
       // 17. Streak History
       'streak_journey': 'PANAW SA STREAK',
@@ -1433,10 +1396,7 @@ class AppLocalization {
       'warrior_circle_ops': 'OPS SA WARRIOR CIRCLE',
       'manage_seasons_desc': 'I-manage ang mga season, presyo sa shop, ug duel moderation.',
       'go_economics_hub': 'ADTO SA ECONOMICS HUB',
-      'system_maintenance': 'MAINTENANCE SA SYSTEM',
-      'metadata_engine': 'METADATA ENGINE',
-      'sync_metadata_desc': 'I-sync ang data sa munisipyo ug i-update ang town-dialect mappings.',
-      'sync_metadata_btn': 'I-SYNC ANG METADATA',
+
       'force_rotation': 'PUGSA PAGBALHIN',
       'resume_auto': 'BALIK SA AUTO',
       'pick_manually': 'PILI OG MANWAL',

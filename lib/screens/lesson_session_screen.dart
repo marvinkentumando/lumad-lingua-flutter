@@ -7,6 +7,7 @@ import '../theme/app_typography.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../services/audio_service.dart';
+import '../services/offline_service.dart';
 import '../widgets/xp_celebration.dart';
 import '../models/lesson_task.dart';
 import '../models/artifact.dart';
@@ -429,12 +430,24 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                 }
               }
             })
-            .catchError((error) {
+            .catchError((error) async {
+              // SAVE OFFLINE if online sync fails
+              final offlineProgress = {
+                'lessonId': lessonId,
+                'score': state.completedCount * 10,
+                'stars': stars,
+                'taskPerformance': _taskMistakes,
+                'bonusXp': _bonusXp,
+                'timestamp': DateTime.now().toIso8601String(),
+              };
+              
+              await ref.read(offlineServiceProvider).saveOfflineProgress(lessonId, offlineProgress);
+
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Sync error: ${error.toString()}'),
-                    backgroundColor: AppColors.semanticRed,
+                    content: Text(l10n.translate('saved_offline_desc')),
+                    backgroundColor: AppColors.gold500,
                   ),
                 );
               }
@@ -544,7 +557,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () => context.pop(),
             child: Text(
               l10n.translate('keep_going'),
               style: const TextStyle(color: AppColors.gold500),
@@ -552,7 +565,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(ctx);
+              context.pop();
               context.pop();
             },
             child: Text(

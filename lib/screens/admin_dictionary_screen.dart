@@ -2,10 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:csv/csv.dart';
-import 'dart:convert';
-import 'dart:io';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../models/dictionary_entry.dart';
@@ -15,7 +11,7 @@ import '../widgets/brand_button.dart';
 import '../widgets/brand_search_bar.dart';
 import '../widgets/brand_text_field.dart';
 import '../widgets/preview_audio_player.dart';
-import '../services/haptic_service.dart';
+import '../widgets/admin/import_dictionary_modal.dart';
 
 class AdminDictionaryScreen extends ConsumerStatefulWidget {
   const AdminDictionaryScreen({super.key});
@@ -64,7 +60,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
           IconButton(
             icon: const Icon(Icons.upload_file_rounded, color: AppColors.gold500),
             tooltip: 'Import CSV',
-            onPressed: () => _importCSV(context),
+            onPressed: () => _showImportModal(context),
           ),
           const SizedBox(width: 8),
         ],
@@ -237,7 +233,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
           const SizedBox(height: 16),
           Text(
             'No matching words found.',
-            style: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
+            style: TextStyle(color: isDark ? Colors.white60 : Colors.black38),
           ),
         ],
       ),
@@ -279,97 +275,13 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
     );
   }
 
-  Future<void> _importCSV(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
-    HapticService.light();
-    
-    try {
-      final result = await FilePicker.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['csv'],
-      );
-
-      if (result == null || result.files.single.path == null) return;
-
-      final file = File(result.files.single.path!);
-      final input = file.openRead();
-      final fields = await input
-          .transform(utf8.decoder)
-          .transform(const CsvDecoder())
-          .toList();
-
-      if (fields.length <= 1) {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('CSV file is empty or missing headers.')),
-        );
-        return;
-      }
-
-      // Headers (Expectation): indigenousWord, translation, translationFilipino, partOfSpeech, language, usageContext
-      // Example: Mansaka_Word, English_Trans, Filipino_Trans, noun, Mansaka, Definition...
-      
-      final List<DictionaryEntry> entries = [];
-      
-      // Skip header row
-      for (var i = 1; i < fields.length; i++) {
-        final row = fields[i];
-        if (row.length < 2) continue; // Skip malformed rows
-
-        entries.add(DictionaryEntry(
-          id: '',
-          indigenousWord: row[0].toString(),
-          translation: row[1].toString(),
-          translationFilipino: row.length > 2 ? row[2].toString() : '',
-          partOfSpeech: _parsePartOfSpeech(row.length > 3 ? row[3].toString() : 'noun'),
-          language: row.length > 4 ? row[4].toString() : 'Mansaka',
-          usageContext: row.length > 5 ? row[5].toString() : '',
-          status: ValidationStatus.approved,
-          submittedAt: DateTime.now(),
-        ));
-      }
-
-      if (entries.isEmpty) return;
-
-      if (!context.mounted) return;
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Confirm Import'),
-          content: Text('Import ${entries.length} words from CSV?'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('CANCEL')),
-            BrandButton(
-              text: 'IMPORT', 
-              type: BrandButtonType.primary,
-              onTap: () => Navigator.pop(dialogContext, true),
-            ),
-          ],
-        ),
-      );
-
-      if (confirm == true && mounted) {
-        await ref.read(firebaseServiceProvider).bulkAddWords(entries);
-        if (mounted) {
-          messenger.showSnackBar(
-            SnackBar(content: Text('Successfully imported ${entries.length} words.')),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text('Error importing CSV: $e')),
-        );
-      }
-    }
-  }
-
-  PartOfSpeech _parsePartOfSpeech(String val) {
-    val = val.toLowerCase().trim();
-    if (val.contains('verb')) return PartOfSpeech.verb;
-    if (val.contains('adj')) return PartOfSpeech.adjective;
-    if (val.contains('phrase')) return PartOfSpeech.phrase;
-    return PartOfSpeech.noun;
+  void _showImportModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const ImportDictionaryModal(),
+    );
   }
 }
 
@@ -545,7 +457,6 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
     }
 
     final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
     setState(() => _loading = true);
 
     try {
@@ -572,11 +483,13 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
       }
 
       if (mounted) {
-        navigator.pop();
+        HapticService.success();
+        Navigator.of(context).pop();
         messenger.showSnackBar(const SnackBar(content: Text('Entry saved successfully.')));
       }
     } catch (e) {
       if (mounted) {
+        HapticService.error();
         messenger.showSnackBar(SnackBar(content: Text('Save failed: $e')));
       }
     } finally {

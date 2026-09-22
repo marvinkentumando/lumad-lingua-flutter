@@ -17,6 +17,8 @@ class AppConfig {
 
   final int streakRewardCycle;
   final Map<String, int> spiritThresholds;
+  final String activePronunciationAlgorithm;
+  final String activeSentimentAlgorithm;
 
   AppConfig({
     required this.wordApprovalXp,
@@ -36,6 +38,8 @@ class AppConfig {
     required this.levelUpParticleDuration,
     required this.streakRewardCycle,
     required this.spiritThresholds,
+    required this.activePronunciationAlgorithm,
+    required this.activeSentimentAlgorithm,
   });
 
   factory AppConfig.fromFirestore(Map<String, dynamic> data) {
@@ -70,6 +74,8 @@ class AppConfig {
         'Seeker': 500,
         'Novice': 0,
       }),
+      activePronunciationAlgorithm: data['activePronunciationAlgorithm'] ?? 'dtw',
+      activeSentimentAlgorithm: data['activeSentimentAlgorithm'] ?? 'naiveBayes',
     );
   }
 
@@ -92,6 +98,8 @@ class AppConfig {
       'levelUpParticleDuration': levelUpParticleDuration,
       'streakRewardCycle': streakRewardCycle,
       'spiritThresholds': spiritThresholds,
+      'activePronunciationAlgorithm': activePronunciationAlgorithm,
+      'activeSentimentAlgorithm': activeSentimentAlgorithm,
     };
   }
 

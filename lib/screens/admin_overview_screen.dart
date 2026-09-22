@@ -6,7 +6,7 @@ import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/brand_background.dart';
-
+import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/firebase_service.dart';
 import '../services/haptic_service.dart';
@@ -182,13 +182,25 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                         GestureDetector(
                           onTap: () {
                             HapticService.selection();
+                            context.push('/admin/algorithm-selection');
+                          },
+                          child: _statCard(
+                            'AI MODELS',
+                            'DEPLOYMENT',
+                            Icons.psychology_rounded,
+                            AppColors.semanticBlue,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            HapticService.selection();
                             context.push('/admin/lessons');
                           },
                           child: _statCard(
                             l10n.translate('manage_label'),
                             l10n.translate('lessons_label'),
                             Icons.library_books_rounded,
-                            AppColors.semanticBlue,
+                            AppColors.gold500,
                           ),
                         ),
                       ]
@@ -199,11 +211,22 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                     const SizedBox(height: 20),
                     SizedBox(
                       width: double.infinity,
-                      child: BrandButton(
-                        text: l10n.translate('advanced_analytics'),
-                        type: BrandButtonType.primary,
-                        icon: Icons.analytics_rounded,
-                        onTap: () => context.push('/admin/analytics'),
+                      child: Column(
+                        children: [
+                          BrandButton(
+                            text: l10n.translate('advanced_analytics'),
+                            type: BrandButtonType.primary,
+                            icon: Icons.analytics_rounded,
+                            onTap: () => context.push('/admin/analytics'),
+                          ),
+                          const SizedBox(height: 12),
+                          BrandButton(
+                            text: 'VIEW TEST ASSESSMENTS',
+                            type: BrandButtonType.secondary,
+                            icon: Icons.assignment_turned_in_rounded,
+                            onTap: () => context.push('/admin/assessments'),
+                          ),
+                        ],
                       ),
                     ).animate().fadeIn(delay: 200.ms),
                     const SizedBox(height: 32),
@@ -237,7 +260,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                               _tappedGrowthBar = _tappedGrowthBar == i ? null : i),
                         ),
                       ).animate().fadeIn(delay: 400.ms),
-                      loading: () => _buildChartSkeleton(),
+                      loading: () => _buildChartAppShimmerSkeleton(),
                       error: (_, __) => const Text('Error loading growth data'),
                     ),
                     const SizedBox(height: 32),
@@ -294,54 +317,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 32),
-                    _sectionLabel(l10n.translate('system_maintenance')),
-                    const SizedBox(height: 16),
-                    BrandCard(
-                      theme: BrandCardTheme.vibrant,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.sync_rounded,
-                                  color: AppColors.gold500,
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  l10n.translate('metadata_engine'),
-                                  style: AppTypography.h3.copyWith(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              l10n.translate('sync_metadata_desc'),
-                              style: AppTypography.body.copyWith(
-                                color: Colors.white60,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            SizedBox(
-                              width: double.infinity,
-                              child: BrandButton(
-                                text: l10n.translate('sync_metadata_btn'),
-                                onTap: () => _syncMetadata(),
-                                type: BrandButtonType.secondary,
-                                icon: Icons.sync_rounded,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+
                     const SizedBox(height: 100),
                   ],
                 ),
@@ -435,25 +411,6 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
     );
   }
 
-  Future<void> _syncMetadata() async {
-    try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Syncing town metadata...')),
-      );
-      await ref.read(firebaseServiceProvider).syncMunicipalityDialects();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Metadata synced! Towns updated with current dialects.')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Sync failed: $e')),
-      );
-    }
-  }
-
   Widget _buildHeroBanner(BuildContext context, AppLocalization l10n) {
     final profileAsync = ref.watch(userProfileProvider);
     final profile = profileAsync.value;
@@ -528,12 +485,16 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
           switch (h['label']) {
             case 'API Status':
               value = data['apiStatus'] ?? value;
+              break;
             case 'Storage':
               value = data['storage'] ?? value;
+              break;
             case 'Database':
               value = data['database'] ?? value;
+              break;
             case 'Uptime':
               value = data['uptime'] ?? value;
+              break;
           }
         }
 
@@ -603,7 +564,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
     );
   }
 
-  Widget _buildChartSkeleton() {
+  Widget _buildChartAppShimmerSkeleton() {
     return BrandCard(
       theme: BrandCardTheme.vibrant,
       child: Padding(
@@ -616,12 +577,12 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Skeleton(
+                  AppShimmerSkeleton(
                     height: 30 + (i * 12.0) % 60.0,
                     borderRadius: 6,
                   ),
                   const SizedBox(height: 10),
-                  const Skeleton(height: 8, width: 24, borderRadius: 2),
+                  const AppShimmerSkeleton(height: 8, width: 24, borderRadius: 2),
                 ],
               ),
             ),
@@ -673,7 +634,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (isLoading)
-                const Skeleton(width: 60, height: 28, borderRadius: 8)
+                const AppShimmerSkeleton(width: 60, height: 28, borderRadius: 8)
               else
                 Text(
                   value,
@@ -864,7 +825,7 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
                   ),
                 ),
                 IconButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => context.pop(),
                   icon: const Icon(Icons.close_rounded),
                 ),
               ],
@@ -995,7 +956,7 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
             'Set "${word.indigenousWord}" as the Word of the Day? This will override automatic rotation.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
             child: Text(l10n.translate('cancel').toUpperCase()),
           ),
           ElevatedButton(

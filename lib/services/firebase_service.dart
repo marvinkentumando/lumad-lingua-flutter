@@ -59,6 +59,31 @@ class FirebaseService {
     }
   }
 
+  Future<Map<String, dynamic>?> getUserLessonProgress(String userId, String lessonId) async {
+    final doc = await _db
+        .collection('users')
+        .doc(userId)
+        .collection('progress')
+        .doc(lessonId)
+        .get();
+    return doc.data();
+  }
+
+  Stream<List<AssessmentResult>> getAssessmentResults() {
+    return _db.collection('assessments').orderBy('timestamp', descending: true).snapshots().map((snap) {
+      return snap.docs.map((doc) {
+        final data = doc.data();
+        return AssessmentResult(
+          userId: data['userId'] ?? '',
+          type: data['type'] == 'preTest' ? AssessmentType.preTest : AssessmentType.postTest,
+          lessonId: data['lessonId'],
+          answers: Map<String, dynamic>.from(data['answers'] ?? {}),
+          timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        );
+      }).toList();
+    });
+  }
+
   Future<void> joinVillage(String userId, String code) async {
     final educatorSnap = await _db
         .collection('users')
@@ -1286,6 +1311,12 @@ class FirebaseService {
       final progressSnap = await _db.collectionGroup('progress').get();
       final srsSnap = await _db.collectionGroup('srs_progress').get();
       final lessonsSnap = await _db.collection('lessons').get();
+      final usersSnap = await _db.collection('users').get();
+
+      final Map<String, Map<String, dynamic>> userMap = {};
+      for (var doc in usersSnap.docs) {
+        userMap[doc.id] = doc.data();
+      }
 
       // 1. Lesson Heatmaps
       final Map<String, Map<String, int>> lessonStruggles = {};
@@ -1294,15 +1325,43 @@ class FirebaseService {
         lessonNames[doc.id] = doc.data()['title'] ?? 'Unknown';
       }
 
+      // Accuracy by Dialect & Location
+      final Map<String, List<double>> dialectAccuracy = {};
+      final Map<String, List<double>> locationAccuracy = {};
+
       for (var doc in progressSnap.docs) {
         final lessonId = doc.id;
-        final performance = doc.data()['performance'] as Map<String, dynamic>? ?? {};
+        final performance =
+            doc.data()['performance'] as Map<String, dynamic>? ?? {};
+        final userId = doc.reference.parent.parent?.id;
+
         if (!lessonStruggles.containsKey(lessonId)) {
           lessonStruggles[lessonId] = {};
         }
+
+        double totalAcc = 0;
+        int count = 0;
+
         performance.forEach((taskId, mistakes) {
-          lessonStruggles[lessonId]![taskId] = (lessonStruggles[lessonId]![taskId] ?? 0) + (mistakes as num).toInt();
+          final mistakesInt = (mistakes as num).toInt();
+          lessonStruggles[lessonId]![taskId] =
+              (lessonStruggles[lessonId]![taskId] ?? 0) + mistakesInt;
+
+          // Simple accuracy heuristic: 1.0 = 0 mistakes, 0.0 = 5+ mistakes
+          final acc = (1.0 - (mistakesInt / 5.0)).clamp(0.0, 1.0);
+          totalAcc += acc;
+          count++;
         });
+
+        if (userId != null && userMap.containsKey(userId) && count > 0) {
+          final user = userMap[userId]!;
+          final dialect = user['tribe'] ?? 'Unknown';
+          final location = user['location'] ?? 'Unknown';
+          final avgAcc = totalAcc / count;
+
+          dialectAccuracy.putIfAbsent(dialect, () => []).add(avgAcc);
+          locationAccuracy.putIfAbsent(location, () => []).add(avgAcc);
+        }
       }
 
       // 2. Dialect Distribution (by active learners)
@@ -1336,21 +1395,49 @@ class FirebaseService {
         final reviews = data['timesReviewed'] as int? ?? 0;
         final level = data['level'] as int? ?? 0;
         totalReviews += reviews;
-        // Approximation: success = total - failures (if we had failure count)
-        // Or using consecutiveCorrect as a health indicator
         totalSuccess += data['consecutiveCorrect'] as int? ?? 0;
         masteryDist[level] = (masteryDist[level] ?? 0) + 1;
+      }
+
+      // 4. XP Trends (Proxy for XP growth using total daily XP)
+      final Map<String, int> xpTrends = {};
+      final now = DateTime.now();
+      for (int i = 0; i < 7; i++) {
+        final date = now.subtract(Duration(days: 6 - i));
+        final dateKey = date.toIso8601String().split('T')[0];
+        xpTrends[dateKey] = 0;
+      }
+
+      for (var user in usersSnap.docs) {
+        final userData = user.data();
+        final createdAt = (userData['createdAt'] as Timestamp?)?.toDate();
+        final xp = (userData['xp'] as num?)?.toInt() ?? 0;
+        if (createdAt != null) {
+          final dateKey = createdAt.toIso8601String().split('T')[0];
+          if (xpTrends.containsKey(dateKey)) {
+            xpTrends[dateKey] = xpTrends[dateKey]! + xp;
+          }
+        }
       }
 
       return {
         'lessonStruggles': lessonStruggles,
         'lessonNames': lessonNames,
         'dialectPopularity': dialectUsers.map((k, v) => MapEntry(k, v.length)),
+        'dialectAccuracy': dialectAccuracy.map(
+          (k, v) => MapEntry(k, v.reduce((a, b) => a + b) / v.length),
+        ),
+        'locationAccuracy': locationAccuracy.map(
+          (k, v) => MapEntry(k, v.reduce((a, b) => a + b) / v.length),
+        ),
+        'xpTrends': xpTrends,
         'srsHealth': {
-          'retentionRate': totalReviews > 0 ? (totalSuccess / (totalReviews + totalSuccess)) : 0.0,
+          'retentionRate': totalReviews > 0
+              ? (totalSuccess / (totalReviews + totalSuccess))
+              : 0.0,
           'masteryDistribution': masteryDist,
           'totalCards': srsSnap.size,
-        }
+        },
       };
     } catch (e, stack) {
       debugPrint('Advanced Analytics Error: $e');
@@ -1359,11 +1446,14 @@ class FirebaseService {
         'lessonStruggles': <String, Map<String, int>>{},
         'lessonNames': <String, String>{},
         'dialectPopularity': <String, int>{},
+        'dialectAccuracy': <String, double>{},
+        'locationAccuracy': <String, double>{},
+        'xpTrends': <String, int>{},
         'srsHealth': {
           'retentionRate': 0.0,
           'masteryDistribution': {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
           'totalCards': 0,
-        }
+        },
       };
     }
   }
@@ -4432,6 +4522,10 @@ final versionHistoryProvider =
 
 final userImpactMetricsProvider = StreamProvider.family<Map<String, dynamic>, String>((ref, userId) {
   return ref.watch(firebaseServiceProvider).getUserImpactMetrics(userId);
+});
+
+final assessmentResultsProvider = StreamProvider<List<AssessmentResult>>((ref) {
+  return ref.watch(firebaseServiceProvider).getAssessmentResults();
 });
 
 

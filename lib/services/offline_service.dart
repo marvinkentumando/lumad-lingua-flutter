@@ -10,6 +10,7 @@ class OfflineService {
   static const String dictionaryBoxName = 'offline_dictionary';
   static const String draftLessonsBoxName = 'draft_lessons';
   static const String searchHistoryBoxName = 'search_history';
+  static const String progressBoxName = 'offline_progress';
 
   bool _initialized = false;
 
@@ -32,6 +33,7 @@ class OfflineService {
       await Hive.openBox<DictionaryEntry>(dictionaryBoxName);
       await Hive.openBox<Lesson>(draftLessonsBoxName);
       await Hive.openBox<String>(searchHistoryBoxName);
+      await Hive.openBox<Map>(progressBoxName);
 
       _initialized = true;
     } catch (e) {
@@ -101,6 +103,28 @@ class OfflineService {
   Future<void> removeDraftLesson(String id) async {
     final box = await _getBox<Lesson>(draftLessonsBoxName);
     await box.delete(id);
+  }
+
+  // Progress Methods
+  Future<void> saveOfflineProgress(String lessonId, Map<String, dynamic> progress) async {
+    final box = await _getBox<Map>(progressBoxName);
+    await box.put(lessonId, progress);
+  }
+
+  Future<Map<String, dynamic>?> getOfflineProgress(String lessonId) async {
+    final box = await _getBox<Map>(progressBoxName);
+    final data = box.get(lessonId);
+    return data != null ? Map<String, dynamic>.from(data) : null;
+  }
+
+  Future<List<Map<String, dynamic>>> getAllOfflineProgress() async {
+    final box = await _getBox<Map>(progressBoxName);
+    return box.values.map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
+  Future<void> removeOfflineProgress(String lessonId) async {
+    final box = await _getBox<Map>(progressBoxName);
+    await box.delete(lessonId);
   }
 
   Future<void> clearCache() async {

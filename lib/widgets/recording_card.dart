@@ -117,7 +117,7 @@ class RecordingCard extends StatelessWidget {
                     Text(
                       '$speakerRole${barangay != null ? " • $barangay" : ""}',
                       style: AppTypography.label.copyWith(
-                        color: isDark ? Colors.white38 : AppColors.creamText2,
+                        color: isDark ? Colors.white60 : AppColors.creamText2,
                         fontSize: 9,
                       ),
                     ),
@@ -196,14 +196,14 @@ class RecordingCard extends StatelessWidget {
                         Text(
                           formatDuration(position),
                           style: AppTypography.label.copyWith(
-                            color: isDark ? Colors.white38 : Colors.black26,
+                            color: isDark ? Colors.white60 : Colors.black26,
                             fontSize: 10,
                           ),
                         ),
                         Text(
                           formatDuration(duration),
                           style: AppTypography.label.copyWith(
-                            color: isDark ? Colors.white38 : Colors.black26,
+                            color: isDark ? Colors.white60 : Colors.black26,
                             fontSize: 10,
                           ),
                         ),
@@ -277,7 +277,7 @@ class RecordingCard extends StatelessWidget {
                     child: Text(
                       culturalNote,
                       style: AppTypography.body.copyWith(
-                        color: isDark ? Colors.white38 : AppColors.creamText3,
+                        color: isDark ? Colors.white60 : AppColors.creamText3,
                         fontSize: 11,
                         height: 1.4,
                       ),

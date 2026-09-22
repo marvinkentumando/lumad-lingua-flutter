@@ -229,7 +229,7 @@ class _BroadcastCardState extends ConsumerState<_BroadcastCard> {
                 Text(
                   'Sent to ${widget.broadcast.recipients.length} students',
                   style: AppTypography.label.copyWith(
-                    color: isDark ? Colors.white38 : AppColors.creamText3,
+                    color: isDark ? Colors.white60 : AppColors.creamText3,
                     fontSize: 10,
                   ),
                 ),

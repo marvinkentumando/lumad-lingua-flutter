@@ -40,19 +40,20 @@ import '../screens/educator_unit_management_screen.dart';
 import '../screens/educator_broadcast_history_screen.dart';
 import '../screens/educator_feedback_screen.dart';
 import '../screens/member_profile_screen.dart';
-import '../screens/scenario_hub_screen.dart';
-import '../screens/scenario_session_screen.dart';
+
 import '../screens/lingua_duel_screen.dart';
 import '../screens/mastery_dashboard_screen.dart';
 import '../screens/warriors_circle_screen.dart';
 import '../screens/streak_history_screen.dart';
-import '../screens/saka_game_screen.dart';
+
 import '../screens/audio_comparison_screen.dart';
 import '../screens/wisdom_progression_screen.dart';
 import '../screens/sentiment_dashboard_screen.dart';
 import '../screens/data_privacy_screen.dart';
 import '../screens/offline_wisdom_screen.dart';
 import '../screens/admin_dictionary_screen.dart';
+import '../screens/admin/algorithm_selection_screen.dart';
+import '../screens/admin/admin_assessments_screen.dart';
 import '../screens/daily_challenge_session_screen.dart';
 import '../models/artifact.dart';
 import '../models/daily_challenge.dart';
@@ -194,6 +195,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const AdminDictionaryScreen(),
           ),
           GoRoute(
+            path: '/admin/algorithm-selection',
+            builder: (context, state) => const AlgorithmSelectionScreen(),
+          ),
+          GoRoute(
+            path: '/admin/assessments',
+            builder: (context, state) => const AdminAssessmentsScreen(),
+          ),
+          GoRoute(
             path: '/educator/dashboard',
             builder: (context, state) => const EducatorDashboardScreen(),
           ),
@@ -247,17 +256,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/ancestral-vault-shop',
             builder: (context, state) => const AncestralVaultShopScreen(),
           ),
-          GoRoute(
-            path: '/scenario-hub',
-            builder: (context, state) => const ScenarioHubScreen(),
-          ),
-          GoRoute(
-            path: '/scenario-session/:scenarioId',
-            builder: (context, state) {
-              final id = state.pathParameters['scenarioId']!;
-              return ScenarioSessionScreen(scenarioId: id);
-            },
-          ),
+
           GoRoute(
             path: '/lingua-duel',
             builder: (context, state) => const LinguaDuelScreen(),
@@ -274,10 +273,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/streak',
             builder: (context, state) => const StreakHistoryScreen(),
           ),
-          GoRoute(
-            path: '/saka-game',
-            builder: (context, state) => const SakaGameScreen(),
-          ),
+
           GoRoute(
             path: '/audio-comparison',
             builder: (context, state) => const AudioComparisonScreen(),

@@ -11,8 +11,7 @@ class RoleNotifier extends Notifier<UserRole> {
     final isSimulating = ref.watch(isSimulatingProvider);
     if (isSimulating) return UserRole.learner;
 
-    final profile = ref.watch(userProfileProvider).value;
-    final roleString = profile?['role']?.toString().toLowerCase();
+    final roleString = ref.watch(userRoleClaimProvider).value?.toLowerCase();
 
     switch (roleString) {
       case 'admin':

@@ -174,7 +174,7 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
                 Text(
                   'LEVEL ${friend['level']} ${l10n.translate('warrior_label')}',
                   style: AppTypography.label.copyWith(
-                    color: isDark ? Colors.white38 : AppColors.forest700.withValues(alpha: 0.6),
+                    color: isDark ? Colors.white60 : AppColors.forest700.withValues(alpha: 0.6),
                     fontSize: 10,
                   ),
                 ),

@@ -15,7 +15,7 @@ import 'package:go_router/go_router.dart';
 import '../services/supabase_storage_service.dart';
 import '../widgets/daily_check_in_board.dart';
 import '../widgets/level_up_modal.dart';
-import '../widgets/skeleton.dart';
+import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/brand_background.dart';
 import '../widgets/artifacts/artifact_inventory_section.dart';
@@ -38,7 +38,7 @@ class LearnerProfileScreen extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       body: BrandBackground(
         child: authState.when(
-          loading: () => _buildProfileSkeleton(),
+          loading: () => _buildProfileTribalLoadingBones(),
           error: (e, _) => Center(child: Text('Error: $e')),
           data: (user) {
             return SafeArea(
@@ -194,7 +194,7 @@ class LearnerProfileScreen extends ConsumerWidget {
         Text(
           _getRoleBadge(role, profile, ref, l10n),
           style: AppTypography.label.copyWith(
-            color: isDark ? Colors.white38 : AppColors.creamText3,
+            color: isDark ? Colors.white60 : AppColors.creamText3,
             fontSize: 12,
             letterSpacing: 1.5,
           ),
@@ -399,33 +399,33 @@ class LearnerProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildProfileSkeleton() {
-    return const SafeArea(
+  Widget _buildProfileTribalLoadingBones() {
+    return SafeArea(
       child: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Column(
           children: [
-            SizedBox(height: 40),
-            Skeleton(width: 140, height: 140, isCircle: true),
-            SizedBox(height: 24),
-            Skeleton(width: 200, height: 32),
-            SizedBox(height: 8),
-            Skeleton(width: 150, height: 16),
-            SizedBox(height: 40),
-            Row(
+            const SizedBox(height: 40),
+            const TribalLoadingBones(width: 140, height: 140, isCircle: true),
+            const SizedBox(height: 24),
+            const TribalLoadingBones(width: 200, height: 32),
+            const SizedBox(height: 8),
+            const TribalLoadingBones(width: 150, height: 16),
+            const SizedBox(height: 40),
+            const Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Skeleton(width: 100, height: 100, borderRadius: 50),
-                Skeleton(width: 100, height: 100, borderRadius: 50),
-                Skeleton(width: 100, height: 100, borderRadius: 50),
+                TribalLoadingBones(width: 100, height: 100, borderRadius: 50),
+                TribalLoadingBones(width: 100, height: 100, borderRadius: 50),
+                TribalLoadingBones(width: 100, height: 100, borderRadius: 50),
               ],
             ),
-            SizedBox(height: 40),
-            Skeleton(height: 160, borderRadius: 24),
-            SizedBox(height: 40),
-            Skeleton(height: 80, borderRadius: 35),
-            SizedBox(height: 12),
-            Skeleton(height: 80, borderRadius: 35),
+            const SizedBox(height: 40),
+            const TribalLoadingBones(height: 160, borderRadius: 24),
+            const SizedBox(height: 40),
+            const TribalLoadingBones(height: 80, borderRadius: 35),
+            const SizedBox(height: 12),
+            const TribalLoadingBones(height: 80, borderRadius: 35),
           ],
         ),
       ),
@@ -713,7 +713,7 @@ class LearnerProfileScreen extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: TextButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => context.pop(),
                       child: Text(l10n.translate('close').toUpperCase(), style: const TextStyle(color: Colors.white38)),
                     ),
                   ),
@@ -725,7 +725,7 @@ class LearnerProfileScreen extends ConsumerWidget {
                         try {
                           await ref.read(firebaseServiceProvider).joinVillage(userId, controller.text);
                           if (context.mounted) {
-                            Navigator.pop(context);
+                            context.pop();
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(l10n.translate('welcome_village')),
@@ -909,7 +909,7 @@ class LearnerProfileScreen extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: TextButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () => context.pop(),
                           child: Text(l10n.translate('close').toUpperCase(), style: const TextStyle(color: Colors.white38)),
                         ),
                       ),
@@ -1097,7 +1097,7 @@ class LearnerProfileScreen extends ConsumerWidget {
           controller: controller,
           maxLines: maxLines,
           enabled: enabled,
-          style: TextStyle(color: enabled ? Colors.white : Colors.white38),
+          style: TextStyle(color: enabled ? Colors.white : Colors.white60),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: const TextStyle(color: Colors.white24),

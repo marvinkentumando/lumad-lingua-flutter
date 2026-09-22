@@ -16,7 +16,7 @@ import '../widgets/daily_check_in_board.dart';
 import '../widgets/level_up_modal.dart';
 import '../widgets/brand_background.dart';
 import '../widgets/profile_avatar.dart';
-import '../widgets/skeleton.dart';
+import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 import '../services/haptic_service.dart';
 import '../widgets/artifacts/artifact_inventory_section.dart';
 import '../providers/theme_provider.dart';
@@ -38,7 +38,7 @@ class StaffProfileScreen extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       body: BrandBackground(
         child: authState.when(
-          loading: () => _buildProfileSkeleton(),
+          loading: () => _buildProfileAppShimmerSkeleton(),
           error: (e, _) => Center(child: Text('Error: $e')),
           data: (user) {
             return SafeArea(
@@ -193,7 +193,7 @@ class StaffProfileScreen extends ConsumerWidget {
         Text(
           _getRoleBadge(role, profile, l10n),
           style: AppTypography.label.copyWith(
-            color: isDark ? Colors.white38 : AppColors.creamText3,
+            color: isDark ? Colors.white60 : AppColors.creamText3,
             fontSize: 12,
             letterSpacing: 1.5,
           ),
@@ -462,33 +462,33 @@ class StaffProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildProfileSkeleton() {
+  Widget _buildProfileAppShimmerSkeleton() {
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Column(
           children: [
             const SizedBox(height: 40),
-            const Skeleton(width: 140, height: 140, isCircle: true),
+            const AppShimmerSkeleton(width: 140, height: 140, isCircle: true),
             const SizedBox(height: 24),
-            const Skeleton(width: 200, height: 32),
+            const AppShimmerSkeleton(width: 200, height: 32),
             const SizedBox(height: 8),
-            const Skeleton(width: 150, height: 16),
+            const AppShimmerSkeleton(width: 150, height: 16),
             const SizedBox(height: 40),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Skeleton(width: 100, height: 100, borderRadius: 50),
-                Skeleton(width: 100, height: 100, borderRadius: 50),
-                Skeleton(width: 100, height: 100, borderRadius: 50),
+                AppShimmerSkeleton(width: 100, height: 100, borderRadius: 50),
+                AppShimmerSkeleton(width: 100, height: 100, borderRadius: 50),
+                AppShimmerSkeleton(width: 100, height: 100, borderRadius: 50),
               ],
             ),
             const SizedBox(height: 40),
-            Skeleton(height: 160, borderRadius: 24),
+            AppShimmerSkeleton(height: 160, borderRadius: 24),
             const SizedBox(height: 40),
-            Skeleton(height: 80, borderRadius: 35),
+            AppShimmerSkeleton(height: 80, borderRadius: 35),
             const SizedBox(height: 12),
-            Skeleton(height: 80, borderRadius: 35),
+            AppShimmerSkeleton(height: 80, borderRadius: 35),
           ],
         ),
       ),
@@ -936,7 +936,7 @@ class StaffProfileScreen extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: TextButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () => context.pop(),
                           child: Text(l10n.translate('close').toUpperCase(), style: const TextStyle(color: Colors.white38)),
                         ),
                       ),
@@ -1005,7 +1005,7 @@ class StaffProfileScreen extends ConsumerWidget {
           controller: controller,
           maxLines: maxLines,
           enabled: enabled,
-          style: TextStyle(color: enabled ? Colors.white : Colors.white38),
+          style: TextStyle(color: enabled ? Colors.white : Colors.white60),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: const TextStyle(color: Colors.white24),

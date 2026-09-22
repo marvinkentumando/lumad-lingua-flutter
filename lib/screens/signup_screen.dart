@@ -956,7 +956,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
             child: Text(
               l10n.translate('close'),
               style: TextStyle(color: isDark ? AppColors.gold500 : AppColors.gold700),

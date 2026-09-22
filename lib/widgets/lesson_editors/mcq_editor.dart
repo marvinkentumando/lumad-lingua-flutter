@@ -68,7 +68,7 @@ class MCQEditor extends StatelessWidget {
                         filled: true,
                         fillColor: AppColors.forestDarkCard,
                         counterStyle: const TextStyle(
-                          color: Colors.white38,
+                          color: Colors.white60,
                           fontSize: 10,
                         ),
                         border: OutlineInputBorder(

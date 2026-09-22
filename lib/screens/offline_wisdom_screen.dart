@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
@@ -115,7 +116,7 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
       child: Row(
         children: [
           IconButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
             icon: const Icon(
               Icons.arrow_back_ios_new_rounded,
               color: AppColors.gold500,
@@ -250,7 +251,7 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
                 Text(
                   '$sub • $size',
                   style: AppTypography.body.copyWith(
-                    color: isDark ? Colors.white38 : AppColors.creamText3,
+                    color: isDark ? Colors.white60 : AppColors.creamText3,
                     fontSize: 11,
                   ),
                 ),
@@ -367,14 +368,14 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
           style: TextStyle(color: Colors.white70),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
+          TextButton(onPressed: () => context.pop(), child: const Text('CANCEL')),
           ElevatedButton(
             onPressed: () async {
               await ref.read(offlineServiceProvider).clearCache();
               ref.invalidate(offlineLessonCountProvider);
               ref.invalidate(offlineDictionaryCountProvider);
               if (context.mounted) {
-                Navigator.pop(context);
+                context.pop();
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cache cleared.')));
               }
             },

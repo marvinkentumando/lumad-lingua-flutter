@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
@@ -121,7 +122,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
             title: Text("Quest: ${_currentIndex + 1}/${_tasks.length}"),
             leading: IconButton(
               icon: const Icon(Icons.close_rounded),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => context.pop(),
             ),
           ),
           body: Padding(

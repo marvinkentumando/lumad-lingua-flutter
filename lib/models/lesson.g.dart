@@ -29,13 +29,16 @@ class LessonAdapter extends TypeAdapter<Lesson> {
       icon: fields[9] as String,
       status: fields[10] as String,
       prerequisiteId: fields[11] as String?,
+      isMistUnit: fields[12] as bool,
+      validatedAt: fields[13] as DateTime?,
+      validatorId: fields[14] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Lesson obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(15)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -59,7 +62,13 @@ class LessonAdapter extends TypeAdapter<Lesson> {
       ..writeByte(10)
       ..write(obj.status)
       ..writeByte(11)
-      ..write(obj.prerequisiteId);
+      ..write(obj.prerequisiteId)
+      ..writeByte(12)
+      ..write(obj.isMistUnit)
+      ..writeByte(13)
+      ..write(obj.validatedAt)
+      ..writeByte(14)
+      ..write(obj.validatorId);
   }
 
   @override
@@ -72,6 +81,3 @@ class LessonAdapter extends TypeAdapter<Lesson> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
-
-
-

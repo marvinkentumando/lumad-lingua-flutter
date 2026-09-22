@@ -9,7 +9,7 @@ import '../widgets/brand_card.dart';
 import '../models/artifact.dart';
 import '../providers/artifact_provider.dart';
 import '../services/firebase_service.dart';
-import '../widgets/skeleton.dart';
+import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 import '../widgets/branded_empty_state.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/profile_avatar.dart';
@@ -41,7 +41,7 @@ class MemberProfileScreen extends ConsumerWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: AppColors.gold500),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         title: Text(
           l10n.translate('tribe_member_caps'),
@@ -190,7 +190,7 @@ class MemberProfileScreen extends ConsumerWidget {
         Text(
           _getRoleBadge(role, profile, l10n),
           style: AppTypography.label.copyWith(
-            color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5),
+            color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.5),
             fontSize: 12,
             letterSpacing: 1.5,
           ),
@@ -311,7 +311,7 @@ class MemberProfileScreen extends ConsumerWidget {
             );
           },
           loading: () => const Center(
-            child: Skeleton(height: 160, borderRadius: 24),
+            child: AppShimmerSkeleton(height: 160, borderRadius: 24),
           ),
           error: (e, _) => Center(
             child: Text(
@@ -385,7 +385,7 @@ class MemberProfileScreen extends ConsumerWidget {
               style: AppTypography.label.copyWith(
                 color: isEarned
                     ? (isDark ? Colors.white : AppColors.forest900)
-                    : (isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.3)),
+                    : (isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.3)),
                 fontSize: 10,
                 fontWeight: FontWeight.w800,
               ),

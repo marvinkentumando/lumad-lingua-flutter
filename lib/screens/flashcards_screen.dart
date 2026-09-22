@@ -256,7 +256,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
                       child: Text(
                         '${_currentIndex + 1} / ${_deck!.length}',
                         style: AppTypography.mono.copyWith(
-                          color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.3),
+                          color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.3),
                           fontSize: 13,
                         ),
                       ),

@@ -85,7 +85,7 @@ class WotdWidget extends ConsumerWidget {
                   child: Text(
                     entry.language.toUpperCase(),
                     style: AppTypography.label.copyWith(
-                      color: isDark ? Colors.white38 : AppColors.forest700,
+                      color: isDark ? Colors.white60 : AppColors.forest700,
                       fontSize: 10,
                     ),
                   ),

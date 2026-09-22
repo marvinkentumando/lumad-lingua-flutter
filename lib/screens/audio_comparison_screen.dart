@@ -18,6 +18,7 @@ import '../models/dictionary_entry.dart';
 import '../models/voice_submission.dart';
 import '../services/firebase_service.dart';
 import '../services/supabase_storage_service.dart';
+import '../utils/audio_validator.dart';
 
 enum PracticeSource { words, phrases }
 
@@ -171,6 +172,21 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         return;
       }
 
+      // Validate recording
+      final error = await AudioValidator.validate(path);
+      if (error != null) {
+        setState(() => _isRecording = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(error),
+              backgroundColor: AppColors.semanticRed,
+            ),
+          );
+        }
+        return;
+      }
+
       setState(() {
         _isRecording = false;
         _isComparing = true;
@@ -277,11 +293,19 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           return;
         }
 
-        // 3. Compare using the upgraded PronunciationService
+        // 3. Compare using the upgraded PronunciationService with Locked Algorithm
+        final config = ref.read(appConfigProvider).value;
+        final lockedAlgoName = config?.activePronunciationAlgorithm ?? 'dtw';
+        final lockedAlgo = PronunciationAlgorithm.values.firstWhere(
+          (e) => e.name == lockedAlgoName,
+          orElse: () => PronunciationAlgorithm.dtw,
+        );
+
         final resultScore = PronunciationService.compareWaveforms(
           nativeWaveform,
           userWaveform,
           strictness: PronunciationStrictness.normal,
+          algorithm: lockedAlgo,
         );
 
         if (mounted) {
@@ -396,7 +420,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
                     const SizedBox(height: 40),
                     Text(
                       'No ${_source.name} available yet.',
-                      style: TextStyle(color: isDark ? Colors.white38 : AppColors.creamText3),
+                      style: TextStyle(color: isDark ? Colors.white60 : AppColors.creamText3),
                     ),
                   ],
                 ),
@@ -510,7 +534,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
                           item.subtitle,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTypography.body.copyWith(color: Colors.white38, fontSize: 12),
+                          style: AppTypography.body.copyWith(color: Colors.white60, fontSize: 12),
                         ),
                       ],
                     ),
@@ -615,7 +639,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       child: Column(
         children: [
           Text(
-            'MATCH SCORE (MFCC)',
+            'ACOUSTIC MATCH',
             style: AppTypography.label.copyWith(color: Colors.black54, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),

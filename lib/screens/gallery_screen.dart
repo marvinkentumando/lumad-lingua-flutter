@@ -13,7 +13,7 @@ import 'package:lumad_lingua/utils/gallery_utils.dart';
 import 'package:animations/animations.dart';
 import 'artifact_detail_screen.dart';
 import '../services/haptic_service.dart';
-import '../widgets/skeleton.dart';
+import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 import '../widgets/branded_empty_state.dart';
 import '../widgets/graceful_image.dart';
 import '../utils/app_localization.dart';
@@ -59,7 +59,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
             const SizedBox(height: 16),
             badgesAsync.when(
               data: (badges) => _buildBadgeGrid(badges),
-              loading: () => _buildBadgeSkeleton(),
+              loading: () => _buildBadgeAppShimmerSkeleton(),
               error: (err, _) => Center(
                 child: Text(
                   'Error: $err',
@@ -93,7 +93,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                     : artifacts.where((a) => a.tier.name.toLowerCase() == _selectedTier.toLowerCase()).toList();
                 return _buildArtifactScroll(filtered);
               },
-              loading: () => _buildArtifactSkeleton(),
+              loading: () => _buildArtifactAppShimmerSkeleton(),
               error: (err, _) => Center(
                 child: Text(
                   'Error: $err',
@@ -379,7 +379,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
             Text(
               badge.title,
               style: AppTypography.label.copyWith(
-                color: badge.isEarned ? Colors.white : Colors.white38,
+                color: badge.isEarned ? Colors.white : Colors.white60,
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
               ),
@@ -391,7 +391,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
     );
   }
 
-  Widget _buildBadgeSkeleton() {
+  Widget _buildBadgeAppShimmerSkeleton() {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -404,15 +404,15 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
       itemCount: 3,
       itemBuilder: (context, index) => const Column(
         children: [
-          Skeleton(width: 70, height: 70, isCircle: true),
+          AppShimmerSkeleton(width: 70, height: 70, isCircle: true),
           SizedBox(height: 8),
-          Skeleton(width: 50, height: 10),
+          AppShimmerSkeleton(width: 50, height: 10),
         ],
       ),
     );
   }
 
-  Widget _buildArtifactSkeleton() {
+  Widget _buildArtifactAppShimmerSkeleton() {
     return SizedBox(
       height: 360,
       child: ListView.builder(
@@ -426,19 +426,19 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: Skeleton(borderRadius: 12)),
+                Expanded(child: AppShimmerSkeleton(borderRadius: 12)),
                 SizedBox(height: 16),
-                Skeleton(width: 150, height: 20),
+                AppShimmerSkeleton(width: 150, height: 20),
                 SizedBox(height: 8),
-                Skeleton(width: 200, height: 12),
+                AppShimmerSkeleton(width: 200, height: 12),
                 SizedBox(height: 4),
-                Skeleton(width: 180, height: 12),
+                AppShimmerSkeleton(width: 180, height: 12),
                 SizedBox(height: 16),
                 Row(
                   children: [
-                    Skeleton(width: 60, height: 20),
+                    AppShimmerSkeleton(width: 60, height: 20),
                     Spacer(),
-                    Skeleton(width: 40, height: 12),
+                    AppShimmerSkeleton(width: 40, height: 12),
                   ],
                 ),
               ],

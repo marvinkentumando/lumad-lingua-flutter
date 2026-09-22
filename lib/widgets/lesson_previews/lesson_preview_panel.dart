@@ -174,7 +174,7 @@ class LessonPreviewPanel extends StatelessWidget {
                     onPressed: onPreviousActivity,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.white38),
+                      side: const BorderSide(color: Colors.white60),
                     ),
                     child: const Text('BACK'),
                   ),

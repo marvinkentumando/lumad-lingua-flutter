@@ -7,12 +7,9 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
 
     function hasRole(role) {
-      return isSignedIn() && getUserData().role == role;
+      return isSignedIn() && request.auth.token.role == role;
     }
 
     function isAdmin() {
@@ -32,8 +29,15 @@ service cloud.firestore {
     // --- USER PROFILES & DATA ---
     match /users/{userId} {
       allow read: if true;
-      // Allow user to write their own, or validator to update XP/metadata during approval
-      allow write: if isSignedIn() && (request.auth.uid == userId || isValidator());
+      // Users can only create their own profile; roles cannot be self-assigned
+      allow create: if isSignedIn() && request.auth.uid == userId && request.resource.data.role == 'learner';
+      // Hardened update rules: Users cannot change their own roles, XP, or crystals directly.
+      allow update: if isSignedIn() && (
+        (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'xp', 'mistCrystals'])) ||
+        isAdmin() ||
+        (isValidator() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['xp', 'mistCrystals', 'wordCount', 'voiceCount', 'lessonCount', 'status']))
+      );
+      allow delete: if isAdmin();
 
       match /progress/{lessonId} {
         allow read, write: if isSignedIn() && request.auth.uid == userId;

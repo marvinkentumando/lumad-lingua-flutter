@@ -735,7 +735,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                   child: Icon(
                     isDraft ? Icons.edit_note_rounded : Icons.menu_book_rounded,
                     color: isDark 
-                        ? (isDraft ? Colors.white38 : AppColors.gold500)
+                        ? (isDraft ? Colors.white60 : AppColors.gold500)
                         : AppColors.forest900,
                     size: 20,
                   ),
@@ -936,7 +936,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                 ),
                 child: Icon(
                   isDraft ? Icons.edit_note_rounded : Icons.menu_book_rounded,
-                  color: isDraft ? Colors.white38 : AppColors.gold500,
+                  color: isDraft ? Colors.white60 : AppColors.gold500,
                   size: 20,
                 ),
               ),
@@ -1340,7 +1340,7 @@ class _StudentCompletionSheet extends ConsumerWidget {
                 ),
               ),
               IconButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => context.pop(),
                 icon: Icon(
                   Icons.close_rounded,
                   color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),

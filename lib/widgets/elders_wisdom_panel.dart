@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 
@@ -69,7 +70,7 @@ class EldersWisdomPanel extends StatelessWidget {
                     Text(
                       "Lore & Cultural Context",
                       style: AppTypography.body.copyWith(
-                        color: isDark ? Colors.white38 : AppColors.forest300,
+                        color: isDark ? Colors.white60 : AppColors.forest300,
                         fontSize: 11,
                       ),
                     ),
@@ -119,7 +120,7 @@ void showEldersWisdom(BuildContext context, String content) {
     isScrollControlled: true,
     builder: (context) => EldersWisdomPanel(
       content: content,
-      onClose: () => Navigator.pop(context),
+      onClose: () => context.pop(),
     ),
   );
 }

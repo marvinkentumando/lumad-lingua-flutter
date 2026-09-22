@@ -15,7 +15,7 @@ import '../widgets/unit_header_card.dart';
 import '../widgets/lesson_step_card.dart';
 import '../widgets/branded_empty_state.dart';
 import '../widgets/wisdom_portal.dart';
-import '../widgets/skeleton.dart';
+import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 import '../utils/icon_utils.dart';
 import '../providers/student_provider.dart';
 import '../providers/learning_provider.dart';
@@ -573,22 +573,22 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
               : _buildSliverMountainPath(context, grouped, studentState, cachedLessonIds, isSummitUnlocked),
         );
       },
-      loading: () => SliverToBoxAdapter(child: _buildPathSkeleton()),
+      loading: () => SliverToBoxAdapter(child: _buildPathAppShimmerSkeleton()),
       error: (err, _) => SliverToBoxAdapter(child: Center(child: Text('Error: $err'))),
     );
   }
 
-  Widget _buildPathSkeleton() {
+  Widget _buildPathAppShimmerSkeleton() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         children: List.generate(3, (i) => Column(
           children: [
-            const Skeleton(height: 100, borderRadius: 24),
+            const AppShimmerSkeleton(height: 100, borderRadius: 24),
             const SizedBox(height: 40),
             ...List.generate(2, (j) => const Padding(
               padding: EdgeInsets.only(bottom: 40),
-              child: Skeleton(height: 120, borderRadius: 32),
+              child: AppShimmerSkeleton(height: 120, borderRadius: 32),
             )),
           ],
         )),

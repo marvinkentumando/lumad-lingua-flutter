@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'skeleton.dart';
+import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 
 class GracefulImage extends StatelessWidget {
   final String imageUrl;
@@ -53,7 +53,7 @@ class GracefulImage extends StatelessWidget {
   }
 
   Widget _buildPlaceholder() {
-    return Skeleton(
+    return AppShimmerSkeleton(
       width: width,
       height: height,
       borderRadius: borderRadius,

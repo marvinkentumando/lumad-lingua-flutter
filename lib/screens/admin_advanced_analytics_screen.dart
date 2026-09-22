@@ -1,6 +1,8 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import '../services/firebase_service.dart';
 import '../services/haptic_service.dart';
 import '../theme/app_colors.dart';
@@ -35,7 +37,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new_rounded, color: isDark ? Colors.white : AppColors.forest900),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.pop(),
         ),
       ),
       body: BrandBackground(
@@ -56,6 +58,21 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                   _buildSystemMetrics(context, data['srsHealth'] as Map<String, dynamic>? ?? {}, l10n),
                   
+                  const SizedBox(height: 40),
+                  _sectionLabel(context, l10n.translate('xp_growth_trends')),
+                  const SizedBox(height: 16),
+                  _buildXPTrendsChart(context, data['xpTrends'] as Map<String, dynamic>? ?? {}, l10n),
+
+                  const SizedBox(height: 40),
+                  _sectionLabel(context, l10n.translate('pronunciation_by_dialect')),
+                  const SizedBox(height: 16),
+                  _buildAccuracyBreakdown(context, data['dialectAccuracy'] as Map<String, dynamic>? ?? {}, l10n),
+
+                  const SizedBox(height: 40),
+                  _sectionLabel(context, l10n.translate('pronunciation_by_location')),
+                  const SizedBox(height: 16),
+                  _buildAccuracyBreakdown(context, data['locationAccuracy'] as Map<String, dynamic>? ?? {}, l10n),
+
                   const SizedBox(height: 40),
                   _sectionLabel(context, l10n.translate('lesson_heatmaps')),
                   const SizedBox(height: 16),
@@ -141,6 +158,175 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildXPTrendsChart(BuildContext context, Map<String, dynamic> trends, AppLocalization l10n) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final entries = trends.entries.toList()..sort((a, b) => a.key.compareTo(b.key));
+    if (entries.isEmpty) return _emptyState(l10n.translate('no_xp_activity'), l10n);
+
+    final maxXP = entries.map((e) => (e.value as num).toInt()).reduce((a, b) => a > b ? a : b);
+    final displayMax = maxXP == 0 ? 100 : maxXP;
+
+    return BrandCard(
+      theme: isDark ? BrandCardTheme.vibrant : BrandCardTheme.gold,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  l10n.translate('aggregate_xp_growth').toUpperCase(),
+                  style: AppTypography.label.copyWith(
+                    color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.5),
+                    fontSize: 10,
+                  ),
+                ),
+                Text(
+                  '+$maxXP Peak',
+                  style: AppTypography.mono.copyWith(color: AppColors.gold500, fontSize: 10),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              height: 120,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: entries.map((e) {
+                  final xpValue = (e.value as num).toInt();
+                  final hPct = xpValue / displayMax;
+                  final dayLabel = e.key.split('-').last;
+
+                  return Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: (hPct * 80).clamp(4.0, 80.0),
+                          decoration: BoxDecoration(
+                            color: AppColors.gold500,
+                            borderRadius: BorderRadius.circular(4),
+                            boxShadow: [
+                              if (xpValue == maxXP && xpValue > 0)
+                                BoxShadow(
+                                  color: AppColors.gold500.withValues(alpha: 0.4),
+                                  blurRadius: 10,
+                                  spreadRadius: 2,
+                                ),
+                            ],
+                          ),
+                        ).animate().scaleY(begin: 0, duration: 600.ms, curve: Curves.easeOutBack),
+                        const SizedBox(height: 8),
+                        Text(
+                          dayLabel,
+                          style: AppTypography.mono.copyWith(
+                            color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
+                            fontSize: 8,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAccuracyBreakdown(BuildContext context, Map<String, dynamic> data, AppLocalization l10n) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    if (data.isEmpty) return _emptyState(l10n.translate('insufficient_voice_data'), l10n);
+
+    final sorted = data.entries.toList()..sort((a, b) => (b.value as num).compareTo(a.value as num));
+
+    return Column(
+      children: sorted.take(5).map((entry) {
+        final accuracy = (entry.value as num).toDouble();
+        final label = entry.key;
+
+        return BrandCard(
+          theme: BrandCardTheme.cream,
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      label.substring(0, 1).toUpperCase(),
+                      style: AppTypography.h3.copyWith(color: AppColors.gold500, fontSize: 18),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: AppTypography.body.copyWith(
+                          color: isDark ? Colors.white : AppColors.forest900,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(2),
+                        child: LinearProgressIndicator(
+                          value: accuracy,
+                          minHeight: 4,
+                          backgroundColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+                          valueColor: AlwaysStoppedAnimation(
+                            accuracy > 0.8 ? AppColors.semanticGreen : (accuracy > 0.6 ? AppColors.gold500 : AppColors.semanticRed),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${(accuracy * 100).toInt()}%',
+                      style: AppTypography.h3.copyWith(
+                        color: isDark ? Colors.white : AppColors.forest900,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      'ACCURACY',
+                      style: AppTypography.label.copyWith(
+                        color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.5),
+                        fontSize: 8,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
   Widget _buildLessonHeatmaps(BuildContext context, Map<String, dynamic> struggles, Map<String, dynamic> names, AppLocalization l10n) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     if (struggles.isEmpty) return _emptyState(l10n.translate('student_stumbles_empty'), l10n);
@@ -157,6 +343,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
         final lessonId = entry.key;
         final taskStruggles = Map<String, int>.from(entry.value as Map);
         final lessonName = names[lessonId] ?? l10n.translate('ancestral_lesson_default');
+        final maxStumble = taskStruggles.values.isEmpty ? 1 : taskStruggles.values.reduce((a, b) => a > b ? a : b);
         
         return BrandCard(
           theme: BrandCardTheme.vibrant,
@@ -174,55 +361,69 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
                         lessonName, 
                         style: AppTypography.h3.copyWith(
                           color: isDark ? AppColors.gold500 : AppColors.gold700, 
-                          fontSize: 16
+                          fontSize: 14
                         ),
                       ),
                     ),
-                    const Icon(Icons.warning_amber_rounded, color: AppColors.semanticRed, size: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.semanticRed.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'CRITICAL',
+                        style: AppTypography.label.copyWith(color: AppColors.semanticRed, fontSize: 8, fontWeight: FontWeight.bold),
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                ...taskStruggles.entries.map((ts) {
-                  // Percentage of struggle compared to top stumble
-                  final maxStumble = taskStruggles.values.reduce((a, b) => a > b ? a : b);
-                  final pct = maxStumble > 0 ? ts.value / maxStumble : 0.0;
-
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Task ${ts.key.split('_').last}', 
-                              style: AppTypography.label.copyWith(
-                                color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7), 
-                                fontSize: 10
-                              ),
-                            ),
-                            Text(
-                              '${ts.value} slips', 
-                              style: AppTypography.mono.copyWith(color: AppColors.semanticRed, fontSize: 10),
-                            ),
-                          ],
+                const SizedBox(height: 20),
+                // Heatmap Grid
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: taskStruggles.entries.map((ts) {
+                    final intensity = ts.value / maxStumble;
+                    return Tooltip(
+                      message: 'Task ${ts.key}: ${ts.value} slips',
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Color.lerp(
+                            isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+                            AppColors.semanticRed,
+                            intensity,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: intensity > 0.7 ? AppColors.semanticRed.withValues(alpha: 0.5) : Colors.transparent,
+                          ),
                         ),
-                        const SizedBox(height: 6),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: pct,
-                            minHeight: 4,
-                            backgroundColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
-                            valueColor: AlwaysStoppedAnimation(
-                              Color.lerp(AppColors.gold500, AppColors.semanticRed, pct),
+                        child: Center(
+                          child: Text(
+                            ts.key.split('_').last.substring(0, min(2, ts.key.split('_').last.length)),
+                            style: TextStyle(
+                              color: intensity > 0.5 ? Colors.white : (isDark ? Colors.white60 : Colors.black38),
+                              fontSize: 10,
+                              fontWeight: intensity > 0.5 ? FontWeight.bold : FontWeight.normal,
                             ),
                           ),
                         ),
-                      ],
-                    ),
-                  );
-                }),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Color intensity represents frequency of learner slips.',
+                  style: AppTypography.label.copyWith(
+                    color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
+                    fontSize: 8,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
               ],
             ),
           ),
@@ -343,7 +544,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
             Text(
               label.toUpperCase(), 
               style: AppTypography.label.copyWith(
-                color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5), 
+                color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.5),
                 fontSize: 9,
                 letterSpacing: 1,
               ),

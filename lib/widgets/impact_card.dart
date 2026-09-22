@@ -90,7 +90,7 @@ class ImpactCard extends StatelessWidget {
             Text(
               impact.primaryLabel,
               style: AppTypography.label.copyWith(
-                color: Colors.white38,
+                color: Colors.white60,
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
               ),

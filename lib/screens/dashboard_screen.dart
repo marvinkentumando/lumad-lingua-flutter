@@ -14,7 +14,7 @@ import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/wotd_widget.dart';
 import '../widgets/crystal_burst_animation.dart';
-import '../widgets/skeleton.dart';
+import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 import '../widgets/branded_empty_state.dart';
 import '../widgets/brand_background.dart';
 import '../services/upload_queue_service.dart';
@@ -26,6 +26,7 @@ import '../services/haptic_service.dart';
 import '../providers/learning_provider.dart';
 import '../models/app_config.dart';
 import '../utils/app_localization.dart';
+import '../widgets/sync_conflict_resolver.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -87,6 +88,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   children: [
                     const SizedBox(height: 16),
                     _buildSyncIndicator(ref, l10n),
+                    _buildConflictBanner(ref, l10n),
                     const SizedBox(height: 16),
                     _buildHeroBanner(context, displayName, student, l10n),
                     const SizedBox(height: 24),
@@ -122,8 +124,66 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
+  Widget _buildConflictBanner(WidgetRef ref, AppLocalization l10n) {
+    final uploadState = ref.watch(uploadQueueProvider);
+    final conflicts = uploadState.conflicts;
+
+    if (conflicts.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: BrandCard(
+        theme: BrandCardTheme.vibrant,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.sync_problem_rounded, color: AppColors.gold500),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.translate('sync_conflicts'),
+                        style: AppTypography.h3.copyWith(color: Colors.white, fontSize: 16),
+                      ),
+                      Text(
+                        l10n.translate('conflicts_desc', params: {'count': conflicts.length.toString()}),
+                        style: AppTypography.body.copyWith(color: Colors.white70, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            BrandButton(
+              text: l10n.translate('resolve_now'),
+              onTap: () => _showConflictResolver(ref, l10n),
+              type: BrandButtonType.small,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showConflictResolver(WidgetRef ref, AppLocalization l10n) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => SyncConflictResolver(
+        l10n: l10n,
+      ),
+    );
+  }
+
   Widget _buildSyncIndicator(WidgetRef ref, AppLocalization l10n) {
-    final isSyncing = ref.watch(uploadQueueProvider);
+    final uploadState = ref.watch(uploadQueueProvider);
+    final isSyncing = uploadState.isSyncing;
     if (!isSyncing) return const SizedBox.shrink();
 
     return Container(
@@ -284,7 +344,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   .toList(),
             );
           },
-          loading: () => _buildQuestSkeleton(),
+          loading: () => _buildQuestAppShimmerSkeleton(),
           error: (err, _) => Text('Error loading rituals: $err'),
         ),
       ],
@@ -465,29 +525,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             children: [
               _buildChallengeCard(
                 context,
-                title: l10n.translate('scenario_stories'),
-                subtitle: l10n.translate('choose_path_desc'),
-                icon: Icons.auto_stories_rounded,
-                color: const Color(0xFF2D4F3C),
-                route: '/scenario-hub',
-              ),
-              const SizedBox(width: 16),
-              _buildChallengeCard(
-                context,
                 title: l10n.translate('lingua_duel'),
                 subtitle: 'P2P Battle',
                 icon: Icons.bolt_rounded,
                 color: const Color(0xFF4F3422),
                 route: '/lingua-duel',
-              ),
-              const SizedBox(width: 16),
-              _buildChallengeCard(
-                context,
-                title: 'Saka',
-                subtitle: 'The Ascent',
-                icon: Icons.terrain_rounded,
-                color: const Color(0xFF6B4226),
-                route: '/saka-game',
               ),
               const SizedBox(width: 16),
               _buildChallengeCard(
@@ -708,7 +750,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           Text(
             l10n.translate('begin_ascent_desc'),
             style: AppTypography.body.copyWith(
-              color: isDark ? Colors.white38 : AppColors.creamText2,
+              color: isDark ? Colors.white60 : AppColors.creamText2,
             ),
           ),
           const SizedBox(height: 24),
@@ -791,7 +833,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             }).toList(),
           );
         },
-        loading: () => _buildClimberSkeleton(),
+        loading: () => _buildClimberAppShimmerSkeleton(),
         error: (err, _) => Padding(
           padding: const EdgeInsets.all(24),
           child: Center(
@@ -805,34 +847,34 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildClimberSkeleton() {
+  Widget _buildClimberAppShimmerSkeleton() {
     return Column(
       children: List.generate(3, (i) => const Padding(
         padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         child: Row(
           children: [
-            Skeleton(width: 24, height: 16),
+            AppShimmerSkeleton(width: 24, height: 16),
             SizedBox(width: 12),
-            Skeleton(width: 48, height: 48, borderRadius: 12),
+            AppShimmerSkeleton(width: 48, height: 48, borderRadius: 12),
             SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Skeleton(width: 120, height: 16),
+                  AppShimmerSkeleton(width: 120, height: 16),
                   SizedBox(height: 4),
-                  Skeleton(width: 80, height: 12),
+                  AppShimmerSkeleton(width: 80, height: 12),
                 ],
               ),
             ),
-            Skeleton(width: 60, height: 16),
+            AppShimmerSkeleton(width: 60, height: 16),
           ],
         ),
       )),
     );
   }
 
-  Widget _buildQuestSkeleton() {
+  Widget _buildQuestAppShimmerSkeleton() {
     return Column(
       children: List.generate(2, (i) => Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -844,15 +886,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
         child: const Row(
           children: [
-            Skeleton(width: 40, height: 40, borderRadius: 12),
+            AppShimmerSkeleton(width: 40, height: 40, borderRadius: 12),
             SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Skeleton(width: 150, height: 16),
+                  AppShimmerSkeleton(width: 150, height: 16),
                   SizedBox(height: 4),
-                  Skeleton(width: 200, height: 12),
+                  AppShimmerSkeleton(width: 200, height: 12),
                 ],
               ),
             ),

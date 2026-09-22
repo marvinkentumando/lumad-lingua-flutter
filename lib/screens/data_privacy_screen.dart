@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'dart:convert';
-import 'package:flutter/services.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
@@ -105,7 +108,7 @@ class DataPrivacyScreen extends ConsumerWidget {
       child: Row(
         children: [
           IconButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
             icon: const Icon(
               Icons.arrow_back_ios_new_rounded,
               color: AppColors.gold500,
@@ -221,7 +224,7 @@ class DataPrivacyScreen extends ConsumerWidget {
                 Text(
                   sub,
                   style: AppTypography.body.copyWith(
-                    color: Colors.white38,
+                    color: Colors.white60,
                     fontSize: 11,
                   ),
                 ),
@@ -268,7 +271,7 @@ class DataPrivacyScreen extends ConsumerWidget {
                 Text(
                   sub,
                   style: AppTypography.body.copyWith(
-                    color: isDark ? Colors.white38 : AppColors.creamText3,
+                    color: isDark ? Colors.white60 : AppColors.creamText3,
                     fontSize: 11,
                   ),
                 ),
@@ -367,11 +370,17 @@ class DataPrivacyScreen extends ConsumerWidget {
       final data = await ref.read(firebaseServiceProvider).exportUserData(user.uid);
       final jsonStr = const JsonEncoder.withIndent('  ').convert(data);
       
-      await Clipboard.setData(ClipboardData(text: jsonStr));
-      
+      final directory = await getTemporaryDirectory();
+      final file = File('${directory.path}/lumad_lingua_export_${user.uid.substring(0, 5)}.json');
+      await file.writeAsString(jsonStr);
+
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.translate('data_exported'))),
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(file.path)],
+            subject: 'Lumad Lingua Data Export',
+            text: 'Here is your exported data from Lumad Lingua.',
+          ),
         );
       }
     } catch (e) {
@@ -417,7 +426,7 @@ class DataPrivacyScreen extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
             child: Text(l10n.translate('cancel').toUpperCase()),
           ),
           ElevatedButton(
@@ -427,7 +436,7 @@ class DataPrivacyScreen extends ConsumerWidget {
                 if (verified) {
                   await ref.read(authServiceProvider).updatePassword(newPasswordController.text);
                   if (context.mounted) {
-                    Navigator.pop(context);
+                    context.pop();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text(l10n.translate('password_updated'))),
                     );
@@ -484,7 +493,7 @@ class DataPrivacyScreen extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
             child: Text(l10n.translate('cancel').toUpperCase()),
           ),
           ElevatedButton(
@@ -494,7 +503,7 @@ class DataPrivacyScreen extends ConsumerWidget {
                 if (verified) {
                   await ref.read(authServiceProvider).deleteUserAccount();
                   if (context.mounted) {
-                    Navigator.pop(context); // Close dialog
+                    context.pop(); // Close dialog
                     // Auth state change will handle navigation to login
                   }
                 } else {

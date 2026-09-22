@@ -54,7 +54,7 @@ void showMistCrystalStore(BuildContext context, WidgetRef ref) {
                         Text(
                           'Exchange your crystals for sacred items',
                           style: AppTypography.body.copyWith(
-                            color: isDark ? Colors.white38 : Colors.black54,
+                            color: isDark ? Colors.white60 : Colors.black54,
                             fontSize: 12,
                           ),
                         ),
@@ -224,7 +224,7 @@ Widget _buildStoreItem(
                 Text(
                   description,
                   style: AppTypography.body.copyWith(
-                    color: isDark ? Colors.white38 : Colors.black54,
+                    color: isDark ? Colors.white60 : Colors.black54,
                     fontSize: 11,
                   ),
                 ),

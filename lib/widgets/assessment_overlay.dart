@@ -97,7 +97,7 @@ class _AssessmentOverlayState extends State<AssessmentOverlay> {
               ),
               Text(
                 '${_currentQuestionIndex + 1} / ${widget.questions.length}',
-                style: AppTypography.mono.copyWith(color: Colors.white38),
+                style: AppTypography.mono.copyWith(color: Colors.white60),
               ),
             ],
           ),

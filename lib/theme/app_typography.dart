@@ -69,8 +69,8 @@ class AppTypography {
   static final TextStyle label = GoogleFonts.nunito(
     fontSize: 12,
     fontWeight: FontWeight.w700,
-    color: AppColors.forest700.withValues(alpha: 0.6),
-    letterSpacing: 1.5,
+    color: AppColors.forest700.withValues(alpha: 0.8),
+    letterSpacing: 1.2,
   );
 
   static final TextStyle mono = GoogleFonts.dmMono(

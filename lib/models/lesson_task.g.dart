@@ -32,13 +32,16 @@ class LessonTaskAdapter extends TypeAdapter<LessonTask> {
       hintMetadata: fields[10] as String,
       audioUrl: fields[11] as String?,
       imageUrl: fields[12] as String?,
+      grammarTitle: fields[13] as String?,
+      grammarDescription: fields[14] as String?,
+      grammarExamples: (fields[15] as List?)?.cast<String>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, LessonTask obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -64,7 +67,13 @@ class LessonTaskAdapter extends TypeAdapter<LessonTask> {
       ..writeByte(11)
       ..write(obj.audioUrl)
       ..writeByte(12)
-      ..write(obj.imageUrl);
+      ..write(obj.imageUrl)
+      ..writeByte(13)
+      ..write(obj.grammarTitle)
+      ..writeByte(14)
+      ..write(obj.grammarDescription)
+      ..writeByte(15)
+      ..write(obj.grammarExamples);
   }
 
   @override
@@ -156,6 +165,3 @@ class TaskTypeAdapter extends TypeAdapter<TaskType> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
-
-
-

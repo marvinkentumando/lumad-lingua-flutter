@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../models/lesson_step.dart';
 import '../../services/firebase_service.dart';
 import '../../theme/app_colors.dart';
@@ -60,7 +61,7 @@ class ConfigurationEditor extends ConsumerWidget {
               borderSide: BorderSide.none,
             ),
             counterStyle: TextStyle(
-              color: isDark ? Colors.white38 : AppColors.creamText3,
+              color: isDark ? Colors.white60 : AppColors.creamText3,
               fontSize: 10,
             ),
           ),
@@ -82,7 +83,7 @@ class ConfigurationEditor extends ConsumerWidget {
               borderSide: BorderSide.none,
             ),
             counterStyle: TextStyle(
-              color: isDark ? Colors.white38 : AppColors.creamText3,
+              color: isDark ? Colors.white60 : AppColors.creamText3,
               fontSize: 10,
             ),
           ),
@@ -409,7 +410,7 @@ class ConfigurationEditor extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
             child: Text(
               'CANCEL',
               style: TextStyle(
@@ -424,7 +425,7 @@ class ConfigurationEditor extends ConsumerWidget {
                 step.data['tags'] = tags;
                 onUpdated();
               }
-              Navigator.pop(context);
+              context.pop();
             },
             child: const Text(
               'ADD',

@@ -284,6 +284,15 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
       .map((snapshot) => snapshot.data());
 });
 
+final userRoleClaimProvider = FutureProvider<String?>((ref) async {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) return null;
+  
+  // Force refresh to get latest claims
+  final idTokenResult = await user.getIdTokenResult(true);
+  return idTokenResult.claims?['role']?.toString();
+});
+
 final otherUserProfileProvider =
     StreamProvider.family<Map<String, dynamic>?, String>((ref, userId) {
       return FirebaseFirestore.instance

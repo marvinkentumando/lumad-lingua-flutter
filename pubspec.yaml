@@ -75,6 +75,7 @@ dependencies:
   flutter_tts: ^4.2.5
   csv: ^8.0.0
   pdf: ^3.12.0
+  fl_chart: ^0.70.2
 
 dev_dependencies:
   flutter_test:

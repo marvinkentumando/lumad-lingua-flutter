@@ -17,21 +17,21 @@ This document tracks the progress of features and requirements defined in `objec
 
 ## ⚙️ Functional Requirements status
 
-| Requirement | Status | Verification |
-| :--- | :--- | :--- |
+| Requirement                                                           | Status | Verification |
+|:----------------------------------------------------------------------| :--- | :--- |
 | **Firestore Persistence** (Vocabulary, Filipino/English translations) | ✅ Met | `FirebaseService` handles all dictionary and lesson entry storage. |
-| **Supabase Audio Archiving** (Native speaker audio, < 10MB) | ✅ Met | `SupabaseStorageService` manages audio uploads and streaming. |
-| **Facebook Post Retrieval** (Graph API or secondary sources) | ❌ Incomplete | `SentimentService` currently uses mock data; API retrieval logic needs final keys/integration. |
-| **Sentiment Classification** (Positive, Negative, Neutral) | ✅ Met | `SentimentService.analyzeSentiment()` classifies text into these polarities. |
-| **Interactive Sentiment Dashboard** | ✅ Met | `SentimentDashboardScreen` provides visualizations for community sentiment trends. |
-| **Leitner-based Spaced Repetition (SRS)** | ✅ Met | `SRSService` and `srsProgressStreamProvider` schedule reviews; visualized in `MemoryForest`. |
-| **Pronunciation Assessment** (MFCC & DTW) | ✅ Met | `PronunciationService` extracts MFCCs and applies DTW for alignment. |
-| **Searchable Dictionary** (< 500ms latency) | ✅ Met | Firestore indexing and `dictionaryStreamProvider` ensure high-performance retrieval. |
-| **Role-Based Access Control** (Learner, Validator, Educator, Admin) | ✅ Met | `AuthService` handles custom roles; Firestore security rules enforced. |
-| **Learner Progress Tracking** (Points, levels, streaks) | ✅ Met | `StudentProvider` and `ProfileScreen` track and display all gamification metrics. |
-| **Offline-First Functionality** (Firestore Cache & Local Cache) | ✅ Met | `OfflineService` uses **Hive** for lessons/dictionary; Firestore handles automatic sync. |
-| **Admin Analytics Dashboard** | ✅ Met | `AdminOverviewScreen` provides aggregated content and user performance metrics. |
-| **Test Assessments** | ✅ Met | `AssessmentProvider` saves results to Firestore for administrator review. |
+| **Supabase Audio Archiving** (Native speaker audio, < 10MB)           | ✅ Met | `SupabaseStorageService` manages audio uploads and streaming. |
+| **Facebook Post Retrieval** (secondary sources)                       | ❌ Incomplete | `SentimentService` currently uses mock data; API retrieval logic needs final keys/integration. |
+| **Sentiment Classification** (Positive, Negative, Neutral)            | ✅ Met | `SentimentService.analyzeSentiment()` classifies text into these polarities. |
+| **Interactive Sentiment Dashboard**                                   | ✅ Met | `SentimentDashboardScreen` provides visualizations for community sentiment trends. |
+| **Leitner-based Spaced Repetition (SRS)**                             | ✅ Met | `SRSService` and `srsProgressStreamProvider` schedule reviews; visualized in `MemoryForest`. |
+| **Pronunciation Assessment** (MFCC & DTW)                             | ✅ Met | `PronunciationService` extracts MFCCs and applies DTW for alignment. |
+| **Searchable Dictionary** (< 500ms latency)                           | ✅ Met | Firestore indexing and `dictionaryStreamProvider` ensure high-performance retrieval. |
+| **Role-Based Access Control** (Learner, Validator, Educator, Admin)   | ✅ Met | `AuthService` handles consolidated roles (Contributor retired); Firestore security rules enforced. |
+| **Learner Progress Tracking** (Points, levels, streaks)               | ✅ Met | `StudentProvider` and `ProfileScreen` track and display all gamification metrics. |
+| **Offline-First Functionality** (Firestore Cache & Local Cache)       | ✅ Met | `OfflineService` uses **Hive** for lessons/dictionary; Firestore handles automatic sync. |
+| **Admin Analytics Dashboard**                                         | ✅ Met | `AdminOverviewScreen` provides aggregated content and user performance metrics. |
+| **Test Assessments**                                                  | ✅ Met | `AssessmentProvider` saves results to Firestore for administrator review. |
 
 ---
 

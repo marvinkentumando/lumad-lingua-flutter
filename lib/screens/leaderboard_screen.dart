@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/badges.dart';
-import '../widgets/skeleton.dart';
+import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 import '../widgets/branded_empty_state.dart';
 import '../widgets/spirit_particle_overlay.dart';
 import '../services/auth_service.dart';
@@ -226,7 +226,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                                       'XP',
                                     );
                                   },
-                                  loading: () => Center(child: _buildPodiumSkeleton()),
+                                  loading: () => Center(child: _buildPodiumAppShimmerSkeleton()),
                                   error: (err, _) =>
                                       Center(child: Text('Error: $err')),
                                 ),
@@ -298,7 +298,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                               }, childCount: displayEntries.length),
                             );
                           },
-                          loading: () => _buildRankingListSkeleton(),
+                          loading: () => _buildRankingListAppShimmerSkeleton(),
                           error: (err, _) => SliverToBoxAdapter(
                             child: Center(child: Text('Error: $err')),
                           ),
@@ -399,41 +399,41 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
         .toList();
   }
 
-  Widget _buildPodiumSkeleton() {
+  Widget _buildPodiumAppShimmerSkeleton() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        _podiumSpotSkeleton(100),
+        _podiumSpotAppShimmerSkeleton(100),
         const SizedBox(width: 8),
-        _podiumSpotSkeleton(140),
+        _podiumSpotAppShimmerSkeleton(140),
         const SizedBox(width: 8),
-        _podiumSpotSkeleton(80),
+        _podiumSpotAppShimmerSkeleton(80),
       ],
     );
   }
 
-  Widget _podiumSpotSkeleton(double height) {
+  Widget _podiumSpotAppShimmerSkeleton(double height) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Skeleton(width: 64, height: 64, isCircle: true),
+        const AppShimmerSkeleton(width: 64, height: 64, isCircle: true),
         const SizedBox(height: 12),
-        const Skeleton(width: 60, height: 12),
+        const AppShimmerSkeleton(width: 60, height: 12),
         const SizedBox(height: 4),
-        const Skeleton(width: 40, height: 10),
+        const AppShimmerSkeleton(width: 40, height: 10),
         const SizedBox(height: 12),
-        Skeleton(width: 80, height: height, borderRadius: 20),
+        AppShimmerSkeleton(width: 80, height: height, borderRadius: 20),
       ],
     );
   }
 
-  Widget _buildRankingListSkeleton() {
+  Widget _buildRankingListAppShimmerSkeleton() {
     return SliverList(
       delegate: SliverChildBuilderDelegate(
         (context, index) => Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          child: const Skeleton(height: 70, borderRadius: 20),
+          child: const AppShimmerSkeleton(height: 70, borderRadius: 20),
         ),
         childCount: 5,
       ),
@@ -696,7 +696,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                 child: Text(
                   '${e.rank}',
                   style: AppTypography.mono.copyWith(
-                    color: isMe ? AppColors.gold500 : Colors.white38,
+                    color: isMe ? AppColors.gold500 : Colors.white60,
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
                   ),
@@ -938,7 +938,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
         Text(
           '$diff ${isXP ? 'XP' : 'words'} until #$nextRank',
           style: AppTypography.mono.copyWith(
-            color: Colors.white38,
+            color: Colors.white60,
             fontSize: 9,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.5,
