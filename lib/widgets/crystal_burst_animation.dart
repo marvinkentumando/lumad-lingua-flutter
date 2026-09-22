@@ -17,8 +17,8 @@ class CrystalBurstAnimation extends StatelessWidget {
         final duration = 600 + random.nextInt(400);
 
         return Positioned(
-          left: MediaQuery.of(context).size.width / 2,
-          top: MediaQuery.of(context).size.height / 2,
+          left: 0,
+          top: 0,
           child: const Text('✨', style: TextStyle(fontSize: 24))
               .animate(
                 onComplete: (_) {

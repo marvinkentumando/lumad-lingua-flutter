@@ -2,9 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/dictionary_entry.dart';
+import 'offline_service.dart';
 
 class WordOfDayService {
+  final Ref _ref;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  WordOfDayService(this._ref);
 
   Stream<DictionaryEntry?> getWordOfDay() {
     return _db.collection('global_stats').doc('word_of_day').snapshots().asyncMap((
@@ -62,16 +66,30 @@ class WordOfDayService {
         if (wordId == null) return await _pickNewWord();
         return await _fetchWord(wordId);
       } catch (e) {
-        debugPrint('WOTD Error in stream: $e');
-        return null;
+        debugPrint('WOTD Error in stream: $e. Attempting offline fallback...');
+        return await _getOfflineFallback();
       }
     });
   }
 
+  Future<DictionaryEntry?> _getOfflineFallback() async {
+    try {
+      return await _ref.read(offlineServiceProvider).getRandomCachedWord();
+    } catch (e) {
+      debugPrint('WOTD Offline fallback failed: $e');
+      return null;
+    }
+  }
+
   Future<DictionaryEntry?> _fetchWord(String wordId) async {
-    final wordDoc = await _db.collection('words').doc(wordId).get();
-    if (!wordDoc.exists) return await _pickNewWord();
-    return DictionaryEntry.fromFirestore(wordDoc.data()!, wordDoc.id);
+    try {
+      final wordDoc = await _db.collection('words').doc(wordId).get();
+      if (!wordDoc.exists) return await _pickNewWord();
+      return DictionaryEntry.fromFirestore(wordDoc.data()!, wordDoc.id);
+    } catch (e) {
+      debugPrint('WOTD: Fetch word failed ($wordId). Falling back to offline cache.');
+      return await _getOfflineFallback();
+    }
   }
 
   Future<DictionaryEntry?> _pickNewWord() async {
@@ -135,8 +153,8 @@ class WordOfDayService {
 
       return entry;
     } catch (e) {
-      debugPrint('WOTD: Error picking new word: $e');
-      return null;
+      debugPrint('WOTD: Error picking new word: $e. Falling back to offline cache.');
+      return await _getOfflineFallback();
     }
   }
 
@@ -177,7 +195,7 @@ class WordOfDayService {
   }
 }
 
-final wordOfDayServiceProvider = Provider((ref) => WordOfDayService());
+final wordOfDayServiceProvider = Provider((ref) => WordOfDayService(ref));
 
 final wordOfDayStreamProvider = StreamProvider<DictionaryEntry?>((ref) {
   return ref.watch(wordOfDayServiceProvider).getWordOfDay();
