@@ -752,7 +752,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                         actions: [
                           TextButton(
                             onPressed: () => context.pop(),
-                            child: Text('LATER', style: TextStyle(color: isDark ? Colors.white60 : AppColors.gold500)),ppColors.forest900.withValues(alpha: 0.4))),
+                            child: Text('LATER', style: TextStyle(color: isDark ? Colors.white60 : AppColors.gold500)),
                           ),
                           BrandButton(
                             text: 'SHARE INVITE',
