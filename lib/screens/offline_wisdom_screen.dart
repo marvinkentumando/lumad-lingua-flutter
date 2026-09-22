@@ -7,6 +7,7 @@ import '../widgets/brand_card.dart';
 import '../widgets/brand_background.dart';
 import '../services/offline_service.dart';
 import '../services/firebase_service.dart';
+import '../services/auth_service.dart';
 import 'dart:async';
 
 class OfflineWisdomScreen extends ConsumerStatefulWidget {
@@ -24,6 +25,7 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
   Widget build(BuildContext context) {
     final lessonCountAsync = ref.watch(offlineLessonCountProvider);
     final dictionaryCountAsync = ref.watch(offlineDictionaryCountProvider);
+    final artifactCountAsync = ref.watch(offlineArtifactCountProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -60,7 +62,12 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildStorageOverview(context, lessonCountAsync.value ?? 0, dictionaryCountAsync.value ?? 0),
+                      _buildStorageOverview(
+                        context,
+                        lessonCountAsync.value ?? 0,
+                        dictionaryCountAsync.value ?? 0,
+                        artifactCountAsync.value ?? 0,
+                      ),
                       const SizedBox(height: 32),
                       _sectionLabel('OFFLINE MODULES'),
                       const SizedBox(height: 16),
@@ -78,6 +85,14 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
                         '${lessonCountAsync.value ?? 0} modules available offline',
                         '${((lessonCountAsync.value ?? 0) * 0.5).toStringAsFixed(1)} MB',
                         (lessonCountAsync.value ?? 0) > 0,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildSyncTile(
+                        context,
+                        'Artifact Archive',
+                        '${artifactCountAsync.value ?? 0} sacred items archived',
+                        '${((artifactCountAsync.value ?? 0) * 0.05).toStringAsFixed(1)} MB',
+                        (artifactCountAsync.value ?? 0) > 0,
                       ),
                       const SizedBox(height: 32),
                       _sectionLabel('MANAGEMENT'),
@@ -150,9 +165,9 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
         ),
       );
 
-  Widget _buildStorageOverview(BuildContext context, int lessons, int words) {
-    // Estimating 10KB per word and 500KB per lesson
-    double mbUsed = (words * 0.01) + (lessons * 0.5);
+  Widget _buildStorageOverview(BuildContext context, int lessons, int words, int artifacts) {
+    // Estimating 10KB per word, 500KB per lesson, 50KB per artifact
+    double mbUsed = (words * 0.01) + (lessons * 0.5) + (artifacts * 0.05);
     double pct = (mbUsed / 200).clamp(0.05, 1.0); // 200MB as a theoretical "full" cache limit
 
     return BrandCard(
@@ -335,11 +350,20 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
       final lessons = await ref.read(firebaseServiceProvider).getPublishedLessons().first;
       await ref.read(offlineServiceProvider).saveLessons(lessons);
 
+      setState(() => _syncProgress = 0.8);
+
+      // 3. Sync Artifacts
+      final user = ref.read(authStateProvider).value;
+      final artifacts = await ref.read(firebaseServiceProvider).getArtifacts(userId: user?.uid).first;
+      await ref.read(offlineServiceProvider).saveArtifacts(artifacts);
+
       setState(() => _syncProgress = 1.0);
       
       // Refresh providers
       ref.invalidate(offlineLessonCountProvider);
       ref.invalidate(offlineDictionaryCountProvider);
+      ref.invalidate(offlineArtifactCountProvider);
+      ref.invalidate(cachedArtifactsProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -374,6 +398,8 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
               await ref.read(offlineServiceProvider).clearCache();
               ref.invalidate(offlineLessonCountProvider);
               ref.invalidate(offlineDictionaryCountProvider);
+              ref.invalidate(offlineArtifactCountProvider);
+              ref.invalidate(cachedArtifactsProvider);
               if (context.mounted) {
                 context.pop();
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cache cleared.')));

@@ -36,13 +36,15 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
   double _opponentHp = 1.0;
   int _currentQuestionIndex = 0;
   bool _isPlayerWinning = true;
+  String _opponentName = 'Ancestral Guardian';
   
   String? _matchId;
   bool _isHost = false;
   StreamSubscription? _matchSubscription;
   Timer? _roundTimer;
   int _secondsLeft = 15;
-  bool _showDamageEffect = false;
+  bool _showPlayerDamageEffect = false;
+  bool _showOpponentDamageEffect = false;
   List<Map<String, dynamic>> _battleQuestions = [];
 
   void _startMatchmaking() async {
@@ -72,12 +74,14 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
         });
       } else {
         _isHost = true;
+        final questions = _createBattleQuestions();
         final newDoc = await FirebaseFirestore.instance.collection('duel_matchmaking').add({
           'hostId': user.uid,
           'hostName': user.displayName ?? 'Warrior',
           'opponentId': null,
           'opponentName': null,
           'status': 'waiting',
+          'questions': questions,
           'createdAt': FieldValue.serverTimestamp(),
         });
         _matchId = newDoc.id;
@@ -103,12 +107,17 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
 
       if (data['status'] == 'active' && _phase == DuelPhase.searching) {
         _roundTimer?.cancel();
-        setState(() => _phase = DuelPhase.matchFound);
+        setState(() {
+          _phase = DuelPhase.matchFound;
+          _opponentName = _isHost
+              ? (data['opponentName'] ?? 'Warrior')
+              : (data['hostName'] ?? 'Warrior');
+          _battleQuestions = List<Map<String, dynamic>>.from(data['questions'] ?? []);
+        });
         HapticService.celebration();
 
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {
-            _generateBattleQuestions();
             setState(() {
               _phase = DuelPhase.battling;
               _playerHp = 1.0;
@@ -122,9 +131,20 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
         final hostHp = (data['hostHp'] ?? 1.0).toDouble();
         final oppHp = (data['opponentHp'] ?? 1.0).toDouble();
 
+        final newPlayerHp = _isHost ? hostHp : oppHp;
+        final newOpponentHp = _isHost ? oppHp : hostHp;
+
+        // Trigger effects if HP decreased from external update (opponent hit us)
+        if (newPlayerHp < _playerHp) {
+          setState(() => _showPlayerDamageEffect = true);
+        }
+        if (newOpponentHp < _opponentHp) {
+          setState(() => _showOpponentDamageEffect = true);
+        }
+
         setState(() {
-          _playerHp = _isHost ? hostHp : oppHp;
-          _opponentHp = _isHost ? oppHp : hostHp;
+          _playerHp = newPlayerHp;
+          _opponentHp = newOpponentHp;
         });
 
         if (_playerHp <= 0) {
@@ -147,7 +167,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
     });
   }
 
-  void _generateBattleQuestions() {
+  List<Map<String, dynamic>> _createBattleQuestions() {
     final dictionary = ref.read(allWordsProvider).value ?? [];
     final l10n = ref.read(localizationProvider);
     
@@ -186,7 +206,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
       ];
     }
 
-    _battleQuestions = questions;
+    return questions;
   }
 
   void _startTimer() {
@@ -212,10 +232,11 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
     if (isCorrect) {
       HapticService.light();
       _opponentHp = math.max(0.0, _opponentHp - 0.25);
+      setState(() => _showOpponentDamageEffect = true);
     } else {
       HapticService.error();
       _playerHp = math.max(0.0, _playerHp - 0.25);
-      _showDamageEffect = true;
+      setState(() => _showPlayerDamageEffect = true);
     }
 
     if (_matchId != null) {
@@ -248,9 +269,14 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
       }
     });
     
-    if (_showDamageEffect) {
+    if (_showPlayerDamageEffect || _showOpponentDamageEffect) {
       await Future.delayed(const Duration(milliseconds: 600));
-      if (mounted) setState(() => _showDamageEffect = false);
+      if (mounted) {
+        setState(() {
+          _showPlayerDamageEffect = false;
+          _showOpponentDamageEffect = false;
+        });
+      }
     }
   }
 
@@ -436,7 +462,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(l10n.translate('ancestral_guardian').toUpperCase(), style: const TextStyle(color: AppColors.gold500, fontWeight: FontWeight.bold, fontSize: 11)),
+                      Text(_opponentName.toUpperCase(), style: const TextStyle(color: AppColors.gold500, fontWeight: FontWeight.bold, fontSize: 11)),
                       const SizedBox(height: 4),
                       Container(
                         width: 120,
@@ -492,10 +518,22 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
             const Spacer(),
           ],
         ),
-        if (_showDamageEffect)
-           Center(child: CrystalBurstAnimation(onComplete: () {
-             if (mounted) setState(() => _showDamageEffect = false);
-           })),
+        if (_showPlayerDamageEffect)
+          Positioned(
+            left: 50,
+            top: 100,
+            child: CrystalBurstAnimation(onComplete: () {
+              if (mounted) setState(() => _showPlayerDamageEffect = false);
+            }),
+          ),
+        if (_showOpponentDamageEffect)
+          Positioned(
+            right: 50,
+            top: 100,
+            child: CrystalBurstAnimation(onComplete: () {
+              if (mounted) setState(() => _showOpponentDamageEffect = false);
+            }),
+          ),
       ],
     );
   }

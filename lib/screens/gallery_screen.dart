@@ -17,6 +17,7 @@ import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 import '../widgets/branded_empty_state.dart';
 import '../widgets/graceful_image.dart';
 import '../utils/app_localization.dart';
+import '../services/offline_service.dart';
 
 class GalleryScreen extends ConsumerStatefulWidget {
   const GalleryScreen({super.key});
@@ -87,18 +88,14 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
             ),
             const SizedBox(height: 16),
             artifactsAsync.when(
-              data: (artifacts) {
-                final filtered = _selectedTier == 'All' 
-                    ? artifacts 
-                    : artifacts.where((a) => a.tier.name.toLowerCase() == _selectedTier.toLowerCase()).toList();
-                return _buildArtifactScroll(filtered);
-              },
+              data: (artifacts) => _buildArtifactContent(artifacts),
               loading: () => _buildArtifactAppShimmerSkeleton(),
-              error: (err, _) => Center(
-                child: Text(
-                  'Error: $err',
-                  style: const TextStyle(color: Colors.white54),
-                ),
+              error: (err, _) => ref.watch(cachedArtifactsProvider).when(
+                data: (cached) => cached.isNotEmpty
+                    ? _buildArtifactContent(cached)
+                    : _buildArtifactErrorState(err),
+                loading: () => _buildArtifactAppShimmerSkeleton(),
+                error: (e, __) => _buildArtifactErrorState(err),
               ),
             ),
             const SizedBox(height: 40),
@@ -115,6 +112,25 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
             const SizedBox(height: 40),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildArtifactContent(List<Artifact> artifacts) {
+    final filtered = _selectedTier == 'All'
+        ? artifacts
+        : artifacts
+            .where((a) =>
+                a.tier.name.toLowerCase() == _selectedTier.toLowerCase())
+            .toList();
+    return _buildArtifactScroll(filtered);
+  }
+
+  Widget _buildArtifactErrorState(dynamic err) {
+    return Center(
+      child: Text(
+        'Error: $err',
+        style: const TextStyle(color: Colors.white54),
       ),
     );
   }
@@ -162,6 +178,8 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
         itemCount: artifacts.length,
         itemBuilder: (context, index) {
           final artifact = artifacts[index];
+          final bool isEarned = artifact.isEarned;
+
           return OpenContainer(
                 closedColor: Colors.transparent,
                 closedElevation: 0,
@@ -177,78 +195,110 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                   child: Container(
                     width: 280,
                     margin: const EdgeInsets.only(right: 20),
-                    child: BrandCard(
-                      theme: BrandCardTheme.cream,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: GracefulImage(
-                              imageUrl: artifact.imageUrl,
-                              width: double.infinity,
-                              borderRadius: 12,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            artifact.title,
-                            style: AppTypography.h2.copyWith(
-                              color: AppColors.creamText,
-                              fontSize: 22,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            artifact.description,
-                            style: AppTypography.body.copyWith(
-                              color: AppColors.creamText2,
-                              fontSize: 13,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
+                    child: Opacity(
+                      opacity: isEarned ? 1.0 : 0.6,
+                      child: ColorFiltered(
+                        colorFilter: isEarned
+                            ? const ColorFilter.mode(Colors.transparent, BlendMode.multiply)
+                            : const ColorFilter.matrix([
+                                0.2126, 0.7152, 0.0722, 0, 0,
+                                0.2126, 0.7152, 0.0722, 0, 0,
+                                0.2126, 0.7152, 0.0722, 0, 0,
+                                0,      0,      0,      1, 0,
+                              ]),
+                        child: BrandCard(
+                          theme: BrandCardTheme.cream,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: _getTierColor(
-                                    artifact.tier,
-                                  ).withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(
-                                    color: _getTierColor(
-                                      artifact.tier,
-                                    ).withValues(alpha: 0.5),
-                                  ),
-                                ),
-                                child: Text(
-                                  artifact.tier.name.toUpperCase(),
-                                  style: AppTypography.label.copyWith(
-                                    color: _getTierColor(artifact.tier),
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              Expanded(
+                                child: Stack(
+                                  children: [
+                                    GracefulImage(
+                                      imageUrl: artifact.imageUrl,
+                                      width: double.infinity,
+                                      borderRadius: 12,
+                                    ),
+                                    if (!isEarned)
+                                      Center(
+                                        child: Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black54,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: Colors.white24),
+                                          ),
+                                          child: const Icon(Icons.lock_outline_rounded, color: Colors.white, size: 32),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
-                              const Spacer(),
-                              Row(
-                                children: List.generate(
-                                  artifact.rarity,
-                                  (index) => const Icon(
-                                    Icons.star_rounded,
-                                    color: AppColors.gold500,
-                                    size: 12,
-                                  ),
+                              const SizedBox(height: 16),
+                              Text(
+                                artifact.title,
+                                style: AppTypography.h2.copyWith(
+                                  color: AppColors.creamText,
+                                  fontSize: 22,
                                 ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                artifact.description,
+                                style: AppTypography.body.copyWith(
+                                  color: AppColors.creamText2,
+                                  fontSize: 13,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _getTierColor(
+                                        artifact.tier,
+                                      ).withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(
+                                        color: _getTierColor(
+                                          artifact.tier,
+                                        ).withValues(alpha: 0.5),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      artifact.tier.name.toUpperCase(),
+                                      style: AppTypography.label.copyWith(
+                                        color: _getTierColor(artifact.tier),
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  if (isEarned)
+                                    Row(
+                                      children: List.generate(
+                                        artifact.rarity,
+                                        (index) => const Icon(
+                                          Icons.star_rounded,
+                                          color: AppColors.gold500,
+                                          size: 12,
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    const Icon(Icons.stars_rounded, color: Colors.white24, size: 16),
+                                ],
                               ),
                             ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),

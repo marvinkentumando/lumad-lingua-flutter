@@ -1,13 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'dart:math' as math;
 import '../models/lesson.dart';
 import '../models/lesson_task.dart';
 import '../models/dictionary_entry.dart';
+import '../models/artifact.dart';
 
 class OfflineService {
   static const String lessonsBoxName = 'offline_lessons';
   static const String dictionaryBoxName = 'offline_dictionary';
+  static const String artifactsBoxName = 'offline_artifacts';
   static const String draftLessonsBoxName = 'draft_lessons';
   static const String searchHistoryBoxName = 'search_history';
   static const String progressBoxName = 'offline_progress';
@@ -27,10 +30,14 @@ class OfflineService {
       _safeRegisterAdapter(LessonAdapter());
       _safeRegisterAdapter(TaskTypeAdapter());
       _safeRegisterAdapter(LessonTaskAdapter());
+      _safeRegisterAdapter(ArtifactTierAdapter());
+      _safeRegisterAdapter(ArtifactRequirementTypeAdapter());
+      _safeRegisterAdapter(ArtifactAdapter());
 
       // Pre-open boxes for performance
       await Hive.openBox<Lesson>(lessonsBoxName);
       await Hive.openBox<DictionaryEntry>(dictionaryBoxName);
+      await Hive.openBox<Artifact>(artifactsBoxName);
       await Hive.openBox<Lesson>(draftLessonsBoxName);
       await Hive.openBox<String>(searchHistoryBoxName);
       await Hive.openBox<Map>(progressBoxName);
@@ -89,6 +96,31 @@ class OfflineService {
     return box.values.toList();
   }
 
+  Future<DictionaryEntry?> getRandomCachedWord() async {
+    final box = await _getBox<DictionaryEntry>(dictionaryBoxName);
+    if (box.isEmpty) return null;
+    final random = math.Random();
+    final index = random.nextInt(box.length);
+    return box.getAt(index);
+  }
+
+  // Artifact Methods
+  Future<void> saveArtifacts(List<Artifact> artifacts) async {
+    final box = await _getBox<Artifact>(artifactsBoxName);
+    final Map<String, Artifact> artifactMap = {for (var a in artifacts) a.id: a};
+    await box.putAll(artifactMap);
+  }
+
+  Future<List<Artifact>> getCachedArtifacts() async {
+    final box = await _getBox<Artifact>(artifactsBoxName);
+    return box.values.toList();
+  }
+
+  Future<int> getArtifactCount() async {
+    final box = await _getBox<Artifact>(artifactsBoxName);
+    return box.length;
+  }
+
   // Draft Methods (Upload Queue)
   Future<void> saveDraftLesson(Lesson lesson) async {
     final box = await _getBox<Lesson>(draftLessonsBoxName);
@@ -130,8 +162,10 @@ class OfflineService {
   Future<void> clearCache() async {
     final lessonBox = await _getBox<Lesson>(lessonsBoxName);
     final dictionaryBox = await _getBox<DictionaryEntry>(dictionaryBoxName);
+    final artifactBox = await _getBox<Artifact>(artifactsBoxName);
     await lessonBox.clear();
     await dictionaryBox.clear();
+    await artifactBox.clear();
   }
 
   Future<int> getLessonCount() async {
@@ -153,6 +187,14 @@ final offlineLessonCountProvider = FutureProvider<int>((ref) {
 
 final offlineDictionaryCountProvider = FutureProvider<int>((ref) {
   return ref.watch(offlineServiceProvider).getDictionaryCount();
+});
+
+final offlineArtifactCountProvider = FutureProvider<int>((ref) {
+  return ref.watch(offlineServiceProvider).getArtifactCount();
+});
+
+final cachedArtifactsProvider = FutureProvider<List<Artifact>>((ref) {
+  return ref.watch(offlineServiceProvider).getCachedArtifacts();
 });
 
 

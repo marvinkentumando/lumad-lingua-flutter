@@ -1,33 +1,75 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hive/hive.dart';
 
-enum ArtifactTier { common, rare, epic, legendary, sacred, ancient }
+part 'artifact.g.dart';
 
+@HiveType(typeId: 6)
+enum ArtifactTier {
+  @HiveField(0)
+  common,
+  @HiveField(1)
+  rare,
+  @HiveField(2)
+  epic,
+  @HiveField(3)
+  legendary,
+  @HiveField(4)
+  sacred,
+  @HiveField(5)
+  ancient
+}
+
+@HiveType(typeId: 7)
 enum ArtifactRequirementType {
+  @HiveField(0)
   xp,
+  @HiveField(1)
   lessons,
+  @HiveField(2)
   words,
+  @HiveField(3)
   streak,
+  @HiveField(4)
   mistCrystals,
 }
 
+@HiveType(typeId: 8)
 class Artifact {
+  @HiveField(0)
   final String id;
+  @HiveField(1)
   final String title;
+  @HiveField(2)
   final String description;
+  @HiveField(3)
   final String emoji;
+  @HiveField(4)
   final String imageUrl;
+  @HiveField(5)
   final String type;
+  @HiveField(6)
   final String? culturalNote;
+  @HiveField(7)
   final ArtifactTier tier;
+  @HiveField(8)
   final int rarity; // 1-100, used for weighted drops
+  @HiveField(9)
   final ArtifactRequirementType requirementType;
+  @HiveField(10)
   final int currentProgress;
+  @HiveField(11)
   final int targetValue;
+  @HiveField(12)
   final bool isEarned;
+  @HiveField(13)
   final int crystalCost;
+  @HiveField(14)
   final String? passiveBonus;
+  @HiveField(15)
   final bool isAvailableInShop;
+  @HiveField(16)
   final DateTime? earnedAt;
+  @HiveField(17)
   final String? legend;
 
   Artifact({

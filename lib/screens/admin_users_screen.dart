@@ -759,7 +759,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                             icon: Icons.share_rounded,
                             type: BrandButtonType.primary,
                             onTap: () {
-                              final text = 'Maayong Adlaw!\n\nYou have been invited to join Lumad Lingua as a ${selectedRole.toUpperCase()}.\n\nPlease sign up at [App Link] using your email: $email\n\nYour staff privileges will activate automatically upon registration.\n\nSee you in the highlands!';
+                              final text = 'Maayong Adlaw!\n\nYou have been invited to join Lumad Lingua as a ${selectedRole.toUpperCase()}.\n\nPlease sign up in the Lumad Lingua application using your email: $email\n\nYour staff privileges will activate automatically upon registration.\n\nSee you in the highlands!';
                               SharePlus.instance.share(
                                 ShareParams(
                                   text: text,

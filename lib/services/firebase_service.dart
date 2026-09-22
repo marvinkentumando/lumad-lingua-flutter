@@ -8,6 +8,7 @@ import '../models/geo_recording.dart';
 import '../models/lesson.dart';
 import '../models/lesson_task.dart';
 import '../models/admin_models.dart';
+import 'auth_service.dart';
 import 'package:lumad_lingua/models/gallery_models.dart';
 import 'package:lumad_lingua/models/artifact.dart';
 import '../models/srs_models.dart';
@@ -3096,11 +3097,38 @@ class FirebaseService {
   }
 
   // Gallery Operations
-  Stream<List<Artifact>> getArtifacts() {
-    return _db.collection('artifacts').snapshots().map((snapshot) {
-      return snapshot.docs
-          .map((doc) => Artifact.fromFirestore(doc.data(), doc.id))
-          .toList();
+  Stream<List<Artifact>> getArtifacts({String? userId}) {
+    if (userId == null) {
+      return _db.collection('artifacts').snapshots().map((snapshot) {
+        return snapshot.docs
+            .map((doc) => Artifact.fromFirestore(doc.data(), doc.id))
+            .toList();
+      });
+    }
+
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('artifacts')
+        .snapshots()
+        .asyncMap((userSnapshot) async {
+      final ownedData = {
+        for (var doc in userSnapshot.docs) doc.id: doc.data()
+      };
+
+      final globalSnap = await _db.collection('artifacts').get();
+      return globalSnap.docs.map((doc) {
+        final artifact = Artifact.fromFirestore(doc.data(), doc.id);
+        final userData = ownedData[doc.id];
+        if (userData != null) {
+          return artifact.copyWith(
+            isEarned: true,
+            earnedAt: (userData['earnedAt'] as Timestamp?)?.toDate(),
+            currentProgress: userData['currentProgress'] ?? 1,
+          );
+        }
+        return artifact;
+      }).toList();
     });
   }
 
@@ -4369,7 +4397,13 @@ final dialectsProvider = StreamProvider<List<String>>((ref) {
 });
 
 final artifactsStreamProvider = StreamProvider<List<Artifact>>((ref) {
-  return ref.watch(firebaseServiceProvider).getArtifacts();
+  final user = ref.watch(authStateProvider).value;
+  final stream = ref.watch(firebaseServiceProvider).getArtifacts(userId: user?.uid);
+  return stream.map((artifacts) {
+    // Automatically cache artifacts for offline use
+    ref.read(offlineServiceProvider).saveArtifacts(artifacts);
+    return artifacts;
+  });
 });
 
 final userBadgesStreamProvider =

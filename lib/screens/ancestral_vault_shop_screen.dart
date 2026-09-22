@@ -198,10 +198,12 @@ class AncestralVaultShopScreen extends ConsumerWidget {
                 ],
               ),
               GestureDetector(
-                onTap: () {
-                    HapticService.selection();
-                    _showExchangeDialog(context, ref, artifact, canAfford, l10n);
-                },
+                onTap: artifact.isEarned
+                    ? null
+                    : () {
+                        HapticService.selection();
+                        _showExchangeDialog(context, ref, artifact, canAfford, l10n);
+                    },
 
                 child: Container(
                   padding: const EdgeInsets.symmetric(
@@ -209,13 +211,19 @@ class AncestralVaultShopScreen extends ConsumerWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: canAfford ? AppColors.gold500 : Colors.white10,
+                    color: artifact.isEarned
+                        ? AppColors.semanticGreen.withValues(alpha: 0.2)
+                        : (canAfford ? AppColors.gold500 : Colors.white10),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    l10n.translate('unlock_caps'),
+                    artifact.isEarned
+                        ? l10n.translate('owned_caps')
+                        : l10n.translate('unlock_caps'),
                     style: AppTypography.mono.copyWith(
-                      color: canAfford ? Colors.black : Colors.white24,
+                      color: artifact.isEarned
+                          ? AppColors.semanticGreen
+                          : (canAfford ? Colors.black : Colors.white24),
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
