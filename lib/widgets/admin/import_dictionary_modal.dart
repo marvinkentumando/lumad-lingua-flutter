@@ -10,6 +10,7 @@ import '../../theme/app_typography.dart';
 import '../../models/dictionary_entry.dart';
 import '../../services/firebase_service.dart';
 import '../../services/haptic_service.dart';
+import '../../utils/file_downloader.dart';
 import '../brand_button.dart';
 
 class ImportDictionaryModal extends ConsumerStatefulWidget {
@@ -190,11 +191,38 @@ class _ImportDictionaryModalState extends ConsumerState<ImportDictionaryModal> {
     );
   }
 
-  void _downloadTemplate() {
+  Future<void> _downloadTemplate() async {
     HapticService.light();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Template downloaded to your device.')),
-    );
+    try {
+      const templateContent =
+          'term,translation_en,translation_fil,pos,dialect,definition\n'
+          'Kadasang,Tree,Puno,noun,Mansaka,A perennial plant with an elongated stem or trunk.\n'
+          'Salamat,Thank you,Salamat,phrase,Mansaka,An expression of gratitude.\n'
+          'Biyag,Life,Buhay,noun,Mansaka,State of living or existing.\n';
+
+      final path = await FileDownloader.downloadCsv(
+        templateContent,
+        'lumad_lingua_dictionary_template.csv',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Template downloaded ($path)'),
+            backgroundColor: AppColors.semanticGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to download template: $e'),
+            backgroundColor: AppColors.semanticRed,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _pickAndImport() async {
