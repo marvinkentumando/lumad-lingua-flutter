@@ -204,6 +204,15 @@ class AuthService {
               'userId': userCredential.user!.uid,
             });
           }
+
+          // 3. Send email verification
+          try {
+            await userCredential.user!.sendEmailVerification();
+          } catch (e) {
+            if (kDebugMode) {
+              debugPrint("Verification email send error: $e");
+            }
+          }
         } catch (e) {
           // Atomic Cleanup: If Firestore profile fails, delete the Auth user
           // so the user isn't stuck in a "registered but broken" state.
@@ -249,6 +258,22 @@ class AuthService {
 
   Future<void> sendPasswordResetEmail(String email) async {
     await _auth.sendPasswordResetEmail(email: email);
+  }
+
+  Future<void> sendEmailVerification() async {
+    final user = _auth.currentUser;
+    if (user != null && !user.emailVerified) {
+      await user.sendEmailVerification();
+    }
+  }
+
+  Future<bool> reloadUser() async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      await user.reload();
+      return _auth.currentUser?.emailVerified ?? false;
+    }
+    return false;
   }
 
   Future<bool> verifyPassword(String password) async {

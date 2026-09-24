@@ -16,6 +16,8 @@ import '../widgets/parallax_background.dart';
 import '../widgets/assessment_overlay.dart';
 import '../models/assessment.dart';
 import '../utils/app_localization.dart';
+import '../utils/password_validator.dart';
+import '../widgets/password_strength_meter.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -234,8 +236,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     }
 
     if (_currentStep == 0) {
+      final pwdVal = PasswordValidator.validate(_passwordController.text);
       return _emailRegex.hasMatch(_emailController.text.trim()) &&
-          _passwordController.text.length >= 6 &&
+          pwdVal.isStrong &&
+          _confirmPasswordController.text.isNotEmpty &&
           _passwordController.text == _confirmPasswordController.text;
     } else if (_currentStep == 1) {
       final baseValid = _usernameController.text.length >= 3 &&
@@ -588,6 +592,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   Widget _buildIdentityStep(AppLocalization l10n) {
+    final pwdValidation = PasswordValidator.validate(_passwordController.text);
+
     return AutofillGroup(
       child: Column(
         children: [
@@ -616,13 +622,17 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             textInputAction: TextInputAction.next,
             autofillHints: const [AutofillHints.newPassword],
             showValidation: true,
-            isValid: _passwordController.text.length >= 6,
-            errorText: _passwordController.text.isNotEmpty && _passwordController.text.length < 6
-                ? l10n.translate('password_length')
+            isValid: pwdValidation.isStrong,
+            errorText: _passwordController.text.isNotEmpty && !pwdValidation.isStrong
+                ? l10n.translate('password_not_strong')
                 : null,
             onChanged: (_) => setState(() {}),
           ),
-          const SizedBox(height: 16),
+          PasswordStrengthMeter(
+            password: _passwordController.text,
+            l10n: l10n,
+          ),
+          const SizedBox(height: 12),
           BrandTextField(
             controller: _confirmPasswordController,
             labelText: l10n.translate('confirm_password'),
