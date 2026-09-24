@@ -59,6 +59,9 @@ class AuthService {
       }
 
       return userCredential;
+    } on FirebaseAuthException catch (e) {
+      if (kDebugMode) debugPrint("Google Sign-In Auth Error: ${e.code} - ${e.message}");
+      rethrow;
     } catch (e) {
       if (kDebugMode) debugPrint("Google Sign-In Error: $e");
       throw Exception("Google sign-in failed: ${e.toString()}");

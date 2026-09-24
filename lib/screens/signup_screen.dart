@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -148,22 +149,48 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   Map<String, dynamic>? _detectedInvite;
+  Timer? _debounceTimer;
+
+  static final _emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+  final _emailFocusNode = FocusNode();
+  bool _emailTouched = false;
 
   @override
   void initState() {
     super.initState();
-    _emailController.addListener(_checkForInvitation);
+    _emailController.addListener(_onEmailChanged);
+    _emailFocusNode.addListener(() {
+      if (!_emailFocusNode.hasFocus && !_emailTouched) {
+        setState(() => _emailTouched = true);
+      }
+    });
   }
 
   @override
   void dispose() {
-    _emailController.removeListener(_checkForInvitation);
+    _debounceTimer?.cancel();
+    _emailController.removeListener(_onEmailChanged);
+    _emailFocusNode.dispose();
     _usernameController.dispose();
     _villageCodeController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  void _onEmailChanged() {
+    _debounceTimer?.cancel();
+    final email = _emailController.text.trim().toLowerCase();
+    if (email.isEmpty || !email.contains('@')) {
+      if (_detectedInvite != null) {
+        setState(() => _detectedInvite = null);
+      }
+      return;
+    }
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _checkForInvitation();
+    });
   }
 
   Future<void> _checkForInvitation() async {
@@ -207,7 +234,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     }
 
     if (_currentStep == 0) {
-      return _emailController.text.contains('@') &&
+      return _emailRegex.hasMatch(_emailController.text.trim()) &&
           _passwordController.text.length >= 6 &&
           _passwordController.text == _confirmPasswordController.text;
     } else if (_currentStep == 1) {
@@ -224,13 +251,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     return true;
   }
 
-  void _nextStep() {
+  Future<void> _nextStep() async {
     if (_validateStep()) {
+      if (_currentStep == 0) {
+        _debounceTimer?.cancel();
+        await _checkForInvitation();
+      }
       HapticService.navigation();
-      setState(() {
-        _currentStep++;
-        _errorMessage = null;
-      });
+      if (mounted) {
+        setState(() {
+          _currentStep++;
+          _errorMessage = null;
+        });
+      }
     } else {
       HapticService.error();
       setState(() => _errorMessage = "Please fill all fields correctly");
@@ -277,9 +310,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final l10n = ref.read(localizationProvider);
         setState(() {
           _isLoading = false;
-          _errorMessage = e.toString().replaceAll('Exception: ', '');
+          _errorMessage = l10n.getAuthErrorMessage(e);
         });
       }
     }
@@ -300,9 +334,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final l10n = ref.read(localizationProvider);
         setState(() {
           _isLoading = false;
-          _errorMessage = e.toString().replaceAll('Exception: ', '');
+          _errorMessage = l10n.getAuthErrorMessage(e);
         });
       }
     }
@@ -542,50 +577,59 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   Widget _buildIdentityStep(AppLocalization l10n) {
-    return Column(
-      children: [
-        BrandTextField(
-          controller: _emailController,
-          labelText: l10n.translate('email_address'),
-          prefixIcon: Icons.email_outlined,
-          keyboardType: TextInputType.emailAddress,
-          showValidation: true,
-          isValid: _emailController.text.contains('@'),
-          errorText: _emailController.text.isNotEmpty && !_emailController.text.contains('@')
-              ? l10n.translate('valid_email')
-              : null,
-          onChanged: (_) => setState(() {}),
-        ),
-        if (_detectedInvite != null) _buildInviteBanner(l10n),
-        const SizedBox(height: 16),
-        BrandTextField(
-          controller: _passwordController,
-          labelText: l10n.translate('password'),
-          prefixIcon: Icons.lock_outline,
-          isPassword: true,
-          showValidation: true,
-          isValid: _passwordController.text.length >= 6,
-          errorText: _passwordController.text.isNotEmpty && _passwordController.text.length < 6
-              ? l10n.translate('password_length')
-              : null,
-          onChanged: (_) => setState(() {}),
-        ),
-        const SizedBox(height: 16),
-        BrandTextField(
-          controller: _confirmPasswordController,
-          labelText: l10n.translate('confirm_password'),
-          prefixIcon: Icons.lock_clock_outlined,
-          isPassword: true,
-          showValidation: true,
-          isValid:
-              _confirmPasswordController.text.isNotEmpty &&
-              _confirmPasswordController.text == _passwordController.text,
-          errorText: _confirmPasswordController.text.isNotEmpty &&
-                  _confirmPasswordController.text != _passwordController.text
-              ? l10n.translate('passwords_dont_match')
-              : null,
-          onChanged: (_) => setState(() {}),
-        ),
+    return AutofillGroup(
+      child: Column(
+        children: [
+          BrandTextField(
+            controller: _emailController,
+            focusNode: _emailFocusNode,
+            labelText: l10n.translate('email_address'),
+            prefixIcon: Icons.email_outlined,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            autofillHints: const [AutofillHints.email, AutofillHints.username],
+            showValidation: true,
+            isValid: _emailRegex.hasMatch(_emailController.text.trim()),
+            errorText: _emailTouched && _emailController.text.isNotEmpty && !_emailRegex.hasMatch(_emailController.text.trim())
+                ? l10n.translate('valid_email')
+                : null,
+            onChanged: (_) => setState(() {}),
+          ),
+          if (_detectedInvite != null) _buildInviteBanner(l10n),
+          const SizedBox(height: 16),
+          BrandTextField(
+            controller: _passwordController,
+            labelText: l10n.translate('password'),
+            prefixIcon: Icons.lock_outline,
+            isPassword: true,
+            textInputAction: TextInputAction.next,
+            autofillHints: const [AutofillHints.newPassword],
+            showValidation: true,
+            isValid: _passwordController.text.length >= 6,
+            errorText: _passwordController.text.isNotEmpty && _passwordController.text.length < 6
+                ? l10n.translate('password_length')
+                : null,
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 16),
+          BrandTextField(
+            controller: _confirmPasswordController,
+            labelText: l10n.translate('confirm_password'),
+            prefixIcon: Icons.lock_clock_outlined,
+            isPassword: true,
+            textInputAction: TextInputAction.done,
+            autofillHints: const [AutofillHints.newPassword],
+            showValidation: true,
+            isValid:
+                _confirmPasswordController.text.isNotEmpty &&
+                _confirmPasswordController.text == _passwordController.text,
+            errorText: _confirmPasswordController.text.isNotEmpty &&
+                    _confirmPasswordController.text != _passwordController.text
+                ? l10n.translate('passwords_dont_match')
+                : null,
+            onChanged: (_) => setState(() {}),
+            onFieldSubmitted: (_) => _nextStep(),
+          ),
         const SizedBox(height: 24),
         Row(
           children: [
@@ -605,8 +649,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           width: double.infinity,
           child: OutlinedButton.icon(
             onPressed: _isLoading ? null : _handleGoogleSignIn,
-            icon: Image.network(
-              'https://img.icons8.com/color/48/000000/google-logo.png',
+            icon: Image.asset(
+              'assets/images/google_logo.png',
               height: 20,
               errorBuilder: (context, error, stackTrace) =>
                   const Icon(Icons.account_circle_outlined, color: Colors.blue),
@@ -627,6 +671,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           ),
         ),
       ],
+    ),
     ).animate().fadeIn();
   }
 

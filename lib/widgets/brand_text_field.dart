@@ -18,6 +18,10 @@ class BrandTextField extends StatefulWidget {
   final String? errorText;
 
   final ValueChanged<String>? onChanged;
+  final Iterable<String>? autofillHints;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onFieldSubmitted;
+  final FocusNode? focusNode;
 
   const BrandTextField({
     super.key,
@@ -32,6 +36,10 @@ class BrandTextField extends StatefulWidget {
     this.isValid = false,
     this.errorText,
     this.onChanged,
+    this.autofillHints,
+    this.textInputAction,
+    this.onFieldSubmitted,
+    this.focusNode,
   });
 
   @override
@@ -40,24 +48,41 @@ class BrandTextField extends StatefulWidget {
 
 class _BrandTextFieldState extends State<BrandTextField> {
   bool _obscureText = true;
-  final FocusNode _focusNode = FocusNode();
+  late FocusNode _focusNode;
   bool _isFocused = false;
 
   @override
   void initState() {
     super.initState();
     _obscureText = widget.isPassword;
-    _focusNode.addListener(() {
-      setState(() {
-        _isFocused = _focusNode.hasFocus;
-      });
-      if (_isFocused) HapticFeedback.selectionClick();
+    _focusNode = widget.focusNode ?? FocusNode();
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  @override
+  void didUpdateWidget(BrandTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.focusNode != oldWidget.focusNode) {
+      oldWidget.focusNode?.removeListener(_onFocusChange);
+      _focusNode = widget.focusNode ?? FocusNode();
+      _focusNode.addListener(_onFocusChange);
+    }
+  }
+
+  void _onFocusChange() {
+    setState(() {
+      _isFocused = _focusNode.hasFocus;
     });
+    if (_isFocused) HapticFeedback.selectionClick();
   }
 
   @override
   void dispose() {
-    _focusNode.dispose();
+    if (widget.focusNode == null) {
+      _focusNode.dispose();
+    } else {
+      _focusNode.removeListener(_onFocusChange);
+    }
     super.dispose();
   }
 
@@ -187,6 +212,9 @@ class _BrandTextFieldState extends State<BrandTextField> {
             ),
             onChanged: widget.onChanged,
             validator: widget.validator,
+            onFieldSubmitted: widget.onFieldSubmitted,
+            textInputAction: widget.textInputAction,
+            autofillHints: widget.autofillHints,
           ),
         ),
         if (hasError)
