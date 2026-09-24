@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:csv/csv.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../models/dictionary_entry.dart';
 import '../services/firebase_service.dart';
 import '../services/haptic_service.dart';
+import '../utils/file_downloader.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/brand_search_bar.dart';
@@ -58,6 +60,11 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.download_rounded, color: AppColors.gold500),
+            tooltip: 'Export CSV',
+            onPressed: () => _exportDictionary(wordsAsync.value ?? []),
+          ),
           IconButton(
             icon: const Icon(Icons.upload_file_rounded, color: AppColors.gold500),
             tooltip: 'Import CSV',
@@ -283,6 +290,52 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => const ImportDictionaryModal(),
     );
+  }
+
+  Future<void> _exportDictionary(List<DictionaryEntry> words) async {
+    HapticService.light();
+    if (words.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No dictionary entries available to export.')),
+      );
+      return;
+    }
+
+    try {
+      final rows = [
+        ['term', 'translation_en', 'translation_fil', 'pos', 'dialect', 'definition'],
+        ...words.map((w) => [
+          w.indigenousWord,
+          w.translation,
+          w.translationFilipino,
+          w.partOfSpeech.name,
+          w.language,
+          w.usageContext,
+        ]),
+      ];
+
+      final csvData = const CsvEncoder().convert(rows);
+      final fileName = 'lumad_lingua_dictionary_${_selectedDialect.toLowerCase()}_${DateTime.now().millisecondsSinceEpoch}.csv';
+      final path = await FileDownloader.downloadCsv(csvData, fileName);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Exported ${words.length} entries ($path)'),
+            backgroundColor: AppColors.semanticGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to export dictionary: $e'),
+            backgroundColor: AppColors.semanticRed,
+          ),
+        );
+      }
+    }
   }
 }
 

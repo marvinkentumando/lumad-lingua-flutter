@@ -64,50 +64,8 @@ class _EducatorUnitManagementScreenState
                   onReorderStart: (index) {
                     HapticService.selection();
                   },
-                  onReorderItem: (oldIndex, newIndex) async {
-                    HapticService.medium();
-                    if (oldIndex == newIndex) return;
-
-                    final movedLesson = filteredLessons.removeAt(oldIndex);
-                    filteredLessons.insert(newIndex, movedLesson);
-
-                    // Update unit numbers in Firestore
-                    try {
-                      final batch = ref
-                          .read(firebaseServiceProvider)
-                          .db
-                          .batch();
-                      for (int i = 0; i < filteredLessons.length; i++) {
-                        final lesson = filteredLessons[i];
-                        if (lesson.unitNumber != i + 1) {
-                          batch.update(
-                            ref
-                                .read(firebaseServiceProvider)
-                                .db
-                                .collection('lessons')
-                                .doc(lesson.id),
-                            {'unitNumber': i + 1},
-                          );
-                        }
-                      }
-                      await batch.commit();
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Units reordered successfully'),
-                          ),
-                        );
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Error reordering units: $e'),
-                            backgroundColor: AppColors.semanticRed,
-                          ),
-                        );
-                      }
-                    }
+                  onReorder: (int oldIndex, int newIndex) {
+                    _onReorderUnits(oldIndex, newIndex, filteredLessons);
                   },
                   itemBuilder: (context, index) {
                     final lesson = filteredLessons[index];
@@ -247,6 +205,47 @@ class _EducatorUnitManagementScreenState
         ],
       ),
     );
+  }
+
+  Future<void> _onReorderUnits(int oldIndex, int newIndex, List<Lesson> filteredLessons) async {
+    HapticService.medium();
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+    if (oldIndex == newIndex) return;
+
+    final movedLesson = filteredLessons.removeAt(oldIndex);
+    filteredLessons.insert(newIndex, movedLesson);
+
+    try {
+      final batch = ref.read(firebaseServiceProvider).db.batch();
+      for (int i = 0; i < filteredLessons.length; i++) {
+        final lesson = filteredLessons[i];
+        if (lesson.unitNumber != i + 1) {
+          batch.update(
+            ref.read(firebaseServiceProvider).db.collection('lessons').doc(lesson.id),
+            {'unitNumber': i + 1},
+          );
+        }
+      }
+      await batch.commit();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Units reordered successfully'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error reordering units: $e'),
+            backgroundColor: AppColors.semanticRed,
+          ),
+        );
+      }
+    }
   }
 }
 
