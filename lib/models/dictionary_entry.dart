@@ -82,7 +82,7 @@ class DictionaryEntry {
     this.usageExampleNative,
     this.usageExampleTranslation,
     this.audioUrl,
-    this.status = ValidationStatus.pending,
+    this.status = ValidationStatus.approved,
     this.validatorRole,
     this.validatorId,
     this.validatorFeedback,
@@ -146,9 +146,8 @@ class DictionaryEntry {
       status: ValidationStatus.values.firstWhere(
         (e) =>
             e.name ==
-            (data['status'] ??
-                (data['isValidated'] == true ? 'approved' : 'pending')),
-        orElse: () => ValidationStatus.pending,
+            (data['status'] ?? 'approved'),
+        orElse: () => ValidationStatus.approved,
       ),
       validatorRole: data['validatorRole'],
       validatorId: data['validatorId'],

@@ -136,9 +136,10 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
         ).map((e) => e.id).toList();
     }
 
+    if (idsToSelect.isEmpty) return;
+
     setState(() {
-      // If all are already selected, deselect all. Otherwise, select all filtered items.
-      bool allSelected = idsToSelect.isNotEmpty && idsToSelect.every((id) => _selectedIds.contains(id));
+      bool allSelected = idsToSelect.every((id) => _selectedIds.contains(id));
       if (allSelected) {
         for (var id in idsToSelect) {
           _selectedIds.remove(id);
@@ -171,11 +172,6 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
             tooltip: 'Select All Filtered',
           ),
           IconButton(
-            icon: const Icon(Icons.check_circle_outline_rounded, color: AppColors.forest900),
-            onPressed: _handleBulkApprove,
-            tooltip: 'Bulk Approve',
-          ),
-          IconButton(
             icon: const Icon(Icons.delete_outline_rounded, color: AppColors.semanticRed),
             onPressed: _handleBulkDelete,
             tooltip: 'Bulk Delete',
@@ -190,52 +186,6 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
         ],
       ),
     );
-  }
-
-  void _handleBulkApprove() async {
-    final validatorId = ref.read(authServiceProvider).currentUser?.uid ?? 'admin';
-    final validatorRole = 'Administrator';
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        title: Text('Confirm Bulk Approval', style: TextStyle(color: AppColors.gold500)),
-        content: Text('Are you sure you want to approve ${_selectedIds.length} items? This will make them live on the platform.',
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticGreen),
-            child: const Text('APPROVE ALL', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    if (_tabController.index == 0) {
-      await ref.read(firebaseServiceProvider).bulkApproveWords(_selectedIds.toList(), validatorId, validatorRole);
-    } else if (_tabController.index == 1) {
-      await ref.read(firebaseServiceProvider).bulkApproveVoiceSubmissions(_selectedIds.toList(), validatorId, validatorRole);
-    } else if (_tabController.index == 2) {
-      await ref.read(firebaseServiceProvider).bulkApproveLessons(_selectedIds.toList(), validatorId, validatorRole);
-    }
-    
-    if (!mounted) return;
-
-    setState(() {
-      _selectedIds.clear();
-      _isSelectionMode = false;
-    });
-    
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bulk approval successful'), backgroundColor: AppColors.semanticGreen),
-      );
-    }
   }
 
   void _handleBulkDelete() {
@@ -302,7 +252,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                   ),
                 ),
                 Text(
-                  'Content Moderation',
+                  'Content Management',
                   style: TextStyle(
                     color: isDark ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3) : AppColors.creamText3,
                     fontSize: 11,
@@ -351,7 +301,15 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
         borderRadius: BorderRadius.circular(16),
       ),
       child: TabBar(
-        onTap: (_) => HapticService.light(),
+        onTap: (_) {
+          HapticService.light();
+          if (_isSelectionMode) {
+            setState(() {
+              _selectedIds.clear();
+              _isSelectionMode = false;
+            });
+          }
+        },
         controller: _tabController,
         indicator: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
@@ -581,9 +539,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
       audioUrl: data.audioUrl,
       onHistory: () => _showVersionHistoryModal(data.id, 'voice_submissions', data.title),
       onDelete: () => _showDeletePasswordDialog(data.title, () {
-         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Recording deletion requested'))
-        );
+        ref.read(firebaseServiceProvider).bulkDeleteVoiceSubmissions([data.id]);
       }),
     );
   }
@@ -597,198 +553,11 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
       title: data.title,
       subtitle: '${data.language} · ${data.category}',
       author: 'Level ${data.level} · Unit ${data.unitNumber}',
-      status: data.status.toString().split('.').last.toLowerCase(),
+      status: data.status,
       onHistory: () => _showVersionHistoryModal(data.id, 'lessons', data.title),
       onDelete: () => _showDeletePasswordDialog(data.title, () {
         ref.read(firebaseServiceProvider).deleteLesson(data.id);
       }),
-      reviewActions: data.status == 'PENDING_REVIEW'
-          ? [
-              _actionIcon(
-                Icons.check_circle_outline_rounded,
-                () => _approveLesson(data),
-                color: AppColors.semanticGreen,
-              ),
-              _actionIcon(
-                Icons.flag_outlined,
-                () => _showFlagLessonDialog(data),
-                color: AppColors.terracotta,
-              ),
-              _reviewAction(
-                label: 'REJECT',
-                icon: Icons.cancel_outlined,
-                onTap: () => _showRejectLessonDialog(data),
-                color: AppColors.semanticRed,
-              ),
-            ]
-          : null,
-    );
-  }
-
-  String get _reviewerId =>
-      ref.read(authServiceProvider).currentUser?.uid ?? 'admin';
-
-  Future<void> _approveLesson(Lesson lesson) async {
-    try {
-      await ref
-          .read(firebaseServiceProvider)
-          .approveLesson(lesson.id, _reviewerId, 'Administrator');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Lesson approved.'),
-            backgroundColor: AppColors.semanticGreen,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Approval failed: $e'),
-            backgroundColor: AppColors.semanticRed,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _showFlagLessonDialog(Lesson lesson) async {
-    final controller = TextEditingController();
-    final feedback = await _showLessonFeedbackDialog(
-      title: 'Request Changes',
-      prompt: 'Explain the changes needed before this lesson can be published.',
-      actionLabel: 'SEND FEEDBACK',
-      actionColor: AppColors.terracotta,
-      controller: controller,
-    );
-    controller.dispose();
-    if (feedback == null) return;
-
-    try {
-      await ref
-          .read(firebaseServiceProvider)
-          .flagLesson(lesson.id, _reviewerId, 'Administrator', feedback);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Request failed: $e'),
-            backgroundColor: AppColors.semanticRed,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _showRejectLessonDialog(Lesson lesson) async {
-    final controller = TextEditingController();
-    final feedback = await _showLessonFeedbackDialog(
-      title: 'Reject Lesson?',
-      prompt: 'This lesson will not be published. Rejection feedback is required.',
-      actionLabel: 'REJECT',
-      actionColor: AppColors.semanticRed,
-      controller: controller,
-      requireFeedback: true,
-    );
-    controller.dispose();
-    if (feedback == null) return;
-
-    try {
-      await ref
-          .read(firebaseServiceProvider)
-          .rejectLesson(lesson.id, _reviewerId, 'Administrator', feedback);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Lesson rejected.'),
-            backgroundColor: AppColors.semanticRed,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Rejection failed: $e'),
-            backgroundColor: AppColors.semanticRed,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<String?> _showLessonFeedbackDialog({
-    required String title,
-    required String prompt,
-    required String actionLabel,
-    required Color actionColor,
-    required TextEditingController controller,
-    bool requireFeedback = false,
-  }) async {
-    var showFeedbackError = false;
-    return showDialog<String>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          title: Text(
-            title,
-            style: AppTypography.h3.copyWith(color: actionColor),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                prompt,
-                style: AppTypography.body.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: controller,
-                autofocus: true,
-                minLines: 3,
-                maxLines: 5,
-                onChanged: (_) {
-                  if (showFeedbackError) {
-                    setDialogState(() => showFeedbackError = false);
-                  }
-                },
-                decoration: InputDecoration(
-                  hintText: 'Feedback for the contributor...',
-                  errorText: showFeedbackError
-                      ? 'Please provide rejection feedback.'
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('CANCEL'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final feedback = controller.text.trim();
-                if (requireFeedback && feedback.isEmpty) {
-                  setDialogState(() => showFeedbackError = true);
-                  return;
-                }
-                Navigator.pop(dialogContext, feedback);
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: actionColor),
-              child: Text(actionLabel),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -820,13 +589,11 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
     required VoidCallback onDelete,
     VoidCallback? onHistory,
     String? audioUrl,
-    List<Widget>? reviewActions,
   }) {
     final isSelected = _selectedIds.contains(id);
-    final statusStyle = status == 'validated' || status == 'published' || status == 'approved'
+    final statusLower = status.toLowerCase();
+    final statusStyle = (statusLower == 'validated' || statusLower == 'published' || statusLower == 'approved' || statusLower == 'active')
         ? BrandBadgeStyle.green
-        : status == 'rejected'
-        ? BrandBadgeStyle.dark
         : BrandBadgeStyle.gold;
 
     return Padding(
@@ -926,7 +693,6 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                       spacing: 8,
                       alignment: WrapAlignment.end,
                       children: [
-                        if (reviewActions != null) ...reviewActions,
                         if (onHistory != null)
                           _actionIcon(
                             Icons.history_rounded,
@@ -1159,30 +925,6 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
     );
   }
 
-  Widget _reviewAction({
-    required String label,
-    required IconData icon,
-    required VoidCallback onTap,
-    required Color color,
-  }) {
-    return TextButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon, color: color, size: 18),
-      label: Text(
-        label,
-        style: AppTypography.label.copyWith(
-          color: color,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-      style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
-    );
-  }
-
   void _showSystemActionsModal() {
     showModalBottomSheet(
       context: context,
@@ -1287,41 +1029,6 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
                       messenger.showSnackBar(
                         const SnackBar(
                           content: Text('Scenarios seeded successfully'),
-                          backgroundColor: AppColors.semanticGreen,
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-              Divider(color: isDark ? Colors.white10 : Colors.black12),
-              _systemAction(
-                icon: Icons.warning_amber_outlined,
-                color: AppColors.semanticRed,
-                title: 'Reset Platform',
-                subtitle: 'Danger: wipe all pending submissions',
-                onTap: () {
-                  Navigator.pop(context);
-                  _showConfirmAction(
-                    'Reset Platform',
-                    'This will permanently delete ALL pending submissions.',
-                    () async {
-                      final words = await ref.read(allWordsProvider.future);
-                      final pendingWords = words.where((w) => w.status == ValidationStatus.pending).map((w) => w.id).toList();
-                      if (pendingWords.isNotEmpty) {
-                        await ref.read(firebaseServiceProvider).bulkDeleteWords(pendingWords);
-                      }
-
-                      final recordings = await ref.read(allVoiceSubmissionsProvider.future);
-                      final pendingRecs = recordings.where((r) => r.status == VoiceStatus.pending).map((r) => r.id).toList();
-                      if (pendingRecs.isNotEmpty) {
-                        await ref.read(firebaseServiceProvider).bulkDeleteVoiceSubmissions(pendingRecs);
-                      }
-
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Platform reset successful'),
                           backgroundColor: AppColors.semanticGreen,
                         ),
                       );
@@ -1511,6 +1218,15 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
         'nodes': e.nodes.length.toString(),
         'reward': e.baseReward.toString(),
       }).toList();
+    } else if (_tabController.index == 4) {
+      final logs = await ref.read(firebaseServiceProvider).getAuditTrail().first;
+      data = logs.map((e) => {
+        'action': e.action,
+        'target': e.targetName,
+        'actor': e.actorName,
+        'type': e.targetType,
+        'time': e.timeAgo,
+      }).toList();
     }
 
     if (data.isEmpty) {
@@ -1547,4 +1263,3 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
     }
   }
 }
-

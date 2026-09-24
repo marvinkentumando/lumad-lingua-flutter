@@ -44,7 +44,7 @@ class VoiceSubmission {
     this.barangay,
     this.duration,
     this.priority = false,
-    this.status = VoiceStatus.pending,
+    this.status = VoiceStatus.approved,
     this.municipalityId,
     this.recordingId,
     this.validatorId,
@@ -111,10 +111,10 @@ class VoiceSubmission {
     if (value is String) {
       return VoiceStatus.values.firstWhere(
         (e) => e.name == value,
-        orElse: () => VoiceStatus.pending,
+        orElse: () => VoiceStatus.approved,
       );
     }
-    return VoiceStatus.pending;
+    return VoiceStatus.approved;
   }
 
   static DateTime? _parseTimestamp(dynamic value) {
