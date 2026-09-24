@@ -6,6 +6,7 @@ import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/brand_background.dart';
+import '../widgets/brand_text_field.dart';
 import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -853,29 +854,11 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: TextField(
+            child: BrandTextField(
               controller: _searchController,
+              labelText: 'Search for a word...',
+              prefixIcon: Icons.search_rounded,
               onChanged: _onSearchChanged,
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-              decoration: InputDecoration(
-                hintText: 'Search for a word...',
-                hintStyle: TextStyle(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurfaceVariant
-                      .withValues(alpha: 0.5),
-                ),
-                prefixIcon: const Icon(Icons.search_rounded),
-                filled: true,
-                fillColor: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.05),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-              ),
             ),
           ),
           const SizedBox(height: 16),
