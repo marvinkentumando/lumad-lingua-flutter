@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/user_preferences_provider.dart';
 
@@ -42,12 +43,53 @@ class AppLocalization {
       'village_code_hint': 'Enter a code from your educator to join their specific community village.',
       'fill_all_fields': 'Please fill all fields correctly',
       'complete_fields_terms': 'Please complete all fields and accept the Terms',
+      'native_language': 'Native Language',
+      'select_native_language': 'Select Native Language',
       'valid_email': 'Sacred name (email) must be valid',
       'password_length': 'Ancient chant (password) must be at least 6 notes',
       'passwords_dont_match': 'The chants do not match',
       'tribe_name_length': 'Tribe name must be at least 3 characters',
       'invalid_email_format': 'Invalid email format',
+      'password_strength': 'Password Strength',
+      'password_strength_weak': 'Weak',
+      'password_strength_fair': 'Fair',
+      'password_strength_strong': 'Strong',
+      'req_min_8_chars': 'At least 8 characters',
+      'req_uppercase': 'Uppercase letter (A-Z)',
+      'req_lowercase': 'Lowercase letter (a-z)',
+      'req_number': 'Number (0-9)',
+      'req_special_char': 'Special character',
+      'password_not_strong': 'Password does not meet strength requirements',
+      'verify_your_email': 'Verify Your Email',
+      'verification_instructions': 'We have sent a verification link to your email address. Please check your inbox or spam folder and click the link to verify.',
+      'verification_email_sent': 'Verification email sent! Please check your inbox and spam folder.',
+      'ive_verified': "I've Verified My Email",
+      'checking': 'Checking...',
+      'resend_verification_email': 'Resend Verification Email',
+      'resend_in_seconds': 'Resend in {seconds}s',
+      'email_verified_success': 'Email verified successfully!',
+      'email_not_verified_yet': 'Email is not verified yet. Please check your email and click the verification link.',
+      'sign_out_or_change_account': 'Sign Out / Change Account',
+      'back_to_sign_in': 'Back to Sign In',
+      'check_email_instructions': 'Please check your inbox and spam folder for instructions to reset your password.',
       'password_too_short': 'Password too short',
+      'forgot_password': 'Forgot Password?',
+      'reset_password_title': 'Reset Password',
+      'reset_password_desc': 'Enter your registered email address and we will send you a link to reset your password.',
+      'send_reset_link': 'Send Reset Link',
+      'cancel': 'Cancel',
+      'reset_email_sent': 'Password reset link has been sent to your email.',
+      'error_user_not_found': 'No account found with this email address.',
+      'error_wrong_password': 'Incorrect password. Please try again.',
+      'error_invalid_credential': 'Invalid email or password. Please check your credentials.',
+      'error_email_already_in_use': 'An account already exists with this email address.',
+      'error_invalid_email': 'Please enter a valid email address.',
+      'error_user_disabled': 'This account has been disabled. Please contact support.',
+      'error_too_many_requests': 'Too many failed attempts. Please try again later.',
+      'error_network_failed': 'Network connection failed. Please check your internet connection.',
+      'error_weak_password': 'Password is too weak. Please choose a stronger password.',
+      'error_operation_not_allowed': 'This sign-in method is currently disabled.',
+      'error_auth_generic': 'Authentication failed. Please try again.',
       'connection_lumad': 'What is your connection to the Lumad languages?',
       'heritage_learner': 'I am a heritage learner (it is my family language)',
       'l2_learner': 'I am an L2 learner (learning it as a second language)',
@@ -532,12 +574,53 @@ class AppLocalization {
       'village_code_hint': 'Ilagay ang code mula sa iyong educator para makasali sa kanilang community village.',
       'fill_all_fields': 'Pakipunan nang tama ang lahat ng field',
       'complete_fields_terms': 'Pakikumpleto ang lahat ng field at tanggapin ang Terms',
+      'native_language': 'Katutubong Wika',
+      'select_native_language': 'Pumili ng Katutubong Wika',
       'valid_email': 'Dapat valid ang email',
       'password_length': 'Dapat hindi bababa sa 6 na character ang password',
       'passwords_dont_match': 'Hindi magkatugma ang mga password',
       'tribe_name_length': 'Dapat hindi bababa sa 3 character ang pangalan ng tribe',
       'invalid_email_format': 'Hindi valid ang format ng email',
+      'password_strength': 'Lakas ng Password',
+      'password_strength_weak': 'Mahina',
+      'password_strength_fair': 'Katamtaman',
+      'password_strength_strong': 'Malakas',
+      'req_min_8_chars': 'Hindi bababa sa 8 character',
+      'req_uppercase': 'May malaking titik (A-Z)',
+      'req_lowercase': 'May maliit na titik (a-z)',
+      'req_number': 'May numero (0-9)',
+      'req_special_char': 'May natatanging simbolo',
+      'password_not_strong': 'Hindi naaabot ng password ang pamantayan sa lakas',
+      'verify_your_email': 'I-verify ang Iyong Email',
+      'verification_instructions': 'Nagpadala kami ng verification link sa iyong email address. Pakitingnan ang iyong inbox o spam folder at i-click ang link.',
+      'verification_email_sent': 'Naipadala na ang verification email! Pakitingnan ang iyong inbox at spam folder.',
+      'ive_verified': 'Na-verify Ko Na Ang Email Ko',
+      'checking': 'Sinusuri...',
+      'resend_verification_email': 'Ipadala Muli Ang Verification Email',
+      'resend_in_seconds': 'Subukan muli sa {seconds}s',
+      'email_verified_success': 'Matagumpay na na-verify ang email!',
+      'email_not_verified_yet': 'Hindi pa na-verify ang email. Pakisuri ang iyong email at i-click ang link.',
+      'sign_out_or_change_account': 'Mag-sign Out / Magpalit ng Account',
+      'back_to_sign_in': 'Bumalik sa Sign In',
+      'check_email_instructions': 'Pakitingnan ang iyong inbox at spam folder para sa mga tagubilin sa pag-reset ng password.',
       'password_too_short': 'Masyadong maikli ang password',
+      'forgot_password': 'Nakalimutan ang Password?',
+      'reset_password_title': 'I-reset ang Password',
+      'reset_password_desc': 'Ilagay ang iyong rehistradong email at ipapadala namin ang link upang i-reset ang iyong password.',
+      'send_reset_link': 'Ipadala ang Link',
+      'cancel': 'Kanselahin',
+      'reset_email_sent': 'Naipadala na sa iyong email ang link sa pag-reset ng password.',
+      'error_user_not_found': 'Walang nahanap na account gamit ang email na ito.',
+      'error_wrong_password': 'Maling password. Pakisubukan ulit.',
+      'error_invalid_credential': 'Hindi valid ang email o password. Pakisuri ang iyong impormasyon.',
+      'error_email_already_in_use': 'May umiiral nang account gamit ang email address na ito.',
+      'error_invalid_email': 'Maglagay ng valid na email address.',
+      'error_user_disabled': 'Na-disable ang account na ito. Makipag-ugnayan sa suporta.',
+      'error_too_many_requests': 'Sobrang daming nabigong pagsubok. Pakisubukan ulit mamaya.',
+      'error_network_failed': 'Nawalan ng koneksyon sa internet. Pakisuri ang iyong koneksyon.',
+      'error_weak_password': 'Masyadong mahina ang password. Pumili ng mas matatag na password.',
+      'error_operation_not_allowed': 'Kasalukuyang naka-disable ang paraan ng pag-sign in na ito.',
+      'error_auth_generic': 'Nabigo ang pag-authenticate. Pakisubukan ulit.',
       'connection_lumad': 'Ano ang koneksyon mo sa mga wikang Lumad?',
       'heritage_learner': 'Natututo ako bilang heritage learner (wika ito ng aking pamilya)',
       'l2_learner': 'L2 learner ako (natututuhan ko ito bilang pangalawang wika)',
@@ -1010,12 +1093,31 @@ class AppLocalization {
       'village_code_hint': 'Ibutang ang code nga gihatag sa imong educator aron makaapil sa ilang community village.',
       'fill_all_fields': 'Palihog sulati og sakto ang tanang field',
       'complete_fields_terms': 'Palihog kompletoha ang tanang field ug dawata ang Terms',
+      'native_language': 'Katutubong Pinulongan',
+      'select_native_language': 'Pilia ang Katutubong Pinulongan',
       'valid_email': 'Kinahanglan valid ang email',
       'password_length': 'Kinahanglan labing menos 6 ka character ang password',
       'passwords_dont_match': 'Dili parehas ang mga password',
       'tribe_name_length': 'Kinahanglan labing menos 3 ka character ang ngalan sa tribe',
       'invalid_email_format': 'Dili valid ang format sa email',
       'password_too_short': 'Mubo ra kaayo ang password',
+      'forgot_password': 'Nakalimot sa Password?',
+      'reset_password_title': 'I-reset ang Password',
+      'reset_password_desc': 'Ibutang ang imong nakarehistro nga email ug ipadala namo ang link aron ma-reset ang imong password.',
+      'send_reset_link': 'Ipadala ang Link',
+      'cancel': 'Kanselahon',
+      'reset_email_sent': 'Naipadala na sa imong email ang link sa pag-reset sa password.',
+      'error_user_not_found': 'Walay nakit-an nga account gamit kini nga email.',
+      'error_wrong_password': 'Sayop nga password. Palihug sulayi pag-usab.',
+      'error_invalid_credential': 'Dili balido nga email o password. Palihug tan-awa ang imong impormasyon.',
+      'error_email_already_in_use': 'Naa nay nag-gamit sa kini nga email address.',
+      'error_invalid_email': 'Palihug pagbutang og balido nga email address.',
+      'error_user_disabled': 'Gi-disable kini nga account. Palihug pakigsulti sa suporta.',
+      'error_too_many_requests': 'Daghan ra kaayong nasayop nga sulay. Palihug sulayi pag-usab unya.',
+      'error_network_failed': 'Nawala ang koneksyon sa internet. Palihug tan-awa ang imong internet.',
+      'error_weak_password': 'Mabuak ra o huyang ra kaayo ang password. Pagpili og mas kusog nga password.',
+      'error_operation_not_allowed': 'Gidili o naka-disable kini nga pamaagi sa pag-sign in.',
+      'error_auth_generic': 'Napasagdan o napakyas ang pag-authenticate. Palihug sulayi pag-usab.',
       'connection_lumad': 'Unsa ang imong koneksyon sa mga pinulongang Lumad?',
       'heritage_learner': 'Heritage learner ko (pinulongan kini sa akong pamilya)',
       'l2_learner': 'L2 learner ko (ikaduhang pinulongan nako kini nga makat-onan)',
@@ -1463,6 +1565,50 @@ class AppLocalization {
       });
     }
     return value;
+  }
+
+  String getAuthErrorMessage(dynamic error) {
+    if (error is FirebaseAuthException) {
+      switch (error.code) {
+        case 'user-not-found':
+          return translate('error_user_not_found');
+        case 'wrong-password':
+          return translate('error_wrong_password');
+        case 'invalid-credential':
+        case 'invalid-login-credentials':
+          return translate('error_invalid_credential');
+        case 'email-already-in-use':
+          return translate('error_email_already_in_use');
+        case 'invalid-email':
+          return translate('error_invalid_email');
+        case 'user-disabled':
+          return translate('error_user_disabled');
+        case 'too-many-requests':
+          return translate('error_too_many_requests');
+        case 'network-request-failed':
+          return translate('error_network_failed');
+        case 'weak-password':
+          return translate('error_weak_password');
+        case 'operation-not-allowed':
+          return translate('error_operation_not_allowed');
+        default:
+          if (error.message != null && error.message!.isNotEmpty) {
+            return error.message!;
+          }
+          return translate('error_auth_generic');
+      }
+    }
+
+    if (error is Exception) {
+      final msg = error.toString().replaceAll('Exception: ', '');
+      if (msg.contains('network-request-failed') || msg.contains('network_error')) {
+        return translate('error_network_failed');
+      }
+      return msg.isEmpty ? translate('error_auth_generic') : msg;
+    }
+
+    final message = error.toString();
+    return message.isEmpty ? translate('error_auth_generic') : message;
   }
 }
 

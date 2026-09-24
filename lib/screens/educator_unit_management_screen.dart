@@ -64,9 +64,8 @@ class _EducatorUnitManagementScreenState
                   onReorderStart: (index) {
                     HapticService.selection();
                   },
-                  onReorder: (oldIndex, newIndex) async {
+                  onReorderItem: (oldIndex, newIndex) async {
                     HapticService.medium();
-                    if (newIndex > oldIndex) newIndex--;
                     if (oldIndex == newIndex) return;
 
                     final movedLesson = filteredLessons.removeAt(oldIndex);

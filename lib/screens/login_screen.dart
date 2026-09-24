@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -23,17 +24,74 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _emailFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
+
+  bool _emailTouched = false;
+  bool _passwordTouched = false;
+  bool _submitted = false;
+
   bool _isLoading = false;
   String? _errorMessage;
+
+  static final _emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+
+  @override
+  void initState() {
+    super.initState();
+    _emailFocusNode.addListener(() {
+      if (!_emailFocusNode.hasFocus && !_emailTouched) {
+        setState(() => _emailTouched = true);
+      }
+    });
+    _passwordFocusNode.addListener(() {
+      if (!_passwordFocusNode.hasFocus && !_passwordTouched) {
+        setState(() => _passwordTouched = true);
+      }
+    });
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
+  String? _getEmailError(AppLocalization l10n) {
+    final text = _emailController.text.trim();
+    if ((_emailTouched || _submitted) && text.isNotEmpty) {
+      if (!_emailRegex.hasMatch(text)) {
+        return l10n.translate('invalid_email_format');
+      }
+    } else if (_submitted && text.isEmpty) {
+      return l10n.translate('invalid_email_format');
+    }
+    return null;
+  }
+
+  String? _getPasswordError(AppLocalization l10n) {
+    final text = _passwordController.text.trim();
+    if ((_passwordTouched || _submitted) && text.isNotEmpty) {
+      if (text.length < 6) {
+        return l10n.translate('password_too_short');
+      }
+    } else if (_submitted && text.isEmpty) {
+      return l10n.translate('password_too_short');
+    }
+    return null;
+  }
+
   Future<void> _handleLogin() async {
+    setState(() => _submitted = true);
+
+    final l10n = ref.read(localizationProvider);
+    if (_getEmailError(l10n) != null || _getPasswordError(l10n) != null) {
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -50,13 +108,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           );
       if (mounted) {
         setState(() => _isLoading = false);
+        TextInput.finishAutofillContext();
         context.go('/');
       }
     } catch (e) {
       if (mounted) {
+        final l10n = ref.read(localizationProvider);
         setState(() {
           _isLoading = false;
-          _errorMessage = e.toString().replaceAll('Exception: ', '');
+          _errorMessage = l10n.getAuthErrorMessage(e);
         });
       }
     }
@@ -77,9 +137,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final l10n = ref.read(localizationProvider);
         setState(() {
           _isLoading = false;
-          _errorMessage = e.toString().replaceAll('Exception: ', '');
+          _errorMessage = l10n.getAuthErrorMessage(e);
         });
       }
     }
@@ -145,34 +206,60 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       const SizedBox(height: 32),
                       BrandCard(
                         theme: BrandCardTheme.cream,
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              if (_errorMessage != null) _buildError(),
-                              BrandTextField(
-                                controller: _emailController,
-                                labelText: l10n.translate('email_address'),
-                                prefixIcon: Icons.email_outlined,
-                                keyboardType: TextInputType.emailAddress,
-                                errorText: _emailController.text.isNotEmpty && !_emailController.text.contains('@')
-                                    ? l10n.translate('invalid_email_format')
-                                    : null,
-                                onChanged: (_) => setState(() {}),
+                        child: AutofillGroup(
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (_errorMessage != null) _buildError(),
+                                BrandTextField(
+                                  controller: _emailController,
+                                  focusNode: _emailFocusNode,
+                                  labelText: l10n.translate('email_address'),
+                                  prefixIcon: Icons.email_outlined,
+                                  keyboardType: TextInputType.emailAddress,
+                                  textInputAction: TextInputAction.next,
+                                  autofillHints: const [AutofillHints.email, AutofillHints.username],
+                                  errorText: _getEmailError(l10n),
+                                  onChanged: (_) => setState(() {}),
+                                ),
+                                const SizedBox(height: 16),
+                                BrandTextField(
+                                  controller: _passwordController,
+                                  focusNode: _passwordFocusNode,
+                                  labelText: l10n.translate('password'),
+                                  prefixIcon: Icons.lock_outline,
+                                  isPassword: true,
+                                  textInputAction: TextInputAction.done,
+                                  autofillHints: const [AutofillHints.password],
+                                  errorText: _getPasswordError(l10n),
+                                  onChanged: (_) => setState(() {}),
+                                  onFieldSubmitted: (_) {
+                                    if (!_isLoading) _handleLogin();
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: _isLoading ? null : () => _showForgotPasswordDialog(context, l10n),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: Text(
+                                    l10n.translate('forgot_password'),
+                                    style: AppTypography.label.copyWith(
+                                      color: AppColors.gold500,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
                               ),
                               const SizedBox(height: 16),
-                              BrandTextField(
-                                controller: _passwordController,
-                                labelText: l10n.translate('password'),
-                                prefixIcon: Icons.lock_outline,
-                                isPassword: true,
-                                errorText: _passwordController.text.isNotEmpty && _passwordController.text.length < 6
-                                    ? l10n.translate('password_too_short')
-                                    : null,
-                                onChanged: (_) => setState(() {}),
-                              ),
-                              const SizedBox(height: 24),
                               BrandButton(
                                 text: _isLoading ? l10n.translate('signing_in') : l10n.translate('sign_in'),
                                 type: BrandButtonType.primary,
@@ -197,6 +284,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ],
                           ),
                         ),
+                      ),
                       ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1),
                       const SizedBox(height: 24),
                       _buildFooter(isDark, l10n),
@@ -232,8 +320,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget _buildGoogleButton(AppLocalization l10n) {
     return OutlinedButton.icon(
       onPressed: _isLoading ? null : _handleGoogleSignIn,
-      icon: Image.network(
-        'https://img.icons8.com/color/48/000000/google-logo.png',
+      icon: Image.asset(
+        'assets/images/google_logo.png',
         height: 20,
         errorBuilder: (context, error, stackTrace) => const Icon(Icons.account_circle_outlined, color: Colors.blue),
       ),
@@ -278,6 +366,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
       ],
     ).animate().fadeIn(delay: 600.ms);
+  }
+
+  void _showForgotPasswordDialog(BuildContext context, AppLocalization l10n) {
+    HapticService.selection();
+    context.push('/forgot-password');
   }
 }
 

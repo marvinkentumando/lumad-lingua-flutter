@@ -55,6 +55,8 @@ import '../screens/admin_dictionary_screen.dart';
 import '../screens/admin/algorithm_selection_screen.dart';
 import '../screens/admin/admin_assessments_screen.dart';
 import '../screens/daily_challenge_session_screen.dart';
+import '../screens/forgot_password_screen.dart';
+import '../screens/email_verification_screen.dart';
 import '../models/artifact.dart';
 import '../models/daily_challenge.dart';
 
@@ -69,13 +71,38 @@ class RouterNotifier extends ChangeNotifier {
   String? redirect(BuildContext context, GoRouterState state) {
     final role = _ref.read(roleProvider);
     final loc = state.uri.toString();
-    final isLoggedIn = FirebaseAuth.instance.currentUser != null;
+    final user = FirebaseAuth.instance.currentUser;
+    final isLoggedIn = user != null;
 
-    if (isLoggedIn &&
-        (loc == '/' || loc == '/onboarding' || loc == '/login' || loc == '/signup')) {
-      if (role == UserRole.admin) return '/admin/overview';
-      if (role == UserRole.educator) return '/educator/dashboard';
-      return '/';
+    if (isLoggedIn) {
+      final isGoogleUser = user.providerData.any((p) => p.providerId == 'google.com');
+      final needsVerification = !user.emailVerified && !isGoogleUser;
+
+      if (needsVerification) {
+        if (loc != '/verify-email') {
+          return '/verify-email';
+        }
+        return null;
+      }
+
+      if (loc == '/' ||
+          loc == '/onboarding' ||
+          loc == '/login' ||
+          loc == '/signup' ||
+          loc == '/verify-email' ||
+          loc == '/forgot-password') {
+        if (role == UserRole.admin) return '/admin/overview';
+        if (role == UserRole.educator) return '/educator/dashboard';
+        return '/';
+      }
+    }
+
+    if (!isLoggedIn &&
+        loc != '/login' &&
+        loc != '/signup' &&
+        loc != '/onboarding' &&
+        loc != '/forgot-password') {
+      return '/login';
     }
 
     // Block unauthorized routes
@@ -293,6 +320,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/signup', builder: (context, state) => const SignupScreen()),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/verify-email',
+        builder: (context, state) => const EmailVerificationScreen(),
+      ),
       GoRoute(
         path: '/wisdom-progression',
         builder: (context, state) => const WisdomProgressionScreen(),
