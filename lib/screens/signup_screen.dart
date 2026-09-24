@@ -266,7 +266,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       }
     } else {
       HapticService.error();
-      setState(() => _errorMessage = "Please fill all fields correctly");
+      final l10n = ref.read(localizationProvider);
+      setState(() => _errorMessage = l10n.translate('fill_all_fields'));
     }
   }
 
@@ -280,7 +281,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   Future<void> _handleSignup() async {
     if (!_validateStep()) {
-      setState(() => _errorMessage = "Please complete all fields and accept the Terms");
+      final l10n = ref.read(localizationProvider);
+      setState(() => _errorMessage = l10n.translate('complete_fields_terms'));
       return;
     }
 
@@ -348,7 +350,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = ref.watch(localizationProvider);
 
-    return Scaffold(
+    return PopScope(
+      canPop: _currentStep == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_currentStep > 0) {
+          _prevStep();
+        }
+      },
+      child: Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -461,6 +471,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -469,8 +480,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       children: [
         SizedBox(
           height: 120,
-          child: Lottie.network(
-            'https://lottie.host/80164c01-70e6-4914-8742-df2a16d55283/jOn7mB2J9T.json',
+          child: Lottie.asset(
+            'assets/images/signup_ritual.json',
             fit: BoxFit.contain,
             animate: true,
             errorBuilder: (context, error, stackTrace) => const Icon(
@@ -851,7 +862,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Native Language",
+          l10n.translate('native_language'),
           style: AppTypography.label.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 12,
@@ -860,7 +871,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         const SizedBox(height: 8),
         _buildDropdown(
           value: _selectedNativeLanguage,
-          hint: "Select Native Language",
+          hint: l10n.translate('select_native_language'),
           items: _nativeLanguages,
           onChanged: (val) {
             setState(() {
