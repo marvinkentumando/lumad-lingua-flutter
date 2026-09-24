@@ -6,6 +6,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/glass_box.dart';
 import '../widgets/brand_card.dart';
+import '../widgets/brand_text_field.dart';
 import 'package:intl/intl.dart'; 
 
 class AdminGamificationScreen extends ConsumerStatefulWidget {
@@ -129,15 +130,11 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.forest800,
         title: Text('Edit $label', style: const TextStyle(color: AppColors.gold500)),
-        content: TextField(
+        content: BrandTextField(
           controller: controller,
+          labelText: 'XP Points',
+          prefixIcon: Icons.stars_rounded,
           keyboardType: TextInputType.number,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
-            labelText: 'XP Points',
-            labelStyle: TextStyle(color: Colors.white70),
-            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
@@ -245,21 +242,16 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
+                BrandTextField(
                   controller: titleController,
-                  decoration: const InputDecoration(labelText: 'Season Title', labelStyle: TextStyle(color: Colors.white70)),
-                  style: const TextStyle(color: Colors.white),
+                  labelText: 'Season Title',
+                  prefixIcon: Icons.title_rounded,
                 ),
-                const SizedBox(height: 16),
-                TextField(
+                const SizedBox(height: 12),
+                BrandTextField(
                   controller: badgeIdController,
-                  decoration: const InputDecoration(
-                    labelText: 'Badge ID / Asset Path', 
-                    labelStyle: TextStyle(color: Colors.white70),
-                    hintText: 'e.g. seasonal_badge_harvest',
-                    hintStyle: TextStyle(color: Colors.white24),
-                  ),
-                  style: const TextStyle(color: Colors.white),
+                  labelText: 'Badge ID / Asset Path',
+                  prefixIcon: Icons.badge_outlined,
                 ),
                 const SizedBox(height: 16),
                 ListTile(
@@ -397,40 +389,43 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
+              BrandTextField(
                 controller: titleController,
-                decoration: const InputDecoration(labelText: 'Item Name', labelStyle: TextStyle(color: Colors.white70)),
-                style: const TextStyle(color: Colors.white),
+                labelText: 'Item Name',
+                prefixIcon: Icons.shopping_bag_outlined,
               ),
-              TextField(
+              const SizedBox(height: 12),
+              BrandTextField(
                 controller: descController,
-                decoration: const InputDecoration(labelText: 'Description', labelStyle: TextStyle(color: Colors.white70)),
-                style: const TextStyle(color: Colors.white),
+                labelText: 'Description',
+                prefixIcon: Icons.description_outlined,
               ),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
-                    child: TextField(
+                    child: BrandTextField(
                       controller: priceController,
+                      labelText: 'Price (Crystals)',
+                      prefixIcon: Icons.diamond_outlined,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Price (Crystals)', labelStyle: TextStyle(color: Colors.white70)),
-                      style: const TextStyle(color: Colors.white),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: TextField(
+                    child: BrandTextField(
                       controller: iconController,
-                      decoration: const InputDecoration(labelText: 'Icon/Emoji', labelStyle: TextStyle(color: Colors.white70)),
-                      style: const TextStyle(color: Colors.white),
+                      labelText: 'Icon/Emoji',
+                      prefixIcon: Icons.emoji_emotions_outlined,
                     ),
                   ),
                 ],
               ),
-              TextField(
+              const SizedBox(height: 12),
+              BrandTextField(
                 controller: typeController,
-                decoration: const InputDecoration(labelText: 'Item Type', labelStyle: TextStyle(color: Colors.white70)),
-                style: const TextStyle(color: Colors.white),
+                labelText: 'Item Type',
+                prefixIcon: Icons.category_outlined,
               ),
             ],
           ),

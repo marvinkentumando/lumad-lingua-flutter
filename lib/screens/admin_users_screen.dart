@@ -13,6 +13,7 @@ import '../widgets/brand_card.dart';
 import '../widgets/profile_avatar.dart';
 import 'package:share_plus/share_plus.dart';
 import '../widgets/brand_search_bar.dart';
+import '../widgets/brand_text_field.dart';
 import '../widgets/branded_empty_state.dart';
 import '../providers/admin_users_provider.dart';
 
@@ -671,19 +672,11 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
+              BrandTextField(
                 controller: emailCtrl,
-                style: TextStyle(color: isDark ? Colors.white : AppColors.forest900),
-                decoration: InputDecoration(
-                  labelText: 'Email Address',
-                  labelStyle: TextStyle(color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5)),
-                  filled: true,
-                  fillColor: isDark ? AppColors.forest800 : Colors.black.withValues(alpha: 0.05),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
+                labelText: 'Email Address',
+                prefixIcon: Icons.email_outlined,
+                keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
@@ -879,35 +872,17 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
+            BrandTextField(
               controller: nameCtrl,
-              style: TextStyle(color: isDark ? Colors.white : AppColors.forest900),
-              decoration: InputDecoration(
-                labelText: 'Username',
-                labelStyle: TextStyle(color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5)),
-                filled: true,
-                fillColor: isDark ? AppColors.forest800 : Colors.black.withValues(alpha: 0.05),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
+              labelText: 'Username',
+              prefixIcon: Icons.person_outline,
             ),
             const SizedBox(height: 12),
-            TextField(
+            BrandTextField(
               controller: xpCtrl,
-              style: TextStyle(color: isDark ? Colors.white : AppColors.forest900),
+              labelText: 'XP',
+              prefixIcon: Icons.stars_rounded,
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'XP',
-                labelStyle: TextStyle(color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5)),
-                filled: true,
-                fillColor: isDark ? AppColors.forest800 : Colors.black.withValues(alpha: 0.05),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
             ),
           ],
         ),

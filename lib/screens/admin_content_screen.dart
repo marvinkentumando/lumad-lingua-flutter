@@ -18,6 +18,7 @@ import '../models/scenario_models.dart';
 import '../models/admin_models.dart';
 import '../widgets/brand_search_bar.dart';
 import '../widgets/brand_background.dart';
+import '../widgets/brand_text_field.dart';
 import '../widgets/branded_empty_state.dart';
 import '../services/haptic_service.dart';
 import '../services/auth_service.dart';
@@ -1094,21 +1095,11 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen> with Si
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
-            TextField(
+            BrandTextField(
               controller: _passwordCtrl,
-              obscureText: true,
-              style: TextStyle(color: isDark ? Colors.white : AppColors.forest900),
-              decoration: InputDecoration(
-                hintText: 'Enter Password',
-                hintStyle: TextStyle(color: isDark ? Colors.white24 : AppColors.creamText3),
-                filled: true,
-                fillColor: isDark ? AppColors.forest900 : AppColors.creamBg,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
-              ),
+              labelText: 'Administrator Password',
+              prefixIcon: Icons.lock_outline_rounded,
+              isPassword: true,
             ),
           ],
         ),
