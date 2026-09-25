@@ -12,6 +12,44 @@ enum PartOfSpeech {
   adjective,
   @HiveField(3)
   phrase,
+  @HiveField(4)
+  adverb,
+  @HiveField(5)
+  pronoun,
+  @HiveField(6)
+  preposition,
+  @HiveField(7)
+  conjunction,
+  @HiveField(8)
+  interjection,
+  @HiveField(9)
+  idiom,
+  @HiveField(10)
+  proverb,
+  @HiveField(11)
+  simile,
+  @HiveField(12)
+  metaphor,
+  @HiveField(13)
+  personification,
+  @HiveField(14)
+  hyperbole,
+  @HiveField(15)
+  onomatopoeia,
+  @HiveField(16)
+  locative,
+  @HiveField(17)
+  particle,
+  @HiveField(18)
+  prefix,
+  @HiveField(19)
+  suffix,
+  @HiveField(20)
+  marker,
+  @HiveField(21)
+  vocative,
+  @HiveField(22)
+  interrogative,
 }
 
 @HiveType(typeId: 1)
@@ -105,6 +143,44 @@ class DictionaryEntry {
         return 'Adjective';
       case PartOfSpeech.phrase:
         return 'Phrase';
+      case PartOfSpeech.adverb:
+        return 'Adverb';
+      case PartOfSpeech.pronoun:
+        return 'Pronoun';
+      case PartOfSpeech.preposition:
+        return 'Preposition';
+      case PartOfSpeech.conjunction:
+        return 'Conjunction';
+      case PartOfSpeech.interjection:
+        return 'Interjection';
+      case PartOfSpeech.idiom:
+        return 'Idiom / Expression';
+      case PartOfSpeech.proverb:
+        return 'Proverb / Salawikain';
+      case PartOfSpeech.simile:
+        return 'Simile';
+      case PartOfSpeech.metaphor:
+        return 'Metaphor';
+      case PartOfSpeech.personification:
+        return 'Personification';
+      case PartOfSpeech.hyperbole:
+        return 'Hyperbole';
+      case PartOfSpeech.onomatopoeia:
+        return 'Onomatopoeia';
+      case PartOfSpeech.locative:
+        return 'Locative';
+      case PartOfSpeech.particle:
+        return 'Particle';
+      case PartOfSpeech.prefix:
+        return 'Prefix';
+      case PartOfSpeech.suffix:
+        return 'Suffix';
+      case PartOfSpeech.marker:
+        return 'Marker';
+      case PartOfSpeech.vocative:
+        return 'Vocative';
+      case PartOfSpeech.interrogative:
+        return 'Interrogative';
     }
   }
 

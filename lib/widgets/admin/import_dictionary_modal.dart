@@ -326,9 +326,33 @@ class _ImportDictionaryModalState extends ConsumerState<ImportDictionaryModal> {
 
   PartOfSpeech _parsePartOfSpeech(String val) {
     val = val.toLowerCase().trim();
+    for (final pos in PartOfSpeech.values) {
+      if (val == pos.name.toLowerCase() || val == pos.partOfSpeechLabel.toLowerCase()) {
+        return pos;
+      }
+    }
     if (val.contains('verb')) return PartOfSpeech.verb;
     if (val.contains('adj')) return PartOfSpeech.adjective;
     if (val.contains('phrase')) return PartOfSpeech.phrase;
+    if (val.contains('adv')) return PartOfSpeech.adverb;
+    if (val.contains('pronoun')) return PartOfSpeech.pronoun;
+    if (val.contains('prep')) return PartOfSpeech.preposition;
+    if (val.contains('conj')) return PartOfSpeech.conjunction;
+    if (val.contains('interj')) return PartOfSpeech.interjection;
+    if (val.contains('idiom')) return PartOfSpeech.idiom;
+    if (val.contains('proverb') || val.contains('salawikain')) return PartOfSpeech.proverb;
+    if (val.contains('simile')) return PartOfSpeech.simile;
+    if (val.contains('metaphor')) return PartOfSpeech.metaphor;
+    if (val.contains('personif')) return PartOfSpeech.personification;
+    if (val.contains('hyperbole')) return PartOfSpeech.hyperbole;
+    if (val.contains('onomatopoeia') || val.contains('ono')) return PartOfSpeech.onomatopoeia;
+    if (val.contains('locative')) return PartOfSpeech.locative;
+    if (val.contains('particle')) return PartOfSpeech.particle;
+    if (val.contains('prefix')) return PartOfSpeech.prefix;
+    if (val.contains('suffix')) return PartOfSpeech.suffix;
+    if (val.contains('marker')) return PartOfSpeech.marker;
+    if (val.contains('vocative')) return PartOfSpeech.vocative;
+    if (val.contains('interrogative')) return PartOfSpeech.interrogative;
     return PartOfSpeech.noun;
   }
 }

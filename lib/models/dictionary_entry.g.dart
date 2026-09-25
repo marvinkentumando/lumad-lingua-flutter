@@ -103,36 +103,16 @@ class PartOfSpeechAdapter extends TypeAdapter<PartOfSpeech> {
 
   @override
   PartOfSpeech read(BinaryReader reader) {
-    switch (reader.readByte()) {
-      case 0:
-        return PartOfSpeech.noun;
-      case 1:
-        return PartOfSpeech.verb;
-      case 2:
-        return PartOfSpeech.adjective;
-      case 3:
-        return PartOfSpeech.phrase;
-      default:
-        return PartOfSpeech.noun;
+    final index = reader.readByte();
+    if (index >= 0 && index < PartOfSpeech.values.length) {
+      return PartOfSpeech.values[index];
     }
+    return PartOfSpeech.noun;
   }
 
   @override
   void write(BinaryWriter writer, PartOfSpeech obj) {
-    switch (obj) {
-      case PartOfSpeech.noun:
-        writer.writeByte(0);
-        break;
-      case PartOfSpeech.verb:
-        writer.writeByte(1);
-        break;
-      case PartOfSpeech.adjective:
-        writer.writeByte(2);
-        break;
-      case PartOfSpeech.phrase:
-        writer.writeByte(3);
-        break;
-    }
+    writer.writeByte(obj.index);
   }
 
   @override
