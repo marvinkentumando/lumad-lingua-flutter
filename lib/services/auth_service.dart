@@ -8,7 +8,9 @@ import 'package:google_sign_in/google_sign_in.dart';
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email', 'profile'],
+  );
 
   Stream<User?> get authStateChanges => _auth.userChanges();
 
@@ -20,6 +22,11 @@ class AuthService {
       if (googleUser == null) return null;
 
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      if (googleAuth.idToken == null && googleAuth.accessToken == null) {
+        throw Exception("Failed to retrieve Google authentication tokens.");
+      }
+
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
@@ -36,7 +43,7 @@ class AuthService {
           // New user from Google, create profile
           await firestore.collection('users').doc(user.uid).set({
             'username': user.displayName ?? 'Tribe Member',
-            'email': user.email,
+            'email': user.email ?? '',
             'location': 'Unknown',
             'tribe': 'General Learner',
             'avatar': user.photoURL ?? '👤',

@@ -3682,6 +3682,10 @@ class FirebaseService {
     });
   }
 
+  Future<void> deleteVoiceSubmission(String id) async {
+    await _db.collection('voice_submissions').doc(id).delete();
+  }
+
   Future<void> bulkDeleteVoiceSubmissions(List<String> ids) async {
     final batch = _db.batch();
     for (var id in ids) {

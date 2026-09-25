@@ -23,7 +23,6 @@ import '../screens/onboarding_screen.dart';
 import '../screens/flashcards_screen.dart';
 import '../screens/admin_overview_screen.dart';
 import '../screens/admin_users_screen.dart';
-import '../screens/admin_content_screen.dart';
 import '../screens/admin_requests_screen.dart';
 import '../screens/admin_gamification_screen.dart';
 import '../screens/admin_advanced_analytics_screen.dart';
@@ -200,10 +199,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/admin/users',
             builder: (context, state) => const AdminUsersScreen(),
-          ),
-          GoRoute(
-            path: '/admin/content',
-            builder: (context, state) => const AdminContentScreen(),
           ),
           GoRoute(
             path: '/admin/requests',
