@@ -27,6 +27,7 @@ import '../models/assessment.dart';
 import 'offline_service.dart';
 
 import '../models/daily_challenge.dart';
+import '../models/warrior_friend.dart';
 
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
@@ -4132,6 +4133,227 @@ class FirebaseService {
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snap) => snap.docs.map((doc) => doc.data()).toList());
+  }
+
+  // --- Warriors Circle Friends & Connections ---
+
+  Stream<List<WarriorFriend>> getUserFriendsStream(String userId) {
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('friends')
+        .snapshots()
+        .switchMap((snapshot) {
+      final friendIds = snapshot.docs.map((doc) => doc.id).toList();
+      if (friendIds.isEmpty) {
+        return Stream.value(<WarriorFriend>[]);
+      }
+
+      return _db
+          .collection('users')
+          .where(FieldPath.documentId, whereIn: friendIds.take(30).toList())
+          .snapshots()
+          .map((userSnap) {
+        return userSnap.docs
+            .map((doc) => WarriorFriend.fromFirestore(doc.data(), doc.id))
+            .toList();
+      });
+    });
+  }
+
+  Stream<List<Map<String, dynamic>>> getPendingFriendRequestsStream(String userId) {
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('friend_requests')
+        .where('status', isEqualTo: 'pending')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    });
+  }
+
+  Future<void> sendFriendRequest({
+    required String fromUserId,
+    required String toUserId,
+  }) async {
+    if (fromUserId == toUserId) {
+      throw Exception("You cannot send a kinship request to yourself.");
+    }
+
+    final friendDoc = await _db
+        .collection('users')
+        .doc(fromUserId)
+        .collection('friends')
+        .doc(toUserId)
+        .get();
+
+    if (friendDoc.exists) {
+      throw Exception("You are already kin with this user.");
+    }
+
+    final reqDoc = await _db
+        .collection('users')
+        .doc(toUserId)
+        .collection('friend_requests')
+        .doc(fromUserId)
+        .get();
+
+    if (reqDoc.exists && reqDoc.data()?['status'] == 'pending') {
+      throw Exception("A kinship request is already pending.");
+    }
+
+    final fromUserDoc = await _db.collection('users').doc(fromUserId).get();
+    final fromData = fromUserDoc.data() ?? {};
+    final fromName = fromData['username'] ?? 'A tribe member';
+    final fromAvatar = fromData['photoURL'] ?? '👤';
+
+    await _db
+        .collection('users')
+        .doc(toUserId)
+        .collection('friend_requests')
+        .doc(fromUserId)
+        .set({
+      'fromUserId': fromUserId,
+      'fromUserName': fromName,
+      'fromUserAvatar': fromAvatar,
+      'toUserId': toUserId,
+      'status': 'pending',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    await addNotification(toUserId, {
+      'title': 'Kinship Invitation! 🌿',
+      'message': '$fromName invited you to join their Warriors Circle.',
+      'type': 'cheer',
+      'senderId': fromUserId,
+      'senderName': fromName,
+      'senderPhotoUrl': fromAvatar,
+    });
+  }
+
+  Future<void> acceptFriendRequest({
+    required String currentUserId,
+    required String requesterId,
+  }) async {
+    final batch = _db.batch();
+
+    final userDoc = await _db.collection('users').doc(currentUserId).get();
+    final userData = userDoc.data() ?? {};
+    final currentName = userData['username'] ?? 'A tribe member';
+
+    final reqUserDoc = await _db.collection('users').doc(requesterId).get();
+    final reqData = reqUserDoc.data() ?? {};
+    final reqName = reqData['username'] ?? 'A tribe member';
+
+    final currentUserFriendRef = _db
+        .collection('users')
+        .doc(currentUserId)
+        .collection('friends')
+        .doc(requesterId);
+    batch.set(currentUserFriendRef, {
+      'friendId': requesterId,
+      'friendName': reqName,
+      'addedAt': FieldValue.serverTimestamp(),
+    });
+
+    final requesterFriendRef = _db
+        .collection('users')
+        .doc(requesterId)
+        .collection('friends')
+        .doc(currentUserId);
+    batch.set(requesterFriendRef, {
+      'friendId': currentUserId,
+      'friendName': currentName,
+      'addedAt': FieldValue.serverTimestamp(),
+    });
+
+    final reqRef = _db
+        .collection('users')
+        .doc(currentUserId)
+        .collection('friend_requests')
+        .doc(requesterId);
+    batch.delete(reqRef);
+
+    await batch.commit();
+
+    await addNotification(requesterId, {
+      'title': 'Kinship Accepted! ⚔️',
+      'message': '$currentName accepted your kinship request in the Warriors Circle.',
+      'type': 'approval',
+      'senderId': currentUserId,
+      'senderName': currentName,
+      'senderPhotoUrl': userData['photoURL'] ?? '👤',
+    });
+  }
+
+  Future<void> declineFriendRequest({
+    required String currentUserId,
+    required String requesterId,
+  }) async {
+    await _db
+        .collection('users')
+        .doc(currentUserId)
+        .collection('friend_requests')
+        .doc(requesterId)
+        .delete();
+  }
+
+  Future<void> removeFriend({
+    required String currentUserId,
+    required String friendId,
+  }) async {
+    final batch = _db.batch();
+    batch.delete(_db.collection('users').doc(currentUserId).collection('friends').doc(friendId));
+    batch.delete(_db.collection('users').doc(friendId).collection('friends').doc(currentUserId));
+    await batch.commit();
+  }
+
+  Future<List<WarriorFriend>> searchUsers(String searchQuery, String currentUserId) async {
+    if (searchQuery.trim().isEmpty) return [];
+
+    final q = searchQuery.trim().toLowerCase();
+
+    final snap = await _db
+        .collection('users')
+        .limit(50)
+        .get();
+
+    final List<WarriorFriend> results = [];
+    for (var doc in snap.docs) {
+      if (doc.id == currentUserId) continue; // Exclude self
+      final data = doc.data();
+      final username = (data['username'] ?? data['name'] ?? '').toString().toLowerCase();
+      final email = (data['email'] ?? '').toString().toLowerCase();
+
+      if (username.contains(q) || email.contains(q)) {
+        results.add(WarriorFriend.fromFirestore(data, doc.id));
+      }
+    }
+    return results;
+  }
+
+  Future<void> sendWarriorSalute({
+    required String senderId,
+    required String targetUserId,
+  }) async {
+    final senderDoc = await _db.collection('users').doc(senderId).get();
+    final senderData = senderDoc.data() ?? {};
+    final senderName = senderData['username'] ?? 'A warrior';
+    final senderAvatar = senderData['photoURL'] ?? '👤';
+
+    await addNotification(targetUserId, {
+      'title': 'Warrior Salute! ⚔️',
+      'message': '$senderName sent you a spirit salute in the Warriors Circle!',
+      'type': 'cheer',
+      'senderId': senderId,
+      'senderName': senderName,
+      'senderPhotoUrl': senderAvatar,
+    });
   }
 }
 

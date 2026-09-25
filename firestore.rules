@@ -54,6 +54,17 @@ service cloud.firestore {
         allow update, delete: if isSignedIn() && (request.auth.uid == userId || isValidator());
       }
 
+      match /friends/{friendId} {
+        allow read: if true;
+        allow write: if isSignedIn() && (request.auth.uid == userId || request.auth.uid == friendId);
+      }
+
+      match /friend_requests/{reqId} {
+        allow read: if isSignedIn() && (request.auth.uid == userId || request.auth.uid == reqId);
+        allow create: if isSignedIn();
+        allow update, delete: if isSignedIn() && (request.auth.uid == userId || request.auth.uid == reqId);
+      }
+
       match /achievements/{badgeId} {
         allow read: if true;
         allow write: if isSignedIn() && (request.auth.uid == userId || isValidator());
