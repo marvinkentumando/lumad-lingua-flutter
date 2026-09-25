@@ -451,55 +451,18 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard> with
               widget.entry.indigenousWord,
               style: AppTypography.h1ExtraBold.copyWith(color: Theme.of(context).colorScheme.primary, fontSize: 28),
             ),
-            const SizedBox(height: 12),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      RichText(
-                        text: TextSpan(
-                          style: AppTypography.body.copyWith(
-                            color: isDark ? Theme.of(context).colorScheme.onSurfaceVariant : AppColors.forest900.withValues(alpha: 0.7),
-                            fontSize: 13,
-                          ),
-                          children: [
-                            TextSpan(
-                              text: 'ENG ',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5) : AppColors.forest900.withValues(alpha: 0.4),
-                              ),
-                            ),
-                            TextSpan(text: widget.entry.translation),
-                          ],
-                        ),
-                      ),
-                      RichText(
-                        text: TextSpan(
-                          style: AppTypography.body.copyWith(
-                            color: isDark ? Theme.of(context).colorScheme.onSurfaceVariant : AppColors.forest900.withValues(alpha: 0.7),
-                            fontSize: 13,
-                          ),
-                          children: [
-                            TextSpan(
-                              text: 'FIL ',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5) : AppColors.forest900.withValues(alpha: 0.4),
-                              ),
-                            ),
-                            TextSpan(text: widget.entry.translationFilipino),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+            if (widget.entry.usageContext.isNotEmpty && !widget.isExpanded) ...[
+              const SizedBox(height: 8),
+              Text(
+                widget.entry.usageContext,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.body.copyWith(
+                  color: isDark ? Theme.of(context).colorScheme.onSurfaceVariant : AppColors.forest900.withValues(alpha: 0.7),
+                  fontSize: 13,
                 ),
-              ],
-            ),
+              ),
+            ],
             if (widget.isExpanded) ...[
               const SizedBox(height: 24),
               Divider(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
@@ -533,7 +496,7 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard> with
                       icon: Icons.share_outlined,
                       type: BrandButtonType.secondary,
                       onTap: () {
-                        final String shareText = 'Lumad Lingua - Learn ${widget.entry.language}\n\nWord: ${widget.entry.indigenousWord}\nTranslation: ${widget.entry.translation}\nDefinition: ${widget.entry.usageContext}';
+                        final String shareText = 'Lumad Lingua - Learn ${widget.entry.language}\n\nWord: ${widget.entry.indigenousWord}\nDefinition: ${widget.entry.usageContext}';
                         SharePlus.instance.share(ShareParams(text: shareText, subject: 'Learning ${widget.entry.indigenousWord} in ${widget.entry.language}'));
                       },
                     ),

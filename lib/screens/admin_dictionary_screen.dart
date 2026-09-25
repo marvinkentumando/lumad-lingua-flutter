@@ -191,10 +191,12 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
                   ],
                 ),
                 Text(
-                  word.translation,
+                  word.usageContext.isNotEmpty ? word.usageContext : word.translation,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: AppTypography.body.copyWith(
                     color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.7),
-                    fontSize: 14,
+                    fontSize: 13,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -303,14 +305,14 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
 
     try {
       final rows = [
-        ['term', 'translation_en', 'translation_fil', 'pos', 'dialect', 'definition'],
+        ['term', 'pos', 'dialect', 'definition', 'example_native', 'example_translation'],
         ...words.map((w) => [
           w.indigenousWord,
-          w.translation,
-          w.translationFilipino,
           w.partOfSpeech.name,
           w.language,
           w.usageContext,
+          w.usageExampleNative ?? '',
+          w.usageExampleTranslation ?? '',
         ]),
       ];
 
@@ -451,17 +453,13 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
                     onChanged: (v) => setState(() => _pos = v!),
                   ),
                   const SizedBox(height: 16),
-                  BrandTextField(controller: _termCtrl, labelText: 'Indigenous Term', prefixIcon: Icons.translate_rounded),
+                  BrandTextField(controller: _termCtrl, labelText: 'Indigenous Term (Word)', prefixIcon: Icons.translate_rounded),
                   const SizedBox(height: 16),
-                  BrandTextField(controller: _transEngCtrl, labelText: 'English Translation', prefixIcon: Icons.language_rounded),
+                  BrandTextField(controller: _defCtrl, labelText: 'Definition', prefixIcon: Icons.description_rounded, maxLines: 3),
                   const SizedBox(height: 16),
-                  BrandTextField(controller: _transFilCtrl, labelText: 'Filipino Translation', prefixIcon: Icons.flag_rounded),
+                  BrandTextField(controller: _exNativeCtrl, labelText: 'Example Sentence (Mansaka)', prefixIcon: Icons.history_edu_rounded),
                   const SizedBox(height: 16),
-                  BrandTextField(controller: _defCtrl, labelText: 'Definition / Usage Context', prefixIcon: Icons.description_rounded, maxLines: 3),
-                  const SizedBox(height: 16),
-                  BrandTextField(controller: _exNativeCtrl, labelText: 'Example Sentence (Native)', prefixIcon: Icons.history_edu_rounded),
-                  const SizedBox(height: 16),
-                  BrandTextField(controller: _exTransCtrl, labelText: 'Example Translation', prefixIcon: Icons.auto_stories_rounded),
+                  BrandTextField(controller: _exTransCtrl, labelText: 'Example Translation (English)', prefixIcon: Icons.auto_stories_rounded),
                   const SizedBox(height: 40),
                   SizedBox(
                     width: double.infinity,
@@ -505,8 +503,8 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
   }
 
   Future<void> _save() async {
-    if (_termCtrl.text.isEmpty || _transEngCtrl.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Term and English translation are required.')));
+    if (_termCtrl.text.isEmpty || _defCtrl.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Term and Definition are required.')));
       return;
     }
 

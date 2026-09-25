@@ -128,7 +128,7 @@ class _ImportDictionaryModalState extends ConsumerState<ImportDictionaryModal> {
           ),
           const SizedBox(height: 12),
           _instructionRow('Header row is required as the first line.'),
-          _instructionRow('Columns: term, translation_en, translation_fil, pos, dialect, definition'),
+          _instructionRow('Columns: term, pos, dialect, definition, example_native, example_translation'),
           _instructionRow('POS values: noun, verb, adjective, phrase'),
         ],
       ),
@@ -195,10 +195,10 @@ class _ImportDictionaryModalState extends ConsumerState<ImportDictionaryModal> {
     HapticService.light();
     try {
       const templateContent =
-          'term,translation_en,translation_fil,pos,dialect,definition\n'
-          'Kadasang,Tree,Puno,noun,Mansaka,A perennial plant with an elongated stem or trunk.\n'
-          'Salamat,Thank you,Salamat,phrase,Mansaka,An expression of gratitude.\n'
-          'Biyag,Life,Buhay,noun,Mansaka,State of living or existing.\n';
+          'term,pos,dialect,definition,example_native,example_translation\n'
+          'Kadasang,noun,Mansaka,A perennial plant with an elongated stem or trunk.,Yang kadasang kay madyaw.,The tree is good.\n'
+          'Salamat,phrase,Mansaka,An expression of gratitude or acknowledgment.,Salamat nang madyaw.,Thank you very much.\n'
+          'Biyag,noun,Mansaka,State of living or existing.,Yang biyag kay bilidnon.,Life is precious.\n';
 
       final path = await FileDownloader.downloadCsv(
         templateContent,
@@ -260,14 +260,35 @@ class _ImportDictionaryModalState extends ConsumerState<ImportDictionaryModal> {
         final row = fields[i];
         if (row.length < 2) continue;
 
-        entries.add(DictionaryEntry(
-          id: '',
-          indigenousWord: row[0].toString(),
-          translation: row[1].toString(),
-          translationFilipino: row.length > 2 ? row[2].toString() : '',
-          partOfSpeech: _parsePartOfSpeech(row.length > 3 ? row[3].toString() : 'noun'),
-          language: row.length > 4 ? row[4].toString() : 'Mansaka',
-          usageContext: row.length > 5 ? row[5].toString() : '',
+        // Support both new 5-field/6-col format and legacy format gracefully
+        final isLegacy = fields[0].length >= 6 && fields[0][1].toString().contains('translation');
+
+        if (isLegacy) {
+          entries.add(DictionaryEntry(
+            id: '',
+            indigenousWord: row[0].toString(),
+            translation: row[1].toString(),
+            translationFilipino: row.length > 2 ? row[2].toString() : '',
+            partOfSpeech: _parsePartOfSpeech(row.length > 3 ? row[3].toString() : 'noun'),
+            language: row.length > 4 ? row[4].toString() : 'Mansaka',
+            usageContext: row.length > 5 ? row[5].toString() : '',
+            status: ValidationStatus.approved,
+            submittedAt: DateTime.now(),
+          ));
+        } else {
+          entries.add(DictionaryEntry(
+            id: '',
+            indigenousWord: row[0].toString(),
+            partOfSpeech: _parsePartOfSpeech(row.length > 1 ? row[1].toString() : 'noun'),
+            language: row.length > 2 ? row[2].toString() : 'Mansaka',
+            usageContext: row.length > 3 ? row[3].toString() : '',
+            usageExampleNative: row.length > 4 ? row[4].toString() : null,
+            usageExampleTranslation: row.length > 5 ? row[5].toString() : null,
+            status: ValidationStatus.approved,
+            submittedAt: DateTime.now(),
+          ));
+        }
+      }
           status: ValidationStatus.approved,
           submittedAt: DateTime.now(),
         ));
