@@ -250,7 +250,7 @@ class _ImportDictionaryModalState extends ConsumerState<ImportDictionaryModal> {
 
       if (file.bytes != null) {
         final content = utf8.decode(file.bytes!);
-        fields = const CsvToListConverter().convert(content);
+        fields = const CsvDecoder().convert(content);
       } else if (file.path != null) {
         final input = File(file.path!).openRead();
         fields = await input

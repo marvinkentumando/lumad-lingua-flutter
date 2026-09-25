@@ -64,7 +64,7 @@ class _EducatorUnitManagementScreenState
                   onReorderStart: (index) {
                     HapticService.selection();
                   },
-                  onReorder: (int oldIndex, int newIndex) {
+                  onReorderItem: (int oldIndex, int newIndex) {
                     _onReorderUnits(oldIndex, newIndex, filteredLessons);
                   },
                   itemBuilder: (context, index) {

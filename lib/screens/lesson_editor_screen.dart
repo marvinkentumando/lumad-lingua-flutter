@@ -773,13 +773,10 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
             onReorderStart: (index) {
               HapticService.selection();
             },
-            onReorder: (oldIndex, newIndex) {
+            onReorderItem: (int oldIndex, int newIndex) {
               HapticService.medium();
               setState(() {
                 _isDirty = true;
-                if (oldIndex < newIndex) {
-                  newIndex -= 1;
-                }
                 if (oldIndex == newIndex) return;
                 final step = _steps.removeAt(oldIndex);
                 _steps.insert(newIndex, step);
