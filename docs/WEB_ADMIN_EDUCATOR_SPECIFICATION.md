@@ -141,3 +141,5 @@ Before publishing the web build (`flutter build web`), verify the following:
 - [ ] **No Hardcoded Platform Code**: Code checks `kIsWeb` before executing mobile-only platform channels (e.g. native path providers or Android-specific plugins).
 - [ ] **Environment Configuration**: Web build correctly loads `.env` or Firebase Web configuration parameters.
 - [ ] **Build Output Check**: Static web assets generated cleanly inside `build/web/`.
+
+

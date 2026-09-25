@@ -237,19 +237,29 @@ class _ImportDictionaryModalState extends ConsumerState<ImportDictionaryModal> {
       final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['csv'],
+        withData: true,
       );
 
-      if (result == null || result.files.single.path == null) {
+      if (result == null || result.files.isEmpty) {
         setState(() => _isImporting = false);
         return;
       }
 
-      final file = File(result.files.single.path!);
-      final input = file.openRead();
-      final fields = await input
-          .transform(utf8.decoder)
-          .transform(const CsvDecoder())
-          .toList();
+      final file = result.files.single;
+      List<List<dynamic>> fields;
+
+      if (file.bytes != null) {
+        final content = utf8.decode(file.bytes!);
+        fields = const CsvToListConverter().convert(content);
+      } else if (file.path != null) {
+        final input = File(file.path!).openRead();
+        fields = await input
+            .transform(utf8.decoder)
+            .transform(const CsvDecoder())
+            .toList();
+      } else {
+        throw 'Unable to read CSV file content.';
+      }
 
       if (fields.length <= 1) {
         throw 'CSV file is empty or missing headers.';
@@ -288,10 +298,6 @@ class _ImportDictionaryModalState extends ConsumerState<ImportDictionaryModal> {
             submittedAt: DateTime.now(),
           ));
         }
-      }
-          status: ValidationStatus.approved,
-          submittedAt: DateTime.now(),
-        ));
       }
 
       if (entries.isEmpty) {
