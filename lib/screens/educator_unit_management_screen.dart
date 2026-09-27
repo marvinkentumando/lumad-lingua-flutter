@@ -58,19 +58,18 @@ class _EducatorUnitManagementScreenState
                   return _buildEmptyState();
                 }
 
-                return ReorderableListView.builder(
+                return ReorderableListView(
                   padding: const EdgeInsets.all(16),
-                  itemCount: filteredLessons.length,
                   onReorderStart: (index) {
                     HapticService.selection();
                   },
-                  onReorderItem: (int oldIndex, int newIndex) {
+                  onReorder: (int oldIndex, int newIndex) {
                     _onReorderUnits(oldIndex, newIndex, filteredLessons);
                   },
-                  itemBuilder: (context, index) {
-                    final lesson = filteredLessons[index];
-                    return _buildLessonTile(lesson, index);
-                  },
+                  children: List.generate(
+                    filteredLessons.length,
+                    (index) => _buildLessonTile(filteredLessons[index], index),
+                  ),
                 );
               },
               loading: () => const Center(

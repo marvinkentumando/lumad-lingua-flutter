@@ -768,22 +768,23 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
           ),
         ),
         Expanded(
-          child: ReorderableListView.builder(
-            itemCount: _steps.length,
+          child: ReorderableListView(
             onReorderStart: (index) {
               HapticService.selection();
             },
-            onReorderItem: (int oldIndex, int newIndex) {
+            onReorder: (int oldIndex, int newIndex) {
               HapticService.medium();
               setState(() {
                 _isDirty = true;
+                if (oldIndex < newIndex) {
+                  newIndex -= 1;
+                }
                 if (oldIndex == newIndex) return;
                 final step = _steps.removeAt(oldIndex);
                 _steps.insert(newIndex, step);
               });
             },
-            itemBuilder: (context, index) {
-              final step = _steps[index];
+            children: _steps.map((step) {
               final isSelected = _selectedStep == step;
               final isStepValid = step.isValid;
               return ListTile(
@@ -852,7 +853,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
                       )
                     : null,
               );
-            },
+            }).toList(),
           ),
         ),
         Padding(

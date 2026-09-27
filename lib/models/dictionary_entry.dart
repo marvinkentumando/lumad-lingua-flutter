@@ -49,7 +49,60 @@ enum PartOfSpeech {
   @HiveField(21)
   vocative,
   @HiveField(22)
-  interrogative,
+  interrogative;
+
+  String get label {
+    switch (this) {
+      case PartOfSpeech.noun:
+        return 'Noun';
+      case PartOfSpeech.verb:
+        return 'Verb';
+      case PartOfSpeech.adjective:
+        return 'Adjective';
+      case PartOfSpeech.phrase:
+        return 'Phrase';
+      case PartOfSpeech.adverb:
+        return 'Adverb';
+      case PartOfSpeech.pronoun:
+        return 'Pronoun';
+      case PartOfSpeech.preposition:
+        return 'Preposition';
+      case PartOfSpeech.conjunction:
+        return 'Conjunction';
+      case PartOfSpeech.interjection:
+        return 'Interjection';
+      case PartOfSpeech.idiom:
+        return 'Idiom / Expression';
+      case PartOfSpeech.proverb:
+        return 'Proverb / Salawikain';
+      case PartOfSpeech.simile:
+        return 'Simile';
+      case PartOfSpeech.metaphor:
+        return 'Metaphor';
+      case PartOfSpeech.personification:
+        return 'Personification';
+      case PartOfSpeech.hyperbole:
+        return 'Hyperbole';
+      case PartOfSpeech.onomatopoeia:
+        return 'Onomatopoeia';
+      case PartOfSpeech.locative:
+        return 'Locative';
+      case PartOfSpeech.particle:
+        return 'Particle';
+      case PartOfSpeech.prefix:
+        return 'Prefix';
+      case PartOfSpeech.suffix:
+        return 'Suffix';
+      case PartOfSpeech.marker:
+        return 'Marker';
+      case PartOfSpeech.vocative:
+        return 'Vocative';
+      case PartOfSpeech.interrogative:
+        return 'Interrogative';
+    }
+  }
+
+  String get partOfSpeechLabel => label;
 }
 
 @HiveType(typeId: 1)
@@ -133,56 +186,7 @@ class DictionaryEntry {
 
   bool get isValidated => status == ValidationStatus.approved;
 
-  String get partOfSpeechLabel {
-    switch (partOfSpeech) {
-      case PartOfSpeech.noun:
-        return 'Noun';
-      case PartOfSpeech.verb:
-        return 'Verb';
-      case PartOfSpeech.adjective:
-        return 'Adjective';
-      case PartOfSpeech.phrase:
-        return 'Phrase';
-      case PartOfSpeech.adverb:
-        return 'Adverb';
-      case PartOfSpeech.pronoun:
-        return 'Pronoun';
-      case PartOfSpeech.preposition:
-        return 'Preposition';
-      case PartOfSpeech.conjunction:
-        return 'Conjunction';
-      case PartOfSpeech.interjection:
-        return 'Interjection';
-      case PartOfSpeech.idiom:
-        return 'Idiom / Expression';
-      case PartOfSpeech.proverb:
-        return 'Proverb / Salawikain';
-      case PartOfSpeech.simile:
-        return 'Simile';
-      case PartOfSpeech.metaphor:
-        return 'Metaphor';
-      case PartOfSpeech.personification:
-        return 'Personification';
-      case PartOfSpeech.hyperbole:
-        return 'Hyperbole';
-      case PartOfSpeech.onomatopoeia:
-        return 'Onomatopoeia';
-      case PartOfSpeech.locative:
-        return 'Locative';
-      case PartOfSpeech.particle:
-        return 'Particle';
-      case PartOfSpeech.prefix:
-        return 'Prefix';
-      case PartOfSpeech.suffix:
-        return 'Suffix';
-      case PartOfSpeech.marker:
-        return 'Marker';
-      case PartOfSpeech.vocative:
-        return 'Vocative';
-      case PartOfSpeech.interrogative:
-        return 'Interrogative';
-    }
-  }
+  String get partOfSpeechLabel => partOfSpeech.partOfSpeechLabel;
 
   factory DictionaryEntry.fromFirestore(Map<String, dynamic> data, String id) {
     DateTime? validatedAt;

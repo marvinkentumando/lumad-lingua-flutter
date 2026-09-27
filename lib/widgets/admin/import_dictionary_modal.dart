@@ -327,7 +327,7 @@ class _ImportDictionaryModalState extends ConsumerState<ImportDictionaryModal> {
   PartOfSpeech _parsePartOfSpeech(String val) {
     val = val.toLowerCase().trim();
     for (final pos in PartOfSpeech.values) {
-      if (val == pos.name.toLowerCase() || val == pos.partOfSpeechLabel.toLowerCase()) {
+      if (val == pos.name.toLowerCase() || val == pos.label.toLowerCase()) {
         return pos;
       }
     }

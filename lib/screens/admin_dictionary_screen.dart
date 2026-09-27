@@ -451,7 +451,7 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
                     decoration: _inputDecoration(isDark),
                     items: PartOfSpeech.values.map((p) => DropdownMenuItem(
                       value: p,
-                      child: Text(p.partOfSpeechLabel.toUpperCase()),
+                      child: Text(p.label.toUpperCase()),
                     )).toList(),
                     onChanged: (v) => setState(() => _pos = v!),
                   ),
