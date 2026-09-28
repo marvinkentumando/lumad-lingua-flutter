@@ -74,6 +74,8 @@ class _AssessmentOverlayState extends State<AssessmentOverlay> {
 
     final question = widget.questions[_currentQuestionIndex];
     final isLast = _currentQuestionIndex == widget.questions.length - 1;
+    final canAdvance = _answers.containsKey(question.id) ||
+        question.questionType == QuestionType.textInput;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -107,8 +109,78 @@ class _AssessmentOverlayState extends State<AssessmentOverlay> {
             textAlign: TextAlign.center,
             style: AppTypography.h3.copyWith(color: Colors.white),
           ).animate(key: ValueKey(_currentQuestionIndex)).fadeIn().slideY(begin: 0.1),
-          const SizedBox(height: 32),
-          ...question.options.map((option) {
+          const SizedBox(height: 24),
+          _buildQuestionContent(question),
+          const SizedBox(height: 24),
+          if (_isSubmitting)
+            const CircularProgressIndicator(color: AppColors.gold500)
+          else
+            BrandButton(
+              text: isLast ? 'SUBMIT' : 'NEXT',
+              onTap: canAdvance
+                  ? () {
+                      if (isLast) {
+                        setState(() => _isFinished = true);
+                      } else {
+                        setState(() {
+                          _currentQuestionIndex++;
+                        });
+                      }
+                    }
+                  : null,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuestionContent(AssessmentQuestion question) {
+    switch (question.questionType) {
+      case QuestionType.starRating:
+        final currentRating = (_answers[question.id] as int?) ?? 0;
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (i) {
+              final starValue = i + 1;
+              final isSelected = starValue <= currentRating;
+              return IconButton(
+                iconSize: 36,
+                icon: Icon(
+                  isSelected ? Icons.star_rounded : Icons.star_outline_rounded,
+                  color: isSelected ? AppColors.gold500 : Colors.white24,
+                ),
+                onPressed: () => _handleOptionSelected(question.id, starValue),
+              );
+            }),
+          ),
+        );
+
+      case QuestionType.textInput:
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: TextField(
+            style: const TextStyle(color: Colors.white),
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: 'Type your feedback here (optional)...',
+              hintStyle: const TextStyle(color: Colors.white30),
+              filled: true,
+              fillColor: Colors.white.withValues(alpha: 0.05),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+            ),
+            onChanged: (val) => _handleOptionSelected(question.id, val),
+          ),
+        );
+
+      case QuestionType.multipleChoice:
+      default:
+        return Column(
+          children: question.options.map((option) {
             final isSelected = _answers[question.id] == option;
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -142,27 +214,8 @@ class _AssessmentOverlayState extends State<AssessmentOverlay> {
                 ),
               ),
             );
-          }),
-          const SizedBox(height: 32),
-          if (_isSubmitting)
-            const CircularProgressIndicator(color: AppColors.gold500)
-          else
-            BrandButton(
-              text: isLast ? 'SUBMIT' : 'NEXT',
-              onTap: _answers.containsKey(question.id)
-                  ? () {
-                      if (isLast) {
-                        setState(() => _isFinished = true);
-                      } else {
-                        setState(() {
-                          _currentQuestionIndex++;
-                        });
-                      }
-                    }
-                  : null,
-            ),
-        ],
-      ),
-    );
+          }).toList(),
+        );
+    }
   }
 }

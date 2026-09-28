@@ -74,14 +74,7 @@ class FirebaseService {
   Stream<List<AssessmentResult>> getAssessmentResults() {
     return _db.collection('assessments').orderBy('timestamp', descending: true).snapshots().map((snap) {
       return snap.docs.map((doc) {
-        final data = doc.data();
-        return AssessmentResult(
-          userId: data['userId'] ?? '',
-          type: data['type'] == 'preTest' ? AssessmentType.preTest : AssessmentType.postTest,
-          lessonId: data['lessonId'],
-          answers: Map<String, dynamic>.from(data['answers'] ?? {}),
-          timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
-        );
+        return AssessmentResult.fromFirestore(doc.data());
       }).toList();
     });
   }
@@ -4363,9 +4356,32 @@ final firebaseServiceProvider = Provider((ref) {
   return FirebaseService();
 });
 
-final dictionaryStreamProvider = StreamProvider<List<DictionaryEntry>>((ref) {
-  return ref.watch(firebaseServiceProvider).getValidatedDictionaryWords();
-});
+final dictionaryStreamProvider =
+    StreamProvider<List<DictionaryEntry>>((ref) async* {
+      final offlineService = ref.watch(offlineServiceProvider);
+
+      // Yield cached dictionary entries first for immediate offline load
+      final cached = await offlineService.getCachedDictionary();
+      if (cached.isNotEmpty) {
+        yield cached;
+      }
+
+      // Stream live validated words from Firestore & save to Hive
+      try {
+        await for (final entries in ref
+            .watch(firebaseServiceProvider)
+            .getValidatedDictionaryWords()) {
+          if (entries.isNotEmpty) {
+            await offlineService.saveDictionaryEntries(entries);
+          }
+          yield entries;
+        }
+      } catch (e) {
+        // Fallback to Hive cache on network/Firestore error
+        final fallback = await offlineService.getCachedDictionary();
+        yield fallback;
+      }
+    });
 
 final pendingDictionaryStreamProvider =
     StreamProvider.family<List<DictionaryEntry>, ValidatorQuery>((ref, query) {
@@ -4377,12 +4393,42 @@ final pendingDictionaryStreamProvider =
     });
 
 final globalDictionaryStreamProvider =
-    StreamProvider.family<List<DictionaryEntry>, ValidatorQuery>((ref, query) {
-      return ref.watch(firebaseServiceProvider).getGlobalDictionaryWords(
-            limit: query.limit,
-            search: query.search,
-            dialect: query.dialect,
-          );
+    StreamProvider.family<List<DictionaryEntry>, ValidatorQuery>((ref, query) async* {
+      final offlineService = ref.watch(offlineServiceProvider);
+
+      // Yield cached dictionary search results first for immediate offline load
+      final cached = await offlineService.searchCachedDictionary(
+        limit: query.limit,
+        search: query.search,
+        dialect: query.dialect,
+      );
+      if (cached.isNotEmpty) {
+        yield cached;
+      }
+
+      // Stream live global dictionary search results from Firestore & save to Hive
+      try {
+        await for (final entries in ref
+            .watch(firebaseServiceProvider)
+            .getGlobalDictionaryWords(
+              limit: query.limit,
+              search: query.search,
+              dialect: query.dialect,
+            )) {
+          if (entries.isNotEmpty) {
+            await offlineService.saveDictionaryEntries(entries);
+          }
+          yield entries;
+        }
+      } catch (e) {
+        // Fallback to Hive cache on network/Firestore error
+        final fallback = await offlineService.searchCachedDictionary(
+          limit: query.limit,
+          search: query.search,
+          dialect: query.dialect,
+        );
+        yield fallback;
+      }
     });
 
 final mapMarkersStreamProvider = StreamProvider<List<GeoRecording>>((ref) {

@@ -1,47 +1,44 @@
-# Implementation Status Checklist
+# Lumad Lingua - Development TODO & Project Roadmap
 
-This document tracks the progress of features and requirements defined in `objectives_and_requirements.md`.
-
-## 🎯 Objectives Status
-
-| Objective | Status | Implementation Details |
-| :--- | :--- | :--- |
-| **Gamified Learning System** (Quizzes, Matching, Pronunciation, Leaderboards, Streaks, XP) | ✅ Implemented | `QuizScreen`, `LeaderboardScreen`, `StreakHistoryScreen`, and `WisdomProgressionScreen`. |
-| **Searchable Digital Dictionary** (Validated vocabulary, native audio, examples) | ✅ Implemented | `DictionaryScreen`, `SupabaseStorageService` for audio, and Firestore for entries. |
-| **Evaluate 3 Pronunciation Algorithms** | ⚠️ Partial | `PronunciationService` implements MFCC and DTW. The "evaluation" part refers to the selection of these models as the most suitable. |
-| **Descriptive Analytics** (Progress, quiz performance, XP, and accuracy) | ✅ Implemented | `AdminAdvancedAnalyticsScreen` and `EducatorAnalyticsScreen`. |
-| **Sentiment Analysis of FB Posts** | ⚠️ Partial | `SentimentService` has basic keyword classification. Real-time Facebook Graph API integration is currently a placeholder/mock. |
-| **Evaluate 3 Sentiment Analysis Algorithms** | ⚠️ Partial | The system uses a specific classification model; full comparative evaluation of three models is not explicitly detailed in the app logic. |
-
----
-
-## ⚙️ Functional Requirements status
-
-| Requirement                                                           | Status | Verification |
-|:----------------------------------------------------------------------| :--- | :--- |
-| **Firestore Persistence** (Vocabulary, Filipino/English translations) | ✅ Met | `FirebaseService` handles all dictionary and lesson entry storage. |
-| **Supabase Audio Archiving** (Native speaker audio, < 10MB)           | ✅ Met | `SupabaseStorageService` manages audio uploads and streaming. |
-| **Facebook Post Retrieval** (secondary sources)                       | ❌ Incomplete | `SentimentService` currently uses mock data; API retrieval logic needs final keys/integration. |
-| **Sentiment Classification** (Positive, Negative, Neutral)            | ✅ Met | `SentimentService.analyzeSentiment()` classifies text into these polarities. |
-| **Interactive Sentiment Dashboard**                                   | ✅ Met | `SentimentDashboardScreen` provides visualizations for community sentiment trends. |
-| **Leitner-based Spaced Repetition (SRS)**                             | ✅ Met | `SRSService` and `srsProgressStreamProvider` schedule reviews; visualized in `MemoryForest`. |
-| **Pronunciation Assessment** (MFCC & DTW)                             | ✅ Met | `PronunciationService` extracts MFCCs and applies DTW for alignment. |
-| **Searchable Dictionary** (< 500ms latency)                           | ✅ Met | Firestore indexing and `dictionaryStreamProvider` ensure high-performance retrieval. |
-| **Role-Based Access Control** (Learner, Validator, Educator, Admin)   | ✅ Met | `AuthService` handles consolidated roles (Contributor retired); Firestore security rules enforced. |
-| **Learner Progress Tracking** (Points, levels, streaks)               | ✅ Met | `StudentProvider` and `ProfileScreen` track and display all gamification metrics. |
-| **Offline-First Functionality** (Firestore Cache & Local Cache)       | ✅ Met | `OfflineService` uses **Hive** for lessons/dictionary; Firestore handles automatic sync. |
-| **Admin Analytics Dashboard**                                         | ✅ Met | `AdminOverviewScreen` provides aggregated content and user performance metrics. |
-| **Test Assessments**                                                  | ✅ Met | `AssessmentProvider` saves results to Firestore for administrator review. |
+## 📌 Recent Completed Tasks
+- [x] **Dictionary Screen (Learner View)**:
+  - Added Part of Speech badge/tag to entry cards.
+  - Added Part of Speech filter chip row (All, Noun, Verb, Adjective, Phrase, etc.).
+  - Removed phonetic pronunciation text display from entry cards.
+  - Implemented SRS mastery stars and saved words bookmarking system.
+  - Implemented Hive offline caching for global dictionary searches and local fallbacks.
+- [x] **Text-To-Speech (TTS) Engine**:
+  - Implemented native TTS language check prioritizing Cebuano (`ceb-PH`) for phonetic similarity to Mansaka, falling back to Filipino (`fil-PH`).
+- [x] **Admin Dictionary Screen**:
+  - Streamlined Add/Edit Entry Modal by removing standalone translation fields while preserving example sentence translations.
+  - Supported CSV export and import modal for dictionary bulk uploads.
+  - Supported native audio recording and file uploads directly from the Admin Entry Form modal.
+- [x] **Lesson Session Screen**:
+  - Fixed "Finish" button dialog bug on session results overlay by dismissing `dialogContext` before navigating with `GoRouter`.
+  - Enhanced post-test survey feedback data submission with star ratings and open-text feedback to Firebase.
 
 ---
 
-## 🚀 Recent UI/UX Enhancements (Not in Original Requirements)
+## 🚀 High Priority (Next Steps)
 
-| Feature | Status | Description |
-| :--- | :--- | :--- |
-| **Generative Textures** | ✅ Implemented | Reactive Dagmay patterns that move with scroll and touch. |
-| **Memory Forest** | ✅ Implemented | Procedural visualization of SRS mastery growth (Sprouts to Trees). |
-| **Glassmorphism UI** | ✅ Implemented | `DynamicGlassBox` used across dashboards for a modern "Ancestral Tech" feel. |
+### 📚 Dictionary & Vocabulary
+- [x] Add Part of Speech filter chip row to the Learner Dictionary Screen.
+- [x] Support native audio file upload directly from the Admin Entry Form modal.
+- [x] Implement Hive offline caching for global dictionary searches.
+
+### 🎮 Lessons & Learning Session
+- [ ] Add audio recording evaluation/pronunciation preview in lesson session activities.
+- [x] Enhance post-test survey feedback data submission to Firebase.
+- [ ] Implement audio pre-caching for entire lesson modules before starting a session.
+
+### 🏆 Gamification & Rewards
+- [ ] Expand Tribal Quests & Daily Challenge claim reward animations.
+- [ ] Integrate Avatar cultural customization shop using Mist Crystals.
+- [ ] Implement local push notifications for daily streak reminders.
 
 ---
-**Last Updated:** $(Get-Date -Format 'yyyy-MM-dd')
+
+## 🛠 Low Priority & Refactoring
+- [ ] Refactor state management providers for smoother offline sync transitions.
+- [ ] Add unit & widget tests for `AudioService` and `DictionaryFilterNotifier`.
+- [ ] Optimize shimmer skeleton loading states across low-end mobile devices.

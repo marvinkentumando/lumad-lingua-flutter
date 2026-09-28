@@ -82,7 +82,12 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                               l10n,
                               filter,
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 12),
+                            _buildPartOfSpeechFilterRow(
+                              Theme.of(context).brightness == Brightness.dark,
+                              filter,
+                            ),
+                            const SizedBox(height: 12),
                           ],
                         ),
                       ),
@@ -190,6 +195,87 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
         const SizedBox(width: 12),
         _buildSortMenu(isDark, l10n, filter.sort),
       ],
+    );
+  }
+
+  Widget _buildPartOfSpeechFilterRow(bool isDark, DictionaryFilter filter) {
+    return SizedBox(
+      height: 38,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        children: [
+          _buildFilterChip(
+            label: 'All',
+            isSelected: filter.partOfSpeech == null,
+            onTap: () {
+              HapticService.selection();
+              ref.read(dictionaryFilterProvider.notifier).update(
+                    (s) => s.copyWith(clearPartOfSpeech: true),
+                  );
+            },
+            isDark: isDark,
+          ),
+          ...PartOfSpeech.values.map((pos) {
+            final isSelected = filter.partOfSpeech == pos;
+            return _buildFilterChip(
+              label: pos.label,
+              isSelected: isSelected,
+              onTap: () {
+                HapticService.selection();
+                ref.read(dictionaryFilterProvider.notifier).update(
+                      (s) => isSelected
+                          ? s.copyWith(clearPartOfSpeech: true)
+                          : s.copyWith(partOfSpeech: pos),
+                    );
+              },
+              isDark: isDark,
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required bool isDark,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppColors.gold500
+                : (isDark
+                    ? Theme.of(context).colorScheme.surfaceContainerHighest
+                    : Colors.white.withValues(alpha: 0.8)),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: isSelected
+                  ? AppColors.gold700
+                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+              width: isSelected ? 1.5 : 1.0,
+            ),
+          ),
+          child: Text(
+            label,
+            style: AppTypography.label.copyWith(
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 11,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -423,12 +509,22 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard> with
                   const SizedBox(width: 8),
                   Icon(Icons.star_rounded, size: 14, color: _getMasteryColor(widget.masteryLevel!)),
                 ],
-                const SizedBox(width: 12),
-                Text(
-                  widget.entry.phonetic ?? '',
-                  style: AppTypography.mono.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                    fontSize: 12,
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHigh.withValues(alpha: isDark ? 0.3 : 0.6),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5)),
+                  ),
+                  child: Text(
+                    widget.entry.partOfSpeechLabel,
+                    style: AppTypography.label.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
                 ),
                 const Spacer(),

@@ -103,8 +103,22 @@ class AudioService {
 
   Future<void> speak(String text) async {
     try {
-      // fil-PH is used as a best-effort fallback for indigenous dialects
-      await _tts.setLanguage("fil-PH");
+      // Try Cebuano first as it is phonetically closer to Mansaka, fallback to Filipino
+      bool setSuccess = false;
+      for (final lang in ["ceb-PH", "ceb", "fil-PH", "fil"]) {
+        try {
+          final isAvail = await _tts.isLanguageAvailable(lang);
+          if (isAvail == true || isAvail == 1) {
+            await _tts.setLanguage(lang);
+            setSuccess = true;
+            break;
+          }
+        } catch (_) {}
+      }
+      if (!setSuccess) {
+        await _tts.setLanguage("fil-PH");
+      }
+
       await _tts.setSpeechRate(0.5);
       await _tts.setVolume(1.0);
       await _tts.setPitch(1.0);

@@ -15,6 +15,7 @@ import '../widgets/brand_search_bar.dart';
 import '../widgets/brand_text_field.dart';
 import '../widgets/preview_audio_player.dart';
 import '../widgets/admin/import_dictionary_modal.dart';
+import '../widgets/lesson_editors/editor_utils.dart';
 
 class AdminDictionaryScreen extends ConsumerStatefulWidget {
   const AdminDictionaryScreen({super.key});
@@ -351,25 +352,23 @@ class _EntryFormSheet extends ConsumerStatefulWidget {
 
 class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
   late TextEditingController _termCtrl;
-  late TextEditingController _transEngCtrl;
-  late TextEditingController _transFilCtrl;
   late TextEditingController _defCtrl;
   late TextEditingController _exNativeCtrl;
   late TextEditingController _exTransCtrl;
   
   String _language = 'Mansaka';
   PartOfSpeech _pos = PartOfSpeech.noun;
+  String? _audioUrl;
   bool _loading = false;
 
   @override
   void initState() {
     super.initState();
     _termCtrl = TextEditingController(text: widget.entry?.indigenousWord);
-    _transEngCtrl = TextEditingController(text: widget.entry?.translation);
-    _transFilCtrl = TextEditingController(text: widget.entry?.translationFilipino);
     _defCtrl = TextEditingController(text: widget.entry?.usageContext);
     _exNativeCtrl = TextEditingController(text: widget.entry?.usageExampleNative);
     _exTransCtrl = TextEditingController(text: widget.entry?.usageExampleTranslation);
+    _audioUrl = widget.entry?.audioUrl;
 
     if (widget.entry != null) {
       _language = widget.entry!.language;
@@ -380,8 +379,6 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
   @override
   void dispose() {
     _termCtrl.dispose();
-    _transEngCtrl.dispose();
-    _transFilCtrl.dispose();
     _defCtrl.dispose();
     _exNativeCtrl.dispose();
     _exTransCtrl.dispose();
@@ -458,15 +455,53 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
                   const SizedBox(height: 16),
                   BrandTextField(controller: _termCtrl, labelText: 'Indigenous Term (Word)', prefixIcon: Icons.translate_rounded),
                   const SizedBox(height: 16),
-                  BrandTextField(controller: _transEngCtrl, labelText: 'English Translation', prefixIcon: Icons.g_translate_rounded),
-                  const SizedBox(height: 16),
-                  BrandTextField(controller: _transFilCtrl, labelText: 'Filipino Translation', prefixIcon: Icons.translate_outlined),
-                  const SizedBox(height: 16),
                   BrandTextField(controller: _defCtrl, labelText: 'Definition / Description', prefixIcon: Icons.description_rounded, maxLines: 3),
                   const SizedBox(height: 16),
                   BrandTextField(controller: _exNativeCtrl, labelText: 'Example Sentence (Indigenous)', prefixIcon: Icons.history_edu_rounded),
                   const SizedBox(height: 16),
                   BrandTextField(controller: _exTransCtrl, labelText: 'Example Translation (English)', prefixIcon: Icons.auto_stories_rounded),
+                  const SizedBox(height: 16),
+                  _buildLabel('Pronunciation Audio', isDark),
+                  EditorUtils.buildAudioRecorderPlaceholder(
+                    context: context,
+                    currentAudioUrl: _audioUrl,
+                    onUploadComplete: (url) {
+                      setState(() {
+                        _audioUrl = url;
+                      });
+                    },
+                  ),
+                  if (_audioUrl != null && _audioUrl!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        PreviewAudioPlayer(
+                          audioUrl: _audioUrl!,
+                          size: 32,
+                          color: isDark ? AppColors.gold500 : AppColors.forest900,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Audio Attached',
+                            style: AppTypography.body.copyWith(
+                              color: isDark ? Colors.white70 : AppColors.forest900,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline_rounded, color: AppColors.semanticRed, size: 20),
+                          tooltip: 'Remove Audio',
+                          onPressed: () {
+                            setState(() {
+                              _audioUrl = null;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 40),
                   SizedBox(
                     width: double.infinity,
@@ -523,14 +558,14 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
         id: widget.entry?.id ?? '',
         indigenousWord: _termCtrl.text.trim(),
         phonetic: widget.entry?.phonetic,
-        translation: _transEngCtrl.text.trim(),
-        translationFilipino: _transFilCtrl.text.trim(),
+        translation: widget.entry?.translation ?? '',
+        translationFilipino: widget.entry?.translationFilipino ?? '',
         partOfSpeech: _pos,
         language: _language,
         usageContext: _defCtrl.text.trim(),
         usageExampleNative: _exNativeCtrl.text.trim(),
         usageExampleTranslation: _exTransCtrl.text.trim(),
-        audioUrl: widget.entry?.audioUrl,
+        audioUrl: _audioUrl,
         status: widget.entry?.status ?? ValidationStatus.approved,
         submittedAt: widget.entry?.submittedAt ?? DateTime.now(),
       );

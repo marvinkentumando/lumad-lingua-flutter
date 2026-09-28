@@ -9,22 +9,27 @@ class DictionaryFilter {
   final String query;
   final String category;
   final DictionarySort sort;
+  final PartOfSpeech? partOfSpeech;
 
   DictionaryFilter({
     this.query = '',
     this.category = 'ALL',
     this.sort = DictionarySort.alphabetical,
+    this.partOfSpeech,
   });
 
   DictionaryFilter copyWith({
     String? query,
     String? category,
     DictionarySort? sort,
+    PartOfSpeech? partOfSpeech,
+    bool clearPartOfSpeech = false,
   }) {
     return DictionaryFilter(
       query: query ?? this.query,
       category: category ?? this.category,
       sort: sort ?? this.sort,
+      partOfSpeech: clearPartOfSpeech ? null : (partOfSpeech ?? this.partOfSpeech),
     );
   }
 }
@@ -44,17 +49,21 @@ final filteredDictionaryProvider = Provider<AsyncValue<List<DictionaryEntry>>>((
       items = items.where((e) => savedIds.contains(e.id)).toList();
     }
 
-    // 2. Filter by search query with basic optimization (lowercase only once)
+    // 2. Filter by Part of Speech
+    if (filter.partOfSpeech != null) {
+      items = items.where((e) => e.partOfSpeech == filter.partOfSpeech).toList();
+    }
+
+    // 3. Filter by search query with basic optimization
     if (filter.query.isNotEmpty) {
       final q = filter.query.toLowerCase();
       items = items.where((e) {
-        // indigenousWord and translation are likely short, but contains is still O(m*n)
         return e.indigenousWord.toLowerCase().contains(q) ||
                e.translation.toLowerCase().contains(q);
       }).toList();
     }
 
-    // 3. Apply Sorting
+    // 4. Apply Sorting
     final sorted = List<DictionaryEntry>.from(items);
     switch (filter.sort) {
       case DictionarySort.alphabetical:

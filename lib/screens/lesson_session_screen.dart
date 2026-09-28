@@ -106,6 +106,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
   LessonTask? _lastTask;
   bool _showLeaderboardSnippet = false;
   List<LessonTask> _allSessionTasks = [];
+  Lesson? _activeLesson;
 
   @override
   void initState() {
@@ -135,6 +136,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
       if (lessonId != null) {
         ref.read(currentLessonProvider(lessonId).future).then((lesson) {
           if (lesson != null && mounted) {
+            _activeLesson = lesson;
             _allSessionTasks = List.from(lesson.tasks);
             ref.read(quizSessionProvider.notifier).loadTasks(lesson.tasks);
             _initTaskState();
@@ -480,6 +482,11 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
 
     final List<AssessmentQuestion> postTestQuestions = [
       AssessmentQuestion(
+        id: 'rating',
+        text: 'How would you rate this lesson overall?',
+        questionType: QuestionType.starRating,
+      ),
+      AssessmentQuestion(
         id: 'confidence',
         text: l10n.translate('confidence_question'),
         options: [
@@ -509,6 +516,11 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           l10n.translate('unlikely')
         ],
       ),
+      AssessmentQuestion(
+        id: 'feedback',
+        text: 'Any feedback or suggestions for our tribal elders?',
+        questionType: QuestionType.textInput,
+      ),
     ];
 
     showDialog(
@@ -521,10 +533,17 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
             type: AssessmentType.postTest,
             questions: postTestQuestions,
             onComplete: (answers) async {
+              final int? ratingScore = answers['rating'] is int ? answers['rating'] : null;
+              final String? openTextFeedback = answers['feedback'] is String ? answers['feedback'] : null;
+              final lessonId = GoRouterState.of(context).uri.queryParameters['lessonId'];
+
               final result = AssessmentResult(
                 userId: user.uid,
                 type: AssessmentType.postTest,
-                lessonId: GoRouterState.of(context).uri.queryParameters['lessonId'],
+                lessonId: lessonId,
+                lessonTitle: _activeLesson?.title,
+                ratingScore: ratingScore,
+                openTextFeedback: openTextFeedback,
                 answers: answers,
                 timestamp: DateTime.now(),
               );
@@ -606,6 +625,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
         distinctMistakeTasks: distinctMistakeTasks,
         bonusXp: bonusXp,
         onFinish: () {
+          Navigator.of(dialogContext).pop();
           if (lessonId != null) {
             context.go('/learning/path?lessonId=$lessonId');
           } else {

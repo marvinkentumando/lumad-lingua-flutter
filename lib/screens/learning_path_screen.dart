@@ -205,6 +205,11 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                     type: AssessmentType.postTest,
                     questions: [
                       AssessmentQuestion(
+                        id: 'star_rating',
+                        text: 'Overall path rating:',
+                        questionType: QuestionType.starRating,
+                      ),
+                      AssessmentQuestion(
                         id: 'peak_mastery',
                         text: 'How would you rate your overall mastery of $resolvedLanguage after completing this path?',
                         options: ['Mastered', 'Proficient', 'Developing', 'Beginner'],
@@ -219,16 +224,27 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                         text: 'How helpful was Lumad Lingua in your learning journey?',
                         options: ['Extremely Helpful', 'Helpful', 'Neutral', 'Unhelpful'],
                       ),
+                      AssessmentQuestion(
+                        id: 'comments',
+                        text: 'Share your thoughts or feedback with our cultural guardians:',
+                        questionType: QuestionType.textInput,
+                      ),
                     ],
                     onComplete: (answers) async {
                       final user = ref.read(authServiceProvider).currentUser;
                       if (user != null) {
+                        final int? ratingScore = answers['star_rating'] is int ? answers['star_rating'] : null;
+                        final String? openTextFeedback = answers['comments'] is String ? answers['comments'] : null;
+
                         final result = AssessmentResult(
                           userId: user.uid,
                           type: AssessmentType.postTest,
+                          lessonId: 'summit_$resolvedLanguage',
+                          lessonTitle: '$resolvedLanguage Summit Learning Path',
+                          ratingScore: ratingScore,
+                          openTextFeedback: openTextFeedback,
                           answers: answers,
                           timestamp: DateTime.now(),
-                          lessonId: 'summit_$resolvedLanguage',
                         );
                         await ref.read(firebaseServiceProvider).saveAssessmentResult(result);
                       }

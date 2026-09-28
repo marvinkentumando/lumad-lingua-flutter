@@ -110,11 +110,54 @@ class AdminAssessmentsScreen extends ConsumerWidget {
             'User ID: ${assessment.userId}',
             style: AppTypography.mono.copyWith(fontSize: 10, color: Colors.black45),
           ),
-          if (assessment.lessonId != null)
+          if (assessment.lessonTitle != null || assessment.lessonId != null)
             Text(
-              'Lesson: ${assessment.lessonId}',
+              'Lesson: ${assessment.lessonTitle ?? assessment.lessonId}',
               style: AppTypography.body.copyWith(fontSize: 12, fontWeight: FontWeight.bold),
             ),
+          if (assessment.ratingScore != null) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                ...List.generate(
+                  5,
+                  (i) => Icon(
+                    i < assessment.ratingScore!
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
+                    color: AppColors.gold500,
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${assessment.ratingScore}/5 Stars',
+                  style: AppTypography.mono.copyWith(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          if (assessment.openTextFeedback != null &&
+              assessment.openTextFeedback!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '"${assessment.openTextFeedback}"',
+                style: AppTypography.body.copyWith(
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           const Divider(color: Colors.black12),
           const SizedBox(height: 8),

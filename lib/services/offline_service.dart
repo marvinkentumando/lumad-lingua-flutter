@@ -96,6 +96,38 @@ class OfflineService {
     return box.values.toList();
   }
 
+  Future<List<DictionaryEntry>> searchCachedDictionary({
+    int limit = 50,
+    String? search,
+    String? dialect,
+  }) async {
+    final box = await _getBox<DictionaryEntry>(dictionaryBoxName);
+    var entries = box.values.toList();
+
+    if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
+      entries = entries
+          .where((e) => e.language.toLowerCase() == dialect.toLowerCase())
+          .toList();
+    }
+
+    if (search != null && search.isNotEmpty) {
+      final q = search.toLowerCase();
+      entries = entries.where((e) {
+        return e.indigenousWord.toLowerCase().contains(q) ||
+            e.translation.toLowerCase().contains(q) ||
+            e.usageContext.toLowerCase().contains(q);
+      }).toList();
+    }
+
+    return entries.take(limit).toList();
+  }
+
+  Stream<List<DictionaryEntry>> watchCachedDictionary() async* {
+    final box = await _getBox<DictionaryEntry>(dictionaryBoxName);
+    yield box.values.toList();
+    yield* box.watch().map((_) => box.values.toList());
+  }
+
   Future<DictionaryEntry?> getRandomCachedWord() async {
     final box = await _getBox<DictionaryEntry>(dictionaryBoxName);
     if (box.isEmpty) return null;
