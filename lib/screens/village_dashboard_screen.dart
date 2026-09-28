@@ -175,7 +175,7 @@ class VillageDashboardScreen extends ConsumerWidget {
         final villageName = educator?['villageName'] ?? '$educatorName\'s Tribe';
 
         final memberCount = leaderboardAsync.value?.length ?? 0;
-        final totalXp = leaderboardAsync.value?.fold<int>(0, (sum, item) => sum + ((item['xp'] as num?)?.toInt() ?? 0)) ?? 0;
+        final totalXp = leaderboardAsync.value?.fold<int>(0, (acc, item) => acc + ((item['xp'] as num?)?.toInt() ?? 0)) ?? 0;
 
         return BrandCard(
           theme: BrandCardTheme.gold,
@@ -379,7 +379,7 @@ class VillageDashboardScreen extends ConsumerWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      broadcast.senderName.isNotEmpty ? broadcast.senderName : 'Educator',
+                      broadcast.educatorName.isNotEmpty ? broadcast.educatorName : 'Educator',
                       style: AppTypography.labelBold.copyWith(color: AppColors.gold500, fontSize: 13),
                     ),
                   ],
@@ -466,22 +466,16 @@ class VillageDashboardScreen extends ConsumerWidget {
     final xp = (member['xp'] as num?)?.toInt() ?? 0;
     final streak = (member['dailyStreak'] as num?)?.toInt() ?? 0;
     final photoUrl = member['photoURL'] as String?;
-    final totemId = member['totemId'] as String?;
 
-    Color rankColor;
     Widget rankWidget;
 
     if (rank == 1) {
-      rankColor = const Color(0xFFFFD700);
       rankWidget = const Text('🥇', style: TextStyle(fontSize: 20));
     } else if (rank == 2) {
-      rankColor = const Color(0xFFC0C0C0);
       rankWidget = const Text('🥈', style: TextStyle(fontSize: 20));
     } else if (rank == 3) {
-      rankColor = const Color(0xFFCD7F32);
       rankWidget = const Text('🥉', style: TextStyle(fontSize: 20));
     } else {
-      rankColor = Colors.white54;
       rankWidget = Text(
         '#$rank',
         style: AppTypography.labelBold.copyWith(color: Colors.white54, fontSize: 14),
@@ -507,7 +501,6 @@ class VillageDashboardScreen extends ConsumerWidget {
           const SizedBox(width: 12),
           ProfileAvatar(
             photoUrl: photoUrl,
-            totemId: totemId,
             radius: 20,
           ),
           const SizedBox(width: 12),

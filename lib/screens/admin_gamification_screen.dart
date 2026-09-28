@@ -66,19 +66,19 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
         padding: const EdgeInsets.all(16),
         children: [
           _buildRewardCategory('CONTRIBUTIONS', [
-            _rewardTile('Word Approval', config.wordApprovalXp, (val) => _updateConfig('wordApprovalXp', val)),
-            _rewardTile('Lesson Approval', config.lessonApprovalXp, (val) => _updateConfig('lessonApprovalXp', val)),
+            _rewardTile('Word Approval', config.wordApprovalXp, (val) => _updateConfig('wordApprovalXp', val, 'Word Approval')),
+            _rewardTile('Lesson Approval', config.lessonApprovalXp, (val) => _updateConfig('lessonApprovalXp', val, 'Lesson Approval')),
           ]),
           const SizedBox(height: 24),
           _buildRewardCategory('LEARNING PATH', [
-            _rewardTile('Lesson Completion (Base)', config.lessonCompletionBaseXp, (val) => _updateConfig('lessonCompletionBaseXp', val)),
-            _rewardTile('Perfect Task Bonus', config.lessonTaskPerfectXp, (val) => _updateConfig('lessonTaskPerfectXp', val)),
-            _rewardTile('Task Retry Reward', config.lessonTaskRetryXp, (val) => _updateConfig('lessonTaskRetryXp', val)),
+            _rewardTile('Lesson Completion (Base)', config.lessonCompletionBaseXp, (val) => _updateConfig('lessonCompletionBaseXp', val, 'Lesson Completion (Base)')),
+            _rewardTile('Perfect Task Bonus', config.lessonTaskPerfectXp, (val) => _updateConfig('lessonTaskPerfectXp', val, 'Perfect Task Bonus')),
+            _rewardTile('Task Retry Reward', config.lessonTaskRetryXp, (val) => _updateConfig('lessonTaskRetryXp', val, 'Task Retry Reward')),
           ]),
           const SizedBox(height: 24),
           _buildRewardCategory('DAILY RITUALS', [
-            _rewardTile('SRS Card Review', config.cardReviewXp, (val) => _updateConfig('cardReviewXp', val)),
-            _rewardTile('SRS Completion Bonus (per card)', config.cardCompletionBonusXp, (val) => _updateConfig('cardCompletionBonusXp', val)),
+            _rewardTile('SRS Card Review', config.cardReviewXp, (val) => _updateConfig('cardReviewXp', val, 'SRS Card Review')),
+            _rewardTile('SRS Completion Bonus (per card)', config.cardCompletionBonusXp, (val) => _updateConfig('cardCompletionBonusXp', val, 'SRS Completion Bonus')),
           ]),
         ],
       ),
@@ -124,7 +124,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         backgroundColor: AppColors.forest800,
         title: Text('Edit $label', style: const TextStyle(color: AppColors.gold500)),
         content: Form(
@@ -155,19 +155,13 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
+          TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('CANCEL')),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               if (formKey.currentState?.validate() ?? false) {
                 final parsed = int.tryParse(controller.text.trim()) ?? currentValue;
-                onUpdate(parsed);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('$label updated to $parsed XP'),
-                    backgroundColor: AppColors.forest700,
-                  ),
-                );
+                Navigator.pop(dialogCtx);
+                await onUpdate(parsed);
               }
             },
             child: const Text('UPDATE'),
@@ -177,14 +171,22 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
     );
   }
 
-  Future<void> _updateConfig(String key, int value) async {
+  Future<void> _updateConfig(String key, int value, [String? label]) async {
     try {
       await ref.read(firebaseServiceProvider).updateAppConfig({key: value});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${label ?? key} updated to $value XP'),
+            backgroundColor: AppColors.semanticGreen,
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to update config: $e'),
+            content: Text('Failed to update ${label ?? key}: $e'),
             backgroundColor: AppColors.semanticRed,
           ),
         );
@@ -281,18 +283,29 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                         value: isAvail,
                         activeThumbColor: AppColors.gold500,
                         onChanged: (val) async {
-                          await ref
-                              .read(firebaseServiceProvider)
-                              .updateShopItem(item.id, {'isAvailable': val});
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  val ? '"${item.title}" is now visible in shop.' : '"${item.title}" is now hidden from shop.',
+                          try {
+                            await ref
+                                .read(firebaseServiceProvider)
+                                .updateShopItem(item.id, {'isAvailable': val});
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    val ? '"${item.title}" is now visible in shop.' : '"${item.title}" is now hidden from shop.',
+                                  ),
+                                  backgroundColor: AppColors.semanticGreen,
                                 ),
-                                backgroundColor: AppColors.forest700,
-                              ),
-                            );
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Failed to update availability: $e'),
+                                  backgroundColor: AppColors.semanticRed,
+                                ),
+                              );
+                            }
                           }
                         },
                       ),
@@ -347,7 +360,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
   void _confirmDeleteShopItem(ShopItem item) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         backgroundColor: AppColors.forest800,
         title: Text('Delete ${item.title}', style: const TextStyle(color: AppColors.gold500)),
         content: Text(
@@ -356,7 +369,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogCtx),
             child: const Text('CANCEL'),
           ),
           ElevatedButton(
@@ -364,25 +377,27 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
             onPressed: () async {
               try {
                 await ref.read(firebaseServiceProvider).deleteShopItem(item.id);
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('"${item.title}" has been deleted.'),
-                      backgroundColor: AppColors.forest700,
-                    ),
-                  );
+                if (!context.mounted) return;
+                if (dialogCtx.mounted) {
+                  Navigator.pop(dialogCtx);
                 }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('"${item.title}" has been deleted.'),
+                    backgroundColor: AppColors.semanticGreen,
+                  ),
+                );
               } catch (e) {
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error deleting shop item: $e'),
-                      backgroundColor: AppColors.semanticRed,
-                    ),
-                  );
+                if (!context.mounted) return;
+                if (dialogCtx.mounted) {
+                  Navigator.pop(dialogCtx);
                 }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to delete shop item: $e'),
+                    backgroundColor: AppColors.semanticRed,
+                  ),
+                );
               }
             },
             child: const Text('DELETE', style: TextStyle(color: Colors.white)),
@@ -403,8 +418,8 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) => AlertDialog(
           backgroundColor: AppColors.forest800,
           title: Text(item == null ? 'New Shop Item' : 'Edit ${item.title}', style: const TextStyle(color: AppColors.gold500)),
           content: SingleChildScrollView(
@@ -504,7 +519,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
+            TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('CANCEL')),
             ElevatedButton(
               onPressed: () async {
                 if (formKey.currentState?.validate() ?? false) {
@@ -525,24 +540,24 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                     } else {
                       await ref.read(firebaseServiceProvider).updateShopItem(item.id, newItem.toFirestore());
                     }
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(item == null ? 'Shop item created' : 'Shop item updated'),
-                          backgroundColor: AppColors.forest700,
-                        ),
-                      );
+                    if (!context.mounted) return;
+                    if (dialogCtx.mounted) {
+                      Navigator.pop(dialogCtx);
                     }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(item == null ? '"${newItem.title}" created successfully!' : '"${newItem.title}" updated successfully!'),
+                        backgroundColor: AppColors.semanticGreen,
+                      ),
+                    );
                   } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Failed to save shop item: $e'),
-                          backgroundColor: AppColors.semanticRed,
-                        ),
-                      );
-                    }
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to save shop item: $e'),
+                        backgroundColor: AppColors.semanticRed,
+                      ),
+                    );
                   }
                 }
               },

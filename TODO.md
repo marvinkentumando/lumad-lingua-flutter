@@ -59,7 +59,7 @@
   - 📁 `lib/screens/admin_gamification_screen.dart`, `lib/services/firebase_service.dart`
 - [x] **Shop Item Availability Toggle**: Add an `isAvailable` switch to shop items and dialogs to allow hiding items without deleting them.
   - 📁 `lib/screens/admin_gamification_screen.dart`, `lib/models/gamification_models.dart`
-- [ ] **Admin Action Feedback (Snackbars)**: Wrap Firebase operations in try-catch blocks and display `ScaffoldMessenger` SnackBar feedback on success/failure.
+- [x] **Admin Action Feedback (Snackbars)**: Wrap Firebase operations in try-catch blocks and display `ScaffoldMessenger` SnackBar feedback on success/failure.
   - 📁 `lib/screens/admin_gamification_screen.dart`
 
 ### 🎮 Lessons & Learning Session
