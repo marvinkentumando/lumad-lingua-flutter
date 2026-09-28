@@ -1255,24 +1255,6 @@ class FirebaseService {
   }
 
   // Gamification & Economics Operations
-  Stream<List<LearningSeason>> getSeasons() {
-    return _db.collection('seasons').orderBy('startDate', descending: true).snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => LearningSeason.fromFirestore(doc.data(), doc.id)).toList();
-    });
-  }
-
-  Future<void> addSeason(LearningSeason season) async {
-    await _db.collection('seasons').add(season.toFirestore());
-  }
-
-  Future<void> updateSeason(String id, Map<String, dynamic> data) async {
-    await _db.collection('seasons').doc(id).update(data);
-  }
-
-  Future<void> deleteSeason(String id) async {
-    await _db.collection('seasons').doc(id).delete();
-  }
-
   Stream<List<ShopItem>> getShopItems() {
     return _db.collection('shop_items').snapshots().map((snapshot) {
       return snapshot.docs.map((doc) => ShopItem.fromFirestore(doc.data(), doc.id)).toList();
@@ -1285,6 +1267,10 @@ class FirebaseService {
 
   Future<void> updateShopItem(String id, Map<String, dynamic> data) async {
     await _db.collection('shop_items').doc(id).update(data);
+  }
+
+  Future<void> deleteShopItem(String id) async {
+    await _db.collection('shop_items').doc(id).delete();
   }
 
   Stream<List<Map<String, dynamic>>> getLinguaDuels() {
@@ -4748,10 +4734,6 @@ final communityFeedProvider = StreamProvider<List<CommunityActivity>>((ref) {
 
 final appConfigProvider = StreamProvider<AppConfig>((ref) {
   return ref.watch(firebaseServiceProvider).getAppConfig();
-});
-
-final seasonsStreamProvider = StreamProvider<List<LearningSeason>>((ref) {
-  return ref.watch(firebaseServiceProvider).getSeasons();
 });
 
 final shopItemsStreamProvider = StreamProvider<List<ShopItem>>((ref) {

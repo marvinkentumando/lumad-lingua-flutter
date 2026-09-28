@@ -6,6 +6,9 @@ class UserPreferences {
   final String learningPathView;
   final bool hasCompletedPreTest;
   final String appLanguage; // 'en', 'tl', 'bis'
+  final bool streakRemindersEnabled;
+  final int streakReminderHour;
+  final int streakReminderMinute;
 
   const UserPreferences({
     this.audioAutoplay = true,
@@ -15,6 +18,9 @@ class UserPreferences {
     this.learningPathView = 'MOUNTAIN',
     this.hasCompletedPreTest = false,
     this.appLanguage = 'en',
+    this.streakRemindersEnabled = true,
+    this.streakReminderHour = 20, // Default 8:00 PM
+    this.streakReminderMinute = 0,
   });
 
   UserPreferences copyWith({
@@ -25,6 +31,9 @@ class UserPreferences {
     String? learningPathView,
     bool? hasCompletedPreTest,
     String? appLanguage,
+    bool? streakRemindersEnabled,
+    int? streakReminderHour,
+    int? streakReminderMinute,
   }) {
     return UserPreferences(
       audioAutoplay: audioAutoplay ?? this.audioAutoplay,
@@ -34,6 +43,10 @@ class UserPreferences {
       learningPathView: learningPathView ?? this.learningPathView,
       hasCompletedPreTest: hasCompletedPreTest ?? this.hasCompletedPreTest,
       appLanguage: appLanguage ?? this.appLanguage,
+      streakRemindersEnabled:
+          streakRemindersEnabled ?? this.streakRemindersEnabled,
+      streakReminderHour: streakReminderHour ?? this.streakReminderHour,
+      streakReminderMinute: streakReminderMinute ?? this.streakReminderMinute,
     );
   }
 
@@ -45,6 +58,9 @@ class UserPreferences {
         'learningPathView': learningPathView,
         'hasCompletedPreTest': hasCompletedPreTest,
         'appLanguage': appLanguage,
+        'streakRemindersEnabled': streakRemindersEnabled,
+        'streakReminderHour': streakReminderHour,
+        'streakReminderMinute': streakReminderMinute,
       };
 
   factory UserPreferences.fromJson(Map<String, dynamic> json) => UserPreferences(
@@ -55,6 +71,8 @@ class UserPreferences {
         learningPathView: json['learningPathView'] ?? 'MOUNTAIN',
         hasCompletedPreTest: json['hasCompletedPreTest'] ?? false,
         appLanguage: json['appLanguage'] ?? 'en',
+        streakRemindersEnabled: json['streakRemindersEnabled'] ?? true,
+        streakReminderHour: json['streakReminderHour'] ?? 20,
+        streakReminderMinute: json['streakReminderMinute'] ?? 0,
       );
 }
-

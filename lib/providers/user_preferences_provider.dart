@@ -9,9 +9,6 @@ class UserPreferencesNotifier extends Notifier<UserPreferences> {
 
   @override
   UserPreferences build() {
-    // Initial state is default, will be updated by init()
-    // In Riverpod 2.0 Notifier, we can't easily wait for async in build()
-    // but we can trigger a load.
     _loadInitial();
     return const UserPreferences();
   }
@@ -40,6 +37,19 @@ class UserPreferencesNotifier extends Notifier<UserPreferences> {
 
   Future<void> setNotifications(bool enabled) async {
     state = state.copyWith(notificationsEnabled: enabled);
+    await _save();
+  }
+
+  Future<void> setStreakRemindersEnabled(bool enabled) async {
+    state = state.copyWith(streakRemindersEnabled: enabled);
+    await _save();
+  }
+
+  Future<void> setStreakReminderTime(int hour, int minute) async {
+    state = state.copyWith(
+      streakReminderHour: hour,
+      streakReminderMinute: minute,
+    );
     await _save();
   }
 

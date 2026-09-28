@@ -15,6 +15,7 @@ import 'package:go_router/go_router.dart';
 import '../services/supabase_storage_service.dart';
 import '../widgets/daily_check_in_board.dart';
 import '../widgets/level_up_modal.dart';
+import '../widgets/streak_reminder_settings_dialog.dart';
 import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/brand_background.dart';
@@ -277,6 +278,14 @@ class LearnerProfileScreen extends ConsumerWidget {
             l10n.translate('notification_sanctuary'),
             l10n.translate('notification_desc'),
             onTap: () => context.push('/notifications'),
+          ),
+          const SizedBox(height: 12),
+          _buildManagementTile(
+            context,
+            Icons.alarm_rounded,
+            'Daily Streak Reminders',
+            'Set daily practice alerts & schedule',
+            onTap: () => showStreakReminderSettingsDialog(context),
           ),
           const SizedBox(height: 12),
         ],

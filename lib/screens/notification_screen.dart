@@ -6,6 +6,7 @@ import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
+import '../widgets/streak_reminder_settings_dialog.dart';
 import 'package:go_router/go_router.dart';
 
 class NotificationScreen extends ConsumerStatefulWidget {
@@ -95,6 +96,13 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
           icon: Icon(Icons.arrow_back_ios_new_rounded, color: isDark ? Colors.white : AppColors.forest900),
           onPressed: () => context.pop(),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.alarm_rounded, color: AppColors.gold500),
+            tooltip: 'Streak Reminders',
+            onPressed: () => showStreakReminderSettingsDialog(context),
+          ),
+        ],
       ),
       body: notificationsAsync.when(
         loading: () => _limit == 20

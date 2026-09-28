@@ -13,6 +13,7 @@ import '../services/task_evaluator.dart';
 import '../widgets/progress_header.dart';
 import '../widgets/feedback_panel.dart';
 import '../widgets/xp_celebration.dart';
+import '../widgets/claim_reward_modal.dart';
 import '../widgets/brand_background.dart';
 import '../widgets/elders_wisdom_panel.dart';
 import '../widgets/lesson_session/session_widgets.dart';
@@ -53,7 +54,7 @@ class _DailyChallengeSessionScreenState
   bool _showFeedback = false;
   bool _lastAnswerCorrect = false;
   String _feedbackSubtitle = "";
-  bool _isCelebrating = false;
+  final bool _isCelebrating = false;
   int _currentTaskXp = 0;
   int _combo = 0;
   int _shakeCounter = 0;
@@ -152,13 +153,30 @@ class _DailyChallengeSessionScreenState
     if (state.isCompleted) {
       setState(() {
         _showFeedback = false;
-        _isCelebrating = true;
       });
       ref.read(audioServiceProvider).playSFX('session_complete');
       
       // Complete in Firebase
       await ref.read(dailyChallengeCompletionProvider.notifier).completeChallenge(widget.challenge);
       
+      if (!mounted) return;
+      final student = ref.read(studentProvider);
+
+      showClaimRewardModal(
+        context: context,
+        title: widget.challenge.title,
+        subtitle: 'Daily Challenge Conquered! Flame Maintained!',
+        crystalsReward: widget.challenge.crystalReward,
+        xpReward: widget.challenge.xpReward,
+        streakDays: student.displayedStreak > 0 ? student.displayedStreak : 1,
+        icon: Icons.auto_awesome_rounded,
+        onClaimed: () {
+          context.go('/');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Daily Challenge Complete! Streak Updated!')),
+          );
+        },
+      );
     } else {
       _initTaskState();
     }

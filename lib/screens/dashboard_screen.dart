@@ -14,6 +14,7 @@ import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/wotd_widget.dart';
 import '../widgets/crystal_burst_animation.dart';
+import '../widgets/claim_reward_modal.dart';
 import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 import '../widgets/branded_empty_state.dart';
 import '../widgets/brand_background.dart';
@@ -335,9 +336,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       quest: q,
                       onClaim: () {
                         ref.read(questActionProvider.notifier).claimReward(q);
-                        HapticService.success();
-                        setState(() => _showBurst = true);
-
+                        showClaimRewardModal(
+                          context: context,
+                          title: q.title,
+                          subtitle: q.description,
+                          crystalsReward: q.reward,
+                          xpReward: (q.reward * 1.5).round(),
+                          icon: Icons.auto_awesome_rounded,
+                        );
                       },
                     ),
                   )

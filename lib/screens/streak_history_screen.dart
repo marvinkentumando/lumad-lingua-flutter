@@ -12,6 +12,7 @@ import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/topo_background.dart';
 import '../widgets/mist_crystal_store.dart';
+import '../widgets/claim_reward_modal.dart';
 import '../utils/app_localization.dart';
 
 class StreakHistoryScreen extends ConsumerWidget {
@@ -378,12 +379,13 @@ class StreakHistoryScreen extends ConsumerWidget {
                       onTap: () {
                         HapticService.celebration();
                         ref.read(studentProvider.notifier).claimMilestone(days, reward);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(l10n.translate('claimed_msg', params: {'reward': m['rewardText'] as String})),
-                            backgroundColor: AppColors.forest700,
-                            behavior: SnackBarBehavior.floating,
-                          ),
+                        showClaimRewardModal(
+                          context: context,
+                          title: '$days-Day Streak Milestone!',
+                          subtitle: 'Your tribal commitment shines bright.',
+                          crystalsReward: reward,
+                          streakDays: days,
+                          icon: Icons.local_fire_department_rounded,
                         );
                       },
                       type: BrandButtonType.small,

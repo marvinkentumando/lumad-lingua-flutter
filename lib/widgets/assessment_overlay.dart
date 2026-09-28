@@ -178,7 +178,6 @@ class _AssessmentOverlayState extends State<AssessmentOverlay> {
         );
 
       case QuestionType.multipleChoice:
-      default:
         return Column(
           children: question.options.map((option) {
             final isSelected = _answers[question.id] == option;

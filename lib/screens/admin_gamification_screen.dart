@@ -7,7 +7,6 @@ import '../theme/app_typography.dart';
 import '../widgets/glass_box.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_text_field.dart';
-import 'package:intl/intl.dart'; 
 
 class AdminGamificationScreen extends ConsumerStatefulWidget {
   const AdminGamificationScreen({super.key});
@@ -22,7 +21,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
   }
 
   @override
@@ -40,25 +39,21 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
         backgroundColor: AppColors.forest900,
         bottom: TabBar(
           controller: _tabController,
-          isScrollable: true,
+          isScrollable: false,
           indicatorColor: AppColors.gold500,
           labelColor: AppColors.gold500,
           unselectedLabelColor: Colors.white60,
           tabs: const [
-            Tab(text: 'SEASONS', icon: Icon(Icons.calendar_month_rounded)),
             Tab(text: 'REWARDS', icon: Icon(Icons.military_tech_rounded)),
             Tab(text: 'SHOP', icon: Icon(Icons.shopping_bag_rounded)),
-            Tab(text: 'DUELS', icon: Icon(Icons.bolt_rounded)),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildSeasonsTab(),
           _buildRewardsTab(),
           _buildShopTab(),
-          _buildDuelsTab(),
         ],
       ),
     );
@@ -125,23 +120,55 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
 
   void _showRewardEditDialog(String label, int currentValue, Function(int) onUpdate) {
     final controller = TextEditingController(text: currentValue.toString());
+    final formKey = GlobalKey<FormState>();
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.forest800,
         title: Text('Edit $label', style: const TextStyle(color: AppColors.gold500)),
-        content: BrandTextField(
-          controller: controller,
-          labelText: 'XP Points',
-          prefixIcon: Icons.stars_rounded,
-          keyboardType: TextInputType.number,
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              BrandTextField(
+                controller: controller,
+                labelText: 'XP Points',
+                prefixIcon: Icons.stars_rounded,
+                keyboardType: TextInputType.number,
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Please enter an XP value';
+                  }
+                  final parsed = int.tryParse(val.trim());
+                  if (parsed == null) {
+                    return 'Please enter a valid whole number';
+                  }
+                  if (parsed < 0) {
+                    return 'XP cannot be negative';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
           ElevatedButton(
             onPressed: () {
-              onUpdate(int.parse(controller.text));
-              Navigator.pop(context);
+              if (formKey.currentState?.validate() ?? false) {
+                final parsed = int.tryParse(controller.text.trim()) ?? currentValue;
+                onUpdate(parsed);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('$label updated to $parsed XP'),
+                    backgroundColor: AppColors.forest700,
+                  ),
+                );
+              }
             },
             child: const Text('UPDATE'),
           ),
@@ -151,159 +178,18 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
   }
 
   Future<void> _updateConfig(String key, int value) async {
-    await ref.read(firebaseServiceProvider).updateAppConfig({key: value});
-  }
-
-  Widget _buildSeasonsTab() {
-    final seasonsAsync = ref.watch(seasonsStreamProvider);
-    return seasonsAsync.when(
-      data: (seasons) => ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: seasons.length + 1,
-        itemBuilder: (context, index) {
-          if (index == seasons.length) {
-            return _buildAddSeasonCard();
-          }
-          final season = seasons[index];
-          return _buildSeasonCard(season);
-        },
-      ),
-      loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
-      error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: Colors.white))),
-    );
-  }
-
-  Widget _buildSeasonCard(LearningSeason season) {
-    return BrandCard(
-      theme: season.isActive ? BrandCardTheme.gold : BrandCardTheme.vibrant,
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        title: Text(season.title, style: AppTypography.h3.copyWith(color: Colors.white)),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${DateFormat('MMM d').format(season.startDate)} - ${DateFormat('MMM d, y').format(season.endDate)}',
-              style: const TextStyle(color: Colors.white70),
-            ),
-            Text('Badge ID: ${season.badgeId}', style: const TextStyle(color: Colors.white60, fontSize: 12)),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.edit, color: Colors.white70),
-              onPressed: () => _showSeasonDialog(season),
-            ),
-            Switch(
-              value: season.isActive,
-              activeThumbColor: AppColors.gold500,
-              onChanged: (val) => ref.read(firebaseServiceProvider).updateSeason(season.id, {'isActive': val}),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAddSeasonCard() {
-    return GestureDetector(
-      onTap: () => _showSeasonDialog(),
-      child: GlassBox(
-        borderRadius: 16,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              const Icon(Icons.add_circle_outline_rounded, color: AppColors.gold500, size: 32),
-              const SizedBox(height: 8),
-              Text('CREATE NEW SEASON', style: AppTypography.label.copyWith(color: AppColors.gold500)),
-            ],
+    try {
+      await ref.read(firebaseServiceProvider).updateAppConfig({key: value});
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update config: $e'),
+            backgroundColor: AppColors.semanticRed,
           ),
-        ),
-      ),
-    );
-  }
-
-  void _showSeasonDialog([LearningSeason? existing]) {
-    final titleController = TextEditingController(text: existing?.title ?? '');
-    final badgeIdController = TextEditingController(text: existing?.badgeId ?? '');
-    DateTime start = existing?.startDate ?? DateTime.now();
-    DateTime end = existing?.endDate ?? DateTime.now().add(const Duration(days: 30));
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: AppColors.forest800,
-          title: Text(existing == null ? 'New Season' : 'Edit Season', style: const TextStyle(color: AppColors.gold500)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                BrandTextField(
-                  controller: titleController,
-                  labelText: 'Season Title',
-                  prefixIcon: Icons.title_rounded,
-                ),
-                const SizedBox(height: 12),
-                BrandTextField(
-                  controller: badgeIdController,
-                  labelText: 'Badge ID / Asset Path',
-                  prefixIcon: Icons.badge_outlined,
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Active Dates', style: TextStyle(color: Colors.white)),
-                  subtitle: Text('${DateFormat('yMMMd').format(start)} - ${DateFormat('yMMMd').format(end)}', style: const TextStyle(color: Colors.white70)),
-                  trailing: const Icon(Icons.calendar_today, color: AppColors.gold500),
-                  onTap: () async {
-                    final picked = await showDateRangePicker(
-                      context: context,
-                      initialDateRange: DateTimeRange(start: start, end: end),
-                      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                    );
-                    if (picked != null) {
-                      setDialogState(() {
-                        start = picked.start;
-                        end = picked.end;
-                      });
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
-            ElevatedButton(
-              onPressed: () {
-                final season = LearningSeason(
-                  id: existing?.id ?? '',
-                  title: titleController.text,
-                  startDate: start,
-                  endDate: end,
-                  badgeId: badgeIdController.text.isNotEmpty 
-                      ? badgeIdController.text 
-                      : 'seasonal_badge_${titleController.text.toLowerCase().replaceAll(' ', '_')}',
-                  isActive: existing?.isActive ?? false,
-                );
-                if (existing == null) {
-                  ref.read(firebaseServiceProvider).addSeason(season);
-                } else {
-                  ref.read(firebaseServiceProvider).updateSeason(existing.id, season.toFirestore());
-                }
-                Navigator.pop(context);
-              },
-              child: const Text('SAVE'),
-            ),
-          ],
-        ),
-      ),
-    );
+        );
+      }
+    }
   }
 
   Widget _buildShopTab() {
@@ -317,40 +203,125 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
             return _buildAddShopItemCard();
           }
           final item = items[index];
-          return BrandCard(
-            theme: BrandCardTheme.cream,
-            margin: const EdgeInsets.only(bottom: 12),
-            child: ListTile(
-              leading: Container(
-                width: 40,
-                height: 40,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(color: AppColors.forest900.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                child: item.icon.length < 3 
-                    ? Text(item.icon, style: const TextStyle(fontSize: 24))
-                    : const Icon(Icons.inventory_2_rounded, color: AppColors.forest900),
-              ),
-              title: Text(item.title, style: AppTypography.h3.copyWith(color: AppColors.forest900)),
-              subtitle: Text(item.description, style: const TextStyle(color: AppColors.forest500)),
-              trailing: IntrinsicWidth(
-                child: Row(
+          final isAvail = item.isAvailable;
+
+          return Opacity(
+            opacity: isAvail ? 1.0 : 0.65,
+            child: BrandCard(
+              theme: isAvail ? BrandCardTheme.cream : BrandCardTheme.vibrant,
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.forest900.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: item.icon.length < 3 
+                      ? Text(item.icon, style: const TextStyle(fontSize: 24))
+                      : Icon(
+                          Icons.inventory_2_rounded,
+                          color: isAvail ? AppColors.forest900 : Colors.white,
+                        ),
+                ),
+                title: Row(
                   children: [
-                    Text('${item.price}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.forest900)),
-                    const SizedBox(width: 4),
-                    const Icon(Icons.diamond, size: 16, color: Colors.blue),
-                    IconButton(
-                      icon: const Icon(Icons.edit, size: 18),
-                      onPressed: () => _showShopItemDialog(item),
+                    Expanded(
+                      child: Text(
+                        item.title,
+                        style: AppTypography.h3.copyWith(
+                          color: isAvail ? AppColors.forest900 : Colors.white,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isAvail
+                            ? AppColors.semanticGreen.withValues(alpha: 0.15)
+                            : Colors.black.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isAvail ? AppColors.semanticGreen : Colors.white30,
+                        ),
+                      ),
+                      child: Text(
+                        isAvail ? 'ACTIVE' : 'HIDDEN',
+                        style: AppTypography.mono.copyWith(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: isAvail ? AppColors.semanticGreen : Colors.white70,
+                        ),
+                      ),
                     ),
                   ],
+                ),
+                subtitle: Text(
+                  item.description,
+                  style: TextStyle(
+                    color: isAvail ? AppColors.forest500 : Colors.white70,
+                  ),
+                ),
+                trailing: IntrinsicWidth(
+                  child: Row(
+                    children: [
+                      Text(
+                        '${item.price}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: isAvail ? AppColors.forest900 : Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.diamond, size: 16, color: Colors.blue),
+                      const SizedBox(width: 4),
+                      Switch(
+                        value: isAvail,
+                        activeThumbColor: AppColors.gold500,
+                        onChanged: (val) async {
+                          await ref
+                              .read(firebaseServiceProvider)
+                              .updateShopItem(item.id, {'isAvailable': val});
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  val ? '"${item.title}" is now visible in shop.' : '"${item.title}" is now hidden from shop.',
+                                ),
+                                backgroundColor: AppColors.forest700,
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.edit,
+                          size: 18,
+                          color: isAvail ? AppColors.forest900 : Colors.white70,
+                        ),
+                        onPressed: () => _showShopItemDialog(item),
+                      ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.delete_outline_rounded,
+                          size: 20,
+                          color: AppColors.semanticRed,
+                        ),
+                        onPressed: () => _confirmDeleteShopItem(item),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           );
         },
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
+      error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: Colors.white))),
     );
   }
 
@@ -373,143 +344,212 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
     );
   }
 
+  void _confirmDeleteShopItem(ShopItem item) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.forest800,
+        title: Text('Delete ${item.title}', style: const TextStyle(color: AppColors.gold500)),
+        content: Text(
+          'Are you sure you want to delete "${item.title}"? This action cannot be undone.',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticRed),
+            onPressed: () async {
+              try {
+                await ref.read(firebaseServiceProvider).deleteShopItem(item.id);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('"${item.title}" has been deleted.'),
+                      backgroundColor: AppColors.forest700,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error deleting shop item: $e'),
+                      backgroundColor: AppColors.semanticRed,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('DELETE', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showShopItemDialog([ShopItem? item]) {
     final titleController = TextEditingController(text: item?.title ?? '');
     final descController = TextEditingController(text: item?.description ?? '');
     final priceController = TextEditingController(text: item?.price.toString() ?? '100');
     final iconController = TextEditingController(text: item?.icon ?? '💰');
     final typeController = TextEditingController(text: item?.type ?? 'misc');
+    bool isAvailable = item?.isAvailable ?? true;
+    final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.forest800,
-        title: Text(item == null ? 'New Shop Item' : 'Edit ${item.title}', style: const TextStyle(color: AppColors.gold500)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              BrandTextField(
-                controller: titleController,
-                labelText: 'Item Name',
-                prefixIcon: Icons.shopping_bag_outlined,
-              ),
-              const SizedBox(height: 12),
-              BrandTextField(
-                controller: descController,
-                labelText: 'Description',
-                prefixIcon: Icons.description_outlined,
-              ),
-              const SizedBox(height: 12),
-              Row(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: AppColors.forest800,
+          title: Text(item == null ? 'New Shop Item' : 'Edit ${item.title}', style: const TextStyle(color: AppColors.gold500)),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: BrandTextField(
-                      controller: priceController,
-                      labelText: 'Price (Crystals)',
-                      prefixIcon: Icons.diamond_outlined,
-                      keyboardType: TextInputType.number,
-                    ),
+                  BrandTextField(
+                    controller: titleController,
+                    labelText: 'Item Name',
+                    prefixIcon: Icons.shopping_bag_outlined,
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return 'Please enter item name';
+                      }
+                      return null;
+                    },
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: BrandTextField(
-                      controller: iconController,
-                      labelText: 'Icon/Emoji',
-                      prefixIcon: Icons.emoji_emotions_outlined,
+                  const SizedBox(height: 12),
+                  BrandTextField(
+                    controller: descController,
+                    labelText: 'Description',
+                    prefixIcon: Icons.description_outlined,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: BrandTextField(
+                          controller: priceController,
+                          labelText: 'Price (Crystals)',
+                          prefixIcon: Icons.diamond_outlined,
+                          keyboardType: TextInputType.number,
+                          validator: (val) {
+                            if (val == null || val.trim().isEmpty) {
+                              return 'Enter price';
+                            }
+                            final parsed = int.tryParse(val.trim());
+                            if (parsed == null) {
+                              return 'Invalid number';
+                            }
+                            if (parsed < 0) {
+                              return 'Min price 0';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: BrandTextField(
+                          controller: iconController,
+                          labelText: 'Icon/Emoji',
+                          prefixIcon: Icons.emoji_emotions_outlined,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  BrandTextField(
+                    controller: typeController,
+                    labelText: 'Item Type',
+                    prefixIcon: Icons.category_outlined,
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white12),
+                    ),
+                    child: SwitchListTile(
+                      activeThumbColor: AppColors.gold500,
+                      title: const Text(
+                        'Item Availability',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      subtitle: Text(
+                        isAvailable ? 'Visible to learners in Ancestral Vault' : 'Hidden from shop catalog',
+                        style: TextStyle(
+                          color: isAvailable ? AppColors.gold500 : Colors.white54,
+                          fontSize: 11,
+                        ),
+                      ),
+                      value: isAvailable,
+                      onChanged: (val) {
+                        setDialogState(() {
+                          isAvailable = val;
+                        });
+                      },
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              BrandTextField(
-                controller: typeController,
-                labelText: 'Item Type',
-                prefixIcon: Icons.category_outlined,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
-          ElevatedButton(
-            onPressed: () {
-              final newItem = ShopItem(
-                id: item?.id ?? '',
-                title: titleController.text,
-                description: descController.text,
-                price: int.parse(priceController.text),
-                icon: iconController.text,
-                type: typeController.text,
-              );
-              
-              if (item == null) {
-                ref.read(firebaseServiceProvider).addShopItem(newItem);
-              } else {
-                ref.read(firebaseServiceProvider).updateShopItem(item.id, newItem.toFirestore());
-              }
-              Navigator.pop(context);
-            },
-            child: Text(item == null ? 'CREATE' : 'UPDATE'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDuelsTab() {
-    final duelsAsync = ref.watch(linguaDuelsStreamProvider);
-    return duelsAsync.when(
-      data: (duels) => ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: duels.length,
-        itemBuilder: (context, index) {
-          final duel = duels[index];
-          final isFlagged = duel['flagged'] == true;
-          return BrandCard(
-            theme: isFlagged ? BrandCardTheme.vibrant : BrandCardTheme.cream,
-            margin: const EdgeInsets.only(bottom: 12),
-            child: ListTile(
-              title: Text('${duel['player1Name']} vs ${duel['player2Name']}', style: TextStyle(color: isFlagged ? Colors.white : AppColors.forest900)),
-              subtitle: Text('Status: ${duel['status']}', style: TextStyle(color: isFlagged ? Colors.white70 : AppColors.forest500)),
-              trailing: isFlagged 
-                ? IconButton(
-                    icon: const Icon(Icons.gavel_rounded, color: AppColors.gold500),
-                    onPressed: () => _showDuelResolutionDialog(duel['id']),
-                  )
-                : null,
             ),
-          );
-        },
-      ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
-    );
-  }
-
-  void _showDuelResolutionDialog(String duelId) {
-    final resolutionController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.forest800,
-        title: const Text('Resolve Duel Dispute', style: TextStyle(color: AppColors.gold500)),
-        content: TextField(
-          controller: resolutionController,
-          maxLines: 3,
-          decoration: const InputDecoration(hintText: 'Enter resolution details...', hintStyle: TextStyle(color: Colors.white24)),
-          style: const TextStyle(color: Colors.white),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
-          ElevatedButton(
-            onPressed: () {
-              ref.read(firebaseServiceProvider).resolveDuelDispute(duelId, resolutionController.text);
-              Navigator.pop(context);
-            },
-            child: const Text('RESOLVE'),
           ),
-        ],
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
+            ElevatedButton(
+              onPressed: () async {
+                if (formKey.currentState?.validate() ?? false) {
+                  final price = int.tryParse(priceController.text.trim()) ?? (item?.price ?? 100);
+                  final newItem = ShopItem(
+                    id: item?.id ?? '',
+                    title: titleController.text.trim(),
+                    description: descController.text.trim(),
+                    price: price,
+                    icon: iconController.text.trim().isNotEmpty ? iconController.text.trim() : '💰',
+                    type: typeController.text.trim().isNotEmpty ? typeController.text.trim() : 'misc',
+                    isAvailable: isAvailable,
+                  );
+                  
+                  try {
+                    if (item == null) {
+                      await ref.read(firebaseServiceProvider).addShopItem(newItem);
+                    } else {
+                      await ref.read(firebaseServiceProvider).updateShopItem(item.id, newItem.toFirestore());
+                    }
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(item == null ? 'Shop item created' : 'Shop item updated'),
+                          backgroundColor: AppColors.forest700,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to save shop item: $e'),
+                          backgroundColor: AppColors.semanticRed,
+                        ),
+                      );
+                    }
+                  }
+                }
+              },
+              child: Text(item == null ? 'CREATE' : 'UPDATE'),
+            ),
+          ],
+        ),
       ),
     );
   }

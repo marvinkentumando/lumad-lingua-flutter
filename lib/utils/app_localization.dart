@@ -481,7 +481,7 @@ class AppLocalization {
       'user_growth_label': 'USER GROWTH (last 7 days)',
       'gamification_economics': 'GAMIFICATION & ECONOMICS',
       'warrior_circle_ops': 'WARRIOR CIRCLE OPS',
-      'manage_seasons_desc': 'Manage seasons, shop prices, and duel moderation.',
+      'manage_seasons_desc': 'Manage XP reward rates and store item prices.',
       'go_economics_hub': 'GO TO ECONOMICS HUB',
       'force_rotation': 'FORCE ROTATION',
       'resume_auto': 'RESUME AUTO',
@@ -1022,7 +1022,7 @@ class AppLocalization {
       'user_growth_label': 'PAGLAKI NG USERS (huling 7 araw)',
       'gamification_economics': 'GAMIFICATION at EKONOMIYA',
       'warrior_circle_ops': 'OPS NG WARRIOR CIRCLE',
-      'manage_seasons_desc': 'Pamahalaan ang mga season, presyo sa shop, at duel moderation.',
+      'manage_seasons_desc': 'Pamahalaan ang mga XP reward at presyo sa shop.',
       'go_economics_hub': 'PUMUNTA SA ECONOMICS HUB',
 
       'force_rotation': 'PWERSAHING PALITAN',
@@ -1519,7 +1519,7 @@ class AppLocalization {
       'user_growth_label': 'PAGDAGHAN SA USERS (miaging 7 ka adlaw)',
       'gamification_economics': 'GAMIFICATION ug EKONOMIYA',
       'warrior_circle_ops': 'OPS SA WARRIOR CIRCLE',
-      'manage_seasons_desc': 'I-manage ang mga season, presyo sa shop, ug duel moderation.',
+      'manage_seasons_desc': 'I-manage ang mga XP reward ug presyo sa shop.',
       'go_economics_hub': 'ADTO SA ECONOMICS HUB',
 
       'force_rotation': 'PUGSA PAGBALHIN',

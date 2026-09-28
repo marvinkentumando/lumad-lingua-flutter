@@ -1,48 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
-class LearningSeason {
-  final String id;
-  final String title;
-  final DateTime startDate;
-  final DateTime endDate;
-  final String badgeId;
-  final String? description;
-  final bool isActive;
-
-  LearningSeason({
-    required this.id,
-    required this.title,
-    required this.startDate,
-    required this.endDate,
-    required this.badgeId,
-    this.description,
-    this.isActive = false,
-  });
-
-  factory LearningSeason.fromFirestore(Map<String, dynamic> data, String id) {
-    return LearningSeason(
-      id: id,
-      title: data['title'] ?? '',
-      startDate: (data['startDate'] as Timestamp).toDate(),
-      endDate: (data['endDate'] as Timestamp).toDate(),
-      badgeId: data['badgeId'] ?? '',
-      description: data['description'],
-      isActive: data['isActive'] ?? false,
-    );
-  }
-
-  Map<String, dynamic> toFirestore() {
-    return {
-      'title': title,
-      'startDate': Timestamp.fromDate(startDate),
-      'endDate': Timestamp.fromDate(endDate),
-      'badgeId': badgeId,
-      'description': description,
-      'isActive': isActive,
-    };
-  }
-}
-
 class ShopItem {
   final String id;
   final String title;
@@ -50,6 +5,7 @@ class ShopItem {
   final int price;
   final String icon;
   final String type; // 'streak_freeze', 'xp_boost', etc.
+  final bool isAvailable;
 
   ShopItem({
     required this.id,
@@ -58,6 +14,7 @@ class ShopItem {
     required this.price,
     required this.icon,
     required this.type,
+    this.isAvailable = true,
   });
 
   factory ShopItem.fromFirestore(Map<String, dynamic> data, String id) {
@@ -68,6 +25,7 @@ class ShopItem {
       price: data['price'] ?? 0,
       icon: data['icon'] ?? '💰',
       type: data['type'] ?? 'misc',
+      isAvailable: data['isAvailable'] ?? true,
     );
   }
 
@@ -78,6 +36,7 @@ class ShopItem {
       'price': price,
       'icon': icon,
       'type': type,
+      'isAvailable': isAvailable,
     };
   }
 }
