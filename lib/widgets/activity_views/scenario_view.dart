@@ -32,7 +32,7 @@ class ScenarioView extends StatelessWidget {
             color: AppColors.forestDarkCard,
             borderRadius: BorderRadius.circular(24),
             image: const DecorationImage(
-              image: AssetImage('assets/images/village_bg.png'),
+              image: AssetImage('assets/images/landing_bg.png'),
               fit: BoxFit.cover,
               opacity: 0.3,
             ),
