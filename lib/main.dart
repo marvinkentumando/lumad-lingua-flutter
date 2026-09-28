@@ -1,9 +1,13 @@
 
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'theme/app_theme.dart';
 import 'firebase_options.dart';
@@ -14,7 +18,22 @@ import 'widgets/error_boundary.dart';
 import 'providers/theme_provider.dart';
 import 'providers/router_provider.dart';
 
-void main() async {
+Future<void> main() async {
+  // All startup work runs inside this zone so uncaught async errors are
+  // routed to Crashlytics instead of silently terminating the app.
+  runZonedGuarded(() {
+    _runApp();
+  }, (error, stackTrace) {
+    // Crashlytics may not exist yet during very early startup failures.
+    if (Firebase.apps.isNotEmpty) {
+      FirebaseCrashlytics.instance.recordError(error, stackTrace,
+          reason: 'Uncaught async error in root zone');
+    }
+    debugPrint("Uncaught async error: $error");
+  });
+}
+
+Future<void> _runApp() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Phase 9: True Edge-to-Edge UI
@@ -39,6 +58,17 @@ void main() async {
   } catch (e) {
     debugPrint("Firebase Initialization Error: $e");
   }
+
+  // Crashlytics: pass uncaught Flutter framework errors to the crash
+  // reporter, satisfying the measurable ≥95% crash-free session target.
+  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+
+  // Platform channel errors (missing plugins, malformed messages).
+  PlatformDispatcher.instance.onError = (error, stackTrace) {
+    FirebaseCrashlytics.instance.recordError(error, stackTrace,
+        reason: 'Platform dispatcher error');
+    return true;
+  };
 
   try {
     await dotenv.load(fileName: ".env");

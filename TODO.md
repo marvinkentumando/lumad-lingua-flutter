@@ -97,7 +97,7 @@
 ### ⚔️ Community & Multiplayer
 - [x] **Lingua Duel Real-Time Sync**: Optimize Firestore state sync and turn timeouts during live multiplayer duels.
   - 📁 `lib/screens/lingua_duel_screen.dart`, `lib/services/duel_service.dart`
-- [ ] **Deploy Duel Firestore Rules**: Ship the new `duel_matches` rules block (`firebase deploy --only firestore:rules`) — required before live duels work in production.
+- [x] **Deploy Duel Firestore Rules**: Shipped the `duel_matches` rules block to production (`firebase deploy --only firestore:rules --project lumadlingua`) — rules compiled and released successfully; live duels now work in production.
   - 📁 `firestore.rules`
 - [ ] **Duel Rematch & Persistent Duel Records**: Add a rematch action on the results screen and store per-user win/loss history (wins, losses, win streaks) in Firestore.
   - 📁 `lib/screens/lingua_duel_screen.dart`, `lib/services/duel_service.dart`
@@ -115,8 +115,8 @@
   - 📁 `lib/services/hive_service.dart`, `lib/providers/student_provider.dart`, `lib/providers/learning_provider.dart`
 - [ ] **Shimmer Skeleton Loading Optimization**: Optimize shimmer animations for low-end Android mobile devices.
   - 📁 `lib/widgets/shimmer_loading.dart`, `lib/screens/dictionary_screen.dart`, `lib/screens/learning_hub_screen.dart`
-- [ ] **Firebase Crashlytics Integration**: Add crash reporting so the ≥95% crash-free session reliability requirement (Non-Functional) is actually measurable in production.
-  - 📁 `lib/main.dart`, `pubspec.yaml`
+- [x] **Firebase Crashlytics Integration**: Added crash reporting so the ≥95% crash-free session reliability requirement (Non-Functional) is actually measurable in production. Wired `firebase_crashlytics` (5.2.0) with `runZonedGuarded` root zone, `FlutterError.onError` fatal capture, and `PlatformDispatcher.onError` handler in `main.dart`; added the Crashlytics Gradle plugin (v3.0.6) on Android and upgraded google-services to 4.4.2 (required by plugin v3). iOS Podfile not present in repo — run `flutter pub get` inside `ios/` before first iOS build if desired.
+  - 📁 `lib/main.dart`, `pubspec.yaml`, `android/app/build.gradle.kts`, `android/settings.gradle.kts`
 - [ ] **Navigation Consistency**: Standardize back-navigation across all modules (GoRouter vs Navigator mixing) per roadmap Phase 4.
   - 📁 `lib/providers/router_provider.dart`
 - [ ] **Haptic Consistency Audit**: Ensure all critical success/error actions across screens trigger appropriate haptic patterns (roadmap Phase 4 open item).
