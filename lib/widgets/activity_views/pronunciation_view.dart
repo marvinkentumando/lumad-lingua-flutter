@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_typography.dart';
-import '../preview_audio_player.dart';
 import 'package:audio_waveforms/audio_waveforms.dart';
+import '../../services/pronunciation_service.dart';
+import 'speaking_practice_view.dart';
 
 class PronunciationView extends StatelessWidget {
   final String question;
@@ -14,7 +12,11 @@ class PronunciationView extends StatelessWidget {
   final VoidCallback? onToggleRecording;
   final bool isReadOnly;
   final String? audioUrl;
+  final String? userAudioPath;
   final RecorderController? recorderController;
+  final PronunciationScore? pronunciationScore;
+  final bool isEvaluating;
+  final VoidCallback? onPlayNativeAudio;
 
   const PronunciationView({
     super.key,
@@ -26,114 +28,29 @@ class PronunciationView extends StatelessWidget {
     this.onToggleRecording,
     this.isReadOnly = false,
     this.audioUrl,
+    this.userAudioPath,
     this.recorderController,
+    this.pronunciationScore,
+    this.isEvaluating = false,
+    this.onPlayNativeAudio,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Text(
-          question.isEmpty ? 'Tap and Speak' : question,
-          style: AppTypography.h2.copyWith(
-            color: isDark ? Colors.white : AppColors.forest900,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 48),
-        Text(
-          word.isEmpty ? 'Word' : word,
-          style: AppTypography.h1ExtraBold.copyWith(
-            color: AppColors.gold500,
-            fontSize: 48,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          phonetic.isEmpty ? '/phonetic/' : phonetic,
-          style: AppTypography.bodyLarge.copyWith(
-            color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5),
-            fontStyle: FontStyle.italic,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 64),
-        if (isReadOnly && audioUrl != null && audioUrl!.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 32),
-            child: PreviewAudioPlayer(audioUrl: audioUrl!),
-          ),
-        GestureDetector(
-          onTap: isReadOnly ? null : onToggleRecording,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              if (isRecording && recorderController != null)
-                AudioWaveforms(
-                  size: const Size(250, 100),
-                  recorderController: recorderController!,
-                  enableGesture: false,
-                  waveStyle: WaveStyle(
-                    waveColor: isDark ? Colors.white.withValues(alpha: 0.5) : AppColors.forest900.withValues(alpha: 0.5),
-                    spacing: 4.0,
-                    extendWaveform: true,
-                    showMiddleLine: false,
-                  ),
-                ),
-              if (!isRecording)
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: isReadOnly
-                        ? (isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.05))
-                        : AppColors.forestDarkCard,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isReadOnly ? (isDark ? Colors.white24 : Colors.black.withValues(alpha: 0.1)) : AppColors.gold500,
-                      width: 2,
-                    ),
-                  ),
-                  child: Icon(
-                    Icons.mic_rounded,
-                    size: 48,
-                    color: isReadOnly ? (isDark ? Colors.white24 : Colors.black.withValues(alpha: 0.1)) : AppColors.gold500,
-                  ),
-                ),
-              if (isRecording)
-                const Icon(
-                      Icons.stop_rounded,
-                      size: 64,
-                      color: AppColors.semanticRed,
-                    )
-                    .animate(onPlay: (c) => c.repeat())
-                    .scale(
-                      begin: const Offset(1, 1),
-                      end: const Offset(1.2, 1.2),
-                      duration: 800.ms,
-                      curve: Curves.easeInOut,
-                    ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-        Text(
-          isReadOnly
-              ? "Educator Preview Mode"
-              : (isRecording
-                    ? "Listening..."
-                    : (hasRecorded ? "Audio recorded!" : "Tap to record")),
-          style: AppTypography.label.copyWith(
-            color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7),
-          ),
-        ),
-      ],
+    return SpeakingPracticeView(
+      question: question,
+      word: word,
+      phonetic: phonetic,
+      isRecording: isRecording,
+      hasRecorded: hasRecorded,
+      onToggleRecording: onToggleRecording,
+      isReadOnly: isReadOnly,
+      audioUrl: audioUrl,
+      userAudioPath: userAudioPath,
+      recorderController: recorderController,
+      pronunciationScore: pronunciationScore,
+      isEvaluating: isEvaluating,
+      onPlayNativeAudio: onPlayNativeAudio,
     );
   }
 }
-
-
-

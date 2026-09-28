@@ -32,6 +32,9 @@
 - [x] **Learner Village Sanctuary & Dashboard**:
   - Added "My Village Sanctuary 🌿" card on Learner Profile Screen when connected to an educator via code.
   - Built dedicated `VillageDashboardScreen` featuring village header, educator info, code copying, total tribe XP, village member count, village broadcast announcements, tribe leaderboard rankings, and leave village confirmation.
+- [x] **Audio Recording Evaluation & Pronunciation Preview**:
+  - Created `SpeakingPracticeView` with native audio listening button, live real-time waveform visualizer using `AudioWaveforms`, recorded user audio playback ("Play My Echo 🎧"), and re-recording controls.
+  - Integrated `PronunciationService` AI waveform analysis in `LessonSessionScreen` to calculate accuracy, fluency, clarity, overall score %, and waveform comparison graph.
 
 ---
 
@@ -60,7 +63,7 @@
   - 📁 `lib/screens/admin_gamification_screen.dart`
 
 ### 🎮 Lessons & Learning Session
-- [ ] **Audio Recording Evaluation & Pronunciation Preview**: Live waveform visualizer and pronunciation scoring during speaking activities.
+- [x] **Audio Recording Evaluation & Pronunciation Preview**: Live waveform visualizer and pronunciation scoring during speaking activities.
   - 📁 `lib/screens/lesson_session_screen.dart`, `lib/widgets/activity_views/speaking_practice_view.dart`, `lib/services/pronunciation_service.dart`
 - [x] **Post-Test Survey Data Submission**: Submit post-test survey ratings and feedback directly to Firebase.
   - 📁 `lib/screens/lesson_session_screen.dart`, `lib/services/firebase_service.dart`
