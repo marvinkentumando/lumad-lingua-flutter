@@ -48,6 +48,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
   String _timeFilter = 'all';
   String _searchQuery = '';
   bool _hasCelebrated = false;
+  final Set<String> _salutedUids = {};
 
   @override
   void initState() {
@@ -532,6 +533,10 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                if (e.uid != null && e.uid != ref.watch(authStateProvider).value?.uid) ...[
+                  const SizedBox(height: 6),
+                  _buildSaluteButton(e.uid!, e.name, ref.watch(localizationProvider), isCompact: true),
+                ],
               ],
             ),
           ),

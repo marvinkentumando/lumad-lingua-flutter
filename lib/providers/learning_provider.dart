@@ -6,6 +6,7 @@ import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../providers/artifact_provider.dart';
 import '../services/offline_service.dart';
+import '../services/audio_service.dart';
 
 // ── Lesson Loader Provider (moved here from lesson_session_screen.dart) ──────
 final currentLessonProvider = FutureProvider.family<Lesson?, String>((
@@ -271,6 +272,49 @@ final quizSessionProvider =
     NotifierProvider<QuizSessionNotifier, QuizSessionState>(() {
       return QuizSessionNotifier();
     });
+
+// Audio Pre-Caching Notifier and Providers
+class LessonAudioPreCacheNotifier extends Notifier<Set<String>> {
+  @override
+  Set<String> build() => {};
+
+  Future<void> preCacheLesson(Lesson lesson) async {
+    if (state.contains(lesson.id)) return;
+
+    final audioUrls = lesson.tasks
+        .map((t) => t.audioUrl)
+        .where((url) => url != null && url.isNotEmpty)
+        .cast<String>()
+        .toList();
+
+    if (audioUrls.isNotEmpty) {
+      await ref.read(audioServiceProvider).preCacheAudio(audioUrls);
+    }
+    state = {...state, lesson.id};
+  }
+}
+
+final lessonAudioPreCacheNotifierProvider =
+    NotifierProvider<LessonAudioPreCacheNotifier, Set<String>>(() {
+  return LessonAudioPreCacheNotifier();
+});
+
+final preCacheMultipleLessonsProvider =
+    FutureProvider.family<void, List<Lesson>>((ref, lessons) async {
+  final audioService = ref.read(audioServiceProvider);
+  for (final lesson in lessons) {
+    final audioUrls = lesson.tasks
+        .map((t) => t.audioUrl)
+        .where((url) => url != null && url.isNotEmpty)
+        .cast<String>()
+        .toList();
+    if (audioUrls.isNotEmpty) {
+      await audioService.preCacheAudio(audioUrls);
+    }
+    ref.read(lessonAudioPreCacheNotifierProvider.notifier).preCacheLesson(lesson);
+  }
+});
+
 
 
 

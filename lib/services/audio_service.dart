@@ -4,6 +4,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import '../models/lesson_task.dart';
 
 class AudioService {
   final _recorder = AudioRecorder();
@@ -94,10 +96,20 @@ class AudioService {
 
   Future<void> playFromUrl(String url) async {
     try {
+      if (url.isEmpty) return;
+      final fileInfo = await DefaultCacheManager().getFileFromCache(url);
+      if (fileInfo != null && await fileInfo.file.exists()) {
+        await _player.play(DeviceFileSource(fileInfo.file.path));
+        return;
+      }
       await _player.play(UrlSource(url));
     } catch (e) {
       debugPrint("Error playing audio from URL: $e");
-      throw Exception('Failed to play audio. Check your connection.');
+      try {
+        await _player.play(UrlSource(url));
+      } catch (_) {
+        throw Exception('Failed to play audio. Check your connection.');
+      }
     }
   }
 
@@ -132,14 +144,31 @@ class AudioService {
     for (var url in urls) {
       if (url.isEmpty) continue;
       try {
-        // Just setting the source starts buffering on most platforms, effectively pre-caching it.
-        final dummyPlayer = AudioPlayer();
-        await dummyPlayer.setSource(UrlSource(url));
-        // Dispose after a short delay to allow buffering to begin
-        Future.delayed(const Duration(seconds: 1), () => dummyPlayer.dispose());
+        await DefaultCacheManager().getSingleFile(url);
       } catch (e) {
         debugPrint("Error pre-caching audio URL $url: $e");
       }
+    }
+  }
+
+  Future<bool> isAudioCached(String url) async {
+    if (url.isEmpty) return false;
+    try {
+      final fileInfo = await DefaultCacheManager().getFileFromCache(url);
+      return fileInfo != null && await fileInfo.file.exists();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> preCacheLessonAudio(List<LessonTask> tasks) async {
+    final urls = tasks
+        .map((t) => t.audioUrl)
+        .where((url) => url != null && url.isNotEmpty)
+        .cast<String>()
+        .toList();
+    if (urls.isNotEmpty) {
+      await preCacheAudio(urls);
     }
   }
 

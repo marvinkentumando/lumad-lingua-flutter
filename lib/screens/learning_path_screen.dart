@@ -579,8 +579,17 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
         final isSummitUnlocked = lessons.isNotEmpty &&
             lessons.every((l) => studentState.lessonProgress[l.id]?['completed'] == true);
 
-        // Trigger auto-scroll
+        // Trigger auto-scroll and background audio pre-caching for active lessons
         _scrollToActiveLesson();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final activeLessons = lessons.where((l) {
+            final isCompleted = studentState.lessonProgress[l.id]?['completed'] == true;
+            return !isCompleted;
+          }).take(3).toList();
+          if (activeLessons.isNotEmpty) {
+            ref.read(preCacheMultipleLessonsProvider(activeLessons));
+          }
+        });
 
         return SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -675,6 +684,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                 ? null
                 : () {
                     HapticFeedback.lightImpact();
+                    ref.read(lessonAudioPreCacheNotifierProvider.notifier).preCacheLesson(lesson);
                     context.push('/lesson_session?lessonId=${lesson.id}');
                   },
             child: Opacity(
@@ -705,7 +715,10 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
           icon: IconUtils.getIconData(unitLessons.first.icon),
           stars: totalStars,
           onTap: !showChildren
-              ? () => context.push('/lesson_session?lessonId=${unitLessons.first.id}')
+              ? () {
+                  ref.read(lessonAudioPreCacheNotifierProvider.notifier).preCacheLesson(unitLessons.first);
+                  context.push('/lesson_session?lessonId=${unitLessons.first.id}');
+                }
               : null,
           children: showChildren ? lessonWidgets : const [],
         ),
@@ -826,6 +839,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                   ? null
                   : () {
                       HapticService.light();
+                      ref.read(lessonAudioPreCacheNotifierProvider.notifier).preCacheLesson(lesson);
                       context.push('/lesson_session?lessonId=${lesson.id}');
                     },
               index: totalLessons - globalIndex,

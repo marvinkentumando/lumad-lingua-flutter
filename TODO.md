@@ -35,6 +35,10 @@
 - [x] **Audio Recording Evaluation & Pronunciation Preview**:
   - Created `SpeakingPracticeView` with native audio listening button, live real-time waveform visualizer using `AudioWaveforms`, recorded user audio playback ("Play My Echo 🎧"), and re-recording controls.
   - Integrated `PronunciationService` AI waveform analysis in `LessonSessionScreen` to calculate accuracy, fluency, clarity, overall score %, and waveform comparison graph.
+- [x] **Lesson Audio Pre-Caching**:
+  - Pre-downloaded and cached remote task audio assets into local device storage via `DefaultCacheManager` (`flutter_cache_manager`) in `AudioService`.
+  - Added cache fallback to `playFromUrl` to play audio directly from cached local disk files.
+  - Integrated automatic background pre-caching for active path lessons and pre-caching triggers on lesson card taps in `LearningPathScreen` and `learning_provider`.
 
 ---
 
@@ -67,7 +71,7 @@
   - 📁 `lib/screens/lesson_session_screen.dart`, `lib/widgets/activity_views/speaking_practice_view.dart`, `lib/services/pronunciation_service.dart`
 - [x] **Post-Test Survey Data Submission**: Submit post-test survey ratings and feedback directly to Firebase.
   - 📁 `lib/screens/lesson_session_screen.dart`, `lib/services/firebase_service.dart`
-- [ ] **Lesson Audio Pre-Caching**: Pre-download all lesson module audio assets into Hive/Cache before starting a session.
+- [x] **Lesson Audio Pre-Caching**: Pre-download all lesson module audio assets into Hive/Cache before starting a session.
   - 📁 `lib/services/audio_service.dart`, `lib/screens/learning_path_screen.dart`, `lib/providers/learning_provider.dart`
 - [ ] **Smart SRS Retention Decay Recommendations**: Dashboard card suggesting low-retention vocabulary based on SuperMemo-2 interval calculations.
   - 📁 `lib/services/srs_service.dart`, `lib/screens/mastery_dashboard_screen.dart`

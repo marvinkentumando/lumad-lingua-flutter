@@ -923,6 +923,25 @@ class FirebaseService {
     });
   }
 
+  /// Sends a tribal salute cheer notification ("Salute! 🛡️") to a user on the leaderboard.
+  Future<void> sendSalute({
+    required String targetUid,
+    required String senderUid,
+    required String senderName,
+    String? senderPhotoUrl,
+  }) async {
+    await addNotification(targetUid, {
+      'type': 'cheer',
+      'title': 'Tribal Salute! 🛡️',
+      'message': '$senderName sent you a Sacred Spark salute for your progress on the leaderboard! ⚡',
+      'senderId': senderUid,
+      'senderName': senderName,
+      'senderPhotoUrl': senderPhotoUrl,
+      'isRead': false,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+  }
+
   /// Sends a notification to multiple users using WriteBatch for scalability.
   Future<void> broadcastNotification(
     List<String> userIds,
