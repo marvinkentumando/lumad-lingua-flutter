@@ -118,6 +118,32 @@ service cloud.firestore {
       allow update, delete: if isValidator();
     }
 
+    // --- LINGUA DUEL (real-time multiplayer) ---
+    match /duel_matches/{matchId} {
+      // Both duelists (and the live matchmaking query) need read access.
+      allow read: if isSignedIn();
+      // Only the lobby creator can publish a new waiting match.
+      allow create: if isSignedIn()
+        && request.resource.data.player1Id == request.auth.uid
+        && request.resource.data.status == 'waiting';
+      // Hosts and joined opponents keep maintaining the match: claiming the
+      // lobby (player2 fields + battleStartedAt), HP deltas, heartbeats,
+      // round clock, forfeits and final cleanup.
+      allow update: if isSignedIn() && (
+        resource.data.player1Id == request.auth.uid ||
+        resource.data.player2Id == request.auth.uid ||
+        // Claiming an open lobby: a waiting match may be joined by anyone
+        // who writes themselves in as player2 while it is still waiting.
+        (resource.data.status == 'waiting' && request.resource.data.player2Id == request.auth.uid)
+      );
+      // The host may delete the doc during cleanup; either duelist may cancel
+      // their own still-waiting lobby.
+      allow delete: if isSignedIn() && (
+        resource.data.player1Id == request.auth.uid ||
+        resource.data.player2Id == request.auth.uid
+      );
+    }
+
     // --- CONFIG & METADATA ---
     match /config/{docId} {
       allow read: if true;

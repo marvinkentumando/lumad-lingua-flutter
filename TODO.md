@@ -83,12 +83,28 @@
   - 📁 `lib/services/notification_service.dart`, `lib/widgets/streak_reminder_settings_dialog.dart`, `lib/screens/learner_profile_screen.dart`
 - [ ] **Avatar Cultural Customization Shop**: Equip and purchase cultural titles, avatar frames, and badges in the Ancestral Vault using Mist Crystals.
   - 📁 `lib/screens/ancestral_vault_shop_screen.dart`, `lib/providers/student_provider.dart`, `lib/models/artifact.dart`
-- [ ] **Leaderboard Encouragement "Salutes"**: Send instant tribal cheer toasts ("Salute! 🛡️") to friends on the leaderboard.
+- [x] **Leaderboard Encouragement "Salutes"**: Send instant tribal cheer toasts ("Salute! 🛡️") to friends on the leaderboard.
   - 📁 `lib/screens/leaderboard_screen.dart`, `lib/services/firebase_service.dart`
+- [x] **Fix Leaderboard Salute Build Error**: `_buildSaluteButton` was referenced in the leaderboard compact list but never defined, breaking compilation of `lib/screens/leaderboard_screen.dart` and failing `test/widget_test.dart`. Implemented the missing button (podium spots) reusing `_sendCheer`, and wired the previously unused `_salutedUids` set so a member can only be saluted once per session in both podium and rank-row salute UIs.
+  - 📁 `lib/screens/leaderboard_screen.dart`
+
+### 📊 Sentiment & Community Analytics
+- [ ] **Facebook Graph API Integration**: Replace mock/secondary post data with real retrieval of publicly available Mansaka-language Facebook posts via the Facebook Graph API (last open Functional Requirement; unblocks real-data sentiment classification).
+  - 📁 `lib/services/sentiment_service.dart`, `lib/screens/sentiment_dashboard_screen.dart`
+- [ ] **3-Algorithm Comparative Evaluation Harness**: Run Naïve Bayes vs SVM vs BiLSTM (sentiment) and DTW vs HMM vs Cosine Similarity (pronunciation) against a real corpus/recordings, compute accuracy, precision, recall and F1, lock the winning models, and record results for the study writeup (closes both "Evaluate 3 algorithms" objectives).
+  - 📁 `lib/services/sentiment_service.dart`, `lib/services/pronunciation_service.dart`
 
 ### ⚔️ Community & Multiplayer
-- [ ] **Lingua Duel Real-Time Sync**: Optimize Firestore state sync and turn timeouts during live multiplayer duels.
+- [x] **Lingua Duel Real-Time Sync**: Optimize Firestore state sync and turn timeouts during live multiplayer duels.
   - 📁 `lib/screens/lingua_duel_screen.dart`, `lib/services/duel_service.dart`
+- [ ] **Deploy Duel Firestore Rules**: Ship the new `duel_matches` rules block (`firebase deploy --only firestore:rules`) — required before live duels work in production.
+  - 📁 `firestore.rules`
+- [ ] **Duel Rematch & Persistent Duel Records**: Add a rematch action on the results screen and store per-user win/loss history (wins, losses, win streaks) in Firestore.
+  - 📁 `lib/screens/lingua_duel_screen.dart`, `lib/services/duel_service.dart`
+- [ ] **Duel State Riverpod Refactor**: Move matchmaking/battle state out of the screen into a `DuelSessionNotifier` so live duels survive navigation and can re-attach to an in-progress match after an app restart.
+  - 📁 `lib/screens/lingua_duel_screen.dart`, `lib/providers/duel_provider.dart` (new)
+- [ ] **Duel Anti-Cheat Hardening**: Validate damage deltas and answer correctness server-side (Cloud Functions or stricter rules) so a modified client cannot write arbitrary HP or claim false wins.
+  - 📁 `lib/services/duel_service.dart`, `firestore.rules`
 - [ ] **Voice Comments in Community Feed**: Allow learners to attach short voice messages to community discussions.
   - 📁 `lib/screens/community_feed_screen.dart`, `lib/services/audio_service.dart`
 
@@ -99,6 +115,12 @@
   - 📁 `lib/services/hive_service.dart`, `lib/providers/student_provider.dart`, `lib/providers/learning_provider.dart`
 - [ ] **Shimmer Skeleton Loading Optimization**: Optimize shimmer animations for low-end Android mobile devices.
   - 📁 `lib/widgets/shimmer_loading.dart`, `lib/screens/dictionary_screen.dart`, `lib/screens/learning_hub_screen.dart`
+- [ ] **Firebase Crashlytics Integration**: Add crash reporting so the ≥95% crash-free session reliability requirement (Non-Functional) is actually measurable in production.
+  - 📁 `lib/main.dart`, `pubspec.yaml`
+- [ ] **Navigation Consistency**: Standardize back-navigation across all modules (GoRouter vs Navigator mixing) per roadmap Phase 4.
+  - 📁 `lib/providers/router_provider.dart`
+- [ ] **Haptic Consistency Audit**: Ensure all critical success/error actions across screens trigger appropriate haptic patterns (roadmap Phase 4 open item).
+  - 📁 `lib/services/haptic_service.dart` + call sites
 
 ---
 
@@ -107,3 +129,5 @@
   - 📁 `test/services/audio_service_test.dart`, `test/services/notification_service_test.dart`
 - [ ] **Provider & Widget Tests**: Widget tests for `DictionaryFilterNotifier`, `ClaimRewardModal`, and `StreakReminderSettingsDialog`.
   - 📁 `test/providers/dictionary_filter_notifier_test.dart`, `test/widgets/claim_reward_modal_test.dart`
+- [ ] **Duel Matchmaking Race Tests**: Firestore-emulator integration test where two clients concurrently claim the same waiting match — exactly one joiner must win the lobby.
+  - 📁 `test/duel_sync_logic_test.dart`, `test/` (emulator harness)

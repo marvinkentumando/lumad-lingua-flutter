@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:lumad_lingua/theme/app_colors.dart';
 import 'package:lumad_lingua/theme/app_typography.dart';
@@ -13,7 +11,9 @@ import 'package:lumad_lingua/widgets/brand_background.dart';
 import 'package:lumad_lingua/widgets/brand_card.dart';
 import 'package:lumad_lingua/widgets/crystal_burst_animation.dart';
 import 'package:lumad_lingua/services/haptic_service.dart';
+import 'package:lumad_lingua/services/duel_service.dart';
 import 'package:lumad_lingua/services/firebase_service.dart';
+import 'package:lumad_lingua/models/duel_models.dart';
 import 'package:lumad_lingua/models/quest.dart';
 import 'package:lumad_lingua/services/auth_service.dart';
 import 'package:lumad_lingua/providers/quest_provider.dart';
@@ -30,266 +30,443 @@ class LinguaDuelScreen extends ConsumerStatefulWidget {
   ConsumerState<LinguaDuelScreen> createState() => _LinguaDuelScreenState();
 }
 
-class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
+class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
+    with WidgetsBindingObserver {
   DuelPhase _phase = DuelPhase.idle;
   double _playerHp = 1.0;
   double _opponentHp = 1.0;
   int _currentQuestionIndex = 0;
   bool _isPlayerWinning = true;
   String _opponentName = 'Ancestral Guardian';
-  
+
   String? _matchId;
   bool _isHost = false;
-  StreamSubscription? _matchSubscription;
+  String? _myId;
+  String? _opponentId;
+  StreamSubscription<DuelMatch?>? _matchSubscription;
   Timer? _roundTimer;
-  int _secondsLeft = 15;
+  int _secondsLeft = DuelSyncConfig.secondsPerRound;
   bool _showPlayerDamageEffect = false;
   bool _showOpponentDamageEffect = false;
-  List<Map<String, dynamic>> _battleQuestions = [];
+  List<DuelQuestion> _battleQuestions = [];
 
-  void _startMatchmaking() async {
+  Timer? _heartbeatTimer;
+  bool _rewardsAwarded = false;
+  bool _answerLocked = false;
+  int _uiRound = 0;
+  DateTime? _uiRoundStartedAt;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Returning from the background: re-sync the countdown from the
+    // document-anchored deadline instead of trusting the drifted local timer.
+    if (state == AppLifecycleState.resumed) {
+      _resyncRoundClock();
+      _sendHeartbeat();
+    }
+  }
+
+  void _resyncRoundClock() {
+    final roundStart = _uiRoundStartedAt;
+    if (roundStart == null || _phase != DuelPhase.battling) return;
+    final seconds = DuelService.secondsLeftForRound(
+      DateTime.now(),
+      roundStart,
+      _uiRound,
+    );
+    if (!mounted) return;
+    setState(() => _secondsLeft = seconds);
+    if (seconds <= 0) {
+      _handleAnswer(-1, isTimeout: true);
+    } else {
+      _startTimer(seconds);
+    }
+  }
+
+  // ── Matchmaking ───────────────────────────────────────────────────────────
+
+  Future<void> _startMatchmaking() async {
+    if (_phase != DuelPhase.idle) return;
     setState(() => _phase = DuelPhase.searching);
     HapticService.light();
 
     final user = ref.read(authStateProvider).value;
-    if (user == null) return;
+    if (user == null) {
+      setState(() => _phase = DuelPhase.idle);
+      return;
+    }
+    _myId = user.uid;
 
     try {
-      final matchQuery = await FirebaseFirestore.instance
-          .collection('duel_matchmaking')
-          .where('status', isEqualTo: 'waiting')
-          .limit(1)
-          .get();
+      final duelService = ref.read(duelServiceProvider);
+      final matchId = await duelService.findOrCreateMatch(
+        userProfile: {
+          'username': user.displayName,
+          'avatar': '👤',
+        },
+        questions: _isHost ? _createBattleQuestions() : null,
+      );
 
-      if (matchQuery.docs.isNotEmpty) {
-        final doc = matchQuery.docs.first;
-        _matchId = doc.id;
-        _isHost = false;
-
-        await doc.reference.update({
-          'opponentId': user.uid,
-          'opponentName': user.displayName ?? 'Warrior',
-          'status': 'active',
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-      } else {
-        _isHost = true;
-        final questions = _createBattleQuestions();
-        final newDoc = await FirebaseFirestore.instance.collection('duel_matchmaking').add({
-          'hostId': user.uid,
-          'hostName': user.displayName ?? 'Warrior',
-          'opponentId': null,
-          'opponentName': null,
-          'status': 'waiting',
-          'questions': questions,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-        _matchId = newDoc.id;
+      if (!mounted) {
+        await duelService.cancelMatch(matchId);
+        return;
       }
 
+      _matchId = matchId;
       _listenToMatch();
     } catch (e) {
       debugPrint("Matchmaking error: $e");
-      setState(() => _phase = DuelPhase.idle);
+      if (mounted) setState(() => _phase = DuelPhase.idle);
     }
   }
 
-  void _listenToMatch() {
-    if (_matchId == null) return;
-
-    _matchSubscription = FirebaseFirestore.instance
-        .collection('duel_matchmaking')
-        .doc(_matchId)
-        .snapshots()
-        .listen((snapshot) {
-      if (!snapshot.exists) return;
-      final data = snapshot.data() as Map<String, dynamic>;
-
-      if (data['status'] == 'active' && _phase == DuelPhase.searching) {
-        _roundTimer?.cancel();
-        setState(() {
-          _phase = DuelPhase.matchFound;
-          _opponentName = _isHost
-              ? (data['opponentName'] ?? 'Warrior')
-              : (data['hostName'] ?? 'Warrior');
-          _battleQuestions = List<Map<String, dynamic>>.from(data['questions'] ?? []);
-        });
-        HapticService.celebration();
-
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            setState(() {
-              _phase = DuelPhase.battling;
-              _playerHp = 1.0;
-              _opponentHp = 1.0;
-              _currentQuestionIndex = 0;
-            });
-            _startTimer();
-          }
-        });
-      } else if (_phase == DuelPhase.battling) {
-        final hostHp = (data['hostHp'] ?? 1.0).toDouble();
-        final oppHp = (data['opponentHp'] ?? 1.0).toDouble();
-
-        final newPlayerHp = _isHost ? hostHp : oppHp;
-        final newOpponentHp = _isHost ? oppHp : hostHp;
-
-        // Trigger effects if HP decreased from external update (opponent hit us)
-        if (newPlayerHp < _playerHp) {
-          setState(() => _showPlayerDamageEffect = true);
-        }
-        if (newOpponentHp < _opponentHp) {
-          setState(() => _showOpponentDamageEffect = true);
-        }
-
-        setState(() {
-          _playerHp = newPlayerHp;
-          _opponentHp = newOpponentHp;
-        });
-
-        if (_playerHp <= 0) {
-          _roundTimer?.cancel();
-          setState(() {
-            _isPlayerWinning = false;
-            _phase = DuelPhase.results;
-          });
-        }
-        
-        if (_opponentHp <= 0) {
-          _roundTimer?.cancel();
-          setState(() {
-             _isPlayerWinning = true;
-             _phase = DuelPhase.results;
-          });
-          _awardVictoryRewards();
-        }
-      }
-    });
-  }
-
-  List<Map<String, dynamic>> _createBattleQuestions() {
+  List<DuelQuestion> _createBattleQuestions() {
     final dictionary = ref.read(allWordsProvider).value ?? [];
     final l10n = ref.read(localizationProvider);
-    
-    List<Map<String, dynamic>> questions = [];
-    
-    if (dictionary.isNotEmpty) {
-      final sample = List.from(dictionary)..shuffle();
+
+    List<DuelQuestion> questions = [];
+
+    if (dictionary.length >= 4) {
+      final sample = List<DictionaryEntry>.from(dictionary)..shuffle();
       for (int i = 0; i < 5 && i < sample.length; i++) {
-        final DictionaryEntry entry = sample[i];
-        
-        List<String> options = [entry.translation];
-        final distractors = dictionary.where((w) => w.id != entry.id).toList()..shuffle();
+        final entry = sample[i];
+
+        final options = <String>[entry.translation];
+        final distractors = dictionary.where((w) => w.id != entry.id).toList()
+          ..shuffle();
         options.addAll(distractors.take(3).map((w) => w.translation));
         options.shuffle();
 
-        questions.add({
-          'question': l10n.translate('duel_question_prefix', params: {'word': entry.indigenousWord}),
-          'options': options,
-          'correct': options.indexOf(entry.translation),
-        });
+        questions.add(DuelQuestion(
+          question: l10n.translate('duel_question_prefix',
+              params: {'word': entry.indigenousWord}),
+          options: options,
+          correctIndex: options.indexOf(entry.translation),
+        ));
       }
     }
 
     if (questions.isEmpty) {
       questions = [
-        {
-          'question': l10n.translate('duel_question_gm'),
-          'options': ['Madyaw na gabi', 'Madyaw na allaw', 'Madyaw na amase', 'Madyaw na hapon'],
-          'correct': 2,
-        },
-        {
-          'question': l10n.translate('duel_question_land'),
-          'options': ['Duta', 'Danaw', 'Allaw', 'Gabi'],
-          'correct': 0,
-        }
+        DuelQuestion(
+          question: l10n.translate('duel_question_gm'),
+          options: ['Madyaw na gabi', 'Madyaw na allaw', 'Madyaw na amase', 'Madyaw na hapon'],
+          correctIndex: 2,
+        ),
+        DuelQuestion(
+          question: l10n.translate('duel_question_land'),
+          options: ['Duta', 'Danaw', 'Allaw', 'Gabi'],
+          correctIndex: 0,
+        ),
       ];
     }
 
     return questions;
   }
 
-  void _startTimer() {
+  // ── Real-time match sync ──────────────────────────────────────────────────
+
+  void _listenToMatch() {
+    if (_matchId == null || _myId == null) return;
+
+    _matchSubscription?.cancel();
+    _matchSubscription = ref
+        .read(duelServiceProvider)
+        .streamMatch(_matchId!)
+        .listen(_onMatchUpdate, onError: (e) {
+      debugPrint("Match stream error: $e");
+    });
+  }
+
+  void _onMatchUpdate(DuelMatch? match) {
+    if (!mounted) return;
+    if (match == null) {
+      // Document vanished (cleanup). End locally instead of hanging.
+      if (_phase == DuelPhase.battling || _phase == DuelPhase.searching) {
+        _finishLocally(won: _playerHp >= _opponentHp, opponentGone: true);
+      }
+      return;
+    }
+
+    switch (match.status) {
+      case DuelStatus.waiting:
+        // Still waiting for an opponent.
+        break;
+
+      case DuelStatus.active:
+        if (_phase == DuelPhase.searching) _onBattleStart(match);
+        if (_phase == DuelPhase.battling) _onBattleUpdate(match);
+
+      case DuelStatus.finished:
+      case DuelStatus.cancelled:
+        if (_phase == DuelPhase.battling || _phase == DuelPhase.searching) {
+          final won = match.winnerId != null
+              ? match.winnerId == _myId
+              : _playerHp >= _opponentHp;
+          _finishLocally(won: won, cancelled: match.status == DuelStatus.cancelled);
+        }
+    }
+  }
+
+  void _onBattleStart(DuelMatch match) {
+    final myId = _myId!;
+    final isPlayer1 = match.player1Id == myId;
+    _isHost = isPlayer1;
+    _opponentId = isPlayer1 ? match.player2Id : match.player1Id;
+    _opponentName = (isPlayer1 ? match.player2Name : match.player1Name) ?? 'Warrior';
+    _battleQuestions = match.questions;
+    _playerHp = isPlayer1 ? match.player1Hp : match.player2Hp;
+    _opponentHp = isPlayer1 ? match.player2Hp : match.player1Hp;
+
     _roundTimer?.cancel();
-    setState(() => _secondsLeft = 15);
-    _roundTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    setState(() {
+      _phase = DuelPhase.matchFound;
+      _currentQuestionIndex = 0;
+      _uiRound = 0;
+      _uiRoundStartedAt = match.battleStartedAt;
+      _secondsLeft = DuelSyncConfig.secondsPerRound;
+    });
+    HapticService.celebration();
+
+    Future.delayed(const Duration(seconds: 2), () {
       if (!mounted) return;
+      setState(() => _phase = DuelPhase.battling);
+      _startHeartbeat();
+      _startTimer(DuelSyncConfig.secondsPerRound);
+    });
+  }
+
+  void _onBattleUpdate(DuelMatch match) {
+    final myId = _myId!;
+    final isPlayer1 = match.player1Id == myId;
+
+    final newPlayerHp = isPlayer1 ? match.player1Hp : match.player2Hp;
+    final newOpponentHp = isPlayer1 ? match.player2Hp : match.player1Hp;
+
+    // Only remote writes (opponent's damage on me) get the hit flash; our own
+    // echoed writes must not.
+    final remote = !match.hasPendingWrites;
+
+    final showPlayerDamage =
+        remote && newPlayerHp < _playerHp && !_showPlayerDamageEffect;
+    final showOpponentDamage =
+        remote && newOpponentHp < _opponentHp && !_showOpponentDamageEffect;
+
+    _playerHp = newPlayerHp;
+    _opponentHp = newOpponentHp;
+
+    // Round-clock reconciliation: adopt the document's authoritative round
+    // clock whenever it moved (either client may open the next round first).
+    if (_uiRound != match.currentRound && match.roundStartedAt != null) {
+      _uiRound = match.currentRound;
+      _uiRoundStartedAt = match.roundStartedAt;
+      if (match.currentRound < _battleQuestions.length && _answerLocked) {
+        _answerLocked = false;
+        _currentQuestionIndex = match.currentRound;
+        _roundTimer?.cancel();
+        _startTimer(DuelSyncConfig.secondsPerRound);
+      }
+    }
+
+    setState(() {
+      _showPlayerDamageEffect = showPlayerDamage;
+      _showOpponentDamageEffect = showOpponentDamage;
+    });
+
+    // A silent opponent (no heartbeat for a while) forfeits the duel so we
+    // never wait on a ghost.
+    _checkOpponentStaleness(match);
+  }
+
+  // ── Heartbeat / abandonment ───────────────────────────────────────────────
+
+  void _startHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = Timer.periodic(DuelSyncConfig.heartbeatInterval, (_) {
+      _sendHeartbeat();
+    });
+    _sendHeartbeat();
+  }
+
+  void _sendHeartbeat() {
+    final matchId = _matchId;
+    final myId = _myId;
+    if (matchId == null || myId == null) return;
+    if (_phase != DuelPhase.battling && _phase != DuelPhase.matchFound) return;
+    ref.read(duelServiceProvider).heartbeat(matchId, myId);
+  }
+
+  void _checkOpponentStaleness(DuelMatch match) {
+    final myId = _myId;
+    if (myId == null || _phase != DuelPhase.battling) return;
+    if (DuelService.isOpponentStale(match, myId, DateTime.now())) {
+      final loser = match.opponentIdOf(myId);
+      if (loser != null) {
+        ref.read(duelServiceProvider).forfeitMatch(match.id, loser);
+      }
+    }
+  }
+
+  // ── Turn timer ────────────────────────────────────────────────────────────
+
+  void _startTimer([int? initialSeconds]) {
+    _roundTimer?.cancel();
+    if (initialSeconds != null && mounted) {
+      setState(() => _secondsLeft = initialSeconds);
+    }
+    _roundTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       if (_secondsLeft > 1) {
         setState(() => _secondsLeft--);
       } else {
-        _handleAnswer(-1);
+        timer.cancel();
+        _handleAnswer(-1, isTimeout: true);
       }
     });
   }
 
-  void _handleAnswer(int selectedIndex) async {
-    _roundTimer?.cancel();
+  // ── Answering ─────────────────────────────────────────────────────────────
+
+  Future<void> _handleAnswer(int selectedIndex, {bool isTimeout = false}) async {
+    if (_answerLocked || _phase != DuelPhase.battling) return;
     if (_battleQuestions.isEmpty) return;
-    
+    _answerLocked = true;
+    _roundTimer?.cancel();
+
+    final duelService = ref.read(duelServiceProvider);
     final q = _battleQuestions[_currentQuestionIndex];
-    final isCorrect = selectedIndex == q['correct'];
+    final isCorrect = selectedIndex == q.correctIndex;
 
     if (isCorrect) {
       HapticService.light();
-      _opponentHp = math.max(0.0, _opponentHp - 0.25);
       setState(() => _showOpponentDamageEffect = true);
     } else {
       HapticService.error();
-      _playerHp = math.max(0.0, _playerHp - 0.25);
       setState(() => _showPlayerDamageEffect = true);
     }
 
-    if (_matchId != null) {
-      final updateData = _isHost
-          ? {'opponentHp': _opponentHp, 'hostHp': _playerHp}
-          : {'hostHp': _opponentHp, 'opponentHp': _playerHp};
-      FirebaseFirestore.instance.collection('duel_matchmaking').doc(_matchId).update(updateData);
+    // One atomic, target-scoped delta per round outcome. Both HP fields are
+    // server-owned; clients never write absolute HP.
+    final matchId = _matchId;
+    final myId = _myId;
+    if (matchId != null && myId != null && _opponentId != null) {
+      try {
+        if (isCorrect) {
+          await duelService.applyDamage(
+            matchId,
+            _opponentId!,
+            DuelMatch.damagePerHit,
+          );
+        } else {
+          await duelService.applyDamage(
+            matchId,
+            myId,
+            DuelMatch.damagePerHit,
+          );
+        }
+      } catch (e) {
+        debugPrint("Damage submit failed: $e");
+      }
+
+      // Advance the shared round clock. If the opponent advanced first we
+      // adopt their (round, startedAt) instead of writing ours.
+      try {
+        final authoritative =
+            await duelService.advanceRound(matchId, _currentQuestionIndex);
+        _uiRound = authoritative.round;
+        _uiRoundStartedAt = authoritative.roundStartedAt;
+      } catch (e) {
+        debugPrint("Round advance failed: $e");
+      }
     }
 
+    if (!mounted) return;
     setState(() {});
 
     await Future.delayed(const Duration(seconds: 1));
-
     if (!mounted) return;
 
-    setState(() {
-      if (_playerHp <= 0 || _opponentHp <= 0 || _currentQuestionIndex >= _battleQuestions.length - 1) {
-        _phase = DuelPhase.results;
-        if (_playerHp > _opponentHp) _isPlayerWinning = true;
-        if (_playerHp < _opponentHp) _isPlayerWinning = false;
-        
-        if (_isPlayerWinning) _awardVictoryRewards();
-        
-        if (_matchId != null && _isHost) {
-          FirebaseFirestore.instance.collection('duel_matchmaking').doc(_matchId).delete();
-        }
+    final outOfHp = _playerHp <= 0 || _opponentHp <= 0;
+    final lastQuestion = _currentQuestionIndex >= _battleQuestions.length - 1;
+
+    if (outOfHp || lastQuestion) {
+      // Final result comes from the document (status/winnerId) — both clients
+      // converge on the same verdict, and rewards are granted exactly once.
+      if (_opponentHp <= 0 || (_playerHp > _opponentHp && lastQuestion)) {
+        _finishLocally(won: true);
       } else {
-        _currentQuestionIndex++;
-        _startTimer();
+        _finishLocally(won: false);
       }
-    });
-    
-    if (_showPlayerDamageEffect || _showOpponentDamageEffect) {
-      await Future.delayed(const Duration(milliseconds: 600));
-      if (mounted) {
-        setState(() {
-          _showPlayerDamageEffect = false;
-          _showOpponentDamageEffect = false;
-        });
-      }
+      return;
+    }
+
+    _currentQuestionIndex++;
+    // We advanced the shared clock ourselves; unlock now. The document echo
+    // unlocks too when the opponent won the race instead — both paths are
+    // idempotent, so the lock can never stick.
+    _answerLocked = false;
+    _startTimer(DuelSyncConfig.secondsPerRound);
+  }
+
+  // ── Finishing ─────────────────────────────────────────────────────────────
+
+  void _finishLocally({
+    required bool won,
+    bool opponentGone = false,
+    bool cancelled = false,
+  }) {
+    if (_phase == DuelPhase.results) return;
+    _roundTimer?.cancel();
+    _heartbeatTimer?.cancel();
+    _isPlayerWinning = won;
+    _awardVictoryRewards(won);
+    setState(() => _phase = DuelPhase.results);
+
+    // Do NOT delete the match document here: the opponent's listener still
+    // needs the final state. Cleanup is a delayed delete on both clients
+    // (harmless if one side already did it) — but only for duels that ended
+    // server-side, never for a vanished/cancelled doc.
+    final matchId = _matchId;
+    if (matchId != null && !opponentGone && !cancelled) {
+      Future.delayed(const Duration(seconds: 10), () {
+        ref.read(duelServiceProvider).deleteMatch(matchId);
+      });
     }
   }
 
-  void _awardVictoryRewards() {
+  void _awardVictoryRewards(bool won) {
+    if (_rewardsAwarded) return;
+    _rewardsAwarded = true;
+    if (!won) return;
     ref.read(studentProvider.notifier).addXp(150);
     ref.read(studentProvider.notifier).addMistCrystals(25);
     ref.read(questActionProvider.notifier).updateProgress(QuestType.duel, 1);
   }
 
+  // ── Cleanup ───────────────────────────────────────────────────────────────
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _roundTimer?.cancel();
+    _heartbeatTimer?.cancel();
     _matchSubscription?.cancel();
+
+    // Leaving while waiting: release the lobby so nobody joins a ghost.
+    final matchId = _matchId;
+    final phase = _phase;
+    if (matchId != null && (phase == DuelPhase.searching || phase == DuelPhase.matchFound)) {
+      ref.read(duelServiceProvider).cancelMatch(matchId);
+    }
     super.dispose();
   }
 
@@ -445,7 +622,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
                         decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(6)),
                         child: FractionallySizedBox(
                           alignment: Alignment.centerLeft,
-                          widthFactor: _playerHp,
+                          widthFactor: _playerHp.clamp(0.0, 1.0),
                           child: Container(decoration: BoxDecoration(color: AppColors.semanticGreen, borderRadius: BorderRadius.circular(6))),
                         ),
                       ),
@@ -470,7 +647,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
                         decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(6)),
                         child: FractionallySizedBox(
                           alignment: Alignment.centerRight,
-                          widthFactor: _opponentHp,
+                          widthFactor: _opponentHp.clamp(0.0, 1.0),
                           child: Container(decoration: BoxDecoration(color: AppColors.semanticRed, borderRadius: BorderRadius.circular(6))),
                         ),
                       ),
@@ -479,9 +656,9 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
                 ],
               ),
             ),
-            
+
             const Spacer(),
-            
+
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: BrandCard(
@@ -489,25 +666,25 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen> {
                 padding: const EdgeInsets.all(24),
                 borderRadius: 24,
                 child: Text(
-                  q['question'],
+                  q.question,
                   textAlign: TextAlign.center,
                   style: AppTypography.h2.copyWith(color: Colors.white),
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 40),
-            
+
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
-                  ...List.generate(q['options'].length, (index) {
+                  ...List.generate(q.options.length, (index) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: BrandButton(
-                        text: q['options'][index],
-                        onTap: () => _handleAnswer(index),
+                        text: q.options[index],
+                        onTap: _answerLocked ? null : () => _handleAnswer(index),
                         type: BrandButtonType.secondary,
                       ),
                     );

@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/duel_models.dart';
@@ -7,61 +8,179 @@ import 'auth_service.dart';
 
 final duelServiceProvider = Provider((ref) => DuelService(ref));
 
+/// Tunables for real-time duel sync. Kept as constants so tests can exercise
+/// the math without touching Firestore.
+abstract final class DuelSyncConfig {
+  /// Seconds each round allows before an auto-timeout answer is submitted.
+  static const int secondsPerRound = 15;
+
+  /// A match is considered abandoned when a player's heartbeat is older
+  /// than this while the battle is active.
+  static const Duration opponentStaleAfter = Duration(seconds: 45);
+
+  /// Waiting matches older than this are swept as cancelled during
+  /// matchmaking so stale lobbies can never be joined.
+  static const Duration waitingMatchTtl = Duration(seconds: 90);
+
+  /// How often each battling client refreshes its heartbeat.
+  static const Duration heartbeatInterval = Duration(seconds: 10);
+}
+
 class DuelService {
   final Ref _ref;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   DuelService(this._ref);
 
-  Stream<DuelMatch?> streamMatch(String matchId) {
-    return _db
-        .collection('duel_matches')
-        .doc(matchId)
-        .snapshots()
-        .map((doc) => doc.exists ? DuelMatch.fromFirestore(doc) : null);
+  CollectionReference<Map<String, dynamic>> get _matches =>
+      _db.collection('duel_matches');
+
+  // ── Pure helpers (used by the screen + unit tests) ────────────────────────
+
+  /// Deadline for a 0-based round: the battle start anchored to the server
+  /// clock, advanced one round length per round. Both clients compute the
+  /// same value from the same document field, so no clock skew is possible.
+  static DateTime deadlineForRound(DateTime battleStartedAt, int roundIndex) =>
+      battleStartedAt.add(
+        Duration(seconds: DuelSyncConfig.secondsPerRound * (roundIndex + 1)),
+      );
+
+  /// Seconds remaining for [roundIndex]; never negative.
+  static int secondsLeftForRound(DateTime now, DateTime battleStartedAt, int roundIndex) {
+    final remaining =
+        deadlineForRound(battleStartedAt, roundIndex).difference(now).inSeconds;
+    return remaining < 0 ? 0 : remaining;
   }
 
-  Future<String> findOrCreateMatch(Map<String, dynamic> userProfile) async {
+  /// True when the opponent's heartbeat is missing or older than the
+  /// staleness window while a battle is running.
+  static bool isOpponentStale(DuelMatch match, String myId, DateTime now) {
+    final opponentId = myId == match.player1Id ? match.player2Id : match.player1Id;
+    if (opponentId == null) return false;
+    final lastSeen = match.lastSeen[opponentId];
+    if (lastSeen == null) return false;
+    return now.difference(lastSeen) > DuelSyncConfig.opponentStaleAfter;
+  }
+
+  /// Winner id for a finished duel, or null while HP is still positive.
+  static String? winnerFromHp(String player1Id, String player2Id, double player1Hp, double player2Hp) {
+    if (player1Hp <= 0) return player2Id;
+    if (player2Hp <= 0) return player1Id;
+    return null;
+  }
+
+  // ── Real-time sync ────────────────────────────────────────────────────────
+
+  Stream<DuelMatch?> streamMatch(String matchId) {
+    return _matches.doc(matchId).snapshots().map(
+          (doc) => doc.exists ? DuelMatch.fromFirestore(doc) : null,
+        );
+  }
+
+  // ── Matchmaking ───────────────────────────────────────────────────────────
+
+  /// Joins the first fresh, waiting match that is not our own, or creates a
+  /// new one. The claim runs inside a transaction so two simultaneous
+  /// joiners can never take the same lobby: the transaction re-verifies
+  /// `status == waiting` at commit time.
+  Future<String> findOrCreateMatch({
+    required Map<String, dynamic> userProfile,
+    List<DuelQuestion>? questions,
+  }) async {
     final userId = _ref.read(authServiceProvider).currentUser?.uid;
     if (userId == null) throw Exception("User not authenticated");
 
-    // 1. Look for waiting matches
-    final waitingMatches = await _db
-        .collection('duel_matches')
-        .where('status', isEqualTo: DuelStatus.waiting.name)
-        .where('player1Id', isNotEqualTo: userId)
-        .limit(1)
-        .get();
+    try {
+      final waitingMatches = await _matches
+          .where('status', isEqualTo: DuelStatus.waiting.name)
+          .orderBy('createdAt', descending: false)
+          .limit(10)
+          .get();
 
-    if (waitingMatches.docs.isNotEmpty) {
-      final matchDoc = waitingMatches.docs.first;
-      await matchDoc.reference.update({
-        'player2Id': userId,
-        'player2Name': userProfile['username'] ?? 'Warrior',
-        'player2Avatar': userProfile['avatar'] ?? '👤',
-        'status': DuelStatus.active.name,
-      });
-      return matchDoc.id;
+      final now = DateTime.now();
+      for (final matchDoc in waitingMatches.docs) {
+        final data = matchDoc.data();
+        if (data['player1Id'] == userId) continue; // never match ourselves
+
+        // Sweep abandoned lobbies instead of joining them.
+        final createdAt = DuelMatch.parseTimestamp(data['createdAt']);
+        if (createdAt != null &&
+            now.difference(createdAt) > DuelSyncConfig.waitingMatchTtl) {
+          await matchDoc.reference
+              .update({'status': DuelStatus.cancelled.name})
+              .catchError((_) {});
+          continue;
+        }
+
+        final claimed = await _tryClaimWaitingMatch(matchDoc.reference, userId, userProfile);
+        if (claimed) return matchDoc.id;
+      }
+    } on FirebaseException {
+      // Composite index or rules issue: fall through to creating a match.
     }
 
-    // 2. Create new match
-    final questions = await _generateQuestions();
+    return _createMatch(userId, userProfile, questions);
+  }
+
+  Future<bool> _tryClaimWaitingMatch(
+    DocumentReference<Map<String, dynamic>> matchRef,
+    String userId,
+    Map<String, dynamic> userProfile,
+  ) async {
+    var claimed = false;
+    try {
+      await _db.runTransaction((transaction) async {
+        final snapshot = await transaction.get(matchRef);
+        if (!snapshot.exists) return;
+        final data = snapshot.data()!;
+        // Re-verify inside the transaction: this is what makes the claim
+        // race-free between two joiners.
+        if (data['status'] != DuelStatus.waiting.name) return;
+        if (data['player1Id'] == userId) return;
+
+        transaction.update(matchRef, {
+          'player2Id': userId,
+          'player2Name': userProfile['username'] ?? 'Warrior',
+          'player2Avatar': userProfile['avatar'] ?? '👤',
+          'status': DuelStatus.active.name,
+          'battleStartedAt': FieldValue.serverTimestamp(),
+          'lastSeen.$userId': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+        claimed = true;
+      });
+      return claimed;
+    } on FirebaseException {
+      return false;
+    }
+  }
+
+  Future<String> _createMatch(
+    String userId,
+    Map<String, dynamic> userProfile,
+    List<DuelQuestion>? questions,
+  ) async {
+    final generated = questions ?? await _generateQuestions();
     final newMatch = DuelMatch(
       id: '',
       player1Id: userId,
       player1Name: userProfile['username'] ?? 'Warrior',
       player1Avatar: userProfile['avatar'] ?? '👤',
       status: DuelStatus.waiting,
-      questions: questions,
+      questions: generated,
       createdAt: DateTime.now(),
     );
 
-    final docRef = await _db.collection('duel_matches').add(newMatch.toFirestore());
+    final docRef = await _matches.add({
+      ...newMatch.toFirestore(),
+      'lastSeen.$userId': FieldValue.serverTimestamp(),
+    });
     return docRef.id;
   }
 
   Future<List<DuelQuestion>> _generateQuestions() async {
-    // Fetch 15 random approved words to build questions
+    // Fetch approved words to build questions. Keep the server filter simple
+    // (status only) to avoid a composite-index requirement.
     final wordsSnap = await _db
         .collection('words')
         .where('status', isEqualTo: 'approved')
@@ -89,7 +208,7 @@ class DuelService {
     for (int i = 0; i < 5; i++) {
       final correctWord = allWords[random.nextInt(allWords.length)];
       final List<String> options = [correctWord.translation];
-      
+
       // Add 3 unique distractors
       while (options.length < 4) {
         final distractor = allWords[random.nextInt(allWords.length)].translation;
@@ -97,7 +216,7 @@ class DuelService {
           options.add(distractor);
         }
       }
-      
+
       options.shuffle();
       generated.add(DuelQuestion(
         question: 'What is the meaning of "${correctWord.indigenousWord}"?',
@@ -109,45 +228,138 @@ class DuelService {
     return generated;
   }
 
-  Future<void> submitDamage(String matchId, String playerId, double damage) async {
-    final matchRef = _db.collection('duel_matches').doc(matchId);
-    
+  // ── Battle state transitions ──────────────────────────────────────────────
+
+  /// Applies [damage] to [targetPlayerId]'s own HP atomically. Clients send
+  /// deltas — never absolute values — so simultaneous round answers cannot
+  /// clobber each other, and this transaction — not the UI — decides the
+  /// winner the moment a player's HP reaches zero.
+  Future<void> applyDamage(String matchId, String targetPlayerId, double damage) async {
+    final matchRef = _matches.doc(matchId);
+
     await _db.runTransaction((transaction) async {
       final snapshot = await transaction.get(matchRef);
       if (!snapshot.exists) return;
 
       final data = snapshot.data()!;
-      final isPlayer1 = data['player1Id'] == playerId;
-      
-      if (isPlayer1) {
-        final currentHp = (data['player2Hp'] as num? ?? 1.0).toDouble();
-        final newHp = (currentHp - damage).clamp(0.0, 1.0);
-        transaction.update(matchRef, {'player2Hp': newHp});
-        
-        if (newHp <= 0) {
-          transaction.update(matchRef, {
-            'status': DuelStatus.finished.name,
-            'winnerId': playerId,
-          });
-        }
-      } else {
-        final currentHp = (data['player1Hp'] as num? ?? 1.0).toDouble();
-        final newHp = (currentHp - damage).clamp(0.0, 1.0);
-        transaction.update(matchRef, {'player1Hp': newHp});
+      // Only live duels can take damage; finished/cancelled docs are frozen.
+      if (data['status'] != DuelStatus.active.name) return;
 
-        if (newHp <= 0) {
-          transaction.update(matchRef, {
-            'status': DuelStatus.finished.name,
-            'winnerId': playerId,
-          });
-        }
+      final targetIsPlayer1 = data['player1Id'] == targetPlayerId;
+      final hpField = targetIsPlayer1 ? 'player1Hp' : 'player2Hp';
+      final currentHp = (data[hpField] as num? ?? 1.0).toDouble();
+      final newHp = (currentHp - damage).clamp(0.0, 1.0);
+
+      final updates = <String, dynamic>{hpField: newHp};
+
+      final winnerId = DuelService.winnerFromHp(
+        (data['player1Id'] ?? '') as String,
+        (data['player2Id'] ?? '') as String,
+        targetIsPlayer1 ? newHp : (data['player1Hp'] as num? ?? 1.0).toDouble(),
+        targetIsPlayer1 ? (data['player2Hp'] as num? ?? 1.0).toDouble() : newHp,
+      );
+      if (winnerId != null && winnerId.isNotEmpty) {
+        updates.addAll({
+          'status': DuelStatus.finished.name,
+          'winnerId': winnerId,
+          'finishedAt': FieldValue.serverTimestamp(),
+        });
       }
+
+      transaction.update(matchRef, updates);
     });
   }
 
+  /// Marks the match finished with the given loser forfeiting. No-op unless
+  /// the duel is still active, so a forfeit can never overturn a real result.
+  Future<void> forfeitMatch(String matchId, String loserId) async {
+    final matchRef = _matches.doc(matchId);
+
+    await _db.runTransaction((transaction) async {
+      final snapshot = await transaction.get(matchRef);
+      if (!snapshot.exists) return;
+      final data = snapshot.data()!;
+      if (data['status'] != DuelStatus.active.name) return;
+
+      final loserIsPlayer1 = data['player1Id'] == loserId;
+      final winnerId =
+          (loserIsPlayer1 ? data['player2Id'] : data['player1Id']) as String?;
+
+      transaction.update(matchRef, {
+        'status': DuelStatus.finished.name,
+        if (winnerId != null) 'winnerId': winnerId,
+        'finishedAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
+  /// Refreshes this player's heartbeat so the opponent can detect a quit.
+  Future<void> heartbeat(String matchId, String playerId) {
+    return _matches.doc(matchId).update({
+      'lastSeen.$playerId': FieldValue.serverTimestamp(),
+    }).catchError((_) {});
+  }
+
+  /// Advances the round counter exactly once per round and returns the
+  /// authoritative (round, roundStartedAt) pair. When both clients try to
+  /// advance simultaneously the transaction guarantees a single increment;
+  /// the losing client reads back the winner's server timestamp, so both
+  /// converge on the same round clock.
+  Future<({int round, DateTime? roundStartedAt})> advanceRound(
+    String matchId,
+    int fromRound,
+  ) async {
+    final matchRef = _matches.doc(matchId);
+    var result = (round: fromRound, roundStartedAt: null as DateTime?);
+
+    await _db.runTransaction((transaction) async {
+      final snapshot = await transaction.get(matchRef);
+      if (!snapshot.exists) return;
+      final data = snapshot.data()!;
+
+      final currentRound = (data['currentRound'] as num? ?? 0).toInt();
+      final roundStartedAt = DuelMatch.parseTimestamp(data['roundStartedAt']);
+
+      if (data['status'] != DuelStatus.active.name || currentRound != fromRound) {
+        // Someone else already opened the next round (or the duel ended):
+        // adopt their clock instead of writing ours.
+        result = (round: currentRound, roundStartedAt: roundStartedAt);
+        return;
+      }
+
+      transaction.update(matchRef, {
+        'currentRound': fromRound + 1,
+        'roundStartedAt': FieldValue.serverTimestamp(),
+      });
+      // Local approximation until the authoritative snapshot arrives.
+      result = (round: fromRound + 1, roundStartedAt: DateTime.now());
+    });
+
+    return result;
+  }
+
+  /// Removes the match document once both clients have had time to observe
+  /// the final result, so finished duels don't accumulate forever.
+  Future<void> deleteMatch(String matchId) async {
+    try {
+      await _matches.doc(matchId).delete();
+    } on FirebaseException {
+      // Already gone or denied; nothing to clean up.
+    }
+  }
+
+  /// Only a still-waiting lobby can be cancelled; active duels must finish
+  /// through damage/forfeit so the opponent always sees a final state.
   Future<void> cancelMatch(String matchId) async {
-    await _db.collection('duel_matches').doc(matchId).update({
-      'status': DuelStatus.cancelled.name,
+    final matchRef = _matches.doc(matchId);
+    await _db.runTransaction((transaction) async {
+      final snapshot = await transaction.get(matchRef);
+      if (!snapshot.exists) return;
+      if (snapshot.data()!['status'] != DuelStatus.waiting.name) return;
+      transaction.update(matchRef, {
+        'status': DuelStatus.cancelled.name,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
     });
   }
 }

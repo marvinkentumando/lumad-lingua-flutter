@@ -617,6 +617,28 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     );
   }
 
+  /// Compact "Salute! 🛡️" button used on podium spots (and any tight layout)
+  /// to cheer a fellow tribe member. Shares the notification logic with the
+  /// rank-row salute icon via [_sendCheer].
+  Widget _buildSaluteButton(
+    String targetUid,
+    String targetName,
+    AppLocalization l10n, {
+    bool isCompact = false,
+  }) {
+    final alreadySaluted = _salutedUids.contains(targetUid);
+    return IconButton(
+      onPressed: alreadySaluted ? null : () => _sendCheer(targetUid, targetName, l10n),
+      icon: Icon(alreadySaluted ? Icons.favorite_rounded : Icons.waving_hand_rounded),
+      color: AppColors.gold500.withValues(alpha: alreadySaluted ? 0.4 : 0.8),
+      iconSize: isCompact ? 20 : 24,
+      tooltip: alreadySaluted ? 'Salute sent' : 'Send Tribal Salute',
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+    );
+  }
+
   Future<void> _sendCheer(String targetUid, String targetName, AppLocalization l10n) async {
     final user = ref.read(authStateProvider).value;
     if (user == null) return;
@@ -635,6 +657,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
         'isRead': false,
         'timestamp': FieldValue.serverTimestamp(),
       });
+
+      // Remember this session's salutes so a member can't be spammed.
+      if (mounted) setState(() => _salutedUids.add(targetUid));
 
       if (mounted) {
         HapticService.light();
@@ -781,14 +806,24 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               ),
               if (!isMe && e.uid != null) ...[
                 const SizedBox(width: 8),
-                IconButton(
-                  onPressed: () => _sendCheer(e.uid!, e.name, l10n),
-                  icon: const Icon(Icons.auto_awesome_rounded),
-                  color: AppColors.gold500.withValues(alpha: 0.6),
-                  iconSize: 20,
-                  tooltip: 'Send Tribal Salute',
-                  visualDensity: VisualDensity.compact,
-                ),
+                Builder(builder: (context) {
+                  final alreadySaluted = _salutedUids.contains(e.uid!);
+                  return IconButton(
+                    onPressed: alreadySaluted
+                        ? null
+                        : () => _sendCheer(e.uid!, e.name, l10n),
+                    icon: Icon(alreadySaluted
+                        ? Icons.favorite_rounded
+                        : Icons.auto_awesome_rounded),
+                    color: AppColors.gold500
+                        .withValues(alpha: alreadySaluted ? 0.3 : 0.6),
+                    iconSize: 20,
+                    tooltip: alreadySaluted
+                        ? 'Salute sent'
+                        : 'Send Tribal Salute',
+                    visualDensity: VisualDensity.compact,
+                  );
+                }),
               ],
             ],
           ),
