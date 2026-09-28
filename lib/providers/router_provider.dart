@@ -50,6 +50,7 @@ import '../screens/wisdom_progression_screen.dart';
 import '../screens/sentiment_dashboard_screen.dart';
 import '../screens/data_privacy_screen.dart';
 import '../screens/offline_wisdom_screen.dart';
+import '../screens/village_dashboard_screen.dart';
 import '../screens/admin_dictionary_screen.dart';
 import '../screens/admin/algorithm_selection_screen.dart';
 import '../screens/admin/admin_assessments_screen.dart';
@@ -277,6 +278,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/ancestral-vault-shop',
             builder: (context, state) => const AncestralVaultShopScreen(),
+          ),
+          GoRoute(
+            path: '/village-dashboard',
+            builder: (context, state) => const VillageDashboardScreen(),
           ),
 
           GoRoute(

@@ -327,6 +327,15 @@ class LearnerProfileScreen extends ConsumerWidget {
               onTap: () => _showJoinVillageDialog(context, ref, user?.uid ?? '', l10n),
             ),
             const SizedBox(height: 12),
+          ] else ...[
+            _buildManagementTile(
+              context,
+              Icons.fort_rounded,
+              'My Village Sanctuary 🌿',
+              'View announcements, leaderboard & tribe stats',
+              onTap: () => context.push('/village-dashboard'),
+            ),
+            const SizedBox(height: 12),
           ],
           _buildManagementTile(
             context,

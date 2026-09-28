@@ -108,6 +108,12 @@ class FirebaseService {
     });
   }
 
+  Future<void> leaveVillage(String userId) async {
+    await _db.collection('users').doc(userId).update({
+      'educatorId': FieldValue.delete(),
+    });
+  }
+
   // User Profile Operations
   Future<void> updateUserProfile(
     String userId,
@@ -4770,6 +4776,23 @@ final scenariosProvider = StreamProvider<List<Scenario>>((ref) {
 
 final broadcastsProvider = StreamProvider<List<VillageBroadcast>>((ref) {
   return ref.watch(firebaseServiceProvider).getVillageBroadcasts();
+});
+
+final villageBroadcastsProvider =
+    StreamProvider.family<List<VillageBroadcast>, String>((ref, educatorId) {
+  return ref
+      .watch(firebaseServiceProvider)
+      .db
+      .collection('broadcasts')
+      .where('educatorId', isEqualTo: educatorId)
+      .snapshots()
+      .map((snap) {
+    final list = snap.docs
+        .map((doc) => VillageBroadcast.fromFirestore(doc.data(), doc.id))
+        .toList();
+    list.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return list;
+  });
 });
 
 final studentFeedbackProvider = StreamProvider<List<StudentFeedback>>((ref) {

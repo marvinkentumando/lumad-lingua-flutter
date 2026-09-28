@@ -29,6 +29,9 @@
   - Implemented `NotificationService` for local push notifications using `flutter_local_notifications`.
   - Added daily repeating streak reminders with custom hour/minute settings modal (`StreakReminderSettingsDialog`).
   - Added instant test streak warning notifications.
+- [x] **Learner Village Sanctuary & Dashboard**:
+  - Added "My Village Sanctuary 🌿" card on Learner Profile Screen when connected to an educator via code.
+  - Built dedicated `VillageDashboardScreen` featuring village header, educator info, code copying, total tribe XP, village member count, village broadcast announcements, tribe leaderboard rankings, and leave village confirmation.
 
 ---
 
