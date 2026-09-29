@@ -45,6 +45,18 @@
   - Wired `TactileWrapper` to trigger haptic feedback on tap down.
   - Integrated consistent haptics across shop exchanges, reminder toggles, village leave/code copy, duel victory/defeat, leaderboard salutes, and admin item deletions.
   - Created unit test suite `test/services/haptic_service_test.dart` verifying all 17 haptic methods.
+- [x] **State Management Offline Sync Refactor**:
+  - Added Hive student profile caching and action queueing in `StudentNotifier`.
+  - Implemented pending sync action processor, draft lesson publishing, and auto-retry on reconnect in `UploadQueueService`.
+  - Added cached progress and lesson fallback logic in `LearningProvider`.
+  - Created unit test suite `test/services/offline_sync_test.dart`.
+- [x] **Shimmer Skeleton Loading Optimization**:
+  - Replaced high-overhead multi-ticker `.animate().shimmer()` with hardware-accelerated `_OptimizedShimmerBox` wrapped in `RepaintBoundary` for zero parent layout repaints.
+  - Added specialized `DictionaryCardSkeleton` and `HubCardSkeleton` structured loading components for `DictionaryScreen` and `LearningHubScreen`.
+- [x] **Avatar Cultural Customization Shop**:
+  - Added category filter chips (ALL, TITLES 📜, FRAMES 🌿, BADGES 🏺) in `AncestralVaultShopScreen`.
+  - Added default shop catalog with cultural titles, avatar frames, and sacred badges.
+  - Integrated customization equipping (`equippedTitle`, `equippedBadge`, `equippedFrame`) in `StudentNotifier` with offline persistence.
 
 ---
 
@@ -79,15 +91,13 @@
   - 📁 `lib/screens/lesson_session_screen.dart`, `lib/services/firebase_service.dart`
 - [x] **Lesson Audio Pre-Caching**: Pre-download all lesson module audio assets into Hive/Cache before starting a session.
   - 📁 `lib/services/audio_service.dart`, `lib/screens/learning_path_screen.dart`, `lib/providers/learning_provider.dart`
-- [ ] **Smart SRS Retention Decay Recommendations**: Dashboard card suggesting low-retention vocabulary based on SuperMemo-2 interval calculations.
-  - 📁 `lib/services/srs_service.dart`, `lib/screens/mastery_dashboard_screen.dart`
 
 ### 🏆 Gamification, Customization & Social
 - [x] **Claim Reward Modal & Animations**: Expand Tribal Quests & Daily Challenge claim reward modal and particle effects.
   - 📁 `lib/widgets/claim_reward_modal.dart`, `lib/widgets/crystal_burst_animation.dart`
 - [x] **Local Push Notifications**: Implement daily streak reminders with user-scheduled times.
   - 📁 `lib/services/notification_service.dart`, `lib/widgets/streak_reminder_settings_dialog.dart`, `lib/screens/learner_profile_screen.dart`
-- [ ] **Avatar Cultural Customization Shop**: Equip and purchase cultural titles, avatar frames, and badges in the Ancestral Vault using Mist Crystals.
+- [x] **Avatar Cultural Customization Shop**: Equip and purchase cultural titles, avatar frames, and badges in the Ancestral Vault using Mist Crystals.
   - 📁 `lib/screens/ancestral_vault_shop_screen.dart`, `lib/providers/student_provider.dart`, `lib/models/artifact.dart`
 - [x] **Leaderboard Encouragement "Salutes"**: Send instant tribal cheer toasts ("Salute! 🛡️") to friends on the leaderboard.
   - 📁 `lib/screens/leaderboard_screen.dart`, `lib/services/firebase_service.dart`
@@ -117,10 +127,10 @@
 ---
 
 ## 🛠 Low Priority, Refactoring & Infrastructure
-- [ ] **State Management Offline Sync Refactor**: Smooth state recovery and background queue retry when reconnecting online.
-  - 📁 `lib/services/hive_service.dart`, `lib/providers/student_provider.dart`, `lib/providers/learning_provider.dart`
-- [ ] **Shimmer Skeleton Loading Optimization**: Optimize shimmer animations for low-end Android mobile devices.
-  - 📁 `lib/widgets/shimmer_loading.dart`, `lib/screens/dictionary_screen.dart`, `lib/screens/learning_hub_screen.dart`
+- [x] **State Management Offline Sync Refactor**: Smooth state recovery and background queue retry when reconnecting online.
+  - 📁 `lib/services/offline_service.dart`, `lib/providers/student_provider.dart`, `lib/services/upload_queue_service.dart`, `lib/providers/learning_provider.dart`
+- [x] **Shimmer Skeleton Loading Optimization**: Optimize shimmer animations for low-end Android mobile devices.
+  - 📁 `lib/widgets/app_shimmer_skeleton.dart`, `lib/screens/dictionary_screen.dart`, `lib/screens/learning_hub_screen.dart`
 - [x] **Firebase Crashlytics Integration**: Added crash reporting so the ≥95% crash-free session reliability requirement (Non-Functional) is actually measurable in production. Wired `firebase_crashlytics` (5.2.0) with `runZonedGuarded` root zone, `FlutterError.onError` fatal capture, and `PlatformDispatcher.onError` handler in `main.dart`; added the Crashlytics Gradle plugin (v3.0.6) on Android and upgraded google-services to 4.4.2 (required by plugin v3). iOS Podfile not present in repo — run `flutter pub get` inside `ios/` before first iOS build if desired.
   - 📁 `lib/main.dart`, `pubspec.yaml`, `android/app/build.gradle.kts`, `android/settings.gradle.kts`
 - [ ] **Navigation Consistency**: Standardize back-navigation across all modules (GoRouter vs Navigator mixing) per roadmap Phase 4.

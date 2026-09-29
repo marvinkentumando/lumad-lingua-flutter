@@ -14,15 +14,166 @@ import '../widgets/spirit_particle_overlay.dart';
 import '../utils/app_localization.dart';
 import '../providers/student_provider.dart';
 
-
-class AncestralVaultShopScreen extends ConsumerWidget {
+class AncestralVaultShopScreen extends ConsumerStatefulWidget {
   const AncestralVaultShopScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AncestralVaultShopScreen> createState() =>
+      _AncestralVaultShopScreenState();
+}
+
+class _AncestralVaultShopScreenState
+    extends ConsumerState<AncestralVaultShopScreen> {
+  String _selectedCategory = 'ALL';
+
+  static final List<Artifact> _defaultVaultCatalog = [
+    // Titles
+    Artifact(
+      id: 'title_mansaka_elder',
+      title: 'Mansaka Elder',
+      description: 'A respected keeper of tribal ancestral stories.',
+      emoji: '📜',
+      type: 'title',
+      tier: ArtifactTier.epic,
+      crystalCost: 150,
+      passiveBonus: '+5% XP from sessions',
+      isAvailableInShop: true,
+    ),
+    Artifact(
+      id: 'title_tribal_guardian',
+      title: 'Tribal Guardian',
+      description: 'Sworn protector of indigenous heritage and language.',
+      emoji: '🛡️',
+      type: 'title',
+      tier: ArtifactTier.sacred,
+      crystalCost: 200,
+      passiveBonus: '+10% XP from quizzes',
+      isAvailableInShop: true,
+    ),
+    Artifact(
+      id: 'title_sacred_weaver',
+      title: 'Sacred Weaver',
+      description: 'Master artisan of traditional indigenous patterns.',
+      emoji: '🧵',
+      type: 'title',
+      tier: ArtifactTier.legendary,
+      crystalCost: 250,
+      passiveBonus: '+15% Mist Crystals from quests',
+      isAvailableInShop: true,
+    ),
+    Artifact(
+      id: 'title_spirit_chanter',
+      title: 'Spirit Chanter',
+      description: 'Voice of the ancient oral chants and ancestral echoes.',
+      emoji: '🎙️',
+      type: 'title',
+      tier: ArtifactTier.ancient,
+      crystalCost: 300,
+      passiveBonus: '+20% XP on speaking practice',
+      isAvailableInShop: true,
+    ),
+
+    // Avatar Frames
+    Artifact(
+      id: 'frame_sunburst_gold',
+      title: 'Golden Sunburst Frame',
+      description: 'Radiant golden sunray halo around your avatar.',
+      emoji: '☀️',
+      type: 'frame',
+      tier: ArtifactTier.rare,
+      crystalCost: 100,
+      passiveBonus: 'Cultural Sun Aura',
+      isAvailableInShop: true,
+    ),
+    Artifact(
+      id: 'frame_forest_vine',
+      title: 'Forest Vine Frame',
+      description: 'Sacred Kagulangan forest vines woven around your avatar.',
+      emoji: '🌿',
+      type: 'frame',
+      tier: ArtifactTier.rare,
+      crystalCost: 120,
+      passiveBonus: 'Ancestral Forest Halo',
+      isAvailableInShop: true,
+    ),
+    Artifact(
+      id: 'frame_tribal_flame',
+      title: 'Tribal Flame Frame',
+      description: 'Sacred spark fire that ignites your warrior presence.',
+      emoji: '🔥',
+      type: 'frame',
+      tier: ArtifactTier.epic,
+      crystalCost: 220,
+      passiveBonus: 'Sacred Fire Glow',
+      isAvailableInShop: true,
+    ),
+    Artifact(
+      id: 'frame_ancestral_crown',
+      title: 'Ancestral Gold Halo',
+      description: 'Glowing golden spirit crown reserved for tribal legends.',
+      emoji: '👑',
+      type: 'frame',
+      tier: ArtifactTier.legendary,
+      crystalCost: 350,
+      passiveBonus: 'Golden Spirit Crown',
+      isAvailableInShop: true,
+    ),
+
+    // Badges & Artifacts
+    Artifact(
+      id: 'badge_waling_waling',
+      title: 'Waling-Waling Spark',
+      description: 'Sacred orchid emblem representing rare beauty and honor.',
+      emoji: '🌸',
+      type: 'badge',
+      tier: ArtifactTier.common,
+      crystalCost: 80,
+      passiveBonus: 'Royal Orchid Badge',
+      isAvailableInShop: true,
+    ),
+    Artifact(
+      id: 'artifact_golden_agung',
+      title: 'Golden Agung',
+      description: 'Resonant brass gong that summons the spirits of the tribe.',
+      emoji: '🔔',
+      type: 'artifact',
+      tier: ArtifactTier.epic,
+      crystalCost: 180,
+      passiveBonus: 'Gong of Resonance',
+      isAvailableInShop: true,
+    ),
+    Artifact(
+      id: 'artifact_kulintang_pearl',
+      title: 'Kulintang Pearl',
+      description: 'Harmonic pearl instrument used in traditional celebrations.',
+      emoji: '💎',
+      type: 'badge',
+      tier: ArtifactTier.sacred,
+      crystalCost: 250,
+      passiveBonus: 'Tribe Harmony Gem',
+      isAvailableInShop: true,
+    ),
+    Artifact(
+      id: 'badge_agila_emblem',
+      title: 'Agila Spirit Emblem',
+      description: 'Emblem of the Philippine Eagle, guardian of mountain skies.',
+      emoji: '🦅',
+      type: 'badge',
+      tier: ArtifactTier.ancient,
+      crystalCost: 400,
+      passiveBonus: 'Great Eagle Badge',
+      isAvailableInShop: true,
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
     final artifactsAsync = ref.watch(artifactsStreamProvider);
+    final studentState = ref.watch(studentProvider);
     final userProfile = ref.watch(userProfileProvider).value;
-    final crystals = userProfile?['mistCrystals'] ?? 0;
+    final crystals = studentState.mistCrystals > 0
+        ? studentState.mistCrystals
+        : (userProfile?['mistCrystals'] ?? 0);
     final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
@@ -39,39 +190,150 @@ class AncestralVaultShopScreen extends ConsumerWidget {
         ),
         actions: [_buildCrystalBalance(crystals)],
       ),
-      body: artifactsAsync.when(
-        data: (artifacts) {
-          final shopItems = artifacts
-              .where((a) => a.isAvailableInShop)
-              .toList();
+      body: Column(
+        children: [
+          _buildFilterChips(),
+          Expanded(
+            child: artifactsAsync.when(
+              data: (artifacts) {
+                final List<Artifact> combinedCatalog = [];
+                final Map<String, Artifact> map = {};
 
-          if (shopItems.isEmpty) {
-            return Center(
-              child: Text(
-                l10n.translate('vault_sealed'),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white24),
+                for (var a in artifacts) {
+                  if (a.isAvailableInShop) {
+                    map[a.id] = a;
+                  }
+                }
+
+                for (var def in _defaultVaultCatalog) {
+                  if (!map.containsKey(def.id)) {
+                    map[def.id] = def;
+                  }
+                }
+
+                combinedCatalog.addAll(map.values);
+
+                final filtered = combinedCatalog.where((a) {
+                  if (_selectedCategory == 'TITLES') return a.isTitle;
+                  if (_selectedCategory == 'FRAMES') return a.isFrame;
+                  if (_selectedCategory == 'BADGES') {
+                    return a.isBadge || a.type == 'artifact';
+                  }
+                  return true;
+                }).toList();
+
+                if (filtered.isEmpty) {
+                  return Center(
+                    child: Text(
+                      l10n.translate('vault_sealed'),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white24),
+                    ),
+                  );
+                }
+
+                return GridView.builder(
+                  padding: const EdgeInsets.all(24),
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                    childAspectRatio: 0.65,
+                  ),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) => _buildShopCard(
+                    context,
+                    ref,
+                    filtered[index],
+                    crystals,
+                    l10n,
+                  ),
+                );
+              },
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: AppColors.gold500),
               ),
-            );
-          }
+              error: (_, __) {
+                final filtered = _defaultVaultCatalog.where((a) {
+                  if (_selectedCategory == 'TITLES') return a.isTitle;
+                  if (_selectedCategory == 'FRAMES') return a.isFrame;
+                  if (_selectedCategory == 'BADGES') {
+                    return a.isBadge || a.type == 'artifact';
+                  }
+                  return true;
+                }).toList();
 
-          return GridView.builder(
-            padding: const EdgeInsets.all(24),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 0.65,
+                return GridView.builder(
+                  padding: const EdgeInsets.all(24),
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                    childAspectRatio: 0.65,
+                  ),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) => _buildShopCard(
+                    context,
+                    ref,
+                    filtered[index],
+                    crystals,
+                    l10n,
+                  ),
+                );
+              },
             ),
-            itemCount: shopItems.length,
-            itemBuilder: (context, index) =>
-                _buildShopCard(context, ref, shopItems[index], crystals, l10n),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChips() {
+    final categories = [
+      {'key': 'ALL', 'label': 'ALL'},
+      {'key': 'TITLES', 'label': 'TITLES 📜'},
+      {'key': 'FRAMES', 'label': 'FRAMES 🌿'},
+      {'key': 'BADGES', 'label': 'BADGES 🏺'},
+    ];
+
+    return Container(
+      height: 44,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        itemCount: categories.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final cat = categories[index];
+          final isSelected = _selectedCategory == cat['key'];
+
+          return ChoiceChip(
+            selected: isSelected,
+            label: Text(cat['label']!),
+            selectedColor: AppColors.gold500,
+            backgroundColor: AppColors.forest800,
+            labelStyle: AppTypography.mono.copyWith(
+              color: isSelected ? Colors.black : Colors.white70,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(
+                color: isSelected
+                    ? AppColors.gold500
+                    : AppColors.gold500.withValues(alpha: 0.2),
+              ),
+            ),
+            onSelected: (_) {
+              HapticService.selection();
+              setState(() => _selectedCategory = cat['key']!);
+            },
           );
         },
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.gold500),
-        ),
-        error: (err, _) => Center(child: Text("Error: $err")),
       ),
     );
   }
@@ -136,9 +398,25 @@ class AncestralVaultShopScreen extends ConsumerWidget {
         artifact.tier == ArtifactTier.legendary ||
         artifact.tier == ArtifactTier.ancient;
 
+    final studentState = ref.watch(studentProvider);
     final userProfile = ref.watch(userProfileProvider).value;
-    final equippedTitle = userProfile?['equippedTitle'];
-    final isEquipped = artifact.isEarned && equippedTitle == artifact.title;
+
+    final currentTitle =
+        studentState.equippedTitle ?? userProfile?['equippedTitle'];
+    final currentBadge =
+        studentState.equippedBadge ?? userProfile?['equippedBadge'];
+    final currentFrame =
+        studentState.equippedFrame ?? userProfile?['equippedFrame'];
+
+    bool isEquipped = false;
+    if (artifact.isEarned) {
+      if (artifact.isTitle && currentTitle == artifact.title) isEquipped = true;
+      if (artifact.isBadge && currentBadge == artifact.emoji) isEquipped = true;
+      if (artifact.isFrame && currentFrame == artifact.title) isEquipped = true;
+      if (!artifact.isCustomization && currentTitle == artifact.title) {
+        isEquipped = true;
+      }
+    }
 
     Widget content = BrandCard(
       theme: BrandCardTheme.vibrant,
@@ -208,18 +486,22 @@ class AncestralVaultShopScreen extends ConsumerWidget {
                   if (artifact.isEarned) {
                     if (!isEquipped) {
                       ref.read(studentProvider.notifier).equipCustomization(
-                        title: artifact.title,
-                        emoji: artifact.emoji,
-                      );
+                            title: artifact.isTitle || !artifact.isCustomization
+                                ? artifact.title
+                                : null,
+                            emoji: artifact.isBadge ? artifact.emoji : null,
+                            frame: artifact.isFrame ? artifact.title : null,
+                          );
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Equipped title "${artifact.title}"!'),
+                          content: Text('Equipped: "${artifact.title}"!'),
                           backgroundColor: AppColors.semanticGreen,
                         ),
                       );
                     }
                   } else {
-                    _showExchangeDialog(context, ref, artifact, canAfford, l10n);
+                    _showExchangeDialog(
+                        context, ref, artifact, canAfford, l10n);
                   }
                 },
                 child: Container(
@@ -232,7 +514,9 @@ class AncestralVaultShopScreen extends ConsumerWidget {
                         ? AppColors.semanticGreen
                         : (artifact.isEarned
                             ? AppColors.gold500
-                            : (canAfford ? AppColors.gold500 : Colors.white10)),
+                            : (canAfford
+                                ? AppColors.gold500
+                                : Colors.white10)),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -261,22 +545,22 @@ class AncestralVaultShopScreen extends ConsumerWidget {
 
     if (isHighTier) {
       return Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: tierColor.withValues(alpha: 0.25),
-                  blurRadius: 20,
-                  spreadRadius: 0,
-                ),
-              ],
-              border: Border.all(
-                color: tierColor.withValues(alpha: 0.6),
-                width: 1.5,
-              ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: tierColor.withValues(alpha: 0.25),
+              blurRadius: 20,
+              spreadRadius: 0,
             ),
-            child: content,
-          )
+          ],
+          border: Border.all(
+            color: tierColor.withValues(alpha: 0.6),
+            width: 1.5,
+          ),
+        ),
+        child: content,
+      )
           .animate(onPlay: (c) => c.repeat(reverse: true))
           .boxShadow(
             begin: BoxShadow(
@@ -335,10 +619,14 @@ class AncestralVaultShopScreen extends ConsumerWidget {
                   children: [
                     Text(artifact.emoji, style: const TextStyle(fontSize: 64)),
                     const SizedBox(height: 16),
-                    Text(l10n.translate('sacred_exchange'), style: AppTypography.h2),
+                    Text(l10n.translate('sacred_exchange'),
+                        style: AppTypography.h2),
                     const SizedBox(height: 8),
                     Text(
-                      l10n.translate('exchange_confirm', params: {'cost': artifact.crystalCost.toString(), 'item': artifact.title}),
+                      l10n.translate('exchange_confirm', params: {
+                        'cost': artifact.crystalCost.toString(),
+                        'item': artifact.title
+                      }),
                       textAlign: TextAlign.center,
                       style: AppTypography.body.copyWith(
                         color: AppColors.creamText3,
@@ -359,7 +647,12 @@ class AncestralVaultShopScreen extends ConsumerWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: BrandButton(
-                            text: isPurchasing ? l10n.translate('processing') : l10n.translate('unlock_caps').toLowerCase().capitalize(),
+                            text: isPurchasing
+                                ? l10n.translate('processing')
+                                : l10n
+                                    .translate('unlock_caps')
+                                    .toLowerCase()
+                                    .capitalize(),
                             type: BrandButtonType.primary,
                             onTap: isPurchasing
                                 ? null
@@ -378,12 +671,19 @@ class AncestralVaultShopScreen extends ConsumerWidget {
                                               artifact.id,
                                               artifact.crystalCost,
                                             );
+                                        ref
+                                            .read(studentProvider.notifier)
+                                            .spendMistCrystals(
+                                                artifact.crystalCost);
+
                                         if (!context.mounted) return;
                                         Navigator.pop(context);
                                         HapticService.artifactUnlock();
-                                        ref.read(audioServiceProvider).playSFX('milestone');
-                                        _showSuccessOverlay(context, artifact, l10n);
-
+                                        ref
+                                            .read(audioServiceProvider)
+                                            .playSFX('milestone');
+                                        _showSuccessOverlay(
+                                            context, artifact, l10n);
                                       } catch (e) {
                                         setDialogState(
                                           () => isPurchasing = false,
@@ -392,7 +692,8 @@ class AncestralVaultShopScreen extends ConsumerWidget {
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
-                                          SnackBar(content: Text(e.toString())),
+                                          SnackBar(
+                                              content: Text(e.toString())),
                                         );
                                       }
                                     }
@@ -411,10 +712,10 @@ class AncestralVaultShopScreen extends ConsumerWidget {
     );
   }
 
-  void _showSuccessOverlay(BuildContext context, Artifact artifact, AppLocalization l10n) {
+  void _showSuccessOverlay(
+      BuildContext context, Artifact artifact, AppLocalization l10n) {
     showSpiritParticles(context, duration: const Duration(seconds: 4));
     showDialog(
-
       context: context,
       barrierDismissible: false,
       builder: (context) => GestureDetector(
@@ -461,7 +762,7 @@ class AncestralVaultShopScreen extends ConsumerWidget {
 }
 
 extension StringExtension on String {
-    String capitalize() {
-      return "${this[0].toUpperCase()}${substring(1)}";
-    }
+  String capitalize() {
+    return "${this[0].toUpperCase()}${substring(1)}";
+  }
 }

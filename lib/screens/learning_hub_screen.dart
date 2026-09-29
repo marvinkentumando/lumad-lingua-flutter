@@ -170,7 +170,7 @@ class LearningHubScreen extends ConsumerWidget {
                             ),
                           ).animate().fadeIn(delay: 220.ms).slideX(begin: -0.1);
                         },
-                        loading: () => AppShimmerSkeleton(height: 100, borderRadius: 32),
+                        loading: () => const HubCardSkeleton(),
                         error: (_, __) => const SizedBox.shrink(),
                       ),
 
@@ -289,7 +289,7 @@ class LearningHubScreen extends ConsumerWidget {
                               ],
                             );
                           },
-                          loading: () => AppShimmerSkeleton(height: 100, borderRadius: 32),
+                          loading: () => const HubCardSkeleton(),
                           error: (_, __) => const SizedBox.shrink(),
                         ),
                       ).animate().fadeIn(delay: 250.ms).slideX(begin: 0.1),

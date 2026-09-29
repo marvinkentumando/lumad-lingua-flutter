@@ -187,6 +187,11 @@ class Artifact {
 
   double get progress =>
       (currentProgress / (targetValue > 0 ? targetValue : 1)).clamp(0.0, 1.0);
+
+  bool get isTitle => type == 'title';
+  bool get isFrame => type == 'frame';
+  bool get isBadge => type == 'badge';
+  bool get isCustomization => isTitle || isFrame || isBadge;
 }
 
 

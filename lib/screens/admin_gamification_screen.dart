@@ -379,25 +379,25 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticRed),
             onPressed: () async {
               HapticService.delete();
+              final messenger = ScaffoldMessenger.of(context);
+              final navigator = Navigator.of(dialogCtx);
               try {
                 await ref.read(firebaseServiceProvider).deleteShopItem(item.id);
-                if (!context.mounted) return;
                 if (dialogCtx.mounted) {
-                  Navigator.pop(dialogCtx);
+                  navigator.pop();
                 }
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   SnackBar(
                     content: Text('"${item.title}" has been deleted.'),
                     backgroundColor: AppColors.semanticGreen,
                   ),
                 );
               } catch (e) {
-                if (!context.mounted) return;
                 if (dialogCtx.mounted) {
-                  Navigator.pop(dialogCtx);
+                  navigator.pop();
                 }
                 HapticService.error();
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   SnackBar(
                     content: Text('Failed to delete shop item: $e'),
                     backgroundColor: AppColors.semanticRed,
@@ -539,27 +539,28 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                     isAvailable: isAvailable,
                   );
                   
+                  final messenger = ScaffoldMessenger.of(context);
+                  final navigator = Navigator.of(dialogCtx);
+
                   try {
                     if (item == null) {
                       await ref.read(firebaseServiceProvider).addShopItem(newItem);
                     } else {
                       await ref.read(firebaseServiceProvider).updateShopItem(item.id, newItem.toFirestore());
                     }
-                    if (!context.mounted) return;
                     if (dialogCtx.mounted) {
-                      Navigator.pop(dialogCtx);
+                      navigator.pop();
                     }
                     HapticService.success();
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.showSnackBar(
                       SnackBar(
                         content: Text(item == null ? '"${newItem.title}" created successfully!' : '"${newItem.title}" updated successfully!'),
                         backgroundColor: AppColors.semanticGreen,
                       ),
                     );
                   } catch (e) {
-                    if (!context.mounted) return;
                     HapticService.error();
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.showSnackBar(
                       SnackBar(
                         content: Text('Failed to save shop item: $e'),
                         backgroundColor: AppColors.semanticRed,

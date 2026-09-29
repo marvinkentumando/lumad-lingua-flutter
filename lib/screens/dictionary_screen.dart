@@ -136,7 +136,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
               itemCount: 5,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               separatorBuilder: (_, __) => const SizedBox(height: 16),
-              itemBuilder: (_, __) => const AppShimmerSkeleton(height: 80, borderRadius: 24),
+              itemBuilder: (_, __) => const DictionaryCardSkeleton(),
             ),
             error: (err, stack) => Center(
               child: Text(

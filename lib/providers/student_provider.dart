@@ -15,6 +15,9 @@ class StudentState {
   final DateTime? lastActive;
   final Map<String, bool> activityMap;
   final List<int> claimedMilestones;
+  final String? equippedTitle;
+  final String? equippedBadge;
+  final String? equippedFrame;
 
   StudentState({
     required this.mistCrystals,
@@ -26,6 +29,9 @@ class StudentState {
     this.lastActive,
     this.activityMap = const {},
     this.claimedMilestones = const [],
+    this.equippedTitle,
+    this.equippedBadge,
+    this.equippedFrame,
   });
 
   StudentState copyWith({
@@ -38,6 +44,9 @@ class StudentState {
     DateTime? lastActive,
     Map<String, bool>? activityMap,
     List<int>? claimedMilestones,
+    String? equippedTitle,
+    String? equippedBadge,
+    String? equippedFrame,
   }) {
     return StudentState(
       mistCrystals: mistCrystals ?? this.mistCrystals,
@@ -49,6 +58,9 @@ class StudentState {
       lastActive: lastActive ?? this.lastActive,
       activityMap: activityMap ?? this.activityMap,
       claimedMilestones: claimedMilestones ?? this.claimedMilestones,
+      equippedTitle: equippedTitle ?? this.equippedTitle,
+      equippedBadge: equippedBadge ?? this.equippedBadge,
+      equippedFrame: equippedFrame ?? this.equippedFrame,
     );
   }
 
@@ -136,6 +148,9 @@ class StudentNotifier extends Notifier<StudentState> {
         lastActive: lastActiveDt,
         activityMap: Map<String, bool>.from(profile['activityMap'] ?? {}),
         claimedMilestones: List<int>.from(profile['claimedMilestones'] ?? []),
+        equippedTitle: profile['equippedTitle'] as String?,
+        equippedBadge: profile['equippedBadge'] as String?,
+        equippedFrame: profile['equippedFrame'] as String?,
       );
 
       Future.microtask(() => _persistLocalState());
@@ -188,6 +203,9 @@ class StudentNotifier extends Notifier<StudentState> {
         'lastActive': state.lastActive?.toIso8601String(),
         'claimedMilestones': state.claimedMilestones,
         'activityMap': state.activityMap,
+        'equippedTitle': state.equippedTitle,
+        'equippedBadge': state.equippedBadge,
+        'equippedFrame': state.equippedFrame,
       });
     } catch (_) {}
   }
@@ -399,15 +417,26 @@ class StudentNotifier extends Notifier<StudentState> {
     }
   }
 
-  void equipCustomization({required String title, String? emoji}) {
+  void equipCustomization({String? title, String? emoji, String? frame}) {
+    state = state.copyWith(
+      equippedTitle: title ?? state.equippedTitle,
+      equippedBadge: emoji ?? state.equippedBadge,
+      equippedFrame: frame ?? state.equippedFrame,
+    );
+    _persistLocalState();
+
     final user = ref.read(authStateProvider).value;
     if (user != null) {
-      ref.read(firebaseServiceProvider).db.collection('users').doc(user.uid).update({
-        'equippedTitle': title,
-        if (emoji != null) 'equippedBadge': emoji,
-      }).catchError((_) {
-        _queueSyncAction('equipCustomization', {'uid': user.uid, 'title': title, 'emoji': emoji});
-      });
+      final Map<String, dynamic> updates = {};
+      if (title != null) updates['equippedTitle'] = title;
+      if (emoji != null) updates['equippedBadge'] = emoji;
+      if (frame != null) updates['equippedFrame'] = frame;
+
+      if (updates.isNotEmpty) {
+        ref.read(firebaseServiceProvider).db.collection('users').doc(user.uid).update(updates).catchError((_) {
+          _queueSyncAction('equipCustomization', {'uid': user.uid, 'title': title, 'emoji': emoji, 'frame': frame});
+        });
+      }
     }
   }
 
