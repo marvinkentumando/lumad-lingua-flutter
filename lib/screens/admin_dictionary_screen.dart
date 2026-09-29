@@ -15,6 +15,7 @@ import '../widgets/brand_search_bar.dart';
 import '../widgets/brand_text_field.dart';
 import '../widgets/preview_audio_player.dart';
 import '../widgets/admin/import_dictionary_modal.dart';
+import '../widgets/admin/bulk_audio_import_modal.dart';
 import '../widgets/lesson_editors/editor_utils.dart';
 
 class AdminDictionaryScreen extends ConsumerStatefulWidget {
@@ -61,6 +62,11 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.audio_file_rounded, color: AppColors.gold500),
+            tooltip: 'Bulk Audio Import',
+            onPressed: () => _showBulkAudioModal(context, wordsAsync.value ?? []),
+          ),
           IconButton(
             icon: const Icon(Icons.download_rounded, color: AppColors.gold500),
             tooltip: 'Export CSV',
@@ -261,6 +267,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
           TextButton(onPressed: () => context.pop(), child: const Text('CANCEL')),
           ElevatedButton(
             onPressed: () async {
+              HapticService.delete();
               final scaffoldMessenger = ScaffoldMessenger.of(context);
               final term = word.indigenousWord;
               context.pop();
@@ -292,6 +299,15 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => const ImportDictionaryModal(),
+    );
+  }
+
+  void _showBulkAudioModal(BuildContext context, List<DictionaryEntry> words) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => BulkAudioImportModal(entries: words),
     );
   }
 
@@ -546,6 +562,7 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
 
   Future<void> _save() async {
     if (_termCtrl.text.isEmpty || _defCtrl.text.isEmpty) {
+      HapticService.warning();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Term and Definition are required.')));
       return;
     }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/haptic_service.dart';
 
 class TactileWrapper extends StatefulWidget {
   final Widget child;
@@ -48,6 +49,9 @@ class _TactileWrapperState extends State<TactileWrapper> with SingleTickerProvid
 
   void _onTapDown(TapDownDetails details) {
     if (widget.onTap != null) {
+      if (widget.enableHaptics) {
+        HapticService.selection();
+      }
       _controller.forward();
     }
   }

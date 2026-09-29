@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/duel_models.dart';
 import '../models/dictionary_entry.dart';
@@ -361,5 +362,31 @@ class DuelService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
     });
+  }
+
+  /// Records persistent duel win/loss history for a user in Firestore.
+  Future<void> recordDuelResult({
+    required String userId,
+    required bool isWinner,
+  }) async {
+    try {
+      final userRef = _db.collection('users').doc(userId);
+      await _db.runTransaction((tx) async {
+        final snap = await tx.get(userRef);
+        if (!snap.exists) return;
+        final data = snap.data() ?? {};
+        final wins = (data['duelWins'] ?? 0) as int;
+        final losses = (data['duelLosses'] ?? 0) as int;
+        final streak = (data['duelStreak'] ?? 0) as int;
+
+        tx.update(userRef, {
+          'duelWins': isWinner ? wins + 1 : wins,
+          'duelLosses': isWinner ? losses : losses + 1,
+          'duelStreak': isWinner ? streak + 1 : 0,
+        });
+      });
+    } catch (e) {
+      debugPrint('Error recording duel result: $e');
+    }
   }
 }

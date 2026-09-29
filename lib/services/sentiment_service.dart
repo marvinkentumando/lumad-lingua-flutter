@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lumad_lingua/services/firebase_service.dart';
 
@@ -107,6 +110,38 @@ class SentimentService {
         detectedKeywords: ["Culture", "Future"],
       ),
     ];
+  }
+
+  Future<List<SentimentData>> fetchFacebookGraphPosts({
+    SentimentModelType model = SentimentModelType.naiveBayes,
+    String? pageToken,
+  }) async {
+    if (pageToken != null && pageToken.isNotEmpty) {
+      try {
+        final url = Uri.parse('https://graph.facebook.com/v19.0/me/posts?access_token=$pageToken&fields=message,created_time,id');
+        final response = await http.get(url).timeout(const Duration(seconds: 5));
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> body = jsonDecode(response.body);
+          final List data = body['data'] ?? [];
+          final List<SentimentData> result = [];
+          for (var item in data) {
+            final text = item['message'] ?? '';
+            if (text.toString().trim().isEmpty) continue;
+            result.add(SentimentData(
+              postText: text,
+              sourceUrl: 'https://facebook.com/${item["id"]}',
+              sentimentScore: analyzeSentiment(text, model: model),
+              timestamp: DateTime.tryParse(item['created_time'] ?? '') ?? DateTime.now(),
+              detectedKeywords: _tokenize(text).take(3).toList(),
+            ));
+          }
+          if (result.isNotEmpty) return result;
+        }
+      } catch (e) {
+        debugPrint('Facebook Graph API fetch error (falling back to local dataset): $e');
+      }
+    }
+    return getRecentSentiment(model: model);
   }
 
   /// Multi-model sentiment analysis orchestration

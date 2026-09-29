@@ -662,7 +662,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
       if (mounted) setState(() => _salutedUids.add(targetUid));
 
       if (mounted) {
-        HapticService.light();
+        HapticService.salute();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(l10n.translate('salute_sent', params: {'name': targetName})),
@@ -674,6 +674,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
       }
     } catch (e) {
       if (mounted) {
+        HapticService.error();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.translate('salute_failed'))),
         );

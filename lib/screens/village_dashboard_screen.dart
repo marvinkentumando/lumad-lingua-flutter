@@ -12,6 +12,7 @@ import '../widgets/profile_avatar.dart';
 import '../widgets/app_shimmer_skeleton.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
+import '../services/haptic_service.dart';
 import '../models/broadcast.dart';
 import '../utils/app_localization.dart';
 
@@ -234,6 +235,7 @@ class VillageDashboardScreen extends ConsumerWidget {
                   ),
                   InkWell(
                     onTap: () {
+                      HapticService.success();
                       Clipboard.setData(ClipboardData(text: villageCode));
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -616,6 +618,7 @@ class VillageDashboardScreen extends ConsumerWidget {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticRed),
             onPressed: () async {
+              HapticService.delete();
               Navigator.pop(dialogCtx);
               try {
                 await ref.read(firebaseServiceProvider).leaveVillage(userId);
@@ -630,6 +633,7 @@ class VillageDashboardScreen extends ConsumerWidget {
                 }
               } catch (e) {
                 if (context.mounted) {
+                  HapticService.error();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Error leaving village: $e'), backgroundColor: AppColors.semanticRed),
                   );

@@ -428,6 +428,11 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
     _roundTimer?.cancel();
     _heartbeatTimer?.cancel();
     _isPlayerWinning = won;
+    if (won) {
+      HapticService.celebration();
+    } else {
+      HapticService.error();
+    }
     _awardVictoryRewards(won);
     setState(() => _phase = DuelPhase.results);
 

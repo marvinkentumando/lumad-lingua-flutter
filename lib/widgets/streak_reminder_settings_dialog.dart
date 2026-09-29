@@ -126,7 +126,7 @@ class StreakReminderSettingsDialog extends ConsumerWidget {
                 ),
                 value: prefs.streakRemindersEnabled,
                 onChanged: (enabled) async {
-                  HapticService.selection();
+                  HapticService.toggle();
                   await prefsNotifier.setStreakRemindersEnabled(enabled);
 
                   // Update schedule

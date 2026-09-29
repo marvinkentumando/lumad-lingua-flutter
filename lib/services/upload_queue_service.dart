@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:lumad_lingua/services/offline_service.dart';
 import 'package:lumad_lingua/services/firebase_service.dart';
 import 'package:lumad_lingua/services/auth_service.dart';
@@ -73,21 +74,37 @@ class UploadQueueService extends Notifier<UploadQueueState> {
 
     final drafts = await _offlineService.getDraftLessons();
     final progressItems = await _offlineService.getAllOfflineProgress();
-    
-    if (drafts.isEmpty && progressItems.isEmpty) return;
+    final pendingActions = await _offlineService.getPendingSyncActions();
+
+    if (drafts.isEmpty && progressItems.isEmpty && pendingActions.isEmpty) return;
 
     final connectivityResult = await Connectivity().checkConnectivity();
     if (connectivityResult.contains(ConnectivityResult.none)) return;
 
     state = state.copyWith(isSyncing: true);
 
-    debugPrint('Starting Upload Queue processing: ${drafts.length} drafts, ${progressItems.length} progress items');
+    debugPrint(
+      'Starting Upload Queue processing: ${drafts.length} drafts, ${progressItems.length} progress items, ${pendingActions.length} pending actions',
+    );
+
+    // Process Pending Student Actions
+    for (var action in pendingActions) {
+      final actionId = action['id'] as String?;
+      try {
+        await _syncPendingAction(action);
+        if (actionId != null) {
+          await _offlineService.removePendingSyncAction(actionId);
+        }
+        debugPrint('Successfully synced pending action: ${action['type']}');
+      } catch (e) {
+        debugPrint('Failed to sync pending action ${action['type']}: $e');
+      }
+    }
 
     // Process Drafts (Lessons)
     for (var lesson in drafts) {
       try {
-        // await ref.read(firebaseServiceProvider).saveLesson(lesson);
-        await Future.delayed(const Duration(seconds: 1)); // Simulate
+        await ref.read(firebaseServiceProvider).saveLesson(lesson, status: 'PUBLISHED');
         await _offlineService.removeDraftLesson(lesson.id);
         debugPrint('Successfully synced lesson: ${lesson.id}');
       } catch (e) {
@@ -97,33 +114,48 @@ class UploadQueueService extends Notifier<UploadQueueState> {
 
     // Process Progress Items
     final List<SyncConflict> newConflicts = [];
-    
+
     for (var progress in progressItems) {
       final lessonId = progress['lessonId'];
       try {
         final serverProgress = await _fetchServerProgress(lessonId);
-        
+
         if (serverProgress != null) {
           // Conflict detection
           final localStars = progress['stars'] as int;
           final serverStars = serverProgress['stars'] as int;
-          
-          if (localStars != serverStars || progress['score'] != serverProgress['bestScore']) {
+
+          if (localStars != serverStars ||
+              progress['score'] != serverProgress['bestScore']) {
             // It's a conflict if scores are different
             final lesson = await _offlineService.getCachedLessons().then(
-              (list) => list.firstWhere((l) => l.id == lessonId, orElse: () => Lesson(id: lessonId, title: 'Unknown Lesson', description: '', category: '', language: '', level: 1, unitNumber: 1, tasks: []))
+                  (list) => list.firstWhere(
+                    (l) => l.id == lessonId,
+                    orElse: () => Lesson(
+                      id: lessonId,
+                      title: 'Unknown Lesson',
+                      description: '',
+                      category: '',
+                      language: '',
+                      level: 1,
+                      unitNumber: 1,
+                      tasks: [],
+                    ),
+                  ),
+                );
+
+            newConflicts.add(
+              SyncConflict(
+                lessonId: lessonId,
+                lessonTitle: lesson.title,
+                localData: progress,
+                serverData: serverProgress,
+              ),
             );
-            
-            newConflicts.add(SyncConflict(
-              lessonId: lessonId,
-              lessonTitle: lesson.title,
-              localData: progress,
-              serverData: serverProgress,
-            ));
             continue; // Wait for resolution
           }
         }
-        
+
         // No conflict or server is behind, just sync
         await _syncProgress(progress);
         await _offlineService.removeOfflineProgress(lessonId);
@@ -132,36 +164,113 @@ class UploadQueueService extends Notifier<UploadQueueState> {
       }
     }
 
-    state = state.copyWith(isSyncing: false, conflicts: [...state.conflicts, ...newConflicts]);
+    state = state.copyWith(
+      isSyncing: false,
+      conflicts: [...state.conflicts, ...newConflicts],
+    );
+  }
+
+  Future<void> _syncPendingAction(Map<String, dynamic> action) async {
+    final type = action['type'] as String?;
+    final payload = action['payload'] as Map<String, dynamic>? ?? {};
+    final firebaseService = ref.read(firebaseServiceProvider);
+
+    if (type == null) return;
+
+    final uid = payload['uid'] as String?;
+    if (uid == null || uid.isEmpty) return;
+
+    switch (type) {
+      case 'claimMilestone':
+        final days = payload['days'] as int?;
+        final crystals = payload['crystals'] as int?;
+        if (days != null && crystals != null) {
+          await firebaseService.db.collection('users').doc(uid).update({
+            'claimedMilestones': FieldValue.arrayUnion([days]),
+            'mistCrystals': FieldValue.increment(crystals),
+          });
+        }
+        break;
+      case 'addMistCrystals':
+        final amount = payload['amount'] as int?;
+        if (amount != null) {
+          await firebaseService.addMistCrystals(uid, amount);
+        }
+        break;
+      case 'addXp':
+        final amount = payload['amount'] as int?;
+        if (amount != null) {
+          await firebaseService.addXp(uid, amount);
+        }
+        break;
+      case 'incrementStreak':
+        await firebaseService.incrementStreak(uid);
+        break;
+      case 'updateHearts':
+        final hearts = payload['hearts'] as int?;
+        if (hearts != null) {
+          await firebaseService.db.collection('users').doc(uid).update({
+            'hearts': hearts,
+            'lastHeartLossAt':
+                hearts == 5 ? null : FieldValue.serverTimestamp(),
+          });
+        }
+        break;
+      case 'equipCustomization':
+        final title = payload['title'] as String?;
+        final emoji = payload['emoji'] as String?;
+        final Map<String, dynamic> updates = {};
+        if (title != null) updates['equippedTitle'] = title;
+        if (emoji != null) updates['equippedBadge'] = emoji;
+        if (updates.isNotEmpty) {
+          await firebaseService.db.collection('users').doc(uid).update(updates);
+        }
+        break;
+      case 'buyStreakShield':
+        await firebaseService.buyStreakShield(uid);
+        break;
+      case 'buyHeart':
+        await firebaseService.db.collection('users').doc(uid).update({
+          'mistCrystals': FieldValue.increment(-50),
+          'hearts': FieldValue.increment(1),
+        });
+        break;
+      default:
+        debugPrint('Unknown pending sync action type: $type');
+    }
   }
 
   Future<Map<String, dynamic>?> _fetchServerProgress(String lessonId) async {
     final user = ref.read(authServiceProvider).currentUser;
     if (user == null) return null;
-    return ref.read(firebaseServiceProvider).getUserLessonProgress(user.uid, lessonId);
+    return ref
+        .read(firebaseServiceProvider)
+        .getUserLessonProgress(user.uid, lessonId);
   }
 
   Future<void> _syncProgress(Map<String, dynamic> progress) async {
     final user = ref.read(authServiceProvider).currentUser;
     if (user == null) return;
-    
+
     await ref.read(firebaseServiceProvider).completeLesson(
       user.uid,
       progress['lessonId'],
       progress['score'],
       progress['stars'],
-      taskPerformance: Map<String, int>.from(progress['taskPerformance'] ?? {}),
+      taskPerformance: Map<String, int>.from(
+        progress['taskPerformance'] ?? {},
+      ),
       bonusXp: progress['bonusXp'] ?? 0,
     );
   }
 
   Future<void> resolveConflict(String lessonId, bool keepLocal) async {
     final conflict = state.conflicts.firstWhere((c) => c.lessonId == lessonId);
-    
+
     if (keepLocal) {
       await _syncProgress(conflict.localData);
     }
-    
+
     await _offlineService.removeOfflineProgress(lessonId);
     state = state.copyWith(
       conflicts: state.conflicts.where((c) => c.lessonId != lessonId).toList(),
@@ -169,6 +278,7 @@ class UploadQueueService extends Notifier<UploadQueueState> {
   }
 }
 
-final uploadQueueProvider = NotifierProvider<UploadQueueService, UploadQueueState>(() {
-  return UploadQueueService();
-});
+final uploadQueueProvider =
+    NotifierProvider<UploadQueueService, UploadQueueState>(() {
+      return UploadQueueService();
+    });

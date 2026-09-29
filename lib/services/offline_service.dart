@@ -14,6 +14,8 @@ class OfflineService {
   static const String draftLessonsBoxName = 'draft_lessons';
   static const String searchHistoryBoxName = 'search_history';
   static const String progressBoxName = 'offline_progress';
+  static const String studentProfileBoxName = 'student_profile';
+  static const String pendingSyncBoxName = 'pending_sync_queue';
 
   bool _initialized = false;
 
@@ -41,11 +43,13 @@ class OfflineService {
       await Hive.openBox<Lesson>(draftLessonsBoxName);
       await Hive.openBox<String>(searchHistoryBoxName);
       await Hive.openBox<Map>(progressBoxName);
+      await Hive.openBox<Map>(studentProfileBoxName);
+      await Hive.openBox<Map>(pendingSyncBoxName);
 
       _initialized = true;
     } catch (e) {
       debugPrint("OfflineService init error: $e");
-      // Don't rethrow, let the lazy loading handle it if possible
+      // Don't rethrow, let lazy loading handle it if possible
     }
   }
 
@@ -191,13 +195,45 @@ class OfflineService {
     await box.delete(lessonId);
   }
 
+  // Student Profile Local Caching
+  Future<void> saveCachedStudentProfile(Map<String, dynamic> profile) async {
+    final box = await _getBox<Map>(studentProfileBoxName);
+    await box.put('current_profile', profile);
+  }
+
+  Future<Map<String, dynamic>?> getCachedStudentProfile() async {
+    final box = await _getBox<Map>(studentProfileBoxName);
+    final data = box.get('current_profile');
+    return data != null ? Map<String, dynamic>.from(data) : null;
+  }
+
+  // Pending Sync Actions Queue
+  Future<void> queuePendingSyncAction(Map<String, dynamic> action) async {
+    final box = await _getBox<Map>(pendingSyncBoxName);
+    final id = action['id'] ?? DateTime.now().millisecondsSinceEpoch.toString();
+    action['id'] = id;
+    await box.put(id, action);
+  }
+
+  Future<List<Map<String, dynamic>>> getPendingSyncActions() async {
+    final box = await _getBox<Map>(pendingSyncBoxName);
+    return box.values.map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
+  Future<void> removePendingSyncAction(String id) async {
+    final box = await _getBox<Map>(pendingSyncBoxName);
+    await box.delete(id);
+  }
+
   Future<void> clearCache() async {
     final lessonBox = await _getBox<Lesson>(lessonsBoxName);
     final dictionaryBox = await _getBox<DictionaryEntry>(dictionaryBoxName);
     final artifactBox = await _getBox<Artifact>(artifactsBoxName);
+    final profileBox = await _getBox<Map>(studentProfileBoxName);
     await lessonBox.clear();
     await dictionaryBox.clear();
     await artifactBox.clear();
+    await profileBox.clear();
   }
 
   Future<int> getLessonCount() async {
@@ -228,6 +264,3 @@ final offlineArtifactCountProvider = FutureProvider<int>((ref) {
 final cachedArtifactsProvider = FutureProvider<List<Artifact>>((ref) {
   return ref.watch(offlineServiceProvider).getCachedArtifacts();
 });
-
-
-

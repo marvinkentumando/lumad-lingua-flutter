@@ -39,6 +39,12 @@
   - Pre-downloaded and cached remote task audio assets into local device storage via `DefaultCacheManager` (`flutter_cache_manager`) in `AudioService`.
   - Added cache fallback to `playFromUrl` to play audio directly from cached local disk files.
   - Integrated automatic background pre-caching for active path lessons and pre-caching triggers on lesson card taps in `LearningPathScreen` and `learning_provider`.
+- [x] **Haptic Consistency Audit**:
+  - Hardened `HapticService` with platform exception safety (`try-catch` wrappers around vibrator/system haptics).
+  - Added new semantic feedback methods (`toggle`, `delete`, `warning`, `salute`).
+  - Wired `TactileWrapper` to trigger haptic feedback on tap down.
+  - Integrated consistent haptics across shop exchanges, reminder toggles, village leave/code copy, duel victory/defeat, leaderboard salutes, and admin item deletions.
+  - Created unit test suite `test/services/haptic_service_test.dart` verifying all 17 haptic methods.
 
 ---
 
@@ -119,7 +125,7 @@
   - 📁 `lib/main.dart`, `pubspec.yaml`, `android/app/build.gradle.kts`, `android/settings.gradle.kts`
 - [ ] **Navigation Consistency**: Standardize back-navigation across all modules (GoRouter vs Navigator mixing) per roadmap Phase 4.
   - 📁 `lib/providers/router_provider.dart`
-- [ ] **Haptic Consistency Audit**: Ensure all critical success/error actions across screens trigger appropriate haptic patterns (roadmap Phase 4 open item).
+- [x] **Haptic Consistency Audit**: Ensure all critical success/error actions across screens trigger appropriate haptic patterns (roadmap Phase 4 open item).
   - 📁 `lib/services/haptic_service.dart` + call sites
 
 ---

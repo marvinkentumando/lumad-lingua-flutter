@@ -443,6 +443,98 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard> with
     }
   }
 
+  Widget _buildPhoneticGuide(BuildContext context, bool isDark) {
+    final rawPhonetic = widget.entry.phonetic;
+    final displayPhonetic = (rawPhonetic != null && rawPhonetic.isNotEmpty)
+        ? rawPhonetic
+        : widget.entry.indigenousWord;
+
+    final cleanText = displayPhonetic.replaceAll(RegExp(r'[/\[\]]'), '').trim();
+    final syllables = cleanText.contains('-') || cleanText.contains('.') || cleanText.contains(' ')
+        ? cleanText.split(RegExp(r'[\-\.\s]+')).where((s) => s.isNotEmpty).toList()
+        : _generateFallbackSyllables(cleanText);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Icon(Icons.record_voice_over_rounded, size: 14, color: isDark ? AppColors.gold500 : AppColors.forest700),
+            const SizedBox(width: 6),
+            Text(
+              'PRONUNCIATION (IPA GUIDE)',
+              style: AppTypography.label.copyWith(
+                color: isDark ? AppColors.gold500 : AppColors.forest700,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: syllables.map((syl) {
+            return GestureDetector(
+              onTap: () {
+                HapticService.selection();
+                ref.read(audioServiceProvider).speak(syl);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppColors.gold500.withValues(alpha: 0.15)
+                      : Colors.white.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark
+                        ? AppColors.gold500.withValues(alpha: 0.3)
+                        : AppColors.forest900.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '/$syl/',
+                      style: AppTypography.mono.copyWith(
+                        color: isDark ? AppColors.gold500 : AppColors.forest900,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.volume_up_rounded,
+                      size: 14,
+                      color: isDark ? AppColors.gold500 : AppColors.forest900,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  List<String> _generateFallbackSyllables(String word) {
+    if (word.length <= 3) return [word];
+    final List<String> chunks = [];
+    int start = 0;
+    while (start < word.length) {
+      int end = (start + 3 <= word.length) ? start + 3 : word.length;
+      chunks.add(word.substring(start, end));
+      start = end;
+    }
+    return chunks;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -566,6 +658,7 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard> with
               Text(widget.l10n.translate('definition'), style: AppTypography.label.copyWith(color: Theme.of(context).colorScheme.primary, fontSize: 10)),
               const SizedBox(height: 8),
               Text(widget.entry.usageContext, style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurface, fontSize: 14, height: 1.5)),
+              _buildPhoneticGuide(context, isDark),
               if (widget.entry.usageExampleNative != null && widget.entry.usageExampleNative!.isNotEmpty) ...[
                 const SizedBox(height: 24),
                 Text(widget.l10n.translate('usage_example'), style: AppTypography.label.copyWith(color: isDark ? AppColors.gold500 : AppColors.forest500, fontSize: 10)),

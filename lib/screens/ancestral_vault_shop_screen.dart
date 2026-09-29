@@ -12,6 +12,7 @@ import '../services/haptic_service.dart';
 import '../services/audio_service.dart';
 import '../widgets/spirit_particle_overlay.dart';
 import '../utils/app_localization.dart';
+import '../providers/student_provider.dart';
 
 
 class AncestralVaultShopScreen extends ConsumerWidget {
@@ -135,6 +136,10 @@ class AncestralVaultShopScreen extends ConsumerWidget {
         artifact.tier == ArtifactTier.legendary ||
         artifact.tier == ArtifactTier.ancient;
 
+    final userProfile = ref.watch(userProfileProvider).value;
+    final equippedTitle = userProfile?['equippedTitle'];
+    final isEquipped = artifact.isEarned && equippedTitle == artifact.title;
+
     Widget content = BrandCard(
       theme: BrandCardTheme.vibrant,
       child: Column(
@@ -198,32 +203,50 @@ class AncestralVaultShopScreen extends ConsumerWidget {
                 ],
               ),
               GestureDetector(
-                onTap: artifact.isEarned
-                    ? null
-                    : () {
-                        HapticService.selection();
-                        _showExchangeDialog(context, ref, artifact, canAfford, l10n);
-                    },
-
+                onTap: () {
+                  HapticService.selection();
+                  if (artifact.isEarned) {
+                    if (!isEquipped) {
+                      ref.read(studentProvider.notifier).equipCustomization(
+                        title: artifact.title,
+                        emoji: artifact.emoji,
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Equipped title "${artifact.title}"!'),
+                          backgroundColor: AppColors.semanticGreen,
+                        ),
+                      );
+                    }
+                  } else {
+                    _showExchangeDialog(context, ref, artifact, canAfford, l10n);
+                  }
+                },
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: artifact.isEarned
-                        ? AppColors.semanticGreen.withValues(alpha: 0.2)
-                        : (canAfford ? AppColors.gold500 : Colors.white10),
+                    color: isEquipped
+                        ? AppColors.semanticGreen
+                        : (artifact.isEarned
+                            ? AppColors.gold500
+                            : (canAfford ? AppColors.gold500 : Colors.white10)),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    artifact.isEarned
-                        ? l10n.translate('owned_caps')
-                        : l10n.translate('unlock_caps'),
+                    isEquipped
+                        ? 'EQUIPPED ✓'
+                        : (artifact.isEarned
+                            ? 'EQUIP'
+                            : l10n.translate('unlock_caps')),
                     style: AppTypography.mono.copyWith(
-                      color: artifact.isEarned
-                          ? AppColors.semanticGreen
-                          : (canAfford ? Colors.black : Colors.white24),
+                      color: isEquipped
+                          ? Colors.black
+                          : (artifact.isEarned
+                              ? Colors.black
+                              : (canAfford ? Colors.black : Colors.white24)),
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
@@ -288,6 +311,7 @@ class AncestralVaultShopScreen extends ConsumerWidget {
     AppLocalization l10n,
   ) {
     if (!canAfford) {
+      HapticService.warning();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.translate('not_enough_crystals_exchange')),
@@ -364,6 +388,7 @@ class AncestralVaultShopScreen extends ConsumerWidget {
                                         setDialogState(
                                           () => isPurchasing = false,
                                         );
+                                        HapticService.error();
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(

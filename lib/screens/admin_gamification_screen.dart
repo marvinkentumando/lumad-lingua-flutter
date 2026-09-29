@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/firebase_service.dart';
+import '../services/haptic_service.dart';
 import '../models/gamification_models.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -283,6 +284,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                         value: isAvail,
                         activeThumbColor: AppColors.gold500,
                         onChanged: (val) async {
+                          HapticService.toggle();
                           try {
                             await ref
                                 .read(firebaseServiceProvider)
@@ -299,6 +301,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                             }
                           } catch (e) {
                             if (context.mounted) {
+                              HapticService.error();
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text('Failed to update availability: $e'),
@@ -375,6 +378,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticRed),
             onPressed: () async {
+              HapticService.delete();
               try {
                 await ref.read(firebaseServiceProvider).deleteShopItem(item.id);
                 if (!context.mounted) return;
@@ -392,6 +396,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                 if (dialogCtx.mounted) {
                   Navigator.pop(dialogCtx);
                 }
+                HapticService.error();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Failed to delete shop item: $e'),
@@ -544,6 +549,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                     if (dialogCtx.mounted) {
                       Navigator.pop(dialogCtx);
                     }
+                    HapticService.success();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(item == null ? '"${newItem.title}" created successfully!' : '"${newItem.title}" updated successfully!'),
@@ -552,6 +558,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                     );
                   } catch (e) {
                     if (!context.mounted) return;
+                    HapticService.error();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Failed to save shop item: $e'),

@@ -82,10 +82,85 @@ class MasteryDashboardScreen extends ConsumerWidget {
         const SizedBox(height: 32),
         _buildMasteryBreakdown(context, stats.counts),
         const SizedBox(height: 32),
+        _buildRetentionDecayCard(context),
         _buildWeeklyTrend(context, stats.weeklyProgress),
         const SizedBox(height: 32),
         _buildReviewAction(context),
       ],
+    );
+  }
+
+  Widget _buildRetentionDecayCard(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, _) {
+        final lowRetentionAsync = ref.watch(lowRetentionWordsProvider);
+
+        return lowRetentionAsync.when(
+          data: (list) {
+            if (list.isEmpty) return const SizedBox.shrink();
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 32),
+              child: BrandCard(
+                theme: BrandCardTheme.cream,
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.psychology_rounded, color: AppColors.terracotta, size: 24),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'SMART RETENTION RECOMMENDATION',
+                            style: AppTypography.label.copyWith(
+                              color: AppColors.forest900,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '${list.length} terms show memory decay potential based on SuperMemo-2 intervals.',
+                      style: AppTypography.body.copyWith(color: AppColors.forest900, fontSize: 13),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: GestureDetector(
+                        onTap: () => context.push('/flashcards?mode=review'),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: AppColors.gold500,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            'BOOST RETENTION (${list.length})',
+                            style: AppTypography.label.copyWith(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+        );
+      },
     );
   }
 

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/lesson_task.dart';
@@ -7,13 +8,29 @@ import '../services/firebase_service.dart';
 import '../providers/artifact_provider.dart';
 import '../services/offline_service.dart';
 import '../services/audio_service.dart';
+import 'student_provider.dart';
 
 // ── Lesson Loader Provider (moved here from lesson_session_screen.dart) ──────
 final currentLessonProvider = FutureProvider.family<Lesson?, String>((
   ref,
   lessonId,
 ) async {
-  return ref.read(firebaseServiceProvider).getLessonById(lessonId);
+  try {
+    final lesson = await ref.read(firebaseServiceProvider).getLessonById(lessonId);
+    if (lesson != null) {
+      await ref.read(offlineServiceProvider).saveLessons([lesson]);
+      return lesson;
+    }
+  } catch (e) {
+    debugPrint('currentLessonProvider error, falling back to cache: $e');
+  }
+
+  final cached = await ref.read(offlineServiceProvider).getCachedLessons();
+  try {
+    return cached.firstWhere((l) => l.id == lessonId);
+  } catch (_) {
+    return null;
+  }
 });
 
 final cachedLessonIdsProvider = StreamProvider<Set<String>>((ref) {
@@ -24,14 +41,14 @@ final cachedLessonIdsProvider = StreamProvider<Set<String>>((ref) {
 
 final latestLessonProvider = Provider<AsyncValue<Map<String, dynamic>>>((ref) {
   final user = ref.watch(authStateProvider).value;
-  if (user == null) return const AsyncValue.data({});
 
-  final progressAsync = ref.watch(userProgressStreamProvider(user.uid));
+  if (user != null) {
+    final progressAsync = ref.watch(userProgressStreamProvider(user.uid));
 
-  return progressAsync.when(
-    data: (progressMap) {
-      if (progressMap.isEmpty) return const AsyncValue.data({});
-
+    if (progressAsync.hasValue &&
+        progressAsync.value != null &&
+        progressAsync.value!.isNotEmpty) {
+      final progressMap = progressAsync.value!;
       String? latestId;
       DateTime? latestTime;
       Map<String, dynamic>? latestData;
@@ -48,22 +65,54 @@ final latestLessonProvider = Provider<AsyncValue<Map<String, dynamic>>>((ref) {
         }
       });
 
-      if (latestId == null) return const AsyncValue.data({});
+      if (latestId != null) {
+        return AsyncValue.data({
+          'id': latestId,
+          'data': latestData,
+        });
+      }
+    }
+  }
 
+  final studentState = ref.watch(studentProvider);
+  if (studentState.lessonProgress.isNotEmpty) {
+    String? latestId;
+    DateTime? latestTime;
+    Map<String, dynamic>? latestData;
+
+    studentState.lessonProgress.forEach((id, data) {
+      if (data is Map<String, dynamic>) {
+        final ts = data['lastAttempt'];
+        DateTime? time;
+        if (ts is Timestamp) {
+          time = ts.toDate();
+        } else if (ts is String) {
+          time = DateTime.tryParse(ts);
+        }
+
+        if (time != null && (latestTime == null || time.isAfter(latestTime!))) {
+          latestTime = time;
+          latestId = id;
+          latestData = data;
+        }
+      }
+    });
+
+    if (latestId != null) {
       return AsyncValue.data({
         'id': latestId,
         'data': latestData,
       });
-    },
-    loading: () => const AsyncValue.loading(),
-    error: (e, st) => AsyncValue.error(e, st),
-  );
+    }
+  }
+
+  return const AsyncValue.data({});
 });
 
 final latestLessonDetailsProvider = FutureProvider<Lesson?>((ref) async {
   final latest = ref.watch(latestLessonProvider).value;
   if (latest == null || latest['id'] == null) return null;
-  return ref.read(firebaseServiceProvider).getLessonById(latest['id']);
+  return ref.watch(currentLessonProvider(latest['id'] as String).future);
 });
 
 // Global XP state

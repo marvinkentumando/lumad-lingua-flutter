@@ -153,5 +153,33 @@ final srsStatsProvider = StreamProvider<SRSStats>((ref) {
   return ref.watch(srsServiceProvider).getStatsStream(userId);
 });
 
+final lowRetentionWordsProvider = StreamProvider<List<SRSProgress>>((ref) {
+  final userId = ref.watch(authServiceProvider).currentUser?.uid;
+  if (userId == null) return Stream.value([]);
+
+  return ref
+      .watch(firebaseServiceProvider)
+      .db
+      .collection('users')
+      .doc(userId)
+      .collection('srs_progress')
+      .snapshots()
+      .map((snap) {
+        final list = snap.docs
+            .map((d) => SRSProgress.fromFirestore(d.data()))
+            .toList();
+
+        final now = DateTime.now();
+        final lowRetention = list.where((p) {
+          final isOverdue = p.nextReview.isBefore(now);
+          final hasLowConsecutive = p.consecutiveCorrect < 2;
+          return isOverdue || hasLowConsecutive || p.level < 3;
+        }).toList();
+
+        lowRetention.sort((a, b) => a.nextReview.compareTo(b.nextReview));
+        return lowRetention;
+      });
+});
+
 
 
