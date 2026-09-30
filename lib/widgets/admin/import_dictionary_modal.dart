@@ -128,8 +128,11 @@ class _ImportDictionaryModalState extends ConsumerState<ImportDictionaryModal> {
           ),
           const SizedBox(height: 12),
           _instructionRow('Header row is required as the first line.'),
-          _instructionRow('Columns: term, pos, dialect, definition, example_native, example_translation'),
+          _instructionRow('Columns: term, pos, dialect, definition, example_native, example_translation, phonetic'),
           _instructionRow('POS values: noun, verb, adjective, phrase'),
+          _instructionRow('phonetic column: Optional validated IPA transcription (e.g. /mɐŋ.sɐ.kɐ/). Leave blank if unknown.'),
+          _instructionRow('IPA must come from validated linguistic/native-speaker sources; do not enter English spelling approximations.'),
+          _instructionRow('Reference audio attached in dataset serves as validated native pronunciation reference.'),
         ],
       ),
     );
@@ -195,10 +198,10 @@ class _ImportDictionaryModalState extends ConsumerState<ImportDictionaryModal> {
     HapticService.light();
     try {
       const templateContent =
-          'term,pos,dialect,definition,example_native,example_translation\n'
-          'Kadasang,noun,Mansaka,A perennial plant with an elongated stem or trunk.,Yang kadasang kay madyaw.,The tree is good.\n'
-          'Salamat,phrase,Mansaka,An expression of gratitude or acknowledgment.,Salamat nang madyaw.,Thank you very much.\n'
-          'Biyag,noun,Mansaka,State of living or existing.,Yang biyag kay bilidnon.,Life is precious.\n';
+          'term,pos,dialect,definition,example_native,example_translation,phonetic\n'
+          'Kadasang,noun,Mansaka,A perennial plant with an elongated stem or trunk.,Yang kadasang kay madyaw.,The tree is good,\n'
+          'Salamat,phrase,Mansaka,An expression of gratitude or acknowledgment.,Salamat nang madyaw.,Thank you very much,/sɐ.lɐ.mɐt/\n'
+          'Biyag,noun,Mansaka,State of living or existing.,Yang biyag kay bilidnon.,Life is precious,\n';
 
       final path = await FileDownloader.downloadCsv(
         templateContent,
@@ -270,13 +273,17 @@ class _ImportDictionaryModalState extends ConsumerState<ImportDictionaryModal> {
         final row = fields[i];
         if (row.length < 2) continue;
 
-        // Support both new 5-field/6-col format and legacy format gracefully
+        // Support both legacy format and 6/7-column formats
         final isLegacy = fields[0].length >= 6 && fields[0][1].toString().contains('translation');
+        final String? phoneticVal = row.length > 6 && row[6].toString().trim().isNotEmpty
+            ? row[6].toString().trim()
+            : null;
 
         if (isLegacy) {
           entries.add(DictionaryEntry(
             id: '',
             indigenousWord: row[0].toString(),
+            phonetic: phoneticVal,
             translation: row[1].toString(),
             translationFilipino: row.length > 2 ? row[2].toString() : '',
             partOfSpeech: _parsePartOfSpeech(row.length > 3 ? row[3].toString() : 'noun'),
@@ -289,6 +296,7 @@ class _ImportDictionaryModalState extends ConsumerState<ImportDictionaryModal> {
           entries.add(DictionaryEntry(
             id: '',
             indigenousWord: row[0].toString(),
+            phonetic: phoneticVal,
             partOfSpeech: _parsePartOfSpeech(row.length > 1 ? row[1].toString() : 'noun'),
             language: row.length > 2 ? row[2].toString() : 'Mansaka',
             usageContext: row.length > 3 ? row[3].toString() : '',

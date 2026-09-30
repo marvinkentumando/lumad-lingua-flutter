@@ -322,7 +322,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
 
     try {
       final rows = [
-        ['term', 'pos', 'dialect', 'definition', 'example_native', 'example_translation'],
+        ['term', 'pos', 'dialect', 'definition', 'example_native', 'example_translation', 'phonetic'],
         ...words.map((w) => [
           w.indigenousWord,
           w.partOfSpeech.name,
@@ -330,6 +330,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
           w.usageContext,
           w.usageExampleNative ?? '',
           w.usageExampleTranslation ?? '',
+          w.phonetic ?? '',
         ]),
       ];
 
@@ -368,6 +369,7 @@ class _EntryFormSheet extends ConsumerStatefulWidget {
 
 class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
   late TextEditingController _termCtrl;
+  late TextEditingController _phoneticCtrl;
   late TextEditingController _defCtrl;
   late TextEditingController _exNativeCtrl;
   late TextEditingController _exTransCtrl;
@@ -381,6 +383,7 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
   void initState() {
     super.initState();
     _termCtrl = TextEditingController(text: widget.entry?.indigenousWord);
+    _phoneticCtrl = TextEditingController(text: widget.entry?.phonetic);
     _defCtrl = TextEditingController(text: widget.entry?.usageContext);
     _exNativeCtrl = TextEditingController(text: widget.entry?.usageExampleNative);
     _exTransCtrl = TextEditingController(text: widget.entry?.usageExampleTranslation);
@@ -395,6 +398,7 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
   @override
   void dispose() {
     _termCtrl.dispose();
+    _phoneticCtrl.dispose();
     _defCtrl.dispose();
     _exNativeCtrl.dispose();
     _exTransCtrl.dispose();
@@ -470,6 +474,42 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
                   ),
                   const SizedBox(height: 16),
                   BrandTextField(controller: _termCtrl, labelText: 'Indigenous Term (Word)', prefixIcon: Icons.translate_rounded),
+                  const SizedBox(height: 16),
+                  BrandTextField(
+                    controller: _phoneticCtrl,
+                    labelText: 'IPA Phonetic Guide (e.g. /mɐŋ.sɐ.kɐ/)',
+                    prefixIcon: Icons.record_voice_over_outlined,
+                  ),
+                  const SizedBox(height: 6),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'IPA TRANSCRIPTION GUIDANCE:',
+                          style: AppTypography.label.copyWith(
+                            color: isDark ? AppColors.gold500 : AppColors.forest700,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '• Enter validated IPA transcriptions from authentic linguistic or native-speaker sources.\n'
+                          '• Include syllable dots (.) or hyphens (-) only when validated by native speakers or elders.\n'
+                          '• Do not enter English-style spelling approximations or fabricated syllable divisions.\n'
+                          '• Attached audio serves as the validated native reference recording (from dataset).',
+                          style: AppTypography.caption.copyWith(
+                            color: isDark ? Colors.white.withValues(alpha: 0.6) : AppColors.forest700.withValues(alpha: 0.7),
+                            fontSize: 11,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   BrandTextField(controller: _defCtrl, labelText: 'Definition / Description', prefixIcon: Icons.description_rounded, maxLines: 3),
                   const SizedBox(height: 16),
@@ -571,10 +611,12 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
     setState(() => _loading = true);
 
     try {
+      final String? phoneticText = _phoneticCtrl.text.trim().isEmpty ? null : _phoneticCtrl.text.trim();
+
       final entry = DictionaryEntry(
         id: widget.entry?.id ?? '',
         indigenousWord: _termCtrl.text.trim(),
-        phonetic: widget.entry?.phonetic,
+        phonetic: phoneticText,
         translation: widget.entry?.translation ?? '',
         translationFilipino: widget.entry?.translationFilipino ?? '',
         partOfSpeech: _pos,
