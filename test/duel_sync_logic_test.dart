@@ -142,4 +142,48 @@ void main() {
       );
     });
   });
+
+  group('DuelHistoryItem model integrity & serialization', () {
+    test('converts toMap and fromMap accurately', () {
+      final historyItem = DuelHistoryItem(
+        id: 'match_123',
+        opponentId: 'user_456',
+        opponentName: 'Warrior Chief',
+        opponentAvatar: '🛡️',
+        isWinner: true,
+        finalPlayerHp: 0.75,
+        finalOpponentHp: 0.0,
+        roundsPlayed: 3,
+        xpEarned: 150,
+        mistCrystalsEarned: 25,
+        timestamp: DateTime(2026, 9, 28, 14, 30),
+      );
+
+      final map = historyItem.toMap();
+      expect(map['opponentId'], 'user_456');
+      expect(map['opponentName'], 'Warrior Chief');
+      expect(map['isWinner'], true);
+      expect(map['roundsPlayed'], 3);
+      expect(map['xpEarned'], 150);
+
+      final restored = DuelHistoryItem.fromMap({
+        'opponentId': 'user_456',
+        'opponentName': 'Warrior Chief',
+        'opponentAvatar': '🛡️',
+        'isWinner': true,
+        'finalPlayerHp': 0.75,
+        'finalOpponentHp': 0.0,
+        'roundsPlayed': 3,
+        'xpEarned': 150,
+        'mistCrystalsEarned': 25,
+        'timestamp': DateTime(2026, 9, 28, 14, 30),
+      }, 'match_123');
+
+      expect(restored.id, 'match_123');
+      expect(restored.opponentName, 'Warrior Chief');
+      expect(restored.isWinner, isTrue);
+      expect(restored.xpEarned, 150);
+      expect(restored.mistCrystalsEarned, 25);
+    });
+  });
 }

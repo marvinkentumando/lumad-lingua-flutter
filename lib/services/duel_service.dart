@@ -349,6 +349,36 @@ class DuelService {
     }
   }
 
+  /// Finds any active or waiting match for [userId] so the session can be restored.
+  Future<DuelMatch?> findActiveMatchForUser(String userId) async {
+    try {
+      // 1. Check if user is player1 in an active or waiting match
+      final p1Snap = await _matches
+          .where('player1Id', isEqualTo: userId)
+          .where('status', whereIn: [DuelStatus.waiting.name, DuelStatus.active.name])
+          .limit(1)
+          .get();
+
+      if (p1Snap.docs.isNotEmpty) {
+        return DuelMatch.fromFirestore(p1Snap.docs.first);
+      }
+
+      // 2. Check if user is player2 in an active match
+      final p2Snap = await _matches
+          .where('player2Id', isEqualTo: userId)
+          .where('status', isEqualTo: DuelStatus.active.name)
+          .limit(1)
+          .get();
+
+      if (p2Snap.docs.isNotEmpty) {
+        return DuelMatch.fromFirestore(p2Snap.docs.first);
+      }
+    } catch (e) {
+      debugPrint('Error searching active match for user: $e');
+    }
+    return null;
+  }
+
   /// Only a still-waiting lobby can be cancelled; active duels must finish
   /// through damage/forfeit so the opponent always sees a final state.
   Future<void> cancelMatch(String matchId) async {
@@ -364,29 +394,86 @@ class DuelService {
     });
   }
 
-  /// Records persistent duel win/loss history for a user in Firestore.
-  Future<void> recordDuelResult({
+  /// Records persistent duel win/loss history and saves a history document.
+  /// Uses a transaction to guarantee idempotent execution.
+  Future<void> recordDuelResultAndHistory({
     required String userId,
     required bool isWinner,
+    required DuelMatch match,
+    int xpEarned = 0,
+    int mistCrystalsEarned = 0,
   }) async {
     try {
+      final historyRef = _db
+          .collection('users')
+          .doc(userId)
+          .collection('duel_history')
+          .doc(match.id);
+
       final userRef = _db.collection('users').doc(userId);
+
       await _db.runTransaction((tx) async {
-        final snap = await tx.get(userRef);
-        if (!snap.exists) return;
-        final data = snap.data() ?? {};
-        final wins = (data['duelWins'] ?? 0) as int;
-        final losses = (data['duelLosses'] ?? 0) as int;
-        final streak = (data['duelStreak'] ?? 0) as int;
+        final historySnap = await tx.get(historyRef);
+        // Idempotency check: if this match history already exists, skip
+        if (historySnap.exists) return;
+
+        final userSnap = await tx.get(userRef);
+        final userData = userSnap.data() ?? {};
+        final wins = (userData['duelWins'] ?? 0) as int;
+        final losses = (userData['duelLosses'] ?? 0) as int;
+        final streak = (userData['duelStreak'] ?? 0) as int;
 
         tx.update(userRef, {
           'duelWins': isWinner ? wins + 1 : wins,
           'duelLosses': isWinner ? losses : losses + 1,
           'duelStreak': isWinner ? streak + 1 : 0,
         });
+
+        final isPlayer1 = match.player1Id == userId;
+        final opponentId = (isPlayer1 ? match.player2Id : match.player1Id) ?? '';
+        final opponentName = (isPlayer1 ? match.player2Name : match.player1Name) ?? 'Warrior';
+        final opponentAvatar = (isPlayer1 ? match.player2Avatar : match.player1Avatar) ?? '👤';
+
+        final historyItem = DuelHistoryItem(
+          id: match.id,
+          opponentId: opponentId,
+          opponentName: opponentName,
+          opponentAvatar: opponentAvatar,
+          isWinner: isWinner,
+          finalPlayerHp: isPlayer1 ? match.player1Hp : match.player2Hp,
+          finalOpponentHp: isPlayer1 ? match.player2Hp : match.player1Hp,
+          roundsPlayed: match.currentRound,
+          xpEarned: xpEarned,
+          mistCrystalsEarned: mistCrystalsEarned,
+          timestamp: DateTime.now(),
+        );
+
+        tx.set(historyRef, historyItem.toMap());
       });
     } catch (e) {
-      debugPrint('Error recording duel result: $e');
+      debugPrint('Error recording duel result and history: $e');
     }
+  }
+
+  /// Legacy helper method for backwards compatibility.
+  Future<void> recordDuelResult({
+    required String userId,
+    required bool isWinner,
+  }) async {
+    final userRef = _db.collection('users').doc(userId);
+    await _db.runTransaction((tx) async {
+      final snap = await tx.get(userRef);
+      if (!snap.exists) return;
+      final data = snap.data() ?? {};
+      final wins = (data['duelWins'] ?? 0) as int;
+      final losses = (data['duelLosses'] ?? 0) as int;
+      final streak = (data['duelStreak'] ?? 0) as int;
+
+      tx.update(userRef, {
+        'duelWins': isWinner ? wins + 1 : wins,
+        'duelLosses': isWinner ? losses : losses + 1,
+        'duelStreak': isWinner ? streak + 1 : 0,
+      });
+    });
   }
 }

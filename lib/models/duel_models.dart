@@ -158,3 +158,62 @@ class DuelQuestion {
     };
   }
 }
+
+class DuelHistoryItem {
+  final String id;
+  final String opponentId;
+  final String opponentName;
+  final String opponentAvatar;
+  final bool isWinner;
+  final double finalPlayerHp;
+  final double finalOpponentHp;
+  final int roundsPlayed;
+  final int xpEarned;
+  final int mistCrystalsEarned;
+  final DateTime timestamp;
+
+  DuelHistoryItem({
+    required this.id,
+    required this.opponentId,
+    required this.opponentName,
+    required this.opponentAvatar,
+    required this.isWinner,
+    required this.finalPlayerHp,
+    required this.finalOpponentHp,
+    required this.roundsPlayed,
+    required this.xpEarned,
+    required this.mistCrystalsEarned,
+    required this.timestamp,
+  });
+
+  factory DuelHistoryItem.fromMap(Map<String, dynamic> map, String id) {
+    return DuelHistoryItem(
+      id: id,
+      opponentId: map['opponentId'] ?? '',
+      opponentName: map['opponentName'] ?? 'Warrior',
+      opponentAvatar: map['opponentAvatar'] ?? '👤',
+      isWinner: map['isWinner'] ?? false,
+      finalPlayerHp: (map['finalPlayerHp'] as num? ?? 0.0).toDouble(),
+      finalOpponentHp: (map['finalOpponentHp'] as num? ?? 0.0).toDouble(),
+      roundsPlayed: (map['roundsPlayed'] as num? ?? 0).toInt(),
+      xpEarned: (map['xpEarned'] as num? ?? 0).toInt(),
+      mistCrystalsEarned: (map['mistCrystalsEarned'] as num? ?? 0).toInt(),
+      timestamp: DuelMatch.parseTimestamp(map['timestamp']) ?? DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'opponentId': opponentId,
+      'opponentName': opponentName,
+      'opponentAvatar': opponentAvatar,
+      'isWinner': isWinner,
+      'finalPlayerHp': finalPlayerHp,
+      'finalOpponentHp': finalOpponentHp,
+      'roundsPlayed': roundsPlayed,
+      'xpEarned': xpEarned,
+      'mistCrystalsEarned': mistCrystalsEarned,
+      'timestamp': FieldValue.serverTimestamp(),
+    };
+  }
+}
