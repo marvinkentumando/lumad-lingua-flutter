@@ -25,6 +25,7 @@ class AuthService {
         _firestoreInstance = firestore,
         _googleSignIn = googleSignIn ??
             GoogleSignIn(
+              clientId: kIsWeb ? _webClientId : null,
               serverClientId: _webClientId,
               scopes: ['email', 'profile'],
             );
@@ -33,7 +34,67 @@ class AuthService {
 
   User? get currentUser => _auth.currentUser;
 
+  Future<void> _createOrUpdateGoogleUserProfile(User user) async {
+    final doc = await firestore.collection('users').doc(user.uid).get();
+
+    if (!doc.exists) {
+      // New user from Google, create profile
+      await firestore.collection('users').doc(user.uid).set({
+        'username': user.displayName ?? 'Tribe Member',
+        'email': user.email ?? '',
+        'location': 'Unknown',
+        'tribe': 'General Learner',
+        'avatar': user.photoURL ?? '👤',
+        'nativeLanguage': 'English',
+        'learningGoal': 'Culture',
+        'role': 'learner',
+        'xp': 0,
+        'mistCrystals': 0,
+        'streak': 0,
+        'wordCount': 0,
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastLogin': FieldValue.serverTimestamp(),
+      });
+    } else {
+      await firestore
+          .collection('users')
+          .doc(user.uid)
+          .update({'lastLogin': FieldValue.serverTimestamp()});
+    }
+  }
+
   Future<UserCredential?> signInWithGoogle() async {
+    if (kIsWeb) {
+      try {
+        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+        googleProvider.addScope('email');
+        googleProvider.addScope('profile');
+
+        final userCredential = await _auth.signInWithPopup(googleProvider);
+        final user = userCredential.user;
+
+        if (user != null) {
+          await _createOrUpdateGoogleUserProfile(user);
+        }
+
+        return userCredential;
+      } on FirebaseAuthException catch (e) {
+        if (kDebugMode) debugPrint("Google Sign-In Web Auth Error: ${e.code} - ${e.message}");
+        if (e.code == 'popup-closed-by-user' || e.code == 'canceled') {
+          return null;
+        }
+        rethrow;
+      } catch (e) {
+        if (kDebugMode) debugPrint("Google Sign-In Web Error: $e");
+        if (e is Exception && e.toString().startsWith('Exception: Google sign-in failed')) {
+          rethrow;
+        }
+        final errStr = e.toString();
+        final cleanMsg = errStr.replaceAll('Exception: ', '');
+        throw Exception("Google sign-in failed: $cleanMsg");
+      }
+    }
+
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return null;
@@ -53,33 +114,7 @@ class AuthService {
       final user = userCredential.user;
 
       if (user != null) {
-        // Check if user profile already exists
-        final doc = await firestore.collection('users').doc(user.uid).get();
-        
-        if (!doc.exists) {
-          // New user from Google, create profile
-          await firestore.collection('users').doc(user.uid).set({
-            'username': user.displayName ?? 'Tribe Member',
-            'email': user.email ?? '',
-            'location': 'Unknown',
-            'tribe': 'General Learner',
-            'avatar': user.photoURL ?? '👤',
-            'nativeLanguage': 'English',
-            'learningGoal': 'Culture',
-            'role': 'learner',
-            'xp': 0,
-            'mistCrystals': 0,
-            'streak': 0,
-            'wordCount': 0,
-            'createdAt': FieldValue.serverTimestamp(),
-            'lastLogin': FieldValue.serverTimestamp(),
-          });
-        } else {
-          await firestore
-              .collection('users')
-              .doc(user.uid)
-              .update({'lastLogin': FieldValue.serverTimestamp()});
-        }
+        await _createOrUpdateGoogleUserProfile(user);
       }
 
       return userCredential;
