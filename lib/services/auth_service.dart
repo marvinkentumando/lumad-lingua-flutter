@@ -7,15 +7,27 @@ import 'dart:math' as math;
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  final FirebaseAuth? _authInstance;
+  final FirebaseFirestore? _firestoreInstance;
+  final GoogleSignIn _googleSignIn;
+
+  FirebaseAuth get _auth => _authInstance ?? FirebaseAuth.instance;
+  FirebaseFirestore get firestore => _firestoreInstance ?? FirebaseFirestore.instance;
+
   static const String _webClientId =
       '941151806887-jpr28rdo5drbjm8bbh6hnnu2kdp0dhdr.apps.googleusercontent.com';
 
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    serverClientId: _webClientId,
-    scopes: ['email', 'profile'],
-  );
+  AuthService({
+    FirebaseAuth? auth,
+    FirebaseFirestore? firestore,
+    GoogleSignIn? googleSignIn,
+  })  : _authInstance = auth,
+        _firestoreInstance = firestore,
+        _googleSignIn = googleSignIn ??
+            GoogleSignIn(
+              serverClientId: _webClientId,
+              scopes: ['email', 'profile'],
+            );
 
   Stream<User?> get authStateChanges => _auth.userChanges();
 
@@ -76,26 +88,28 @@ class AuthService {
       rethrow;
     } on PlatformException catch (e) {
       if (kDebugMode) debugPrint("Google Sign-In Platform Error: ${e.code} - ${e.message}");
-      if (e.code == 'sign_in_canceled' ||
-          e.code == 'null-error' ||
-          (e.message != null && e.message!.contains('null value'))) {
+      if (e.code == GoogleSignIn.kSignInCanceledError || e.code == 'sign_in_canceled') {
+        // Genuine user cancellation from account picker
         return null;
       }
       final details = e.message ?? e.details ?? e.code;
-      throw Exception("Google sign-in failed: $details");
+      throw Exception("Google sign-in failed [${e.code}]: $details");
     } on TypeError catch (e) {
       if (kDebugMode) debugPrint("Google Sign-In Type Error: $e");
-      // Handle Pigeon platform channel force-unwrap on null response (user canceled)
-      return null;
+      throw Exception(
+        "Google sign-in failed: Native Google Sign-In returned a null response. Check Google Play Services, app signing certificate (SHA-1), and OAuth configuration.",
+      );
     } catch (e) {
       if (kDebugMode) debugPrint("Google Sign-In Error: $e");
       final errStr = e.toString();
       if (errStr.contains('Null check operator used on a null value') ||
-          errStr.contains('sign_in_canceled') ||
           errStr.contains('null-error')) {
-        return null;
+        throw Exception(
+          "Google sign-in failed: Native Google Sign-In returned a null response. Check Google Play Services, app signing certificate (SHA-1), and OAuth configuration.",
+        );
       }
-      throw Exception("Google sign-in failed: ${e.toString()}");
+      final cleanMsg = errStr.replaceAll('Exception: ', '');
+      throw Exception("Google sign-in failed: $cleanMsg");
     }
   }
 
