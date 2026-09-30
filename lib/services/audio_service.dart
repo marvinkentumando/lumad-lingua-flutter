@@ -8,14 +8,28 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../models/lesson_task.dart';
 
 class AudioService {
-  final _recorder = AudioRecorder();
-  final _player = AudioPlayer();
-  final _bgPlayer = AudioPlayer();
-  final _sfxPlayer = AudioPlayer();
-  final _tts = FlutterTts();
+  final AudioRecorder _recorder;
+  final AudioPlayer _player;
+  final AudioPlayer _bgPlayer;
+  final AudioPlayer _sfxPlayer;
+  final FlutterTts _tts;
 
-  AudioService() {
-    _bgPlayer.setReleaseMode(ReleaseMode.loop);
+  AudioService({
+    AudioRecorder? recorder,
+    AudioPlayer? player,
+    AudioPlayer? bgPlayer,
+    AudioPlayer? sfxPlayer,
+    FlutterTts? tts,
+  })  : _recorder = recorder ?? AudioRecorder(),
+        _player = player ?? AudioPlayer(),
+        _bgPlayer = bgPlayer ?? AudioPlayer(),
+        _sfxPlayer = sfxPlayer ?? AudioPlayer(),
+        _tts = tts ?? FlutterTts() {
+    try {
+      _bgPlayer.setReleaseMode(ReleaseMode.loop);
+    } catch (e) {
+      debugPrint("Error setting release mode: $e");
+    }
   }
 
   Future<void> playAmbientMusic(String theme) async {
