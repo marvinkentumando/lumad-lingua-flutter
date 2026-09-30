@@ -43,3 +43,20 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Pronunciation research dataset (lives OUTSIDE this repo as a sibling directory).
+# Defensive rules so raw/learner audio, MFCC arrays and experiment outputs can never be committed here.
+/lumad_lingua_pronunciation/
+/research_data/
+*.npy
+*.npz
+research/**/raw/
+research/**/staging/
+research/**/processed/
+research/**/features/
+research/**/experiments/
+research/**/*.wav
+research/**/*.WAV
+research/**/*.m4a
+research/**/*.mp3
+research/**/__pycache__/

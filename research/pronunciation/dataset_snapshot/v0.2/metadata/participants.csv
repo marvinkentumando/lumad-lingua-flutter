@@ -1,0 +1,2 @@
+speaker_id,role,consent_form_ref,enrolment_order,collection_session_ids,device_class,environment_class,dataset_version,notes
+R001,reference,,0,,,,lumad_lingua_pronunciation_v0.2,Reference speaker (tribal chieftain / native speaker). Identity held outside the dataset. Reference recordings pre-existing; collection details not recorded here.

@@ -1,0 +1,1 @@
+rating_id,recording_id,word_id,speaker_id,reference_recording_id,validator_code,rating_pass,human_rating,validation_status,unratable_reason,blind_confirmed,rating_date,rating_protocol_version,dataset_version,notes

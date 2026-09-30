@@ -1,0 +1,41 @@
+# CANDIDATE preprocessing configuration. NOT confirmed.
+# Must be reviewed against metadata/audio_quality.csv once the real reference audio has been probed.
+# Applies only to files written under processed/PP001/. raw/ is never modified.
+preproc_id: PP001
+status: candidate
+description: Baseline 16 kHz mono PCM16, DC removal, peak normalisation, energy-based trim, no noise reduction
+created: 2026-09-30
+review_required_before_use: true
+review_note: >
+  Reference audio could not be probed in v0.1 (source storage unreachable from the build environment).
+  Confirm original sample rates, channel counts and codecs before adopting this config.
+target_sample_rate_hz: 16000
+resample:
+  method: high_quality_antialiased   # e.g. soxr_hq / libsamplerate sinc_best; record the exact library at run time
+  library: null
+  library_version: null
+channel_handling: mono_average       # alternatives: left_only
+output:
+  container: wav
+  encoding: pcm_s16le
+  bit_depth: 16
+dc_offset_removal: true
+normalization:
+  type: peak
+  target_dbfs: -1.0
+silence_trim:
+  enabled: true
+  method: energy_threshold
+  threshold_db: -40
+  min_silence_ms: 100
+  pad_ms: 50
+noise_reduction:
+  enabled: false
+  method: null
+  params: {}
+tooling:
+  decoder: null            # e.g. ffmpeg
+  decoder_version: null
+  dsp_library: null        # e.g. librosa / scipy
+  dsp_version: null
+code_commit: null

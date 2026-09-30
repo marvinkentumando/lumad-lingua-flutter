@@ -1,0 +1,3 @@
+requests>=2.31
+PyYAML>=6.0
+mutagen>=1.47      # pure-Python audio metadata probe (fallback when ffprobe is unavailable)

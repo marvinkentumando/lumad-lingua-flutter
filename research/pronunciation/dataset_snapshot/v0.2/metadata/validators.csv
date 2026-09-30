@@ -1,0 +1,2 @@
+validator_code,role,scope,dataset_version,notes
+V01,validator,reference_validation;learner_rating,lumad_lingua_pronunciation_v0.2,Validated all 128 reference recordings prior to dataset assembly; will perform the blind 1-5 learner ratings. Identity held outside the dataset.

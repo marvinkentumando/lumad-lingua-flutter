@@ -1,0 +1,17 @@
+# Corpus contract for the pronunciation reference dataset. Read by scripts/common.py and check_dataset.py.
+corpus_id: lumad_lingua_pronunciation
+expected_reference_recordings: 128        # physical, researcher-validated reference recordings (established project data, 2026-09-30)
+reference_speaker_id: R001
+reference_validation:
+  status: validated
+  validator_code: V01
+  provenance: >
+    Every recording in the Supabase export of project ovdwgowtnlujnbcyldkk, bucket audio, path dataset
+    (archive dataset.zip, sha256 df4e62cadd972f04a614b3ccc1f634f18b0a6269803b22c913d4f32fea218d89, 128 entries)
+    is a researcher-validated reference recording. Validation status is independent of vocabulary mapping status.
+recording_id_scheme: REF_nnn, assigned once by ascending byte-wise sort of the original object_name at first registration; never reassigned or reused
+vocabulary_item_id_scheme: Wnnn, assigned only when a recording-to-item mapping is supported by evidence; an item may own several reference recordings
+multiple_references_per_item: true
+mapping_status_values: [mapped, unresolved]
+mapping_evidence_values: [firestore_exact_term, validator_confirmed, researcher_confirmed]
+learner_recording_id_scheme: Sxxx_Wnnn[_Tnn]; learner collection requires the item list (mapping) to be complete first
