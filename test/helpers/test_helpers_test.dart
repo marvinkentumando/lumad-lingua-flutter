@@ -30,12 +30,22 @@ void main() {
       expect(recPath, contains('recording.m4a'));
     });
 
-    test('FakeAuthService returns configured user and empty auth state stream', () async {
+    test('FakeAuthService returns configured user and handles google sign-in fake', () async {
       final auth = FakeAuthService();
       expect(auth.currentUser, isNull);
+      expect(auth.signInWithGoogleCalled, isFalse);
+
+      final result = await auth.signInWithGoogle();
+      expect(result, isNull);
+      expect(auth.signInWithGoogleCalled, isTrue);
 
       final authState = await auth.authStateChanges.first;
       expect(authState, isNull);
+
+      final authWithError = FakeAuthService(
+        signInWithGoogleError: Exception('Google sign in failed'),
+      );
+      expect(() => authWithError.signInWithGoogle(), throwsA(isA<Exception>()));
     });
 
     testWidgets('createTestProviderScope provides overrides to descendant widgets', (tester) async {

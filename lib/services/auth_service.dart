@@ -8,7 +8,11 @@ import 'package:google_sign_in/google_sign_in.dart';
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  static const String _webClientId =
+      '941151806887-jpr28rdo5drbjm8bbh6hnnu2kdp0dhdr.apps.googleusercontent.com';
+
   final GoogleSignIn _googleSignIn = GoogleSignIn(
+    serverClientId: _webClientId,
     scopes: ['email', 'profile'],
   );
 
@@ -259,6 +263,11 @@ class AuthService {
   }
 
   Future<void> signOut() async {
+    try {
+      await _googleSignIn.signOut();
+    } catch (e) {
+      if (kDebugMode) debugPrint("Google Sign-Out Error: $e");
+    }
     await _auth.signOut();
   }
 

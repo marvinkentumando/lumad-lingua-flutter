@@ -12,7 +12,20 @@
           "package_name": "com.example.lumad_lingua"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "941151806887-na7dho8656vmeg9eq6koce36ufqns43u.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.lumad_lingua",
+            "certificate_hash": "3d7fb5ed839e0eebe00ae0d734acd44a93f9043e"
+          }
+        },
+        {
+          "client_id": "941151806887-jpr28rdo5drbjm8bbh6hnnu2kdp0dhdr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCNKBx20FxwqjZ4d2J0ghBiwpSgiDtUuZM"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "941151806887-jpr28rdo5drbjm8bbh6hnnu2kdp0dhdr.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "941151806887-o55gctg96k85tgl2giauf56dq9lsmshm.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.lumadLingua"
+              }
+            }
+          ]
         }
       }
     }

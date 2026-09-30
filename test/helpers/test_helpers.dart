@@ -79,8 +79,15 @@ class FakeAudioService implements AudioService {
 /// Avoids invoking native Firebase Auth or Firestore instances.
 class FakeAuthService implements AuthService {
   User? mockUser;
+  UserCredential? mockCredential;
+  Object? signInWithGoogleError;
+  bool signInWithGoogleCalled = false;
 
-  FakeAuthService({this.mockUser});
+  FakeAuthService({
+    this.mockUser,
+    this.mockCredential,
+    this.signInWithGoogleError,
+  });
 
   @override
   User? get currentUser => mockUser;
@@ -92,7 +99,13 @@ class FakeAuthService implements AuthService {
   Future<UserCredential?> signInWithEmail(String email, String password) async => null;
 
   @override
-  Future<UserCredential?> signInWithGoogle() async => null;
+  Future<UserCredential?> signInWithGoogle() async {
+    signInWithGoogleCalled = true;
+    if (signInWithGoogleError != null) {
+      throw signInWithGoogleError!;
+    }
+    return mockCredential;
+  }
 
   @override
   Future<UserCredential?> signUpWithEmail(
