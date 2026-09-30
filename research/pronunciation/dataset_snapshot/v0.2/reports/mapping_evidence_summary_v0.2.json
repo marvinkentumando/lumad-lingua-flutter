@@ -1,0 +1,27 @@
+{
+ "generated": "2026-09-30T04:21:42+00:00",
+ "corpus_version": "lumad_lingua_pronunciation_v0.2",
+ "recordings": 128,
+ "filename_groups": 113,
+ "category_counts_by_group": {
+  "EXACT_TERM_UNIQUE": 11,
+  "NO_PROJECT_MATCH": 63,
+  "PARTIAL_TOKEN_CANDIDATE": 14,
+  "EXACT_EXAMPLE_SENTENCE_UNIQUE": 3,
+  "SPELLING_VARIANT_CANDIDATE": 6,
+  "MULTIPLE_TAKE_CANDIDATE": 12,
+  "NORMALIZED_TEXT_CANDIDATE": 1,
+  "VOICE_SUBMISSION_TRANSCRIPT_CANDIDATE": 1,
+  "EXACT_LESSON_ITEM_UNIQUE": 2
+ },
+ "authoritative_recordings": 16,
+ "review_cases": 97,
+ "recordings_in_review": 112,
+ "sources": {
+  "words": 2000,
+  "usage_example_lines": 4084,
+  "published_lesson_items": 24,
+  "voice_submission_transcripts": 8,
+  "repo_files_scanned": 247
+ }
+}

@@ -44,8 +44,10 @@ python3 scripts/fetch_reference_audio.py list         # lists Supabase audio/dat
 python3 scripts/fetch_reference_audio.py stage        # downloads every listed object byte-for-byte to staging/supabase_audio_dataset/
 python3 scripts/inventory_source_archive.py <zip>     # OR: inventory a manually exported archive (byte-for-byte extract, probe, sha256, grouping)
 python3 scripts/export_firestore_metadata.py          # read-only export of words/voice_submissions/lessons → staging/firestore_export
-python3 scripts/build_reference_registry.py           # REF_nnn registry (all validated) + evidence-based vocabulary.csv + reference_mapping_input.csv
-# researcher/V01 fill metadata/reference_mapping_input.csv for unresolved recordings, then re-run build_reference_registry.py
+python3 scripts/resolve_vocabulary_mapping.py         # evidence inventory (metadata/mapping_evidence.csv) + human review queue (metadata/mapping_review_queue.csv)
+python3 scripts/build_reference_registry.py           # REF_nnn registry (all validated) + evidence-based vocabulary.csv + id ledger
+# researcher/V01 complete metadata/mapping_review_queue.csv (see validation/mapping_review_instructions.md), then:
+python3 scripts/apply_mapping_review.py               # validates decisions, applies them, rebuilds registry/manifest/checksums, reruns checks
 python3 scripts/fetch_reference_audio.py promote      # copies every registered recording to raw/reference/REF_nnn.<ext>, refuses to overwrite
 python3 scripts/probe_audio.py                        # read-only probe → metadata/audio_quality.csv
 python3 scripts/build_manifest.py                     # reference rows → manifests/manifest.csv

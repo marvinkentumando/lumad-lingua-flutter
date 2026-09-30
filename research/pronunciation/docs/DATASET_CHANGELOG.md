@@ -76,3 +76,14 @@ preprocessing protocol NOT frozen; experiment dataset NOT frozen.
 - Noncanonical candidate outputs: processed/PP001-candidate (128 ok, deterministic) and features/PP001-candidate_FE001 (128 ok, frames 37–244, all finite).
 - manifests/repro_manifest_v0.2.json; scripts run_preprocessing.py, extract_features.py, analyze_preprocessing.py, build_repro_manifest.py, test_pipeline.py (12 tests).
 - Raw checksum list unchanged (sha256 4ba701e3…); config checksums regenerated.
+
+### v0.2 addendum — 2026-09-30 — vocabulary mapping evidence resolution
+
+- New `metadata/mapping_evidence.csv` (128 rows, evidence category per recording), `metadata/mapping_review_queue.csv`
+  (97 linguistic cases / 112 recordings), `metadata/vocabulary_id_history.csv` (append-only id ledger),
+  `metadata/mapping_audit_log.csv` (written by apply_mapping_review.py), `validation/mapping_review_instructions.md`.
+- Mapped 16/128 recordings to 16 items (W001–W011 unchanged; W012–W016 new: 3 dictionary usage-example phrases, 2 published-lesson items).
+- Registry gains `evidence_category` and `item_key`; vocabulary gains `item_key`, `source_field`, `evidence_category`.
+- Scripts: resolve_vocabulary_mapping.py, apply_mapping_review.py, mapping_common.py, test_mapping.py; build_reference_registry.py and
+  check_dataset.py extended (evidence validity, no candidate/take promotion, queue ↔ unresolved consistency, ledger stability).
+- Multi-take groups remain candidates (0 multi-reference items declared); spelling variants kept separate. See reports/vocabulary_mapping_v0.2.md.

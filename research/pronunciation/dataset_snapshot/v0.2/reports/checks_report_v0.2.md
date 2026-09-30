@@ -5,8 +5,8 @@ Generated: 2026-09-30  Mode: `prefreeze`  Root: `/home/user/lumad_lingua_pronunc
 | Status | Count |
 |---|---|
 | EXPECTED-NOT-YET-COLLECTED | 4 |
-| INFO | 5 |
-| PASS | 39 |
+| INFO | 6 |
+| PASS | 48 |
 
 | Status | Check | Detail |
 |---|---|---|
@@ -23,7 +23,7 @@ Generated: 2026-09-30  Mode: `prefreeze`  Root: `/home/user/lumad_lingua_pronunc
 | PASS | registry:validation_status | all 128 recordings validated (provenance: Every recording in the Supabase export of project ovdwgowtnl…) |
 | PASS | registry:mapping_status values | all in {mapped, unresolved} |
 | PASS | registry:mapping_evidence for mapped rows | ok |
-| EXPECTED-NOT-YET-COLLECTED | registry:vocabulary mapping | 117/128 recordings unresolved (validated audio, item identity pending); 11 mapped |
+| EXPECTED-NOT-YET-COLLECTED | registry:vocabulary mapping | 112/128 recordings unresolved (validated audio, item identity pending); 16 mapped |
 | PASS | registry:mapping input rows for unresolved | 117 rows in reference_mapping_input.csv |
 | PASS | registry:canonical raw copy | all 128 present in raw/reference/ |
 | PASS | registry:raw filename == recording_id | ok |
@@ -32,7 +32,17 @@ Generated: 2026-09-30  Mode: `prefreeze`  Root: `/home/user/lumad_lingua_pronunc
 | PASS | source_objects:count | 128 (expected 128) |
 | PASS | registry:raw bytes match sha256 | 128 files re-hashed OK |
 | PASS | raw/reference:orphan files | none |
-| PASS | vocabulary:word_id unique & well-formed | 11 items |
+| PASS | evidence:coverage | 128 evidence rows for 128 recordings |
+| PASS | evidence:categories valid | ok |
+| PASS | evidence:no candidate/take auto-promotion | authoritative rows are exact, unsuffixed matches only |
+| PASS | registry:mapped rows carry authoritative/human evidence | 16 mapped rows ok |
+| INFO | evidence:category counts | {'EXACT_TERM_UNIQUE': 11, 'NO_PROJECT_MATCH': 63, 'PARTIAL_TOKEN_CANDIDATE': 14, 'EXACT_EXAMPLE_SENTENCE_UNIQUE': 3, 'SPELLING_VARIANT_CANDIDATE': 6, 'MULTIPLE_TAKE_CANDIDATE': 27, 'NORMALIZED_TEXT_CANDIDATE': 1, 'VOICE_SUBMISSION_TRANSCRIPT_CANDIDATE': 1, 'EXACT_LESSON_ITEM_UNIQUE': 2} |
+| PASS | review queue ↔ unresolved recordings | 97 cases cover 112 recordings; unresolved 112 |
+| PASS | review queue:decisions parse | no invalid decisions |
+| PASS | id ledger:unique | 16 ids recorded |
+| PASS | id ledger:vocabulary ids recorded | all vocabulary ids in vocabulary_id_history.csv |
+| PASS | id ledger:ids never reassigned | item_key per id stable |
+| PASS | vocabulary:word_id unique & well-formed | 16 items |
 | PASS | vocabulary:firestore_word_doc_id unique | ok |
 | PASS | vocabulary:mansaka_text present | all items have text from source data |
 | PASS | registry→vocabulary word_id exists | ok |
@@ -53,11 +63,11 @@ Generated: 2026-09-30  Mode: `prefreeze`  Root: `/home/user/lumad_lingua_pronunc
 | PASS | audio_quality:coverage | 128 probed |
 | PASS | manifest:no unreadable included | ok |
 | INFO | exclusions | none logged |
-| EXPECTED-NOT-YET-COLLECTED | learner recordings | none yet; item list not final until mapping is complete (11 items mapped so far) |
+| EXPECTED-NOT-YET-COLLECTED | learner recordings | none yet; item list not final until mapping is complete (16 items mapped so far) |
 | EXPECTED-NOT-YET-COLLECTED | ratings:coverage | no included learner recordings yet |
 | PASS | dataset_version consistency | all rows agree with VERSION (lumad_lingua_pronunciation_v0.2) |
 | PASS | checksums:lists for current version | SHA256SUMS_config_v0.2.txt, SHA256SUMS_metadata_v0.2.txt, SHA256SUMS_raw_v0.2.txt, SHA256SUMS_validation_v0.2.txt |
-| PASS | checksums:verify lists | 148 entries verified |
+| PASS | checksums:verify lists | 152 entries verified |
 
 EXPECTED-NOT-YET-COLLECTED = legitimately absent in the pre-freeze state; becomes ERROR in `--mode freeze`.
 Frozen-ready: NO

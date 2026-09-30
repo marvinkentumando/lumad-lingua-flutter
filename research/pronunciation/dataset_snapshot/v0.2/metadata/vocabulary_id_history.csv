@@ -1,0 +1,17 @@
+word_id,item_key,mansaka_text,assigned_on,assigned_by,evidence_category,recording_ids_at_assignment,dataset_version,note
+W001,words:9wYfRCZDf3elrtSWzbe4,antik,2026-09-30,build_reference_registry.py,EXACT_TERM_UNIQUE,REF_001,lumad_lingua_pronunciation_v0.2,backfilled: id existed before the ledger was introduced
+W002,words:YPqMHKvZT0jQTX8jNr1S,arabat,2026-09-30,build_reference_registry.py,EXACT_TERM_UNIQUE,REF_002,lumad_lingua_pronunciation_v0.2,backfilled: id existed before the ledger was introduced
+W003,words:A1wLuJfWky5Crrg9cBBi,arayon,2026-09-30,build_reference_registry.py,EXACT_TERM_UNIQUE,REF_036,lumad_lingua_pronunciation_v0.2,backfilled: id existed before the ledger was introduced
+W004,words:ior1V7Dho3n5PPv7hJux,bapa,2026-09-30,build_reference_registry.py,EXACT_TERM_UNIQUE,REF_038,lumad_lingua_pronunciation_v0.2,backfilled: id existed before the ledger was introduced
+W005,words:c6CO9DECOzrPNuyLgKO2,barangaw,2026-09-30,build_reference_registry.py,EXACT_TERM_UNIQUE,REF_003,lumad_lingua_pronunciation_v0.2,backfilled: id existed before the ledger was introduced
+W006,words:w7amVxl3HlYNLFXLBx6W,batad,2026-09-30,build_reference_registry.py,EXACT_TERM_UNIQUE,REF_039,lumad_lingua_pronunciation_v0.2,backfilled: id existed before the ledger was introduced
+W007,words:fry54dN7LhkUoDCBVnEh,bobay,2026-09-30,build_reference_registry.py,EXACT_TERM_UNIQUE,REF_004,lumad_lingua_pronunciation_v0.2,backfilled: id existed before the ledger was introduced
+W008,words:0KEq4c3IEDne7WUkiADa,bugsak,2026-09-30,build_reference_registry.py,EXACT_TERM_UNIQUE,REF_005,lumad_lingua_pronunciation_v0.2,backfilled: id existed before the ledger was introduced
+W009,words:tPSO95ipLwxJQ4KhVJtj,kadyawan,2026-09-30,build_reference_registry.py,EXACT_TERM_UNIQUE,REF_011,lumad_lingua_pronunciation_v0.2,backfilled: id existed before the ledger was introduced
+W010,words:dwRUTVf9nAaw2fRpLtpr,karapi,2026-09-30,build_reference_registry.py,EXACT_TERM_UNIQUE,REF_052,lumad_lingua_pronunciation_v0.2,backfilled: id existed before the ledger was introduced
+W011,words:WvotzMcPJqYRVSZOz68O,kimod,2026-09-30,build_reference_registry.py,EXACT_TERM_UNIQUE,REF_054,lumad_lingua_pronunciation_v0.2,backfilled: id existed before the ledger was introduced
+W012,words_example:dE3ANzop5NnJOQsED3qd:gaagod yang baboy,Gaagod yang baboy.,2026-09-30,build_reference_registry.py,EXACT_EXAMPLE_SENTENCE_UNIQUE,REF_008,lumad_lingua_pronunciation_v0.2,
+W013,words_example:4bW3jEbX7VkRqB0cmgwi:kaana yang manok,Kaana yang manok.,2026-09-30,build_reference_registry.py,EXACT_EXAMPLE_SENTENCE_UNIQUE,REF_010,lumad_lingua_pronunciation_v0.2,
+W014,words_example:8LMN5ogb64Tt2LPdEAxQ:madakmul yang abol,Madakmul yang abol.,2026-09-30,build_reference_registry.py,EXACT_EXAMPLE_SENTENCE_UNIQUE,REF_014,lumad_lingua_pronunciation_v0.2,
+W015,lesson_item:madyaw na gabi,Madyaw na gabi,2026-09-30,build_reference_registry.py,EXACT_LESSON_ITEM_UNIQUE,REF_065,lumad_lingua_pronunciation_v0.2,
+W016,lesson_item:saramat,Saramat,2026-09-30,build_reference_registry.py,EXACT_LESSON_ITEM_UNIQUE,REF_099,lumad_lingua_pronunciation_v0.2,

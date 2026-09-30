@@ -1,10 +1,10 @@
 {
  "manifest_version": 1,
- "generated": "2026-09-30T04:05:52+00:00",
+ "generated": "2026-09-30T04:23:49+00:00",
  "corpus_version": "lumad_lingua_pronunciation_v0.2",
  "corpus_identity": {
   "registry": "metadata/reference_recordings.csv",
-  "registry_sha256": "637b00043bed02e248d9a9ec4aee545a8c364c26781438e8073bf4548ce4e0a4",
+  "registry_sha256": "a9537217e4c9e2637ed387f3cca4c7f21afa50eb3c33d6d65a7221c1b9ac351f",
   "raw_checksums": "checksums/SHA256SUMS_raw_v0.2.txt",
   "raw_checksums_sha256": "4ba701e39310cf8b6b23a747d515d773185663697c17e012641d82fb7a199e60",
   "n_reference_recordings": 128

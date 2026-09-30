@@ -17,6 +17,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from common import (ROOT, RE_WORD, RE_SPK, RE_REF, RE_LEARNER, REASON_CODES, STAGES, MAPPING_STATUS, MAPPING_EVIDENCE,
                     read_csv, version, corpus, sha256_file, rel, truthy)
+from mapping_common import AUTHORITATIVE, CATEGORIES, DECISIONS
 
 class Report:
     def __init__(self): self.lines = []; self.counts = Counter()
@@ -84,6 +85,30 @@ def run(root, mode, verify_hashes):
         (rep.error if badh else rep.pass_)("registry:raw bytes match sha256", str(badh[:8]) if badh else f"{sum(1 for r in reg if r.get('raw_audio_path'))} files re-hashed OK")
     raw_files = {rel(p, root) for p in (root / "raw" / "reference").glob("*") if p.is_file() and p.name not in {".gitkeep", "README.md"}}
     orph = sorted(raw_files - {r["raw_audio_path"] for r in reg}); (rep.error if orph else rep.pass_)("raw/reference:orphan files", str(orph[:8]) if orph else "none")
+
+    # ---------------- mapping evidence / review queue / id ledger ----------------
+    _, ev = read_csv(root / "metadata" / "mapping_evidence.csv"); _, rq = read_csv(root / "metadata" / "mapping_review_queue.csv"); _, hist = read_csv(root / "metadata" / "vocabulary_id_history.csv")
+    if ev:
+        (rep.pass_ if len(ev) == len(reg) else rep.error)("evidence:coverage", f"{len(ev)} evidence rows for {len(reg)} recordings")
+        badcat = [e["recording_id"] for e in ev if e["evidence_category"] not in CATEGORIES]; (rep.error if badcat else rep.pass_)("evidence:categories valid", str(badcat[:8]) if badcat else "ok")
+        promo = [e["recording_id"] for e in ev if e["authoritative"] == "true" and (e["evidence_category"] not in AUTHORITATIVE or e["take_suffix"])]
+        (rep.error if promo else rep.pass_)("evidence:no candidate/take auto-promotion", str(promo[:8]) if promo else "authoritative rows are exact, unsuffixed matches only")
+        badm = [r["recording_id"] for r in mapped if r.get("evidence_category") not in AUTHORITATIVE | {"HUMAN_CONFIRMED"}]
+        (rep.error if badm else rep.pass_)("registry:mapped rows carry authoritative/human evidence", str(badm[:8]) if badm else f"{len(mapped)} mapped rows ok")
+        rep.info("evidence:category counts", str(dict(Counter(e["evidence_category"] for e in ev))))
+    else: rep.warn("evidence", "metadata/mapping_evidence.csv missing; run resolve_vocabulary_mapping.py")
+    if rq:
+        qr = {x for c in rq for x in c["recording_ids"].split(";") if x}; unres_ids = {r["recording_id"] for r in unres}
+        (rep.pass_ if qr == unres_ids else rep.error)("review queue ↔ unresolved recordings", f"{len(rq)} cases cover {len(qr)} recordings; unresolved {len(unres_ids)}" + ("" if qr == unres_ids else f"; missing {sorted(unres_ids - qr)[:5]} extra {sorted(qr - unres_ids)[:5]}"))
+        badd = [c["review_case_id"] for c in rq if c.get("decision", "").strip() and c["decision"].strip().upper() not in DECISIONS]; (rep.error if badd else rep.pass_)("review queue:decisions parse", str(badd[:8]) if badd else "no invalid decisions")
+        pend = [c["review_case_id"] for c in rq if c.get("decision", "").strip()]; 
+        if pend: rep.warn("review queue:decisions awaiting apply", f"{len(pend)} decided cases not yet applied (run apply_mapping_review.py)")
+    elif unres: rep.warn("review queue", "unresolved recordings but no queue; run resolve_vocabulary_mapping.py")
+    hid = Counter(h["word_id"] for h in hist); dh = [k for k, n in hid.items() if n > 1]; (rep.error if dh else rep.pass_)("id ledger:unique", str(dh) if dh else f"{len(hist)} ids recorded")
+    unledgered = sorted(v["word_id"] for v in voc if v["word_id"] not in hid) if hist else []
+    (rep.warn if unledgered else rep.pass_)("id ledger:vocabulary ids recorded", f"missing {unledgered[:8]}" if unledgered else "all vocabulary ids in vocabulary_id_history.csv")
+    ledger_key = {h["word_id"]: h["item_key"] for h in hist}; drift = [v["word_id"] for v in voc if v["word_id"] in ledger_key and ledger_key[v["word_id"]] and ledger_key[v["word_id"]] != v.get("item_key")]
+    (rep.error if drift else rep.pass_)("id ledger:ids never reassigned", str(drift[:8]) if drift else "item_key per id stable")
 
     # ---------------- vocabulary ----------------
     wids = Counter(v["word_id"] for v in voc); dupw = [k for k, n in wids.items() if n > 1]; badw = [k for k in wids if not RE_WORD.match(k)]
