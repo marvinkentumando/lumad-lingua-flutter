@@ -26,6 +26,7 @@ class AuthService {
         _googleSignIn = googleSignIn ??
             GoogleSignIn(
               serverClientId: _webClientId,
+              scopes: ['email', 'profile'],
             );
 
   Stream<User?> get authStateChanges => _auth.userChanges();
@@ -89,24 +90,21 @@ class AuthService {
       if (kDebugMode) debugPrint("Google Sign-In Platform Error: ${e.code} - ${e.message}");
       if (e.code == GoogleSignIn.kSignInCanceledError ||
           e.code == 'sign_in_canceled' ||
-          e.code == 'null-error') {
-        // Genuine user cancellation or null response from account picker
+          e.code == '12501') {
+        // Genuine user cancellation
         return null;
       }
       final details = e.message ?? e.details ?? e.code;
       throw Exception("Google sign-in failed [${e.code}]: $details");
     } on TypeError catch (e) {
       if (kDebugMode) debugPrint("Google Sign-In Type Error: $e");
-      // Handle Pigeon platform channel force-unwrap on null response (user canceled / no account selected)
-      return null;
+      throw Exception("Google sign-in failed due to native plugin response: $e");
     } catch (e) {
       if (kDebugMode) debugPrint("Google Sign-In Error: $e");
-      final errStr = e.toString();
-      if (errStr.contains('Null check operator used on a null value') ||
-          errStr.contains('null-error') ||
-          errStr.contains('sign_in_canceled')) {
-        return null;
+      if (e is Exception && e.toString().startsWith('Exception: Google sign-in failed')) {
+        rethrow;
       }
+      final errStr = e.toString();
       final cleanMsg = errStr.replaceAll('Exception: ', '');
       throw Exception("Google sign-in failed: $cleanMsg");
     }

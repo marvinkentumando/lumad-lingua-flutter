@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -53,6 +54,38 @@ void main() {
       expect(result, isNull);
     });
 
+    test('returns null on PlatformException 12501 (Google API cancel code)', () async {
+      final fakeGoogleSignIn = TestGoogleSignIn()
+        ..errorToThrow = PlatformException(
+          code: '12501',
+          message: 'User cancelled sign-in flow',
+        );
+      final authService = AuthService(googleSignIn: fakeGoogleSignIn);
+
+      final result = await authService.signInWithGoogle();
+      expect(result, isNull);
+    });
+
+    test('throws Exception on PlatformException null-error', () async {
+      final fakeGoogleSignIn = TestGoogleSignIn()
+        ..errorToThrow = PlatformException(
+          code: 'null-error',
+          message: 'Host platform returned null value for non-null return value.',
+        );
+      final authService = AuthService(googleSignIn: fakeGoogleSignIn);
+
+      expect(
+        () => authService.signInWithGoogle(),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('[null-error]'),
+          ),
+        ),
+      );
+    });
+
     test('throws Exception on native PlatformException failure (e.g. network_error)', () async {
       final fakeGoogleSignIn = TestGoogleSignIn()
         ..errorToThrow = PlatformException(
@@ -73,22 +106,78 @@ void main() {
       );
     });
 
-    test('returns null gracefully on TypeError (Pigeon force-unwrap on null response / cancellation)', () async {
+    test('throws Exception on native PlatformException failure (e.g. sign_in_failed)', () async {
+      final fakeGoogleSignIn = TestGoogleSignIn()
+        ..errorToThrow = PlatformException(
+          code: 'sign_in_failed',
+          message: 'com.google.android.gms.common.api.ApiException: 10',
+        );
+      final authService = AuthService(googleSignIn: fakeGoogleSignIn);
+
+      expect(
+        () => authService.signInWithGoogle(),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('[sign_in_failed]: com.google.android.gms.common.api.ApiException: 10'),
+          ),
+        ),
+      );
+    });
+
+    test('throws Exception on TypeError (Pigeon platform channel force-unwrap failure)', () async {
       final fakeGoogleSignIn = TestGoogleSignIn()
         ..errorToThrow = TypeError();
       final authService = AuthService(googleSignIn: fakeGoogleSignIn);
 
-      final result = await authService.signInWithGoogle();
-      expect(result, isNull);
+      expect(
+        () => authService.signInWithGoogle(),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('Google sign-in failed due to native plugin response'),
+          ),
+        ),
+      );
     });
 
-    test('returns null gracefully on Null check operator used on a null value', () async {
+    test('throws Exception on Null check operator used on a null value', () async {
       final fakeGoogleSignIn = TestGoogleSignIn()
         ..errorToThrow = Exception('Null check operator used on a null value');
       final authService = AuthService(googleSignIn: fakeGoogleSignIn);
 
-      final result = await authService.signInWithGoogle();
-      expect(result, isNull);
+      expect(
+        () => authService.signInWithGoogle(),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('Google sign-in failed: Null check operator used on a null value'),
+          ),
+        ),
+      );
+    });
+
+    test('rethrows FirebaseAuthException', () async {
+      final fakeGoogleSignIn = TestGoogleSignIn()
+        ..errorToThrow = FirebaseAuthException(
+          code: 'invalid-credential',
+          message: 'The credential is bad.',
+        );
+      final authService = AuthService(googleSignIn: fakeGoogleSignIn);
+
+      expect(
+        () => authService.signInWithGoogle(),
+        throwsA(
+          isA<FirebaseAuthException>().having(
+            (e) => e.code,
+            'code',
+            equals('invalid-credential'),
+          ),
+        ),
+      );
     });
   });
 }
