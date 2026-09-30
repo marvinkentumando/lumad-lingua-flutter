@@ -435,8 +435,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                 children: [
                                   if (_errorMessage != null) _buildError(),
                                   _buildStepContent(l10n),
-                                  const SizedBox(height: 32),
-                                  _buildNavigationButtons(l10n),
+                                  if (_currentStep > 0) ...[
+                                    const SizedBox(height: 32),
+                                    _buildNavigationButtons(l10n),
+                                  ],
                                 ],
                               ),
                             ),
@@ -651,6 +653,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             onChanged: (_) => setState(() {}),
             onFieldSubmitted: (_) => _nextStep(),
           ),
+        const SizedBox(height: 24),
+        BrandButton(
+          text: _isLoading ? l10n.translate('waiting') : l10n.translate('continue'),
+          type: BrandButtonType.primary,
+          onTap: _isLoading ? null : _nextStep,
+        ),
         const SizedBox(height: 24),
         Row(
           children: [
@@ -1034,6 +1042,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   Widget _buildNavigationButtons(AppLocalization l10n) {
+    if (_currentStep == 0) return const SizedBox.shrink();
+
     final isFormLastStep = _isValidatorInvite ? _currentStep == 1 : _currentStep == 2;
     final isAssessmentStep = _currentStep == _assessmentStepIndex;
 

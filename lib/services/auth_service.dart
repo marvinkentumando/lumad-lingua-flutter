@@ -26,7 +26,6 @@ class AuthService {
         _googleSignIn = googleSignIn ??
             GoogleSignIn(
               serverClientId: _webClientId,
-              scopes: ['email', 'profile'],
             );
 
   Stream<User?> get authStateChanges => _auth.userChanges();
@@ -88,25 +87,25 @@ class AuthService {
       rethrow;
     } on PlatformException catch (e) {
       if (kDebugMode) debugPrint("Google Sign-In Platform Error: ${e.code} - ${e.message}");
-      if (e.code == GoogleSignIn.kSignInCanceledError || e.code == 'sign_in_canceled') {
-        // Genuine user cancellation from account picker
+      if (e.code == GoogleSignIn.kSignInCanceledError ||
+          e.code == 'sign_in_canceled' ||
+          e.code == 'null-error') {
+        // Genuine user cancellation or null response from account picker
         return null;
       }
       final details = e.message ?? e.details ?? e.code;
       throw Exception("Google sign-in failed [${e.code}]: $details");
     } on TypeError catch (e) {
       if (kDebugMode) debugPrint("Google Sign-In Type Error: $e");
-      throw Exception(
-        "Google sign-in failed: Native Google Sign-In returned a null response. Check Google Play Services, app signing certificate (SHA-1), and OAuth configuration.",
-      );
+      // Handle Pigeon platform channel force-unwrap on null response (user canceled / no account selected)
+      return null;
     } catch (e) {
       if (kDebugMode) debugPrint("Google Sign-In Error: $e");
       final errStr = e.toString();
       if (errStr.contains('Null check operator used on a null value') ||
-          errStr.contains('null-error')) {
-        throw Exception(
-          "Google sign-in failed: Native Google Sign-In returned a null response. Check Google Play Services, app signing certificate (SHA-1), and OAuth configuration.",
-        );
+          errStr.contains('null-error') ||
+          errStr.contains('sign_in_canceled')) {
+        return null;
       }
       final cleanMsg = errStr.replaceAll('Exception: ', '');
       throw Exception("Google sign-in failed: $cleanMsg");

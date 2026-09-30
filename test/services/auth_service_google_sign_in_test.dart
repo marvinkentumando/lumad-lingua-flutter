@@ -73,38 +73,22 @@ void main() {
       );
     });
 
-    test('throws Exception with diagnostic hint on TypeError (Pigeon force-unwrap null check)', () async {
+    test('returns null gracefully on TypeError (Pigeon force-unwrap on null response / cancellation)', () async {
       final fakeGoogleSignIn = TestGoogleSignIn()
         ..errorToThrow = TypeError();
       final authService = AuthService(googleSignIn: fakeGoogleSignIn);
 
-      expect(
-        () => authService.signInWithGoogle(),
-        throwsA(
-          isA<Exception>().having(
-            (e) => e.toString(),
-            'message',
-            contains('Check Google Play Services, app signing certificate (SHA-1), and OAuth configuration'),
-          ),
-        ),
-      );
+      final result = await authService.signInWithGoogle();
+      expect(result, isNull);
     });
 
-    test('throws Exception with diagnostic hint on Null check operator used on a null value', () async {
+    test('returns null gracefully on Null check operator used on a null value', () async {
       final fakeGoogleSignIn = TestGoogleSignIn()
         ..errorToThrow = Exception('Null check operator used on a null value');
       final authService = AuthService(googleSignIn: fakeGoogleSignIn);
 
-      expect(
-        () => authService.signInWithGoogle(),
-        throwsA(
-          isA<Exception>().having(
-            (e) => e.toString(),
-            'message',
-            contains('Check Google Play Services, app signing certificate (SHA-1), and OAuth configuration'),
-          ),
-        ),
-      );
+      final result = await authService.signInWithGoogle();
+      expect(result, isNull);
     });
   });
 }
