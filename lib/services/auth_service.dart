@@ -122,18 +122,25 @@ class AuthService {
       // 1. Check for invitation
       String assignedRole = 'learner';
       String? assignedDialect;
+      List<QueryDocumentSnapshot<Map<String, dynamic>>> pendingInvites = [];
 
-      final inviteSnap = await firestore
-          .collection('invitations')
-          .where('email', isEqualTo: email.trim().toLowerCase())
-          .get();
+      try {
+        final inviteSnap = await firestore
+            .collection('invitations')
+            .where('email', isEqualTo: email.trim().toLowerCase())
+            .get();
 
-      final pendingInvites = inviteSnap.docs.where((d) => d.data()['status'] == 'pending');
+        pendingInvites = inviteSnap.docs.where((d) => d.data()['status'] == 'pending').toList();
 
-      if (pendingInvites.isNotEmpty) {
-        final inviteData = pendingInvites.first.data();
-        assignedRole = inviteData['role'] ?? 'learner';
-        assignedDialect = inviteData['indigenousGroup'];
+        if (pendingInvites.isNotEmpty) {
+          final inviteData = pendingInvites.first.data();
+          assignedRole = inviteData['role'] ?? 'learner';
+          assignedDialect = inviteData['indigenousGroup'];
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint("Invitation lookup error (proceeding as default learner): $e");
+        }
       }
 
       final userCredential = await _auth.createUserWithEmailAndPassword(
@@ -205,11 +212,17 @@ class AuthService {
 
           // 2. Mark invite as successful
           if (pendingInvites.isNotEmpty) {
-            await pendingInvites.first.reference.update({
-              'status': 'consumed',
-              'consumedAt': FieldValue.serverTimestamp(),
-              'userId': userCredential.user!.uid,
-            });
+            try {
+              await pendingInvites.first.reference.update({
+                'status': 'consumed',
+                'consumedAt': FieldValue.serverTimestamp(),
+                'userId': userCredential.user!.uid,
+              });
+            } catch (e) {
+              if (kDebugMode) {
+                debugPrint("Consume invitation error: $e");
+              }
+            }
           }
 
           // 3. Send email verification

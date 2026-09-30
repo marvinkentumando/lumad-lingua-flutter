@@ -25,6 +25,10 @@ class PhoneticGuideWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final syllables = IpaParser.parseSyllables(phonetic);
 
+    if (syllables.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -49,77 +53,49 @@ class PhoneticGuideWidget extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 8),
-        if (syllables.isEmpty)
-          _buildUnavailableFallback(context)
-        else
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: syllables.map((syl) {
-              return GestureDetector(
-                onTap: () => _showSyllableTooltip(context, syl, ref),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: syllables.map((syl) {
+            return GestureDetector(
+              onTap: () => _showSyllableTooltip(context, syl, ref),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppColors.gold500.withValues(alpha: 0.15)
+                      : Colors.white.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
                     color: isDark
-                        ? AppColors.gold500.withValues(alpha: 0.15)
-                        : Colors.white.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isDark
-                          ? AppColors.gold500.withValues(alpha: 0.3)
-                          : AppColors.forest900.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '/$syl/',
-                        style: AppTypography.mono.copyWith(
-                          color: isDark ? AppColors.gold500 : AppColors.forest900,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Icon(
-                        Icons.info_outline_rounded,
-                        size: 14,
-                        color: isDark ? AppColors.gold500 : AppColors.forest900,
-                      ),
-                    ],
+                        ? AppColors.gold500.withValues(alpha: 0.3)
+                        : AppColors.forest900.withValues(alpha: 0.2),
                   ),
                 ),
-              );
-            }).toList(),
-          ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '/$syl/',
+                      style: AppTypography.mono.copyWith(
+                        color: isDark ? AppColors.gold500 : AppColors.forest900,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 14,
+                      color: isDark ? AppColors.gold500 : AppColors.forest900,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
       ],
-    );
-  }
-
-  Widget _buildUnavailableFallback(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.black.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? Colors.white10 : Colors.black12,
-        ),
-      ),
-      child: Text(
-        'IPA guide unavailable for this entry',
-        style: AppTypography.caption.copyWith(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.5)
-              : AppColors.forest700.withValues(alpha: 0.6),
-          fontStyle: FontStyle.italic,
-        ),
-      ),
     );
   }
 

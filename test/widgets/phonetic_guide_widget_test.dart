@@ -100,17 +100,18 @@ void main() {
       expect(find.text('Pronunciation symbol (standard guide unavailable)'), findsNWidgets(2));
     });
 
-    testWidgets('8. Missing/null phonetic data displays graceful unavailable state', (tester) async {
+    testWidgets('8. Missing/null phonetic data renders nothing', (tester) async {
       await tester.pumpWidget(buildTestWidget(phonetic: null));
       await tester.pumpAndSettle();
 
-      expect(find.text('IPA guide unavailable for this entry'), findsOneWidget);
-      expect(find.text('/'), findsNothing);
+      expect(find.text('PRONUNCIATION (IPA GUIDE)'), findsNothing);
+      expect(find.text('IPA guide unavailable for this entry'), findsNothing);
 
       await tester.pumpWidget(buildTestWidget(phonetic: '  '));
       await tester.pumpAndSettle();
 
-      expect(find.text('IPA guide unavailable for this entry'), findsOneWidget);
+      expect(find.text('PRONUNCIATION (IPA GUIDE)'), findsNothing);
+      expect(find.text('IPA guide unavailable for this entry'), findsNothing);
     });
 
     testWidgets('9. Missing audioUrl does not cause an exception in tooltip', (tester) async {
