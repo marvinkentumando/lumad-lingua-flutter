@@ -23,6 +23,8 @@ class Mapping(unittest.TestCase):
         for f in (SRC / "metadata").glob("*.csv"): shutil.copy(f, root / "metadata" / f.name)
         for f in (SRC / "manifests").glob("*.csv"): shutil.copy(f, root / "manifests" / f.name)
         for f in (SRC / "staging" / "firestore_export").glob("*.json"): shutil.copy(f, root / "staging" / "firestore_export" / f.name)
+        if (SRC / "staging" / "dictionary").exists():
+            (root / "staging" / "dictionary").mkdir(); [shutil.copy(f, root / "staging" / "dictionary" / f.name) for f in (SRC / "staging" / "dictionary").glob("*.csv")]
         shutil.copy(SRC / "config" / "corpus.yaml", root / "config" / "corpus.yaml"); (root / "metadata" / "vocabulary_id_history.csv").unlink(missing_ok=True)
         cls.root = root
         r = run("resolve_vocabulary_mapping.py", root, "--flutter-root", "/nonexistent"); assert r.returncode == 0, r.stderr
@@ -73,8 +75,9 @@ class Mapping(unittest.TestCase):
         qp = self.root / "metadata" / "mapping_review_queue.csv"; qh, q = read_csv(qp)
         c = next(x for x in q if x["evidence_category"] == "NO_PROJECT_MATCH" and not x["decision"]); c.update(decision="CONFIRM_TEXT_NEW_ITEM", confirmed_by="V01", confirmation_date="2026-10-01")  # missing text
         d = next(x for x in q if x["evidence_category"] == "MULTIPLE_TAKE_CANDIDATE" and not x["decision"]); d.update(decision="CONFIRM_TEXT_NEW_ITEM", authoritative_mansaka_text="X", confirmed_by="V01", confirmation_date="2026-10-01")  # no takes_same_item
-        e = next(x for x in q if x["evidence_category"] == "SPELLING_VARIANT_CANDIDATE" and not x["decision"]); e.update(decision="SAME_AS", decision_target="RC999", confirmed_by="V01", confirmation_date="2026-10-01")
-        f = next(x for x in q if x["evidence_category"] == "PARTIAL_TOKEN_CANDIDATE" and not x["decision"]); f.update(decision="BOGUS")
+        undecided = [x for x in q if not x["decision"] and x not in (c, d)]
+        e = undecided[0]; e.update(decision="SAME_AS", decision_target="RC999", confirmed_by="V01", confirmation_date="2026-10-01")
+        f = undecided[1]; f.update(decision="BOGUS")
         write_csv(qp, qh, q); r = run("apply_mapping_review.py", self.root, "--dry-run"); self.assertEqual(r.returncode, 1); out = r.stdout
         for msg in ("authoritative_mansaka_text required", "takes_same_item=Y", "has no decision", "unknown decision"): self.assertIn(msg, out)
         for x in (c, d, e, f): x.update(decision="", decision_target="", authoritative_mansaka_text="", confirmed_by="", confirmation_date="")

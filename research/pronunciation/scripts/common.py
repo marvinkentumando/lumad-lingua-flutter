@@ -7,7 +7,7 @@ RE_WORD = re.compile(r"^W\d{3}$")
 RE_SPK = re.compile(r"^[RS]\d{3}$")
 RE_REF = re.compile(r"^REF_\d{3}$")            # physical reference recording id (independent of vocabulary item id)
 MAPPING_STATUS = {"mapped", "unresolved"}
-MAPPING_EVIDENCE = {"firestore_exact_term", "project_record_exact", "validator_confirmed", "researcher_confirmed"}
+MAPPING_EVIDENCE = {"firestore_exact_term", "project_record_exact", "dictionary_exact", "validator_confirmed", "researcher_confirmed"}
 RE_LEARNER = re.compile(r"^(S\d{3})_(W\d{3})(?:_T(\d{2}))?$")
 REASON_CODES = {"CORRUPT","EMPTY","TOO_SHORT","CLIPPED","NOISE","WRONG_ITEM",
                 "MULTIPLE_ATTEMPTS_IN_ONE_FILE","DUPLICATE","UNRATABLE","CONSENT_WITHDRAWN","OTHER"}
