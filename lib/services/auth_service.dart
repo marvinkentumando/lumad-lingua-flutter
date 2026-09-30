@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'dart:math' as math;
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -73,8 +74,27 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       if (kDebugMode) debugPrint("Google Sign-In Auth Error: ${e.code} - ${e.message}");
       rethrow;
+    } on PlatformException catch (e) {
+      if (kDebugMode) debugPrint("Google Sign-In Platform Error: ${e.code} - ${e.message}");
+      if (e.code == 'sign_in_canceled' ||
+          e.code == 'null-error' ||
+          (e.message != null && e.message!.contains('null value'))) {
+        return null;
+      }
+      final details = e.message ?? e.details ?? e.code;
+      throw Exception("Google sign-in failed: $details");
+    } on TypeError catch (e) {
+      if (kDebugMode) debugPrint("Google Sign-In Type Error: $e");
+      // Handle Pigeon platform channel force-unwrap on null response (user canceled)
+      return null;
     } catch (e) {
       if (kDebugMode) debugPrint("Google Sign-In Error: $e");
+      final errStr = e.toString();
+      if (errStr.contains('Null check operator used on a null value') ||
+          errStr.contains('sign_in_canceled') ||
+          errStr.contains('null-error')) {
+        return null;
+      }
       throw Exception("Google sign-in failed: ${e.toString()}");
     }
   }
