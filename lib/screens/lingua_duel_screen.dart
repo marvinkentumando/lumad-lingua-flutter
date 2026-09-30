@@ -241,26 +241,67 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
   }
 
   Widget _buildSearching(AppLocalization l10n) {
-    return Center(
+    return Stack(
       key: const ValueKey('searching'),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircularProgressIndicator(color: AppColors.gold500)
-              .animate(onPlay: (c) => c.repeat())
-              .scale(begin: const Offset(1, 1), end: const Offset(1.3, 1.3), duration: 1.seconds, curve: Curves.easeInOut),
-          const SizedBox(height: 32),
-          Text(
-            l10n.translate('seeking_opponent'),
-            style: AppTypography.label.copyWith(color: AppColors.gold500, letterSpacing: 4),
+      children: [
+        Positioned(
+          top: 16,
+          left: 16,
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 28),
+            onPressed: () {
+              HapticService.light();
+              ref.read(duelSessionProvider.notifier).reset();
+            },
+            tooltip: l10n.translate('retreat'),
           ),
-          const SizedBox(height: 12),
-          Text(
-            l10n.translate('stirring_spirits'),
-            style: AppTypography.body.copyWith(color: Colors.white60),
+        ),
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(color: AppColors.gold500)
+                    .animate(onPlay: (c) => c.repeat())
+                    .scale(begin: const Offset(1, 1), end: const Offset(1.3, 1.3), duration: 1.seconds, curve: Curves.easeInOut),
+                const SizedBox(height: 32),
+                Text(
+                  l10n.translate('seeking_opponent'),
+                  style: AppTypography.label.copyWith(color: AppColors.gold500, letterSpacing: 4),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.translate('stirring_spirits'),
+                  style: AppTypography.body.copyWith(color: Colors.white60),
+                ),
+                const SizedBox(height: 40),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white70,
+                    side: const BorderSide(color: Colors.white30),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  ),
+                  onPressed: () {
+                    HapticService.light();
+                    ref.read(duelSessionProvider.notifier).reset();
+                  },
+                  icon: const Icon(Icons.close_rounded, size: 18),
+                  label: Text(
+                    'CANCEL MATCHMAKING',
+                    style: AppTypography.label.copyWith(
+                      color: Colors.white70,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
