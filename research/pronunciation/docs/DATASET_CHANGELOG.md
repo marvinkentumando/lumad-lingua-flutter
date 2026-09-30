@@ -66,3 +66,13 @@ Changes:
 
 Status after v0.2: physical reference corpus COMPLETE (128/128); linguistic mapping INCOMPLETE (see checks report);
 preprocessing protocol NOT frozen; experiment dataset NOT frozen.
+
+### v0.2 addendum — 2026-09-30 — preprocessing protocol investigation PPINV001
+
+- New shared implementation `pipeline/` (audio_io, preprocess, features; pipeline_version 0.1.0) used by scripts, tests and the future notebook.
+- `experiments/PPINV001/` stereo/level/trim/resample/feature-sensitivity measurements for all 128 references (summary.json + CSVs).
+- PP001 revised: channel_handling=average, 16 kHz soxr HQ, DC removal, PCM16, relative-to-peak trim mechanism FROZEN; normalisation and trim values PROVISIONAL (learner data). Overall status stays candidate.
+- FE001 frozen as the common feature design contract (per-parameter rationale in the YAML); cross-checked against librosa 0.11.0.
+- Noncanonical candidate outputs: processed/PP001-candidate (128 ok, deterministic) and features/PP001-candidate_FE001 (128 ok, frames 37–244, all finite).
+- manifests/repro_manifest_v0.2.json; scripts run_preprocessing.py, extract_features.py, analyze_preprocessing.py, build_repro_manifest.py, test_pipeline.py (12 tests).
+- Raw checksum list unchanged (sha256 4ba701e3…); config checksums regenerated.

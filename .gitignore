@@ -52,9 +52,8 @@ app.*.map.json
 *.npz
 research/**/raw/
 research/**/staging/
-research/**/processed/
-research/**/features/
-research/**/experiments/
+# processed/, features/ and experiments/ snapshot folders may hold small text logs; their audio and arrays are
+# excluded by the extension rules below (*.wav, *.WAV, *.npy, *.npz).
 research/**/*.wav
 research/**/*.WAV
 research/**/*.m4a

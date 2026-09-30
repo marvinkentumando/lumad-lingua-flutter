@@ -24,6 +24,7 @@ copied into the app repository or its `assets/` folder.
 | `features/<PP>_<FE>/` | Derived MFCC arrays + `feature_log.csv` | regenerable |
 | `experiments/<EXP>/` | Experiment outputs (Stage 3 and later) | immutable once written |
 | `checksums/` | `SHA256SUMS_*` lists | regenerated at each freeze |
+| `pipeline/` | Shared preprocessing/MFCC implementation (`audio_io`, `preprocess`, `features`); the future notebook imports this | versioned |
 | `scripts/` | Reproducible tooling (Python 3.11, see `scripts/requirements.txt`) | versioned |
 | `reports/` | Audit and check reports | append-only |
 
@@ -51,6 +52,11 @@ python3 scripts/build_manifest.py                     # reference rows → manif
 python3 scripts/checksums.py generate                 # checksums/SHA256SUMS_*_<version>.txt
 python3 scripts/checksums.py verify
 python3 scripts/check_dataset.py                      # reports/checks_report_<version>.md
+python3 scripts/analyze_preprocessing.py              # PPINV001 measurements -> experiments/PPINV001/
+python3 scripts/run_preprocessing.py --pp PP001 --candidate   # processed/PP001-candidate/ (+ transformation_log.csv); drop --candidate once PP001 is frozen
+python3 scripts/extract_features.py --pp-tag PP001-candidate --fe FE001   # features/<pp>_<fe>/ (.npy + feature_log.csv)
+python3 scripts/build_repro_manifest.py               # manifests/repro_manifest_<ver>.json
+python3 scripts/test_pipeline.py                      # automated pipeline checks (needs numpy, scipy, soxr; librosa optional)
 ```
 
 Readiness layers are tracked separately: (1) physical reference corpus, (2) linguistic mapping completeness, (3) preprocessing protocol (PP/FE) status, (4) experiment readiness. See `reports/checks_report_<ver>.md` and `CHANGELOG.md`.

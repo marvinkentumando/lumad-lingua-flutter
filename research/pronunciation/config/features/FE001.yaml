@@ -1,0 +1,95 @@
+# FE001 — MFCC feature contract. Status: frozen (design contract). Depends on PP001 (candidate) output at 16 kHz.
+feature_id: FE001
+status: frozen
+description: 13 MFCC (C1..C13, C0 excluded), 25 ms periodic-Hamming frames, 10 ms hop, 512-point FFT, 26 HTK-mel filters 0-8000 Hz, natural log with 1e-10 floor, orthonormal DCT-II, no lifter/energy/deltas/CMVN
+created: 2026-09-30
+input_preproc_id: PP001
+input_sample_rate_hz: 16000
+pre_emphasis: 0.97
+frame_length_ms: 25
+frame_step_ms: 10
+window: hamming
+n_fft: 512
+n_mels: 26
+n_mfcc: 13
+fmin_hz: 0
+fmax_hz: 8000
+include_c0: false
+log_energy: false
+lifter: 0
+deltas:
+  delta: false
+  delta_delta: false
+cmvn:
+  enabled: false
+  scope: per_utterance
+library:
+  name: null
+  version: null
+code_commit: null
+frozen_on: '2026-09-30'
+implementation: research/pronunciation/pipeline/features.py (pipeline_version 0.1.0); cross-checked against librosa 0.11.0 melspectrogram+power_to_db+DCT to 1e-6
+log_floor: 1.0e-10
+log_base: natural
+dct: type-II, norm=ortho (scipy.fft.dct)
+window_periodic: true
+framing: no padding, no centring; n_frames = 1 + floor((N - 400)/160)
+review_note: All parameters are methodological design choices following standard speech-feature practice (HTK/Davis-Mermelstein), fixed identically for DTW, HMM and Cosine. Frozen as the common feature
+  contract; the only dependency is PP001's provisional normalisation/trim values, which affect which frames reach the log floor. Any change creates a new FE id.
+parameter_status:
+  pre_emphasis:
+    value: 0.97
+    status: FROZEN
+    rationale: standard first-order high-pass to flatten the speech spectral tilt
+  frame_length_ms:
+    value: 25
+    status: FROZEN
+    rationale: quasi-stationary speech window; 400 samples at 16 kHz; shortest reference yields 51 frames
+  frame_step_ms:
+    value: 10
+    status: FROZEN
+    rationale: standard 100 frames/s hop
+  window:
+    value: hamming (periodic)
+    status: FROZEN
+    rationale: standard MFCC window; periodic form as in librosa/scipy fftbins=True
+  n_fft:
+    value: 512
+    status: FROZEN
+    rationale: next power of two above 400 samples
+  n_mels:
+    value: 26
+    status: FROZEN
+    rationale: HTK/python_speech_features default filter count for 16 kHz
+  fmin_hz:
+    value: 0
+    status: FROZEN
+    rationale: full band
+  fmax_hz:
+    value: 8000
+    status: FROZEN
+    rationale: Nyquist at 16 kHz
+  n_mfcc:
+    value: 13
+    status: FROZEN
+    rationale: C1..C13, standard cepstral envelope resolution
+  include_c0:
+    value: false
+    status: FROZEN
+    rationale: C0 carries level; excluding it makes features gain-invariant on non-floor frames (verified)
+  log_energy:
+    value: false
+    status: FROZEN
+    rationale: level-dependent; excluded for the same reason as C0
+  lifter:
+    value: 0
+    status: FROZEN
+    rationale: no cepstral liftering; DTW/Cosine operate on raw cepstra
+  deltas:
+    value: 'off'
+    status: FROZEN (for FE001)
+    rationale: static features only; a delta variant would be a separate FE id evaluated identically across algorithms
+  cmvn:
+    value: 'off'
+    status: FROZEN (for FE001)
+    rationale: per-utterance normalisation is a separate FE id; not applied silently

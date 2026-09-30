@@ -1,0 +1,103 @@
+{
+ "manifest_version": 1,
+ "generated": "2026-09-30T04:05:52+00:00",
+ "corpus_version": "lumad_lingua_pronunciation_v0.2",
+ "corpus_identity": {
+  "registry": "metadata/reference_recordings.csv",
+  "registry_sha256": "637b00043bed02e248d9a9ec4aee545a8c364c26781438e8073bf4548ce4e0a4",
+  "raw_checksums": "checksums/SHA256SUMS_raw_v0.2.txt",
+  "raw_checksums_sha256": "4ba701e39310cf8b6b23a747d515d773185663697c17e012641d82fb7a199e60",
+  "n_reference_recordings": 128
+ },
+ "software": {
+  "pipeline_version": "0.1.0",
+  "pipeline_package": "research/pronunciation/pipeline (repo) == <dataset>/pipeline",
+  "python": "3.11.15",
+  "numpy": "2.4.6",
+  "scipy": "1.17.1",
+  "soxr": "1.1.0",
+  "libsoxr": "0.1.3-14-ga66f3ee"
+ },
+ "configs": {
+  "PP001": {
+   "path": "config/preprocessing/PP001.yaml",
+   "status": "candidate",
+   "config_hash": "10033fde7a59ccaa91b140337df9e04315de6e077f2bef6bcd38d9d2c5dfc3d8",
+   "file_sha256": "2945f8667290056b7a7c6989e03469def64a3b09b4de1475280e354ca6880aa8"
+  },
+  "FE001": {
+   "path": "config/features/FE001.yaml",
+   "status": "frozen",
+   "config_hash": "e823247b4daed07e916accf444921e093b1550ee5c4a55267e79e95671a1bb40",
+   "file_sha256": "e2a17f00df59c7915ca4edcf17e5e95fe91d2cd8a6995ea8aad52f2cc03d59e0"
+  }
+ },
+ "runs": {
+  "processed/PP001-candidate": {
+   "status": "noncanonical",
+   "preproc_status": null,
+   "config_hash": "10033fde7a59ccaa91b140337df9e04315de6e077f2bef6bcd38d9d2c5dfc3d8",
+   "preproc_config_hash": null,
+   "feature_config_hash": null,
+   "n_ok": 128,
+   "n_failed": 0,
+   "generated": "2026-09-30T04:03:11+00:00",
+   "transformation_log_sha256": "e8649bcc0309dd9bd2b3c1a445a7cd2002cf332d27b60d2519c4e33f4ac4e65d",
+   "feature_log_sha256": null,
+   "frames_min": null,
+   "frames_max": null
+  },
+  "features/PP001-candidate_FE001": {
+   "status": null,
+   "preproc_status": "noncanonical",
+   "config_hash": null,
+   "preproc_config_hash": "10033fde7a59ccaa91b140337df9e04315de6e077f2bef6bcd38d9d2c5dfc3d8",
+   "feature_config_hash": "e823247b4daed07e916accf444921e093b1550ee5c4a55267e79e95671a1bb40",
+   "n_ok": 128,
+   "n_failed": 0,
+   "generated": "2026-09-30T04:03:13+00:00",
+   "transformation_log_sha256": null,
+   "feature_log_sha256": "5a8017f398ba3b12ee6b281d92646b08ddfc192cf116dc1eabe9a1cf1b732ee1",
+   "frames_min": 37,
+   "frames_max": 244
+  }
+ },
+ "provisional_parameters": {
+  "PP001": {
+   "decoding_lossy": {
+    "value": null,
+    "status": "PROVISIONAL - learner data required",
+    "evidence": "no lossy input exists yet; decoder and version must be pinned on real learner files"
+   },
+   "normalization": {
+    "value": {
+     "type": "peak",
+     "target_dbfs": -1.0
+    },
+    "status": "PROVISIONAL - learner data required",
+    "evidence": "FE001 (C1..C13, no energy) is gain-invariant except in near-silent frames hitting the 1e-10 log floor (58/128 files show a gain effect > 0.01 before trimming; see summary.feature_sensitivity). Normalisation therefore matters only through floor/threshold behaviour and cross-device level differences, which cannot be judged without learner recordings. Reference-only facts: peak -1 dBFS gains -1.0..+9.1 dB; RMS -20 dBFS gains -10.0..+4.4 dB with post-gain peaks <= -0.97 dBFS (no clipping)"
+   },
+   "silence_trim_threshold_db": {
+    "value": -40,
+    "status": "PROVISIONAL - learner data required",
+    "evidence": "on references -30/-40/-50 dB remove median 15%/8%/0% of samples; learner recordings will contain more silence and noise, so the threshold must be set on representative learner audio"
+   },
+   "silence_trim_min_silence_ms": {
+    "value": 100,
+    "status": "PROVISIONAL - learner data required",
+    "evidence": "as above"
+   },
+   "silence_trim_pad_ms": {
+    "value": 50,
+    "status": "PROVISIONAL - learner data required",
+    "evidence": "as above; padding cannot restore audio already cut in the masters"
+   }
+  }
+ },
+ "investigations": {
+  "PPINV001": {
+   "summary_sha256": "094012479509084333905a4902a41c54ce09dca9511cc61e6b3cb3c202cf0051",
+   "path": "experiments/PPINV001/summary.json"
+  }
+ }
+}

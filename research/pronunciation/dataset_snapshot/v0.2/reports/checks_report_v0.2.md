@@ -57,7 +57,7 @@ Generated: 2026-09-30  Mode: `prefreeze`  Root: `/home/user/lumad_lingua_pronunc
 | EXPECTED-NOT-YET-COLLECTED | ratings:coverage | no included learner recordings yet |
 | PASS | dataset_version consistency | all rows agree with VERSION (lumad_lingua_pronunciation_v0.2) |
 | PASS | checksums:lists for current version | SHA256SUMS_config_v0.2.txt, SHA256SUMS_metadata_v0.2.txt, SHA256SUMS_raw_v0.2.txt, SHA256SUMS_validation_v0.2.txt |
-| PASS | checksums:verify lists | 147 entries verified |
+| PASS | checksums:verify lists | 148 entries verified |
 
 EXPECTED-NOT-YET-COLLECTED = legitimately absent in the pre-freeze state; becomes ERROR in `--mode freeze`.
 Frozen-ready: NO

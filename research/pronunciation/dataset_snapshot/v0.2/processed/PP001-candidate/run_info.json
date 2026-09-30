@@ -1,0 +1,150 @@
+{
+ "preproc_id": "PP001",
+ "run_tag": "PP001-candidate",
+ "status": "noncanonical",
+ "config": {
+  "preproc_id": "PP001",
+  "status": "candidate",
+  "description": "16 kHz mono PCM16 (stereo averaged), DC removal, level normalisation (provisional), relative energy trim (provisional thresholds), no noise reduction",
+  "created": "2026-09-30",
+  "review_required_before_use": true,
+  "review_note": "Investigation PPINV001 (experiments/PPINV001/summary.json) on all 128 validated references fixed channel handling, sample rate, resampler, DC removal, sample format and the trim mechanism. Normalisation values and trim thresholds/padding stay PROVISIONAL until representative learner recordings exist.",
+  "target_sample_rate_hz": 16000,
+  "resample": {
+   "method": "soxr HQ (libsoxr, band-limited sinc)",
+   "library": "python-soxr",
+   "library_version_pinned": "1.1.0 (libsoxr 0.1.3)",
+   "quality": "HQ",
+   "note": "Colab/deployment must reproduce output hashes recorded in processed/<PP>/transformation_log.csv"
+  },
+  "channel_handling": "average",
+  "output": {
+   "container": "wav",
+   "encoding": "pcm_s16le",
+   "bit_depth": 16
+  },
+  "dc_offset_removal": true,
+  "normalization": {
+   "type": "peak",
+   "target_dbfs": -1.0
+  },
+  "silence_trim": {
+   "enabled": true,
+   "method": "frame_rms_endpoint",
+   "frame_ms": 10,
+   "threshold_ref": "peak",
+   "threshold_db": -40,
+   "min_silence_ms": 100,
+   "pad_ms": 50,
+   "note": "threshold relative to the file's peak sample level (gain-invariant); applied after resampling; endpoint (leading/trailing) trim only"
+  },
+  "noise_reduction": {
+   "enabled": false,
+   "method": null,
+   "params": {}
+  },
+  "tooling": {
+   "decoder": null,
+   "decoder_version": null,
+   "dsp_library": null,
+   "dsp_version": null
+  },
+  "code_commit": null,
+  "revised": "2026-09-30",
+  "decoding": {
+   "pcm_wav": "PCM16 -> float64 x/32768 (pipeline.audio_io.read_wav); 8/24/32-bit handled",
+   "lossy": "NOT DEFINED: learner m4a/AAC decoding must be pinned to a decoder + version when learner recordings exist"
+  },
+  "pipeline_order": [
+   "decode",
+   "channel_handling",
+   "resample",
+   "dc_offset_removal",
+   "normalization",
+   "silence_trim"
+  ],
+  "parameter_status": {
+   "decoding_pcm": {
+    "value": "PCM16 WAV -> float x/32768",
+    "status": "FROZEN",
+    "evidence": "all 128 references are PCM16 WAV; exact integer-to-float mapping, tested"
+   },
+   "decoding_lossy": {
+    "value": null,
+    "status": "PROVISIONAL - learner data required",
+    "evidence": "no lossy input exists yet; decoder and version must be pinned on real learner files"
+   },
+   "channel_handling": {
+    "value": "average",
+    "status": "FROZEN",
+    "evidence": "PPINV001: L/R correlation min 0.979 (median 0.99995), |RMS diff| <= 0.043 dB, best cross-correlation lag 0 in 128/128, no polarity inversion, average-vs-louder-channel loss <= 0.054 dB (no cancellation), FE001 distance between L/R/average < 3% of frame spread. Averaging is safe and symmetric; a per-file guard (corr >= 0.9 and cancellation loss > -3 dB) is logged for future inputs"
+   },
+   "target_sample_rate_hz": {
+    "value": 16000,
+    "status": "FROZEN",
+    "evidence": "energy above 8 kHz: median 0.007%, max 1.24% of total; speech-band coverage; standard MFCC rate; mobile-deployment realistic; soxr HQ deterministic, duration error < 0.032 ms, sample counts exact"
+   },
+   "resampler": {
+    "value": "soxr HQ, python-soxr 1.1.0 / libsoxr 0.1.3",
+    "status": "FROZEN (version-pinned)",
+    "evidence": "byte-identical repeated runs, finite output, peak change within +/-0.27 dB"
+   },
+   "sample_format": {
+    "value": "float64 internal, PCM16 LE WAV derived files",
+    "status": "FROZEN",
+    "evidence": "round-half-even, clip count logged; 0 clipped samples on references"
+   },
+   "dc_offset_removal": {
+    "value": true,
+    "status": "FROZEN",
+    "evidence": "measured |DC| <= 0.00104 FS; mean subtraction is deterministic and harmless"
+   },
+   "normalization": {
+    "value": {
+     "type": "peak",
+     "target_dbfs": -1.0
+    },
+    "status": "PROVISIONAL - learner data required",
+    "evidence": "FE001 (C1..C13, no energy) is gain-invariant except in near-silent frames hitting the 1e-10 log floor (58/128 files show a gain effect > 0.01 before trimming; see summary.feature_sensitivity). Normalisation therefore matters only through floor/threshold behaviour and cross-device level differences, which cannot be judged without learner recordings. Reference-only facts: peak -1 dBFS gains -1.0..+9.1 dB; RMS -20 dBFS gains -10.0..+4.4 dB with post-gain peaks <= -0.97 dBFS (no clipping)"
+   },
+   "silence_trim_method": {
+    "value": "frame RMS endpoint trim, 10 ms frames, threshold relative to peak",
+    "status": "FROZEN",
+    "evidence": "relative threshold is gain-invariant (tested); references are already edited masters (leading quiet 20-330 ms, trailing 0-440 ms at -40 dBFS), so the mechanism must not over-trim: min FE001 frames after rel-40 trim = 37, no file below 30 frames"
+   },
+   "silence_trim_threshold_db": {
+    "value": -40,
+    "status": "PROVISIONAL - learner data required",
+    "evidence": "on references -30/-40/-50 dB remove median 15%/8%/0% of samples; learner recordings will contain more silence and noise, so the threshold must be set on representative learner audio"
+   },
+   "silence_trim_min_silence_ms": {
+    "value": 100,
+    "status": "PROVISIONAL - learner data required",
+    "evidence": "as above"
+   },
+   "silence_trim_pad_ms": {
+    "value": 50,
+    "status": "PROVISIONAL - learner data required",
+    "evidence": "as above; padding cannot restore audio already cut in the masters"
+   },
+   "noise_reduction": {
+    "value": "disabled",
+    "status": "FROZEN (disabled)",
+    "evidence": "no justification from the reference domain; enabling it later requires a new PP id and learner evidence"
+   }
+  }
+ },
+ "config_hash": "10033fde7a59ccaa91b140337df9e04315de6e077f2bef6bcd38d9d2c5dfc3d8",
+ "corpus_version": "lumad_lingua_pronunciation_v0.2",
+ "registry_sha256": "637b00043bed02e248d9a9ec4aee545a8c364c26781438e8073bf4548ce4e0a4",
+ "pipeline_version": "0.1.0",
+ "python": "3.11.15",
+ "numpy": "2.4.6",
+ "scipy": "1.17.1",
+ "soxr": "1.1.0",
+ "libsoxr": "0.1.3-14-ga66f3ee",
+ "generated": "2026-09-30T04:03:11+00:00",
+ "n_ok": 128,
+ "n_failed": 0,
+ "transformation_log_sha256": "e8649bcc0309dd9bd2b3c1a445a7cd2002cf332d27b60d2519c4e33f4ac4e65d"
+}

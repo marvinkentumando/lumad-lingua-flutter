@@ -1,3 +1,7 @@
 requests>=2.31
 PyYAML>=6.0
 mutagen>=1.47      # pure-Python audio metadata probe (fallback when ffprobe is unavailable)
+numpy>=2.0
+scipy>=1.14
+soxr>=0.5        # python-soxr; pinned version recorded in run_info.json / repro manifest
+librosa>=0.10    # optional: independent MFCC cross-check in test_pipeline.py
