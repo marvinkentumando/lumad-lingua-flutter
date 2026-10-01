@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../models/community_activity.dart';
+import '../models/community_comment.dart';
 import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -371,15 +371,76 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
               style: AppTypography.h3.copyWith(color: AppColors.gold500),
             ),
             const SizedBox(height: 16),
-            // We'd add a StreamBuilder for comments here later
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Text(
-                  widget.l10n.translate('conversation_soon'),
-                  style: const TextStyle(color: Colors.white24, fontSize: 12),
-                ),
-              ),
+            Consumer(
+              builder: (context, ref, _) {
+                final commentsAsync =
+                    ref.watch(activityCommentsProvider(widget.activity.id));
+
+                return commentsAsync.when(
+                  data: (comments) {
+                    if (comments.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                '🌿',
+                                style: TextStyle(fontSize: 28),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                widget.l10n.translate('conversation_soon'),
+                                style: const TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 13,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    return Container(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.4,
+                      ),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: comments.length,
+                        itemBuilder: (context, index) {
+                          final comment = comments[index];
+                          return _CommentTile(comment: comment);
+                        },
+                      ),
+                    );
+                  },
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.gold500,
+                      ),
+                    ),
+                  ),
+                  error: (err, _) => Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Center(
+                      child: Text(
+                        'Error loading comments: $err',
+                        style: const TextStyle(
+                          color: AppColors.semanticRed,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 16),
             Row(
@@ -420,7 +481,6 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
                                   userPhotoUrl: profile['photoURL'],
                                 );
                             _commentController.clear();
-                            if (context.mounted) context.pop();
                           }
                         },
                         icon: const Icon(
@@ -448,6 +508,91 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
             const SizedBox(height: 24),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CommentTile extends StatelessWidget {
+  final CommunityComment comment;
+
+  const _CommentTile({required this.comment});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 14,
+            backgroundColor: AppColors.gold500.withValues(alpha: 0.2),
+            backgroundImage: (comment.userPhotoUrl != null &&
+                    comment.userPhotoUrl!.isNotEmpty)
+                ? NetworkImage(comment.userPhotoUrl!)
+                : null,
+            child: (comment.userPhotoUrl == null ||
+                    comment.userPhotoUrl!.isEmpty)
+                ? Text(
+                    comment.userName.isNotEmpty
+                        ? comment.userName[0].toUpperCase()
+                        : '👤',
+                    style: const TextStyle(
+                      color: AppColors.gold500,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  )
+                : null,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.forest900,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.05),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        comment.userName,
+                        style: AppTypography.label.copyWith(
+                          color: AppColors.gold500,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                      ),
+                      Text(
+                        comment.relativeTime,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    comment.text,
+                    style: AppTypography.body.copyWith(
+                      color: Colors.white,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

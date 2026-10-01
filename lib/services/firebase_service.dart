@@ -16,6 +16,7 @@ import '../models/voice_submission.dart';
 import '../models/contributor_request.dart';
 import '../models/quest.dart';
 import '../models/community_activity.dart';
+import '../models/community_comment.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rxdart/rxdart.dart';
 import '../models/gamification_models.dart';
@@ -3921,6 +3922,8 @@ class FirebaseService {
       transaction.set(commentRef, {
         'userId': userId,
         'userName': userName,
+        if (userPhotoUrl != null && userPhotoUrl.isNotEmpty)
+          'userPhotoUrl': userPhotoUrl,
         'text': text,
         'createdAt': FieldValue.serverTimestamp(),
       });
@@ -3949,6 +3952,20 @@ class FirebaseService {
           'timestamp': FieldValue.serverTimestamp(),
         });
       }
+    });
+  }
+
+  Stream<List<CommunityComment>> streamComments(String activityId) {
+    return _db
+        .collection('community_feed')
+        .doc(activityId)
+        .collection('comments')
+        .orderBy('createdAt', descending: false)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        return CommunityComment.fromFirestore(doc.data(), doc.id);
+      }).toList();
     });
   }
 
@@ -4755,6 +4772,11 @@ final pendingLessonsCountProvider =
 
 final communityFeedProvider = StreamProvider<List<CommunityActivity>>((ref) {
   return ref.watch(firebaseServiceProvider).getCommunityFeed();
+});
+
+final activityCommentsProvider =
+    StreamProvider.family<List<CommunityComment>, String>((ref, activityId) {
+  return ref.watch(firebaseServiceProvider).streamComments(activityId);
 });
 
 final appConfigProvider = StreamProvider<AppConfig>((ref) {
