@@ -1,6 +1,6 @@
 recording_id,object_name,base_name,variant_group_id,word_id,item_key,firestore_word_doc_id,mansaka_text,translation_en,item_type,source_collection,source_doc_id,evidence_category,review_case_id,confirmed_by,confirmation_date,notes
 REF_006,Dagom.WAV,dagom,VG013,,,,,,,,,,,,,
-REF_007,Diin kaw padlog.WAV,diin kaw padlog,VG016,,,,,,,,,,,,,
+REF_007,Diin kaw padlog.WAV,diin kaw padlog,VG016,W042,human:RC016:diin kaw padlog,,Diin kaw padlog,,phrase,human_review,RC016,HUMAN_CONFIRMED,RC016,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
 REF_008,Gaagod yang baboy .WAV,gaagod yang baboy,VG019,,,,,,,,,,,,,
 REF_009,Ingkod.WAV,ingkod,VG024,,,,,,,,,,,,,
 REF_010,Kaana yang manok.WAV,kaana yang manok,VG027,,,,,,,,,,,,,
@@ -8,111 +8,111 @@ REF_012,Larad.WAV,larad,VG035,,,,,,,,,,,,,
 REF_013,Madaig.WAV,madaig,VG042,,,,,,,,,,,,,
 REF_014,Madakmul yang abol.WAV,madakmul yang abol,VG043,,,,,,,,,,,,,
 REF_015,Madyaw.WAV,madyaw,VG045,,,,,,,,,,,,,
-REF_016,Magasogbo.WAV,magasogbo,VG051,,,,,,,,,,,,,
-REF_017,Makaan Da kita.WAV,makaan da kita,VG053,,,,,,,,,,,,,
-REF_018,Nana yang kammo tuod.WAV,nana yang kammo tuod,VG061,,,,,,,,,,,,,
-REF_019,Nanang iyambong mo.WAV,nanang iyambong mo,VG063,,,,,,,,,,,,,
-REF_020,Pagarungan.WAV,pagarungan,VG069,,,,,,,,,,,,,
-REF_021,Pangiyakan Ta.WAV,pangiyakan ta,VG072,,,,,,,,,,,,,
-REF_022,Paroda.WAV,paroda,VG073,,,,,,,,,,,,,
+REF_016,Magasogbo.WAV,magasogbo,VG051,W062,human:RC051:magasogbo,,Magasogbo,,word,human_review,RC051,HUMAN_CONFIRMED,RC051,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_017,Makaan Da kita.WAV,makaan da kita,VG053,W064,human:RC053:makaan da kita,,Makaan Da kita,,phrase,human_review,RC053,HUMAN_CONFIRMED,RC053,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_018,Nana yang kammo tuod.WAV,nana yang kammo tuod,VG061,W070,human:RC061:nana yang kammo tuod,,Nana yang kammo tuod,,phrase,human_review,RC061,HUMAN_CONFIRMED,RC061,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_019,Nanang iyambong mo.WAV,nanang iyambong mo,VG063,W072,human:RC063:nanang iyambong mo,,Nanang iyambong mo,,phrase,human_review,RC063,HUMAN_CONFIRMED,RC063,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_020,Pagarungan.WAV,pagarungan,VG069,W078,svelmoe:hw:pagarongan,,pagarongan,n. Glass; mirror.,word,svelmoe1990,M04007,HUMAN_CONFIRMED,RC069,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_021,Pangiyakan Ta.WAV,pangiyakan ta,VG072,W080,human:RC072:pangiyakan ta,,Pangiyakan Ta,,phrase,human_review,RC072,HUMAN_CONFIRMED,RC072,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_022,Paroda.WAV,paroda,VG073,W081,svelmoe:finder:paroda,,Paroda,Sweet Potato,word,svelmoe1990,finder pdf p. 548,HUMAN_CONFIRMED,RC073,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION; reviewer gloss 'Sweet Potato' entered over finder gloss 'vegetable' (finder p. 548 lists paroda under 'vegetable')
 REF_023,Sapi.WAV,sapi,VG080,,,,,,,,,,,,,
 REF_024,Usug.WAV,usug,VG094,,,,,,,,,,,,,
-REF_025,Wara ako akurutuy.WAV,wara ako akurutuy,VG095,,,,,,,,,,,,,
+REF_025,Wara ako akurutuy.WAV,wara ako akurutuy,VG095,W096,human:RC095:wara ako akurutuy,,Wara ako akurutuy,,phrase,human_review,RC095,HUMAN_CONFIRMED,RC095,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
 REF_026,Wara ko akaani yang pinggan.WAV,wara ko akaani yang pinggan,VG096,,,,,,,,,,,,,
-REF_027,Yaabay ko kamangun(1).WAV,yaabay ko kamangun,VG098,,,,,,,,,,,,,
-REF_028,Yaabay ko kamangun.WAV,yaabay ko kamangun,VG098,,,,,,,,,,,,,
-REF_029,Yaga-agung ako na yaturog.WAV,yaga-agung ako na yaturog,VG100,,,,,,,,,,,,,
-REF_030,Yaginurom Da kaw.WAV,yaginurom da kaw,VG107,,,,,,,,,,,,,
-REF_031,Yanag-aruk yang mangaysu(1).WAV,yanag-aruk yang mangaysu,VG110,,,,,,,,,,,,,
-REF_032,Yanag-aruk yang mangaysu.WAV,yanag-aruk yang mangaysu,VG110,,,,,,,,,,,,,
-REF_033,agtura tura ng ugbos .WAV,agtura tura ng ugbos,VG001,,,,,,,,,,,,,
+REF_027,Yaabay ko kamangun(1).WAV,yaabay ko kamangun,VG098,W097,human:RC098:yaabay ko kamangun,,Yaabay ko kamangun,,phrase,human_review,RC098,HUMAN_CONFIRMED,RC098,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_028,Yaabay ko kamangun.WAV,yaabay ko kamangun,VG098,W097,human:RC098:yaabay ko kamangun,,Yaabay ko kamangun,,phrase,human_review,RC098,HUMAN_CONFIRMED,RC098,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_029,Yaga-agung ako na yaturog.WAV,yaga-agung ako na yaturog,VG100,W099,human:RC100:yaga-agung ako na yaturog,,Yaga-agung ako na yaturog,,phrase,human_review,RC100,HUMAN_CONFIRMED,RC100,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_030,Yaginurom Da kaw.WAV,yaginurom da kaw,VG107,W106,human:RC107:yaginurom da kaw,,Yaginurom Da kaw,,phrase,human_review,RC107,HUMAN_CONFIRMED,RC107,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_031,Yanag-aruk yang mangaysu(1).WAV,yanag-aruk yang mangaysu,VG110,W109,human:RC110:yanag-aruk yang mangaysu,,Yanag-aruk yang mangaysu,,phrase,human_review,RC110,HUMAN_CONFIRMED,RC110,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_032,Yanag-aruk yang mangaysu.WAV,yanag-aruk yang mangaysu,VG110,W109,human:RC110:yanag-aruk yang mangaysu,,Yanag-aruk yang mangaysu,,phrase,human_review,RC110,HUMAN_CONFIRMED,RC110,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_033,agtura tura ng ugbos .WAV,agtura tura ng ugbos,VG001,W037,human:RC001:agtura tura ng ugbos,,agtura tura ng ugbos,,phrase,human_review,RC001,HUMAN_CONFIRMED,RC001,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
 REF_034,ama.WAV,ama,VG002,,,,,,,,,,,,,
-REF_035,amanting.WAV,amanting,VG003,,,,,,,,,,,,,
-REF_037,baboo.WAV,baboo,VG007,,,,,,,,,,,,,
-REF_040,dako ra yang bilas mo .WAV,dako ra yang bilas mo,VG014,,,,,,,,,,,,,
-REF_041,dakurat.WAV,dakurat,VG015,,,,,,,,,,,,,
-REF_042,duor.WAV,duor,VG017,,,,,,,,,,,,,
-REF_043,duwambuok(1).WAV,duwambuok,VG018,,,,,,,,,,,,,
-REF_044,duwambuok.WAV,duwambuok,VG018,,,,,,,,,,,,,
-REF_045,gaakbu ako disang bintana.WAV,gaakbu ako disang bintana,VG020,,,,,,,,,,,,,
-REF_046,gauma.WAV,gauma,VG021,,,,,,,,,,,,,
-REF_047,gyaring.WAV,gyaring,VG022,,,,,,,,,,,,,
+REF_035,amanting.WAV,amanting,VG003,W038,human:RC003:amanting,,amanting,,word,human_review,RC003,HUMAN_CONFIRMED,RC003,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_037,baboo.WAV,baboo,VG007,W039,human:RC007:baboo,,baboo,,word,human_review,RC007,HUMAN_CONFIRMED,RC007,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_040,dako ra yang bilas mo .WAV,dako ra yang bilas mo,VG014,W040,human:RC014:dako ra yang bilas mo,,dako ra yang bilas mo,,phrase,human_review,RC014,HUMAN_CONFIRMED,RC014,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_041,dakurat.WAV,dakurat,VG015,W041,human:RC015:dakurat,,dakurat,,word,human_review,RC015,HUMAN_CONFIRMED,RC015,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_042,duor.WAV,duor,VG017,W043,human:RC017:duor,,duor,,word,human_review,RC017,HUMAN_CONFIRMED,RC017,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_043,duwambuok(1).WAV,duwambuok,VG018,W044,human:RC018:duwambuok,,duwambuok,,word,human_review,RC018,HUMAN_CONFIRMED,RC018,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_044,duwambuok.WAV,duwambuok,VG018,W044,human:RC018:duwambuok,,duwambuok,,word,human_review,RC018,HUMAN_CONFIRMED,RC018,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_045,gaakbu ako disang bintana.WAV,gaakbu ako disang bintana,VG020,W045,human:RC020:gaakbu ako disang bintana,,gaakbu ako disang bintana,,phrase,human_review,RC020,HUMAN_CONFIRMED,RC020,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_046,gauma.WAV,gauma,VG021,W046,human:RC021:gauma,,gauma,v. To be glad; to be happy.,word,human_review,RC021,HUMAN_CONFIRMED,RC021,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_047,gyaring.WAV,gyaring,VG022,W047,human:RC022:gyaring,,gyaring,finder: grind,word,human_review,RC022,HUMAN_CONFIRMED,RC022,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
 REF_048,ina.WAV,ina,VG023,,,,,,,,,,,,,
 REF_049,isa.WAV,isa,VG025,,,,,,,,,,,,,
-REF_050,isu.WAV,isu,VG026,,,,,,,,,,,,,
-REF_051,kamanggud.WAV,kamanggud,VG029,,,,,,,,,,,,,
-REF_053,katumbar.WAV,katumbar,VG031,,,,,,,,,,,,,
-REF_055,kinuraw muuri.WAV,kinuraw muuri,VG033,,,,,,,,,,,,,
-REF_056,kyumaan da kamo.WAV,kyumaan da kamo,VG034,,,,,,,,,,,,,
+REF_050,isu.WAV,isu,VG026,W048,human:RC026:isu,,isu,,word,human_review,RC026,HUMAN_CONFIRMED,RC026,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_051,kamanggud.WAV,kamanggud,VG029,W049,human:RC029:kamanggud,,kamanggud,,word,human_review,RC029,HUMAN_CONFIRMED,RC029,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_053,katumbar.WAV,katumbar,VG031,W050,human:RC031:katumbar,,katumbar,,word,human_review,RC031,HUMAN_CONFIRMED,RC031,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_055,kinuraw muuri.WAV,kinuraw muuri,VG033,W051,human:RC033:kinuraw muuri,,kinuraw muuri,,phrase,human_review,RC033,HUMAN_CONFIRMED,RC033,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_056,kyumaan da kamo.WAV,kyumaan da kamo,VG034,W052,human:RC034:kyumaan da kamo,,kyumaan da kamo,,phrase,human_review,RC034,HUMAN_CONFIRMED,RC034,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
 REF_057,lima.WAV,lima,VG036,,,,,,,,,,,,,
-REF_058,lumon na bobay.WAV,lumon na bobay,VG037,,,,,,,,,,,,,
-REF_059,lumon na usug.WAV,lumon na usug,VG038,,,,,,,,,,,,,
-REF_060,lutya.WAV,lutya,VG039,,,,,,,,,,,,,
-REF_061,lyurot.WAV,lyurot,VG040,,,,,,,,,,,,,
-REF_062,maanog.WAV,maanog,VG041,,,,,,,,,,,,,
+REF_058,lumon na bobay.WAV,lumon na bobay,VG037,W053,human:RC037:lumon na bobay,,lumon na bobay,,phrase,human_review,RC037,HUMAN_CONFIRMED,RC037,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_059,lumon na usug.WAV,lumon na usug,VG038,W054,human:RC038:lumon na usug,,lumon na usug,,phrase,human_review,RC038,HUMAN_CONFIRMED,RC038,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_060,lutya.WAV,lutya,VG039,W055,human:RC039:lutya,,lutya,,word,human_review,RC039,HUMAN_CONFIRMED,RC039,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_061,lyurot.WAV,lyurot,VG040,W056,human:RC040:lyurot,,lyurot,"v. To cook in bamboo. | finder: bamboo, cook in",word,human_review,RC040,HUMAN_CONFIRMED,RC040,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_062,maanog.WAV,maanog,VG041,W057,human:RC041:maanog,,maanog,,word,human_review,RC041,HUMAN_CONFIRMED,RC041,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
 REF_063,madayaw.WAV,madayaw,VG044,,,,,,,,,,,,,
-REF_064,madyaw na allaw.WAV,madyaw na allaw,VG046,,,,,,,,,,,,,
+REF_064,madyaw na allaw.WAV,madyaw na allaw,VG046,W058,human:RC046:madyaw na allaw!,,Madyaw na Allaw!,Good Day!,phrase,human_review,RC046,HUMAN_CONFIRMED,RC046,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
 REF_065,madyaw na gabi.WAV,madyaw na gabi,VG047,,,,,,,,,,,,,
-REF_066,madyaw na gabila(1).WAV,madyaw na gabila,VG048,,,,,,,,,,,,,
-REF_067,madyaw na gabila.WAV,madyaw na gabila,VG048,,,,,,,,,,,,,
-REF_068,madyaw na masurom kariko.WAV,madyaw na masurom kariko,VG050,,,,,,,,,,,,,
-REF_069,madyaw na masurom(1).WAV,madyaw na masurom,VG049,,,,,,,,,,,,,
-REF_070,madyaw na masurom(2).WAV,madyaw na masurom,VG049,,,,,,,,,,,,,
-REF_071,madyaw na masurom(3).WAV,madyaw na masurom,VG049,,,,,,,,,,,,,
-REF_072,madyaw na masurom.WAV,madyaw na masurom,VG049,,,,,,,,,,,,,
-REF_073,magsandayong pa ko atong tubod.WAV,magsandayong pa ko atong tubod,VG052,,,,,,,,,,,,,
+REF_066,madyaw na gabila(1).WAV,madyaw na gabila,VG048,W059,lesson_item:madyaw na gabila,,Madyaw na gabila,Good afternoon,phrase,lessons,6pXuOdANtl5dST82kBLe,HUMAN_CONFIRMED,RC048,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION; Preferred gloss: Good afternoon (published lesson); dictionary gloss for gabila is dusk/evening.
+REF_067,madyaw na gabila.WAV,madyaw na gabila,VG048,W059,lesson_item:madyaw na gabila,,Madyaw na gabila,Good afternoon,phrase,lessons,6pXuOdANtl5dST82kBLe,HUMAN_CONFIRMED,RC048,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION; Preferred gloss: Good afternoon (published lesson); dictionary gloss for gabila is dusk/evening.
+REF_068,madyaw na masurom kariko.WAV,madyaw na masurom kariko,VG050,W061,human:RC050:madyaw na masurom kariko,,madyaw na masurom kariko,,phrase,human_review,RC050,HUMAN_CONFIRMED,RC050,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_069,madyaw na masurom(1).WAV,madyaw na masurom,VG049,W060,lesson_item:madyaw na masurom,,Madyaw na masurom,Good morning,phrase,lessons,6pXuOdANtl5dST82kBLe,HUMAN_CONFIRMED,RC049,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION; Preferred gloss: Good morning; dictionary form is masurum.
+REF_070,madyaw na masurom(2).WAV,madyaw na masurom,VG049,W060,lesson_item:madyaw na masurom,,Madyaw na masurom,Good morning,phrase,lessons,6pXuOdANtl5dST82kBLe,HUMAN_CONFIRMED,RC049,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION; Preferred gloss: Good morning; dictionary form is masurum.
+REF_071,madyaw na masurom(3).WAV,madyaw na masurom,VG049,W060,lesson_item:madyaw na masurom,,Madyaw na masurom,Good morning,phrase,lessons,6pXuOdANtl5dST82kBLe,HUMAN_CONFIRMED,RC049,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION; Preferred gloss: Good morning; dictionary form is masurum.
+REF_072,madyaw na masurom.WAV,madyaw na masurom,VG049,W060,lesson_item:madyaw na masurom,,Madyaw na masurom,Good morning,phrase,lessons,6pXuOdANtl5dST82kBLe,HUMAN_CONFIRMED,RC049,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION; Preferred gloss: Good morning; dictionary form is masurum.
+REF_073,magsandayong pa ko atong tubod.WAV,magsandayong pa ko atong tubod,VG052,W063,human:RC052:magsandayong pa ko atong tubod,,magsandayong pa ko atong tubod,,phrase,human_review,RC052,HUMAN_CONFIRMED,RC052,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
 REF_074,makagwas.WAV,makagwas,VG054,,,,,,,,,,,,,
-REF_075,makator yang ulo ko.WAV,makator yang ulo ko,VG055,,,,,,,,,,,,,
-REF_076,mangud(1).WAV,mangud,VG056,,,,,,,,,,,,,
-REF_077,mangud.WAV,mangud,VG056,,,,,,,,,,,,,
+REF_075,makator yang ulo ko.WAV,makator yang ulo ko,VG055,W065,human:RC055:makator yang ulo ko,,makator yang ulo ko,,phrase,human_review,RC055,HUMAN_CONFIRMED,RC055,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_076,mangud(1).WAV,mangud,VG056,W066,svelmoe:hw:mangod,,mangod,n. Younger sibling.,word,svelmoe1990,M03443,HUMAN_CONFIRMED,RC056,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_077,mangud.WAV,mangud,VG056,W066,svelmoe:hw:mangod,,mangod,n. Younger sibling.,word,svelmoe1990,M03443,HUMAN_CONFIRMED,RC056,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
 REF_078,maparaat.WAV,maparaat,VG057,,,,,,,,,,,,,
-REF_079,marutuy.WAV,marutuy,VG058,,,,,,,,,,,,,
-REF_080,mataba.WAV,mataba,VG059,,,,,,,,,,,,,
-REF_081,na naan.WAV,na naan,VG060,,,,,,,,,,,,,
-REF_082,nanang gawbok.WAV,nanang gawbok,VG062,,,,,,,,,,,,,
-REF_083,nanang tuod parandong.WAV,nanang tuod parandong,VG064,,,,,,,,,,,,,
-REF_084,nanang uram mayo(1).WAV,nanang uram mayo,VG065,,,,,,,,,,,,,
-REF_085,nanang uram mayo.WAV,nanang uram mayo,VG065,,,,,,,,,,,,,
-REF_086,nangakaw.WAV,nangakaw,VG066,,,,,,,,,,,,,
-REF_087,nangamang pak ng kayamas.WAV,nangamang pak ng kayamas,VG067,,,,,,,,,,,,,
-REF_088,niyanluluto ng ina mo .WAV,niyanluluto ng ina mo,VG068,,,,,,,,,,,,,
-REF_089,pagarungan(1).WAV,pagarungan,VG069,,,,,,,,,,,,,
-REF_090,pagsugbo.WAV,pagsugbo,VG070,,,,,,,,,,,,,
+REF_079,marutuy.WAV,marutuy,VG058,W067,human:RC058:marutuy,,marutuy,,word,human_review,RC058,HUMAN_CONFIRMED,RC058,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_080,mataba.WAV,mataba,VG059,W068,human:RC059:mataba,,mataba,v. To meet. | an. | adj Fat. | v To become Tat. | finder: fat,word,human_review,RC059,HUMAN_CONFIRMED,RC059,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_081,na naan.WAV,na naan,VG060,W069,human:RC060:na naan,,na naan,,phrase,human_review,RC060,HUMAN_CONFIRMED,RC060,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_082,nanang gawbok.WAV,nanang gawbok,VG062,W071,human:RC062:nanang gawbok,,nanang gawbok,,phrase,human_review,RC062,HUMAN_CONFIRMED,RC062,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_083,nanang tuod parandong.WAV,nanang tuod parandong,VG064,W073,human:RC064:nanang tuod parandong,,nanang tuod parandong,,phrase,human_review,RC064,HUMAN_CONFIRMED,RC064,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_084,nanang uram mayo(1).WAV,nanang uram mayo,VG065,W074,human:RC065:nanang uram mayo,,nanang uram mayo,,phrase,human_review,RC065,HUMAN_CONFIRMED,RC065,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_085,nanang uram mayo.WAV,nanang uram mayo,VG065,W074,human:RC065:nanang uram mayo,,nanang uram mayo,,phrase,human_review,RC065,HUMAN_CONFIRMED,RC065,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_086,nangakaw.WAV,nangakaw,VG066,W075,human:RC066:nangakaw,,nangakaw,n. Stilt. | finder: stilt,word,human_review,RC066,HUMAN_CONFIRMED,RC066,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_087,nangamang pak ng kayamas.WAV,nangamang pak ng kayamas,VG067,W076,human:RC067:nangamang pak ng kayamas,,nangamang pak ng kayamas,,phrase,human_review,RC067,HUMAN_CONFIRMED,RC067,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_088,niyanluluto ng ina mo .WAV,niyanluluto ng ina mo,VG068,W077,human:RC068:niyanluluto ng ina mo,,niyanluluto ng ina mo,,phrase,human_review,RC068,HUMAN_CONFIRMED,RC068,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_089,pagarungan(1).WAV,pagarungan,VG069,W078,svelmoe:hw:pagarongan,,pagarongan,n. Glass; mirror.,word,svelmoe1990,M04007,HUMAN_CONFIRMED,RC069,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_090,pagsugbo.WAV,pagsugbo,VG070,W079,human:RC070:pagsugbo,,pagsugbo,,word,human_review,RC070,HUMAN_CONFIRMED,RC070,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
 REF_091,pakal.WAV,pakal,VG071,,,,,,,,,,,,,
-REF_092,paroda(1).WAV,paroda,VG073,,,,,,,,,,,,,
-REF_093,pasaylowak doon.WAV,pasaylowak doon,VG074,,,,,,,,,,,,,
-REF_094,pasayluwak doon.WAV,pasayluwak doon,VG075,,,,,,,,,,,,,
+REF_092,paroda(1).WAV,paroda,VG073,W081,svelmoe:finder:paroda,,Paroda,Sweet Potato,word,svelmoe1990,finder pdf p. 548,HUMAN_CONFIRMED,RC073,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION; reviewer gloss 'Sweet Potato' entered over finder gloss 'vegetable' (finder p. 548 lists paroda under 'vegetable')
+REF_093,pasaylowak doon.WAV,pasaylowak doon,VG074,W082,human:RC074:pasaylowak doon,,pasaylowak doon,,phrase,human_review,RC074,HUMAN_CONFIRMED,RC074,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_094,pasayluwak doon.WAV,pasayluwak doon,VG075,W083,human:RC075:pasayluwak doon,,pasayluwak doon,,phrase,human_review,RC075,HUMAN_CONFIRMED,RC075,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
 REF_095,pito.WAV,pito,VG076,,,,,,,,,,,,,
-REF_096,sampuro.WAV,sampuro,VG077,,,,,,,,,,,,,
+REF_096,sampuro.WAV,sampuro,VG077,W084,svelmoe:hw:samporo,,samporo,num. Ten.,word,svelmoe1990,M04593,HUMAN_CONFIRMED,RC077,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
 REF_097,sandok.WAV,sandok,VG078,,,,,,,,,,,,,
-REF_098,sang kanlaw.WAV,sang kanlaw,VG079,,,,,,,,,,,,,
+REF_098,sang kanlaw.WAV,sang kanlaw,VG079,W085,human:RC079:sang kanlaw,,sang kanlaw,,phrase,human_review,RC079,HUMAN_CONFIRMED,RC079,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
 REF_099,saramat.WAV,saramat,VG081,,,,,,,,,,,,,
-REF_100,sining bapa mo(1).WAV,sining bapa mo,VG082,,,,,,,,,,,,,
-REF_101,sining bapa mo.WAV,sining bapa mo,VG082,,,,,,,,,,,,,
-REF_102,sining gadiyaga kanmo.WAV,sining gadiyaga kanmo,VG083,,,,,,,,,,,,,
+REF_100,sining bapa mo(1).WAV,sining bapa mo,VG082,W086,human:RC082:sining bapa mo,,sining bapa mo,,phrase,human_review,RC082,HUMAN_CONFIRMED,RC082,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_101,sining bapa mo.WAV,sining bapa mo,VG082,W086,human:RC082:sining bapa mo,,sining bapa mo,,phrase,human_review,RC082,HUMAN_CONFIRMED,RC082,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_102,sining gadiyaga kanmo.WAV,sining gadiyaga kanmo,VG083,W087,human:RC083:sining gadiyaga kanmo,,sining gadiyaga kanmo,,phrase,human_review,RC083,HUMAN_CONFIRMED,RC083,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
 REF_103,siyam.WAV,siyam,VG084,,,,,,,,,,,,,
-REF_104,tabi di saan.WAV,tabi di saan,VG085,,,,,,,,,,,,,
-REF_105,tabi kanmo.WAV,tabi kanmo,VG086,,,,,,,,,,,,,
+REF_104,tabi di saan.WAV,tabi di saan,VG085,W088,human:RC085:tabi di saan,,tabi di saan,,phrase,human_review,RC085,HUMAN_CONFIRMED,RC085,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_105,tabi kanmo.WAV,tabi kanmo,VG086,W089,human:RC086:tabi kanmo,,tabi kanmo,,phrase,human_review,RC086,HUMAN_CONFIRMED,RC086,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
 REF_106,tabidak.WAV,tabidak,VG087,,,,,,,,,,,,,
-REF_107,turo(1).WAV,turo,VG088,,,,,,,,,,,,,
-REF_108,turo.WAV,turo,VG088,,,,,,,,,,,,,
-REF_109,ulloy.WAV,ulloy,VG089,,,,,,,,,,,,,
-REF_110,umpo na bobay.WAV,umpo na bobay,VG090,,,,,,,,,,,,,
-REF_111,umpu na usug.WAV,umpu na usug,VG091,,,,,,,,,,,,,
-REF_112,unom.WAV,unom,VG092,,,,,,,,,,,,,
-REF_113,upat(1).WAV,upat,VG093,,,,,,,,,,,,,
-REF_114,upat(2).WAV,upat,VG093,,,,,,,,,,,,,
-REF_115,upat.WAV,upat,VG093,,,,,,,,,,,,,
+REF_107,turo(1).WAV,turo,VG088,W090,svelmoe:hw:toro,,toro,"hom.1 num. Three. | hom.1 mum, Three. | hom.2 n. Bull (cow or carabao).",word,svelmoe1990,M05725;M05726,HUMAN_CONFIRMED,RC088,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_108,turo.WAV,turo,VG088,W090,svelmoe:hw:toro,,toro,"hom.1 num. Three. | hom.1 mum, Three. | hom.2 n. Bull (cow or carabao).",word,svelmoe1990,M05725;M05726,HUMAN_CONFIRMED,RC088,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_109,ulloy.WAV,ulloy,VG089,W091,svelmoe:hw:olloy,,olloy,n Tender new leaves of sweet potato vines. | v To pick new leaves of sweet potato vines.,word,svelmoe1990,M03770,HUMAN_CONFIRMED,RC089,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_110,umpo na bobay.WAV,umpo na bobay,VG090,W092,human:RC090:umpo na bobay,,umpo na bobay,,phrase,human_review,RC090,HUMAN_CONFIRMED,RC090,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_111,umpu na usug.WAV,umpu na usug,VG091,W093,human:RC091:umpu na usug,,umpu na usug,,phrase,human_review,RC091,HUMAN_CONFIRMED,RC091,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_112,unom.WAV,unom,VG092,W094,human:RC092:unom,,unom,,word,human_review,RC092,HUMAN_CONFIRMED,RC092,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_113,upat(1).WAV,upat,VG093,W095,svelmoe:hw:opat,,opat,num. Four. | mum.,word,svelmoe1990,M03840,HUMAN_CONFIRMED,RC093,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_114,upat(2).WAV,upat,VG093,W095,svelmoe:hw:opat,,opat,num. Four. | mum.,word,svelmoe1990,M03840,HUMAN_CONFIRMED,RC093,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_115,upat.WAV,upat,VG093,W095,svelmoe:hw:opat,,opat,num. Four. | mum.,word,svelmoe1990,M03840,HUMAN_CONFIRMED,RC093,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
 REF_116,waro.WAV,waro,VG097,,,,,,,,,,,,,
-REF_117,yadaragan.WAV,yadaragan,VG099,,,,,,,,,,,,,
-REF_118,yagabasa.WAV,yagabasa,VG101,,,,,,,,,,,,,
-REF_119,yagakanta.WAV,yagakanta,VG102,,,,,,,,,,,,,
-REF_120,yagasagda.WAV,yagasagda,VG103,,,,,,,,,,,,,
-REF_121,yagasayaw.WAV,yagasayaw,VG104,,,,,,,,,,,,,
-REF_122,yagasurat.WAV,yagasurat,VG105,,,,,,,,,,,,,
-REF_123,yagaugas.WAV,yagaugas,VG106,,,,,,,,,,,,,
-REF_124,yakaan.WAV,yakaan,VG108,,,,,,,,,,,,,
-REF_125,yamadaman kaw kanak.WAV,yamadaman kaw kanak,VG109,,,,,,,,,,,,,
-REF_126,yasagob kaw.WAV,yasagob kaw,VG111,,,,,,,,,,,,,
-REF_127,yasagub.WAV,yasagub,VG112,,,,,,,,,,,,,
-REF_128,yulugpat.WAV,yulugpat,VG113,,,,,,,,,,,,,
+REF_117,yadaragan.WAV,yadaragan,VG099,W098,human:RC099:yadaragan,,yadaragan,v. To run. | finder: run,word,human_review,RC099,HUMAN_CONFIRMED,RC099,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_118,yagabasa.WAV,yagabasa,VG101,W100,human:RC101:yagabasa,,yagabasa,"n. Drinking glass. | mod pil. It is because; because of; in view of. | v To read. | hom.1 mod. ptl. It is because; because of; in view of. | hom.2 v. ‘To make wet. | hom.2 n. Wusband. | hom.2 v. To marry a man. | finder: read; wet, to make",word,human_review,RC101,HUMAN_CONFIRMED,RC101,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_119,yagakanta.WAV,yagakanta,VG102,W101,human:RC102:yagakanta,,yagakanta,n Song. | v To sing. | finder: sing,word,human_review,RC102,HUMAN_CONFIRMED,RC102,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_120,yagasagda.WAV,yagasagda,VG103,W102,human:RC103:yagasagda,,yagasagda,hom.1 v. To rebuke; to forbid; to stop. | hom.2 v. To fool around; to joke. | finder: rebuke,word,human_review,RC103,HUMAN_CONFIRMED,RC103,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_121,yagasayaw.WAV,yagasayaw,VG104,W103,human:RC104:yagasayaw,,yagasayaw,"hom.1 v. To dance. | hom.2 n. Kind of bird. | hom.2 . Kind of bird. | finder: dance; sarangkipaw,",word,human_review,RC104,HUMAN_CONFIRMED,RC104,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_122,yagasurat.WAV,yagasurat,VG105,W104,human:RC105:yagasurat,,yagasurat,n. Breech position of a fetus. | . Breech position of a fetus.,word,human_review,RC105,HUMAN_CONFIRMED,RC105,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_123,yagaugas.WAV,yagaugas,VG106,W105,human:RC106:yagaugas,,yagaugas,v. To wash (as dishes or floor).,word,human_review,RC106,HUMAN_CONFIRMED,RC106,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_124,yakaan.WAV,yakaan,VG108,W107,human:RC108:yakaan,,yakaan,v. To eat something. | n. Wooden box. Dili ako mapagun sang kanmo kaon kay mabugat. ¥ will not be able to carry your box because it’s heavy. | n Wooden box. | v Food. | finder: eat,word,human_review,RC108,HUMAN_CONFIRMED,RC108,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_125,yamadaman kaw kanak.WAV,yamadaman kaw kanak,VG109,W108,human:RC109:yamadaman kaw kanak,,yamadaman kaw kanak,,phrase,human_review,RC109,HUMAN_CONFIRMED,RC109,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_126,yasagob kaw.WAV,yasagob kaw,VG111,W110,human:RC111:yasagob kaw,,yasagob kaw,,phrase,human_review,RC111,HUMAN_CONFIRMED,RC111,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_127,yasagub.WAV,yasagub,VG112,W111,human:RC112:yasagub,,yasagub,"finder: fetch | water, to fetch",word,human_review,RC112,HUMAN_CONFIRMED,RC112,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION
+REF_128,yulugpat.WAV,yulugpat,VG113,W112,human:RC113:yulugpat,,yulugpat,,word,human_review,RC113,HUMAN_CONFIRMED,RC113,RESEARCHER,2026-10-02,AGREED_TO_SUGGESTED_ACTION

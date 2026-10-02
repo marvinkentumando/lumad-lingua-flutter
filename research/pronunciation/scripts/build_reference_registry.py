@@ -18,6 +18,7 @@ W ids are allocated once (ledger metadata/vocabulary_id_history.csv) and never r
 import argparse, datetime as dt, json, re, sys
 from collections import OrderedDict, defaultdict
 from pathlib import Path
+from dictionary_evidence import Dictionary
 from common import ROOT, read_csv, write_csv, version, corpus, rel, RE_WORD
 
 REG_HEADER = ["recording_id","object_name","source_project","source_storage_bucket","source_storage_path","source_public_url_verified","staged_path",
@@ -31,6 +32,18 @@ INPUT_HEADER = ["recording_id","object_name","base_name","variant_group_id","wor
                 "source_collection","source_doc_id","evidence_category","review_case_id","confirmed_by","confirmation_date","notes"]
 HIST_HEADER = ["word_id","item_key","mansaka_text","assigned_on","assigned_by","evidence_category","recording_ids_at_assignment","dataset_version","note"]
 
+def dict_meta_for_key(dictionary, key):
+    """Dictionary columns for a human-confirmed item keyed to a Svelmoe headword/finder form (svelmoe:hw:<norm> / svelmoe:finder:<norm>).
+    Only filled when the lookup resolves to exactly that key; nothing is inferred."""
+    try: kind, form = key.split(":", 2)[1:]
+    except ValueError: return {}
+    lk = dictionary.lookup(form); s = lk.get("summary") or {}
+    if lk.get("key") != key: return {}
+    if kind == "hw": return {"dict_headword": s.get("headword", ""), "dict_entry_ids": s.get("entry_ids", ""), "dict_pos": s.get("pos", ""), "dict_definition": s.get("definition", ""), "dict_book_page": s.get("book_page", ""),
+                             "dict_homonym_count": str(s.get("homonym_count", "")), "dict_all_forms": s.get("all_headword_strings", ""), "source_field": f"headword (book p. {s.get('book_page', '')}; transcriptions {s.get('files', '')})"}
+    if kind == "finder": return {"dict_headword": s.get("headword", ""), "dict_definition": s.get("english", ""), "dict_book_page": s.get("pdf_page", ""), "source_field": "English-Mansaka finder (headword entry not located in OCR)"}
+    return {}
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--root", default=str(ROOT)); p.add_argument("--project", default="ovdwgowtnlujnbcyldkk"); a = p.parse_args(); root = Path(a.root)
@@ -41,6 +54,7 @@ def main():
     _, old_voc = read_csv(root / "metadata" / "vocabulary.csv"); old_voc = [v for v in old_voc if v.get("word_id") and RE_WORD.match(v["word_id"]) and v.get("reference_recording_ids")]
     _, mapping_input = read_csv(root / "metadata" / "reference_mapping_input.csv")
     _, evidence = read_csv(root / "metadata" / "mapping_evidence.csv"); ev_by = {e["recording_id"]: e for e in evidence}
+    dictionary = Dictionary(root)
     hh, history = read_csv(root / "metadata" / "vocabulary_id_history.csv"); hist_by_key = {h["item_key"]: h["word_id"] for h in history if h.get("item_key")}
     wj = root / "staging" / "firestore_export" / "words.json"; words = {w["_id"]: w for w in json.load(open(wj))} if wj.exists() else {}
     if not inv: raise SystemExit("metadata/source_audio_inventory.csv is empty; run inventory_source_archive.py first")
@@ -109,6 +123,7 @@ def main():
             wid = r["word_id"] or wid_by_key.get(key)
             if not wid: wid = f"W{next_w:03d}"; next_w += 1
             e = ev_by.get(r["recording_id"], {}); m = inp_meta.get(key, {}); w = words.get(r["firestore_word_doc_id"], {}) if r["firestore_word_doc_id"] else {}
+            if key.startswith("svelmoe:") and not e.get("dict_headword") and dictionary.available: e = {**e, **{k: v for k, v in dict_meta_for_key(dictionary, key).items() if not e.get(k)}}
             prevv = next((v for v in old_voc if v["word_id"] == wid), {})
             text = w.get("term") or m.get("mansaka_text") or (e.get("candidate_mansaka_text") if e.get("authoritative") == "true" else "") or prevv.get("mansaka_text", "")
             if not text and prevv: text = prevv.get("mansaka_text", "")

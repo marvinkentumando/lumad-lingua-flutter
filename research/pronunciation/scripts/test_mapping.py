@@ -26,6 +26,15 @@ class Mapping(unittest.TestCase):
         if (SRC / "staging" / "dictionary").exists():
             (root / "staging" / "dictionary").mkdir(); [shutil.copy(f, root / "staging" / "dictionary" / f.name) for f in (SRC / "staging" / "dictionary").glob("*.csv")]
         shutil.copy(SRC / "config" / "corpus.yaml", root / "config" / "corpus.yaml"); (root / "metadata" / "vocabulary_id_history.csv").unlink(missing_ok=True)
+        # the fixture replays the review from the pre-review state: human-confirmed mappings are stripped (the live dataset may already carry them)
+        (root / "metadata" / "mapping_audit_log.csv").unlink(missing_ok=True)
+        ih, _ = read_csv(root / "metadata" / "reference_mapping_input.csv"); write_csv(root / "metadata" / "reference_mapping_input.csv", ih, [])
+        rh, reg0 = read_csv(root / "metadata" / "reference_recordings.csv")
+        for x in reg0:
+            if x.get("evidence_category") == "HUMAN_CONFIRMED":
+                x.update(mapping_status="unresolved", word_id="", item_key="", mapping_evidence="", evidence_category="", mapping_confirmed_by="", mapping_confirmation_date="")
+        write_csv(root / "metadata" / "reference_recordings.csv", rh, reg0)
+        vh, voc0 = read_csv(root / "metadata" / "vocabulary.csv"); write_csv(root / "metadata" / "vocabulary.csv", vh, [v for v in voc0 if v.get("evidence_category") != "HUMAN_CONFIRMED"])
         cls.root = root
         r = run("resolve_vocabulary_mapping.py", root, "--flutter-root", "/nonexistent"); assert r.returncode == 0, r.stderr
         # drop raw paths so the fixture does not require audio

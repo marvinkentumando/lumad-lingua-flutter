@@ -1,5 +1,7 @@
 # Vocabulary mapping review — instructions (v0.2, dictionary-based re-analysis 2026-09-30)
 
+> **Status 2026-10-02:** the 76-case queue was returned fully decided and applied (see reports/vocabulary_mapping_v0.2_review_applied.md). `metadata/mapping_review_queue.csv` is now empty. These instructions stay in force for any future row (a SPLIT, a correction, or recordings added in a later version).
+
 File to complete: `metadata/mapping_review_queue.csv` — **76 cases covering 91 recordings** (down from 97 cases / 112
 recordings before the Svelmoe & Svelmoe 1990 dictionary was available). One row = one linguistic case (a filename group,
 possibly several takes). Everything except the decision columns is prefilled from the dictionary and project evidence.

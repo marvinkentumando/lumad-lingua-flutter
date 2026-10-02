@@ -19,10 +19,12 @@ a sibling directory `../lumad_lingua_pronunciation/` (see `docs/DATASET_README.m
 | `docs/` | Rating scale (1–5), rating protocol, learner collection protocol, exclusion reason codes, raw-audio rules, dataset README/CHANGELOG |
 | `dataset_snapshot/v0.2/` | Text-only snapshot of the external dataset at `lumad_lingua_pronunciation_v0.2`: registry of the 128 recordings with SHA-256, vocabulary, manifest, checksum lists, reports, the PPINV001 measurements, the transformation and feature logs of the noncanonical `PP001-candidate` run, and `repro_manifest_v0.2.json`. No audio or feature matrices. Superseded 48-selection artifacts are under `reports/superseded/` for history only. |
 
-Current state (v0.2, PRE-FREEZE): 128/128 validated reference recordings registered and hashed; 37/128 mapped to
-vocabulary items by exact evidence from the Svelmoe & Svelmoe (1990) Mansaka Dictionary (headwords, alternate forms, example
-sentences, finder), Firestore terms and published lesson items; 91 recordings await item confirmation in
-`metadata/mapping_review_queue.csv` (76 grouped cases; see `docs/mapping_review_instructions.md`). The dictionary
+Current state (v0.2, PRE-FREEZE): 128/128 validated reference recordings registered and hashed; 128/128 mapped to
+112 vocabulary items (37 by exact evidence from the Svelmoe & Svelmoe (1990) Mansaka Dictionary, Firestore terms and
+published lesson items; 91 by the researcher's completed review of 2026-10-02, applied with `apply_mapping_review.py`,
+audit trail in `dataset_snapshot/v0.2/metadata/mapping_audit_log.csv`). 13 items own several validated references;
+the review queue is empty. Open points (52 items without an English gloss, two doubtful root glosses, three lesson-vs-
+dictionary gloss conflicts) are listed in `dataset_snapshot/v0.2/reports/vocabulary_mapping_v0.2_review_applied.md`. The dictionary
 transcriptions themselves stay outside the repository (private staging data; provenance hashes in
 `dataset_snapshot/v0.2/reports/dictionary_provenance.json`). Preprocessing investigation PPINV001 is complete
 (`dataset_snapshot/v0.2/reports/preprocessing_protocol_v0.2.md`); FE001 is frozen; PP001 keeps two provisional

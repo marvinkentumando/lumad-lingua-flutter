@@ -17,11 +17,13 @@ receive two different items; SAME_AS chains must terminate in a decided case; W 
 never reused. Writes metadata/reference_mapping_input.csv (+ audit rows in metadata/mapping_audit_log.csv), then
 rebuilds registry, manifest and runs the integrity check. Use --dry-run to validate without writing.
 """
-import argparse, datetime as dt, subprocess, sys
+import argparse, datetime as dt, re, subprocess, sys
 from collections import defaultdict
 from pathlib import Path
 from common import ROOT, read_csv, write_csv, version, RE_WORD
 from mapping_common import DECISIONS
+from dictionary_evidence import Dictionary
+RE_FS_DOC = re.compile(r"^[A-Za-z0-9]{20}$")
 
 AUDIT_HEADER = ["applied_on","review_case_id","decision","decision_target","recording_ids","word_id","item_key","mansaka_text","translation_en","confirmed_by","confirmation_date","notes"]
 
@@ -34,6 +36,7 @@ def main():
     _, hist = read_csv(root / "metadata" / "vocabulary_id_history.csv"); ih, inp = read_csv(root / "metadata" / "reference_mapping_input.csv")
     reg_by = {r["recording_id"]: r for r in reg}; voc_by_id = {v["word_id"]: v for v in voc}; voc_by_key = {v.get("item_key", ""): v for v in voc if v.get("item_key")}
     fs_to_w = {v["firestore_word_doc_id"]: v["word_id"] for v in voc if v.get("firestore_word_doc_id")}
+    dictionary = Dictionary(root)
     used_ids = {v["word_id"] for v in voc} | {h["word_id"] for h in hist} | {r["word_id"] for r in reg if r.get("word_id")}
     next_w = 1 + max([int(w[1:]) for w in used_ids if RE_WORD.match(w)] or [0]); errors = []; cases = {c["review_case_id"]: c for c in queue}
     decided = {k: c for k, c in cases.items() if c.get("decision", "").strip()}
@@ -64,17 +67,28 @@ def main():
             text = c["authoritative_mansaka_text"].strip(); key = f"human:{cid}:{text.casefold()}"
             res = dict(word_id=None, item_key=key, text=text, tr=c.get("authoritative_translation_en", "").strip(), item_type="phrase" if len(text.split()) > 1 else "word", coll="human_review", doc=cid)
         elif d == "CONFIRM_CANDIDATE":
-            tgt = c.get("decision_target", "").strip(); key = c.get("candidate_item_key", ""); wid = c.get("candidate_word_id", "")
+            tgt = c.get("decision_target", "").strip(); key = c.get("candidate_item_key", ""); wid = c.get("candidate_word_id", ""); dict_hit = {}
+            cand_text = (c.get("candidate_mansaka_text") or "").strip()
             if tgt:
                 if RE_WORD.match(tgt): wid = tgt; key = voc_by_id[tgt]["item_key"] if tgt in voc_by_id else key
                 elif tgt in fs_to_w: wid = fs_to_w[tgt]; key = f"words:{tgt}"
                 elif ":" in tgt: key = tgt
-                else: key = f"words:{tgt}"
+                elif key and tgt.casefold() == cand_text.casefold(): pass  # the reviewer repeated the prefilled candidate -> confirms candidate_item_key
+                elif RE_FS_DOC.match(tgt) and tgt not in dictionary.hw: key = f"words:{tgt}"
+                else:
+                    # a headword form (e.g. `opat`): must be a dictionary headword / alternate form / finder form, never free text
+                    lk = dictionary.lookup(tgt)
+                    if lk.get("category") in ("DICTIONARY_HEADWORD_EXACT", "DICTIONARY_HEADWORD_ALTFORM", "DICTIONARY_FINDER_EXACT") and lk.get("key"): key = lk["key"]; dict_hit = lk
+                    else: errors.append(f"{cid}: decision_target '{tgt}' is not a dictionary headword, item key, Wnnn or Firestore doc id"); return None
             if not key and wid and wid in voc_by_id: key = voc_by_id[wid]["item_key"]
             if not key: errors.append(f"{cid}: cannot resolve candidate target"); return None
-            v = voc_by_key.get(key)
-            res = dict(word_id=wid or (v["word_id"] if v else None), item_key=key, text=c.get("authoritative_mansaka_text", "").strip() or c.get("candidate_mansaka_text", ""), tr=c.get("authoritative_translation_en", "").strip() or c.get("candidate_translation_en", ""),
-                       item_type="phrase" if len((c.get("candidate_mansaka_text") or "x").split()) > 1 else "word", coll=c.get("candidate_source", "").split(":")[0] or "human_review", doc=c.get("candidate_source", "").split(":")[1].split(" ")[0] if ":" in c.get("candidate_source", "") else cid)
+            v = voc_by_key.get(key); summ = dict_hit.get("summary") or {}
+            if dict_hit: coll, doc = "svelmoe1990", summ.get("entry_ids") or ("finder pdf p. " + summ.get("pdf_page", "") if dict_hit["category"] == "DICTIONARY_FINDER_EXACT" else "")
+            elif ":" in c.get("candidate_source", ""): coll, doc = c["candidate_source"].split(":", 1)[0], c["candidate_source"].split(":", 1)[1].split(" [")[0].split(";")[0].strip() if c["candidate_source"].split(":", 1)[0] != "svelmoe1990" else c["candidate_source"].split(":", 1)[1].split(" [")[0].strip()
+            else: coll, doc = "human_review", cid
+            res = dict(word_id=wid or (v["word_id"] if v else None), item_key=key, text=c.get("authoritative_mansaka_text", "").strip() or summ.get("headword", "") or cand_text,
+                       tr=c.get("authoritative_translation_en", "").strip() or c.get("candidate_translation_en", "") or summ.get("definition", "") or summ.get("english", ""),
+                       item_type="phrase" if len((cand_text or summ.get("headword") or "x").split()) > 1 else "word", coll=coll, doc=doc)
         elif d == "SAME_AS":
             tgt = c["decision_target"].strip()
             if RE_WORD.match(tgt):
@@ -125,7 +139,7 @@ def main():
     remaining = [c for c in queue if not c.get("decision", "").strip() or c["decision"].strip().upper() == "DEFER"] + new_rows_for_queue
     for c in remaining:
         if c.get("decision", "").strip().upper() == "DEFER": c["decision"] = ""
-    write_csv(qpath, qh, remaining)
+    write_csv(root / "metadata" / "mapping_review_queue.csv", qh, remaining)  # the canonical queue always reflects what is still open, whatever file the decisions came from
     print(f"applied {len(decided)} decisions: {n_map} recordings mapped, new items {new_items}, {len(new_rows_for_queue)} split rows added, {len(remaining)} cases remain")
     if not a.no_rebuild:
         here = Path(__file__).parent
