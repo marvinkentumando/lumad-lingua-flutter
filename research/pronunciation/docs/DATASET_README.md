@@ -13,10 +13,10 @@ copied into the app repository or its `assets/` folder.
 |---|---|---|
 | `raw/reference/` | All validated reference recordings `REF_001.<ext>` … `REF_128.<ext>` (count from `config/corpus.yaml`), byte-for-byte copies of the Supabase objects | write-once |
 | `raw/learner/Sxxx/` | Learner recordings `Sxxx_Wyyy.<ext>` (retakes `Sxxx_Wyyy_T02.<ext>`) | write-once |
-| `staging/` | Working copies (Supabase listing, Firestore export, downloaded objects under original names) used to build the mapping. Not part of the dataset proper | regenerable |
-| `metadata/` | `reference_recordings.csv` (canonical registry, one row per validated recording), `vocabulary.csv` (items `Wnnn`, may own several references), `reference_mapping_input.csv` (human input for unresolved recordings), `participants.csv`, `validators.csv`, `audio_quality.csv`, `source_objects.csv`, `source_audio_inventory.csv` | edited by scripts / researcher |
+| `staging/` | Working copies (Supabase listing, Firestore export, downloaded objects under original names, `dictionary/` = Svelmoe 1990 OCR transcriptions + flattened CSVs) used to build the mapping. Not part of the dataset proper | regenerable |
+| `metadata/` | `reference_recordings.csv` (canonical registry, one row per validated recording), `vocabulary.csv` (items `Wnnn`, may own several references), `learner_targets.csv` (authoritative 112-item collection list, generated), `translation_review_flags.csv`, `reference_mapping_input.csv`, `mapping_audit_log.csv`, `learner_import_log.csv`, `learner_collection_status.csv`, `participants.csv`, `validators.csv`, `audio_quality.csv`, `source_objects.csv`, `source_audio_inventory.csv` | edited by scripts / researcher |
 | `manifests/` | `manifest.csv` (one row per raw recording), `exclusions.csv` | edited by scripts / researcher |
-| `validation/` | Rating scale, rating protocol, learner collection protocol, `ratings.csv` | ratings written by V01 only |
+| `validation/` | Rating scale, rating protocol (RP1.1), learner collection protocol (LC1.1), `ratings.csv` (pass 1) / `ratings_pass2.csv`, `rating_packages/` (blind randomised packages), `ratings_freeze_<ver>_pass<k>.json`, `mapping_review_instructions.md`, `review_submissions/` | ratings written by V01 only, via rating_tool.py |
 | `config/corpus.yaml` | Corpus contract: expected reference count, id schemes, status vocabularies | versioned |
 | `config/preprocessing/` | `PPnnn.yaml` audio-level preprocessing configs (candidates until frozen) + `OPEN_QUESTIONS.md` | versioned, append-only |
 | `config/features/` | `FEnnn.yaml` MFCC configs | versioned, append-only |
@@ -58,7 +58,17 @@ python3 scripts/analyze_preprocessing.py              # PPINV001 measurements ->
 python3 scripts/run_preprocessing.py --pp PP001 --candidate   # processed/PP001-candidate/ (+ transformation_log.csv); drop --candidate once PP001 is frozen
 python3 scripts/extract_features.py --pp-tag PP001-candidate --fe FE001   # features/<pp>_<fe>/ (.npy + feature_log.csv)
 python3 scripts/build_repro_manifest.py               # manifests/repro_manifest_<ver>.json
+python3 scripts/build_learner_targets.py              # metadata/learner_targets.csv (112 items) + reports/learner_targets_<ver>.json
+python3 scripts/new_participant.py S001 --session CS01  # enrol a learner (code only)
+python3 scripts/import_learner_audio.py --source inbox/S001 --speaker S001 --session CS01 --date YYYY-MM-DD   # write-once import + QC + status
+python3 scripts/learner_collection_status.py          # per-learner completeness (missing / duplicate / retake / unreadable / excluded)
+python3 scripts/rating_tool.py package --pass 1 --validator V01 --seed <int>   # blind randomised rating package
+python3 scripts/rating_tool.py ingest validation/rating_packages/<id>          # validated ingestion -> validation/ratings.csv
+python3 scripts/rating_tool.py freeze --pass 1                                 # ratings freeze record (required before any experiment)
+python3 scripts/rating_tool.py package --pass 2 --seed <int>                   # optional ~10% intra-rater pass (after the pass-1 freeze)
+python3 -m pipeline.dataset_interface                 # loader contract check for the future notebook (NOT READY until frozen)
 python3 scripts/test_pipeline.py                      # automated pipeline checks (needs numpy, scipy, soxr; librosa optional)
+python3 scripts/test_learner_rating.py                # learner import / rating / freeze checks (temporary fixtures only)
 ```
 
 Readiness layers are tracked separately: (1) physical reference corpus, (2) linguistic mapping completeness, (3) preprocessing protocol (PP/FE) status, (4) experiment readiness. See `reports/checks_report_<ver>.md` and `CHANGELOG.md`.
@@ -77,6 +87,8 @@ Credentials: `fetch_reference_audio.py` reads `SUPABASE_URL` / `SUPABASE_ANON_KE
 8. PP and FE configs finalised and checksummed.
 9. `scripts/checksums.py generate` run; list fingerprints recorded in `CHANGELOG.md`; `raw/` and `metadata/` set read-only; archive copy made.
 10. Identity mapping and consent records confirmed absent from this tree.
+11. `metadata/learner_targets.csv` unchanged since collection began (sha256 recorded in `validation/ratings_freeze_<ver>_pass1.json`); every learner file imported through `import_learner_audio.py` (provenance in `learner_import_log.csv`), read-only, in `SHA256SUMS_raw_<ver>.txt`.
+12. `validation/ratings_freeze_<ver>_pass1.json` exists and matches `ratings.csv`, targets, manifest, exclusions and the PP/FE config files (`rating_tool.py freeze --pass 1`); `pipeline/dataset_interface.py` loads without `DatasetNotFrozen`.
 
 ## Privacy
 

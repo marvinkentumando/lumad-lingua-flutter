@@ -18,6 +18,8 @@ from pathlib import Path
 from common import (ROOT, RE_WORD, RE_SPK, RE_REF, RE_LEARNER, REASON_CODES, STAGES, MAPPING_STATUS, MAPPING_EVIDENCE,
                     read_csv, version, corpus, sha256_file, rel, truthy)
 from mapping_common import AUTHORITATIVE, CATEGORIES, DECISIONS
+from learner_common import active_takes, validate_ratings, ratings_path, freeze_path, vtag
+import json
 
 class Report:
     def __init__(self): self.lines = []; self.counts = Counter()
@@ -187,6 +189,27 @@ def run(root, mode, verify_hashes):
     if not exc: rep.info("exclusions", "none logged")
     elif not prob: rep.pass_("exclusions:consistency")
 
+    # ---------------- learner targets (authoritative collection list) ----------------
+    _, tg = read_csv(root / "metadata" / "learner_targets.csv"); tby = {t["word_id"]: t for t in tg}
+    if not tg: absent("learner targets", "metadata/learner_targets.csv missing; run build_learner_targets.py")
+    else:
+        (rep.pass_ if set(tby) == set(wids) else rep.error)("learner targets:items = vocabulary", f"{len(tg)} targets vs {len(wids)} items" + ("" if set(tby) == set(wids) else f"; missing {sorted(set(wids) - set(tby))[:5]} extra {sorted(set(tby) - set(wids))[:5]}"))
+        badt = [t["word_id"] for t in tg if sorted(filter(None, t["reference_recording_ids"].split(";"))) != sorted(regw.get(t["word_id"], [])) or t["primary_playback_reference_id"] not in t["reference_recording_ids"].split(";")
+                or t["primary_playback_reference_id"] != min(filter(None, t["reference_recording_ids"].split(";")), default="")]
+        (rep.error if badt else rep.pass_)("learner targets:references & primary playback (lowest id)", str(badt[:8]) if badt else "every item lists its registry references; primary = lowest REF id")
+        badtx = [t["word_id"] for t in tg if t["mansaka_text"] != next((v["mansaka_text"] for v in voc if v["word_id"] == t["word_id"]), None)]
+        (rep.error if badtx else rep.pass_)("learner targets:text = vocabulary", str(badtx[:8]) if badtx else "ok")
+        inel = [t["word_id"] for t in tg if not truthy(t.get("collection_eligible"))]; (rep.warn if inel else rep.pass_)("learner targets:collection eligible", f"not eligible: {inel[:8]}" if inel else f"all {len(tg)} items eligible")
+        badts = [t["word_id"] for t in tg if t.get("translation_status") not in {"available", "flagged", "missing"} or (t["translation_status"] != "available") != truthy(t.get("translation_review_required"))]
+        (rep.error if badts else rep.pass_)("learner targets:translation flags consistent", str(badts[:8]) if badts else f"{sum(1 for t in tg if t['translation_status']=='missing')} missing, {sum(1 for t in tg if t['translation_status']=='flagged')} flagged, {sum(1 for t in tg if t['translation_status']=='available')} available (none auto-corrected)")
+        badlr = [m["recording_id"] for m in lrn if m["word_id"] in tby and m.get("reference_recording_id") != tby[m["word_id"]]["primary_playback_reference_id"]]
+        if lrn: (rep.error if badlr else rep.pass_)("manifest:learner reference = primary playback reference", str(badlr[:8]) if badlr else "ok")
+    if lrn:
+        act, probs = active_takes(man, exc); (rep.error if probs else rep.pass_)("learner takes:consistency", "; ".join(probs[:5]) if probs else f"{len(act)} active takes; retakes only after excluded takes")
+        unenr = sorted({m["speaker_id"] for m in lrn if m["speaker_id"] not in set(learners)})
+        if unenr: rep.error("learner recordings:speaker enrolled", str(unenr))
+        _, ilog = read_csv(root / "metadata" / "learner_import_log.csv"); logged = {l["recording_id"] for l in ilog if l.get("status") == "imported"}
+        unl = [m["recording_id"] for m in lrn if m["recording_id"] not in logged]; (rep.warn if unl else rep.pass_)("learner recordings:import provenance", f"{len(unl)} files not in learner_import_log.csv: {unl[:5]}" if unl else f"all {len(lrn)} logged")
     # ---------------- learner grid ----------------
     items = sorted(wids)
     if learners and items:
@@ -197,37 +220,33 @@ def run(root, mode, verify_hashes):
             if miss: absent(f"learner grid:{s}", f"{len(miss)}/{len(items)} items not recorded")
             else: rep.pass_(f"learner grid:{s}", f"{len(items)}/{len(items)} recorded")
         rep.info("learner recordings", f"{len(lrn)} files; item list currently {len(items)} mapped items (mapping completeness: {len(mapped)}/{len(reg)} recordings)")
-    else: absent("learner recordings", f"none yet; item list not final until mapping is complete ({len(items)} items mapped so far)")
+    else: absent("learner recordings", f"none yet; {len(items)} target items await collection" if len(mapped) == len(reg) else f"none yet; item list not final until mapping is complete ({len(mapped)}/{len(reg)} mapped)")
 
-    # ---------------- ratings ----------------
-    if rat:
-        bad = []
-        for r in rat:
-            hr = r.get("human_rating", "").strip(); st = r.get("validation_status", "")
-            if st == "rated" and not (hr.isdigit() and 1 <= int(hr) <= 5): bad.append(f"{r['rating_id']}:'{hr}'")
-            elif st == "unratable" and (hr or not r.get("unratable_reason", "").strip()): bad.append(f"{r['rating_id']}:unratable needs blank rating + reason")
-            elif st not in {"rated", "unratable", "pending"}: bad.append(f"{r['rating_id']}:status '{st}'")
-        (rep.error if bad else rep.pass_)("ratings:valid values", str(bad[:8]) if bad else f"{len(rat)} rows valid")
-        dk = [k for k, n in Counter((r["recording_id"], r["validator_code"], r.get("rating_pass", "1")) for r in rat).items() if n > 1]
-        (rep.error if dk else rep.pass_)("ratings:unique (recording, validator, pass)", str(dk[:5]) if dk else "ok")
-        mb = {m["recording_id"]: m for m in man}
-        mism = [r["rating_id"] for r in rat if r["recording_id"] in mb and (mb[r["recording_id"]]["word_id"] != r["word_id"] or mb[r["recording_id"]]["speaker_id"] != r["speaker_id"])]
-        orr = [r["rating_id"] for r in rat if r["recording_id"] not in mb]
-        badrefid = [r["rating_id"] for r in rat if r.get("reference_recording_id") and r["reference_recording_id"] not in regby]
-        if mism: rep.error("ratings:word/speaker match manifest", str(mism[:8]))
-        if orr: rep.error("ratings:orphan rows", str(orr[:8]))
-        if badrefid: rep.error("ratings:reference_recording_id registered", str(badrefid[:8]))
-        if not (mism or orr or badrefid): rep.pass_("ratings:consistency with manifest/registry")
-        nb = [r["rating_id"] for r in rat if not truthy(r.get("blind_confirmed"))]; 
-        if nb: rep.error("ratings:blind_confirmed", f"{len(nb)} rows not confirmed blind")
-        uv = sorted({r["validator_code"] for r in rat} - {v["validator_code"] for v in vals}); 
-        if uv: rep.error("ratings:validator known", str(uv))
+    # ---------------- ratings (pass 1 = validation/ratings.csv, pass 2 = validation/ratings_pass2.csv) ----------------
+    _, rat2 = read_csv(ratings_path(root, 2))
+    for rp, rows_ in ((1, rat), (2, rat2)):
+        if rows_:
+            errs = validate_ratings(root, rp, rows=rows_, manifest=man, targets=tg, validators=vals)
+            (rep.error if errs else rep.pass_)(f"ratings pass {rp}:rules", "; ".join(errs[:5]) + (f" (+{len(errs)-5})" if len(errs) > 5 else "") if errs else f"{len(rows_)} rows valid (integer 1-5 or unratable+reason, blind, unique, ids and primary reference match)")
+        fp = freeze_path(root, rp)
+        if fp.exists():
+            fz = json.loads(fp.read_text()); ok = fz.get("ratings_sha256") == (sha256_file(ratings_path(root, rp)) if ratings_path(root, rp).exists() else None)
+            (rep.pass_ if ok else rep.error)(f"ratings pass {rp}:frozen", f"{fp.name} sha256 {fz.get('ratings_sha256','')[:16]} matches" if ok else f"{fp.name} does not match the ratings file (modified after freeze)")
+            if rp == 1:
+                drift = [k for k, pth in [("targets_sha256", "metadata/learner_targets.csv"), ("manifest_sha256", "manifests/manifest.csv"), ("exclusions_sha256", "manifests/exclusions.csv")] if (root / pth).exists() and sha256_file(root / pth) != fz.get(k)]
+                (rep.error if drift else rep.pass_)("ratings pass 1:frozen companions", f"changed since freeze: {drift}" if drift else "targets, manifest and exclusions unchanged since the freeze")
+        elif rp == 1 and lrn: absent("ratings pass 1:frozen", "no freeze record yet (rating_tool.py freeze --pass 1)")
     inc_l = [m["recording_id"] for m in lrn if truthy(m.get("included_in_experiment"))]
-    rated1 = {r["recording_id"] for r in rat if r.get("rating_pass", "1") == "1" and r.get("validation_status") == "rated"}
-    unr = [i for i in inc_l if i not in rated1]
-    if inc_l and not unr: rep.pass_("ratings:coverage", f"all {len(inc_l)} included learner recordings rated (pass 1)")
-    elif inc_l: absent("ratings:coverage", f"{len(unr)}/{len(inc_l)} included learner recordings lack a pass-1 rating")
-    else: absent("ratings:coverage", "no included learner recordings yet")
+    act_ids = {v["recording_id"] for v in active_takes(man, exc)[0].values()} if lrn else set()
+    decided1 = {r["recording_id"] for r in rat if str(r.get("rating_pass", "1")) == "1" and r.get("validation_status") in ("rated", "unratable")}
+    und = sorted(act_ids - decided1)
+    if act_ids and not und: rep.pass_("ratings:coverage", f"all {len(act_ids)} active learner recordings have a pass-1 decision ({len(inc_l)} included)")
+    elif act_ids: absent("ratings:coverage", f"{len(und)}/{len(act_ids)} active learner recordings lack a pass-1 decision")
+    else: absent("ratings:coverage", "no learner recordings yet")
+    if mode == "freeze":
+        pst = next((l.split(":", 1)[1].strip() for l in (root / "config" / "preprocessing" / "PP001.yaml").read_text().splitlines() if l.startswith("status:")), "") if (root / "config" / "preprocessing" / "PP001.yaml").exists() else "missing"
+        (rep.pass_ if pst == "frozen" else rep.warn)("PP001 status", pst if pst == "frozen" else f"'{pst}': provisional values must be fixed before the experiment runs (loader refuses otherwise)")
+        (rep.pass_ if (root / "manifests" / f"repro_manifest_{vtag(ver)}.json").exists() else rep.error)("repro manifest", "PP/FE versions recorded" if (root / "manifests" / f"repro_manifest_{vtag(ver)}.json").exists() else "run build_repro_manifest.py")
 
     # ---------------- versions & checksums ----------------
     badv = {n: sorted({r.get("dataset_version") for r in rows if r.get("dataset_version") and r["dataset_version"] != ver}) for n, rows in [("registry", reg), ("vocabulary", voc), ("manifest", man), ("ratings", rat), ("exclusions", exc), ("participants", parts), ("validators", vals)]}

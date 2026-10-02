@@ -87,3 +87,45 @@ preprocessing protocol NOT frozen; experiment dataset NOT frozen.
 - Scripts: resolve_vocabulary_mapping.py, apply_mapping_review.py, mapping_common.py, test_mapping.py; build_reference_registry.py and
   check_dataset.py extended (evidence validity, no candidate/take promotion, queue ↔ unresolved consistency, ledger stability).
 - Multi-take groups remain candidates (0 multi-reference items declared); spelling variants kept separate. See reports/vocabulary_mapping_v0.2.md.
+
+### v0.2 addendum — 2026-09-30 — complete dictionary integrated into vocabulary mapping
+
+- Svelmoe & Svelmoe (1990) Mansaka Dictionary supplied as two OCR transcriptions; preserved byte-for-byte in `staging/dictionary/`
+  (sha256 in provenance.json) and flattened to entries/examples/finder CSVs. New `scripts/dictionary_evidence.py`.
+- Mapping re-run over all 128 recordings: 37 mapped (was 16), 36 items (W001–W016 unchanged, W017–W036 new), 1 multi-reference item
+  (W025 `madayaw, madyaw`). Review queue reduced from 97 cases/112 recordings to 76 cases/91 recordings; old queue archived under reports/superseded/.
+- Registry gains `form_text`; vocabulary gains alternate_forms and dictionary_* columns; gloss conflicts recorded (lesson vs dictionary).
+- Report: reports/vocabulary_mapping_v0.2_dictionary.md.
+
+### v0.2 addendum — 2026-10-02 — human review applied: mapping complete
+
+- Completed review queue returned by the researcher (76/76 cases decided, 2026-10-02); kept byte-for-byte under
+  `validation/review_submissions/` together with the normalised copy that was ingested (BOM removed, date → ISO,
+  one reviewer gloss moved from an evidence column to `authoritative_translation_en`).
+- `apply_mapping_review.py`: 91 recordings mapped, 76 new items W037–W112; 128/128 recordings now mapped, 112 items,
+  13 items with several validated references (all `takes_same_item=Y`), 0 open cases. Audit rows in `metadata/mapping_audit_log.csv`.
+- Script fixes found by this run: a bare headword in `decision_target` now resolves through the dictionary (key `svelmoe:hw:*`)
+  instead of being treated as a Firestore doc id; the canonical queue is always rewritten at `metadata/mapping_review_queue.csv`
+  even when decisions are read from another file; human-confirmed items keyed to a dictionary headword/finder form get the
+  dictionary columns filled from the key.
+- Open points (translations missing on 52 items; two doubtful root glosses; gloss conflicts) listed in
+  reports/vocabulary_mapping_v0.2_review_applied.md. Raw audio and validation status unchanged.
+
+### v0.2 addendum — 2026-10-02 — learner collection and human ground-truth infrastructure prepared (no learner data yet)
+
+- `metadata/learner_targets.csv` (112 items, TL-0.2) generated from vocabulary.csv + reference_recordings.csv by
+  `scripts/build_learner_targets.py`: word_id, Mansaka text, item type, references (128/128 represented, 13 multi-reference),
+  deterministic primary playback reference (`lowest_reference_id`, config/corpus.yaml), provenance, collection eligibility
+  (112/112) and translation metadata (41 available, 19 flagged, 52 missing; 71 need linguistic review; none corrected or invented).
+  `metadata/translation_review_flags.csv` holds the 5 open flags from the applied review (2 doubtful root glosses, 3 lesson/dictionary conflicts).
+- Protocols finalised before any data exists: LC1.1 (validation/learner_collection_protocol.md), RP1.1 (validation/rating_protocol.md);
+  corpus.yaml gains `learner_collection` and `human_rating` contracts (ids Sxxx / Sxxx_Wnnn[_Tnn], accepted formats, minimum 10 learners,
+  rating reference policy, pass-2 fraction 0.10).
+- New scripts: `import_learner_audio.py` (write-once import with id/format/enrolment/target validation, duplicate and overwrite refusal,
+  retake rules, sha256, probe, `metadata/learner_import_log.csv`, manifest/status/checksums/check refresh), `learner_collection_status.py`
+  (per-learner completeness -> metadata/learner_collection_status.csv + reports/learner_collection_status_<ver>.md), `rating_tool.py`
+  (blind randomised rating packages with recorded seed, validated ingestion into validation/ratings.csv / ratings_pass2.csv, freeze
+  record validation/ratings_freeze_<ver>_pass<k>.json), `learner_common.py`; `pipeline/dataset_interface.py` = loader contract for the
+  future notebook (refuses unfrozen or modified data). build_manifest.py fills learner reference ids; check_dataset.py checks targets,
+  take consistency, rating rules, freeze integrity. `scripts/test_learner_rating.py` (13 tests on temporary fixtures).
+- No learner recording, participant or rating exists. No DTW/HMM/Cosine code. Raw audio and validation status unchanged.

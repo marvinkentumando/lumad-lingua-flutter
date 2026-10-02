@@ -1,0 +1,34 @@
+{
+ "generated": "2026-10-02T01:16:34+00:00",
+ "dataset_version": "lumad_lingua_pronunciation_v0.2",
+ "target_list_version": "TL-0.2",
+ "file": "metadata/learner_targets.csv",
+ "sha256": "015bd1baeafee86eafaf56330839639f115ce8f264d2dd6a7ec6db14c45402af",
+ "n_items": 112,
+ "n_vocabulary_items": 112,
+ "n_collection_eligible": 112,
+ "n_references_represented": 128,
+ "n_registry_references": 128,
+ "n_multi_reference_items": 13,
+ "playback_reference_policy": "lowest_reference_id",
+ "translation_status_counts": {
+  "available": 41,
+  "flagged": 19,
+  "missing": 52
+ },
+ "translation_review_required": 71,
+ "translation_source_counts": {
+  "firestore_words": 11,
+  "firestore_words_example": 3,
+  "lesson": 4,
+  "svelmoe1990_finder": 1,
+  "svelmoe1990_headword": 24,
+  "svelmoe1990_example": 1,
+  "none": 52,
+  "svelmoe1990_root_gloss_via_review": 14,
+  "voice_submission_transcript_via_review": 1,
+  "svelmoe1990_finder+reviewer": 1
+ },
+ "open_flags": 5,
+ "rule": "generated from metadata/vocabulary.csv + metadata/reference_recordings.csv; no filename-derived identity; no gloss invented or corrected"
+}

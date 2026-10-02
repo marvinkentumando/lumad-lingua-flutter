@@ -6,7 +6,7 @@ Generated: 2026-10-02  Mode: `prefreeze`  Root: `/home/user/lumad_lingua_pronunc
 |---|---|
 | EXPECTED-NOT-YET-COLLECTED | 3 |
 | INFO | 6 |
-| PASS | 46 |
+| PASS | 51 |
 
 | Status | Check | Detail |
 |---|---|---|
@@ -60,11 +60,16 @@ Generated: 2026-10-02  Mode: `prefreeze`  Root: `/home/user/lumad_lingua_pronunc
 | PASS | audio_quality:coverage | 128 probed |
 | PASS | manifest:no unreadable included | ok |
 | INFO | exclusions | none logged |
-| EXPECTED-NOT-YET-COLLECTED | learner recordings | none yet; item list not final until mapping is complete (112 items mapped so far) |
-| EXPECTED-NOT-YET-COLLECTED | ratings:coverage | no included learner recordings yet |
+| PASS | learner targets:items = vocabulary | 112 targets vs 112 items |
+| PASS | learner targets:references & primary playback (lowest id) | every item lists its registry references; primary = lowest REF id |
+| PASS | learner targets:text = vocabulary | ok |
+| PASS | learner targets:collection eligible | all 112 items eligible |
+| PASS | learner targets:translation flags consistent | 52 missing, 19 flagged, 41 available (none auto-corrected) |
+| EXPECTED-NOT-YET-COLLECTED | learner recordings | none yet; 112 target items await collection |
+| EXPECTED-NOT-YET-COLLECTED | ratings:coverage | no learner recordings yet |
 | PASS | dataset_version consistency | all rows agree with VERSION (lumad_lingua_pronunciation_v0.2) |
 | PASS | checksums:lists for current version | SHA256SUMS_config_v0.2.txt, SHA256SUMS_metadata_v0.2.txt, SHA256SUMS_raw_v0.2.txt, SHA256SUMS_validation_v0.2.txt |
-| PASS | checksums:verify lists | 155 entries verified |
+| PASS | checksums:verify lists | 158 entries verified |
 
 EXPECTED-NOT-YET-COLLECTED = legitimately absent in the pre-freeze state; becomes ERROR in `--mode freeze`.
 Frozen-ready: NO

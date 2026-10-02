@@ -1,0 +1,6 @@
+word_id,mansaka_text,flag_code,detail,raised_by,raised_on,source_report,resolution_status,resolved_by,resolved_on,resolution_notes
+W104,yagasurat,ROOT_GLOSS_DOUBTFUL,translation is the dictionary definition of root 'sorat' (breech position of a fetus); a 'surat/sulat' = write reading was not in the OCR and may be the intended root,RESEARCH_TOOLING,2026-10-02,reports/vocabulary_mapping_v0.2_review_applied.md,open,,,
+W075,nangakaw,ROOT_GLOSS_DOUBTFUL,translation is the dictionary definition of root 'akaw' (stilt); a 'takaw' = steal reading would also fit the inflected form,RESEARCH_TOOLING,2026-10-02,reports/vocabulary_mapping_v0.2_review_applied.md,open,,,
+W059,Madyaw na gabila,LESSON_DICTIONARY_CONFLICT,lesson gloss 'Good afternoon' vs dictionary gabila = dusk/evening (ambong = afternoon),RESEARCH_TOOLING,2026-10-02,reports/vocabulary_mapping_v0.2_review_applied.md,open,,,
+W060,Madyaw na masurom,LESSON_DICTIONARY_CONFLICT,lesson gloss 'Good morning'; dictionary spells the noun masurum and also lists karamdag = morning,RESEARCH_TOOLING,2026-10-02,reports/vocabulary_mapping_v0.2_review_applied.md,open,,,
+W015,Madyaw na gabi,LESSON_DICTIONARY_CONFLICT,lesson gloss 'Good evening' vs dictionary gabi = night,RESEARCH_TOOLING,2026-10-02,reports/vocabulary_mapping_v0.2_review_applied.md,open,,,

@@ -2,7 +2,7 @@
 """Build/refresh manifests/manifest.csv.
 
 Reference rows come from metadata/reference_recordings.csv (one row per physical validated recording, REF_nnn) and
-require the file to be present in raw/reference/. Learner rows are parsed from raw/learner/Sxxx/Sxxx_Wnnn[_Tnn] files.
+require the file to be present in raw/reference/. Learner rows are parsed from raw/learner/Sxxx/Sxxx_Wnnn[_Tnn] files; their reference_recording_id is the item's\nprimary playback reference from metadata/learner_targets.csv (deterministic policy), mapping_status 'mapped' when the item exists.
 Editable columns (collection_session_id, recording_date, included_in_experiment, exclusion_id, notes) are preserved.
 Reference rows default to included_in_experiment=true (all validated references are corpus members); learner rows
 default to false until a rating decision exists. Nothing is fabricated: dates and sessions stay blank until filled.
@@ -22,6 +22,8 @@ def main():
     _, aq = read_csv(root / "metadata" / "audio_quality.csv"); aq = {r["file_path"]: r for r in aq}
     _, old = read_csv(root / "manifests" / "manifest.csv"); old = {r["recording_id"]: r for r in old}
     ver = version(root); spk = corpus(root).get("reference_speaker_id", "R001"); rows = []
+    _, tg = read_csv(root / "metadata" / "learner_targets.csv"); targets = {t["word_id"]: t for t in tg}
+    _, voc = read_csv(root / "metadata" / "vocabulary.csv"); items = {v["word_id"] for v in voc}
     for r in reg:
         if not r.get("raw_audio_path") or not (root / r["raw_audio_path"]).exists(): continue
         prev = old.get(r["recording_id"], {}); q = aq.get(r["raw_audio_path"], {})
@@ -37,8 +39,9 @@ def main():
         m = RE_LEARNER.match(f.stem)
         if not m: print(f"skip (not an id): {rel(f, root)}"); continue
         prev = old.get(f.stem, {}); q = aq.get(rel(f, root), {})
-        row = {"recording_id": f.stem, "recording_type": "learner", "speaker_id": m.group(1), "word_id": m.group(2), "mapping_status": "", "variant_group_id": "",
-               "reference_recording_id": "", "take_number": int(m.group(3) or 1), "original_audio_path": rel(f, root), "original_format": f.suffix.lower().lstrip("."),
+        w = m.group(2); t = targets.get(w, {})
+        row = {"recording_id": f.stem, "recording_type": "learner", "speaker_id": m.group(1), "word_id": w, "mapping_status": "mapped" if w in items else "unknown_item", "variant_group_id": "",
+               "reference_recording_id": t.get("primary_playback_reference_id", ""), "take_number": int(m.group(3) or 1), "original_audio_path": rel(f, root), "original_format": f.suffix.lower().lstrip("."),
                "original_sha256": q.get("sha256", ""), "duration_sec": q.get("duration_sec", ""), "readable": q.get("readable", ""),
                "validation_status": prev.get("validation_status") or "pending", "dataset_version": prev.get("dataset_version") or ver}
         for k in KEEP: row[k] = prev.get(k, "")

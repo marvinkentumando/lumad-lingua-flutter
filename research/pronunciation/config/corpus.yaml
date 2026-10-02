@@ -15,3 +15,23 @@ multiple_references_per_item: true
 mapping_status_values: [mapped, unresolved]
 mapping_evidence_values: [firestore_exact_term, validator_confirmed, researcher_confirmed]
 learner_recording_id_scheme: Sxxx_Wnnn[_Tnn]; learner collection requires the item list (mapping) to be complete first
+
+# ---- learner collection and human ground truth (stage prepared 2026-10-02; no learner data exists yet) ----
+learner_collection:
+  protocol_version: LC1.1
+  participant_id_scheme: "Sxxx (S001, S002, ...): code only; no name, school, sex, age, municipality or ethnicity is encoded anywhere in the dataset"
+  recording_id_scheme: "Sxxx_Wnnn = the single primary attempt; Sxxx_Wnnn_Tnn (nn >= 02) = retake after a documented technical failure of take nn-1; earlier takes are never overwritten or deleted"
+  target_list: metadata/learner_targets.csv          # generated from vocabulary.csv + reference_recordings.csv by scripts/build_learner_targets.py; never hand-edited
+  items_per_learner: all_targets                      # every learner attempts every collection-eligible item (112 at v0.2)
+  minimum_learners: 10
+  accepted_formats:
+    lossless_preferred: [wav, flac]
+    device_formats_preserved_as_is: [m4a, aac, mp4, 3gp, ogg, opus, mp3, amr]
+  primary_playback_reference_policy: lowest_reference_id   # deterministic: smallest REF_nnn among the item's validated references, recorded per item in learner_targets.csv; chosen without any learner or algorithm information; every validated reference stays available for later algorithm scoring
+human_rating:
+  protocol_version: RP1.1
+  scale: integers 1-5 (validation/rating_scale.md); never converted to production tiers inside the dataset
+  validator_code: V01
+  rating_reference_policy: primary_playback_reference      # the validator hears the item's primary playback reference (same deterministic choice as collection) immediately before the learner recording
+  pass2_fraction: 0.10
+  blindness: validator sees target text, ids and audio only; no DTW/HMM/Cosine output exists before validation/ratings.csv is frozen (rating_tool.py freeze)

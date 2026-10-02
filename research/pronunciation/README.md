@@ -12,7 +12,7 @@ a sibling directory `../lumad_lingua_pronunciation/` (see `docs/DATASET_README.m
 | Path | Content |
 |---|---|
 | `pipeline/` | Shared, documented implementation of preprocessing (PP) and MFCC features (FE): `audio_io.py`, `preprocess.py`, `features.py`. The dataset scripts, `scripts/test_pipeline.py` and the future Colab notebook import this package instead of re-implementing it. |
-| `scripts/` | Canonical copy of the dataset tooling (Python 3.11, `requirements.txt`). Set `LLP_DATASET_ROOT` to point at the external dataset root, or run from a copy inside that root. Includes `analyze_preprocessing.py` (PPINV001), `run_preprocessing.py`, `extract_features.py`, `build_repro_manifest.py`, `test_pipeline.py`, and the mapping tools `resolve_vocabulary_mapping.py` (evidence inventory + review queue), `apply_mapping_review.py` (ingests the completed review), `dictionary_evidence.py` (Svelmoe 1990 lookups), `test_mapping.py`. |
+| `scripts/` | Canonical copy of the dataset tooling (Python 3.11, `requirements.txt`). Set `LLP_DATASET_ROOT` to point at the external dataset root, or run from a copy inside that root. Includes `analyze_preprocessing.py` (PPINV001), `run_preprocessing.py`, `extract_features.py`, `build_repro_manifest.py`, `test_pipeline.py`, the mapping tools `resolve_vocabulary_mapping.py` (evidence inventory + review queue), `apply_mapping_review.py` (ingests the completed review), `dictionary_evidence.py` (Svelmoe 1990 lookups), `test_mapping.py`, and the learner/ground-truth tools `build_learner_targets.py` (112-item target list), `new_participant.py`, `import_learner_audio.py` (write-once import + QC), `learner_collection_status.py`, `rating_tool.py` (blind packages, validated ingestion, freeze), `learner_common.py`, `test_learner_rating.py`. |
 | `config/corpus.yaml` | Corpus contract: 128 validated reference recordings, id schemes, status vocabularies |
 | `config/preprocessing/PP001.yaml` | Preprocessing config with per-parameter status: channel averaging, 16 kHz soxr HQ, DC removal, PCM16 and the relative-peak trim mechanism are FROZEN; normalisation and trim values are PROVISIONAL (learner data). Overall status: candidate. |
 | `config/features/FE001.yaml` | MFCC feature contract, FROZEN as the common design for DTW/HMM/Cosine (C1..C13, 25/10 ms, Hamming, 512 FFT, 26 HTK mel, 0–8 kHz). |
@@ -21,10 +21,13 @@ a sibling directory `../lumad_lingua_pronunciation/` (see `docs/DATASET_README.m
 
 Current state (v0.2, PRE-FREEZE): 128/128 validated reference recordings registered and hashed; 128/128 mapped to
 112 vocabulary items (37 by exact evidence from the Svelmoe & Svelmoe (1990) Mansaka Dictionary, Firestore terms and
-published lesson items; 91 by the researcher's completed review of 2026-10-02, applied with `apply_mapping_review.py`,
-audit trail in `dataset_snapshot/v0.2/metadata/mapping_audit_log.csv`). 13 items own several validated references;
-the review queue is empty. Open points (52 items without an English gloss, two doubtful root glosses, three lesson-vs-
-dictionary gloss conflicts) are listed in `dataset_snapshot/v0.2/reports/vocabulary_mapping_v0.2_review_applied.md`. The dictionary
+published lesson items; 91 by the researcher's completed review of 2026-10-02, audit trail in
+`dataset_snapshot/v0.2/metadata/mapping_audit_log.csv`). The authoritative learner target list
+`dataset_snapshot/v0.2/metadata/learner_targets.csv` (112 items, 128 references, 13 multi-reference items, deterministic
+primary playback reference = lowest REF id) and the collection / blind-rating / freeze tooling are in place (protocols LC1.1
+and RP1.1 in `docs/`, loader contract in `docs/experiment_input_contract.md`). No learner recording, participant or human
+rating exists yet; translations are 41 available / 19 flagged / 52 missing and are never corrected automatically
+(`metadata/translation_review_flags.csv`). The dictionary
 transcriptions themselves stay outside the repository (private staging data; provenance hashes in
 `dataset_snapshot/v0.2/reports/dictionary_provenance.json`). Preprocessing investigation PPINV001 is complete
 (`dataset_snapshot/v0.2/reports/preprocessing_protocol_v0.2.md`); FE001 is frozen; PP001 keeps two provisional
