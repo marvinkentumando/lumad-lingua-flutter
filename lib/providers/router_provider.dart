@@ -148,7 +148,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/dictionary',
-            builder: (context, state) => const DictionaryScreen(),
+            builder: (context, state) {
+              final query = state.uri.queryParameters['q'] ??
+                  state.uri.queryParameters['query'];
+              return DictionaryScreen(initialQuery: query);
+            },
           ),
           GoRoute(
             path: '/learning',

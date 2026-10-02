@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lumad_lingua/models/sentiment_post.dart';
 import 'package:lumad_lingua/services/firebase_service.dart';
 
 enum SentimentModelType {
@@ -414,9 +415,19 @@ class SentimentService {
     double exp2x = math.exp((2 * x).clamp(-20.0, 20.0));
     return (exp2x - 1) / (exp2x + 1);
   }
+
+  /// Fetches human-validated community sentiment posts from repository.
+  Future<List<SentimentPost>> getValidatedSentimentPosts() async {
+    // Return empty list until production validated sentiment dataset is connected
+    return [];
+  }
 }
 
 final sentimentServiceProvider = Provider((ref) => SentimentService());
+
+final communitySentimentPostsProvider = FutureProvider<List<SentimentPost>>((ref) async {
+  return ref.watch(sentimentServiceProvider).getValidatedSentimentPosts();
+});
 
 final recentSentimentProvider = FutureProvider<List<SentimentData>>((ref) async {
   final config = ref.watch(appConfigProvider).value;

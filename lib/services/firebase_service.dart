@@ -16,7 +16,6 @@ import '../models/voice_submission.dart';
 import '../models/contributor_request.dart';
 import '../models/quest.dart';
 import '../models/community_activity.dart';
-import '../models/community_comment.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rxdart/rxdart.dart';
 import '../models/gamification_models.dart';
@@ -3902,73 +3901,6 @@ class FirebaseService {
     });
   }
 
-  Future<void> addComment(
-    String activityId,
-    String userId,
-    String userName,
-    String text, {
-    String? userPhotoUrl,
-  }) async {
-    final activityRef = _db.collection('community_feed').doc(activityId);
-    final commentRef = activityRef.collection('comments').doc();
-
-    return _db.runTransaction((transaction) async {
-      final snapshot = await transaction.get(activityRef);
-      if (!snapshot.exists) return;
-
-      final data = snapshot.data()!;
-      final targetUserId = data['userId'] as String?;
-
-      transaction.set(commentRef, {
-        'userId': userId,
-        'userName': userName,
-        if (userPhotoUrl != null && userPhotoUrl.isNotEmpty)
-          'userPhotoUrl': userPhotoUrl,
-        'text': text,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      transaction.update(activityRef, {
-        'commentCount': FieldValue.increment(1),
-      });
-
-      // Add notification for the activity owner
-      if (targetUserId != null && targetUserId != userId) {
-        final notifRef = _db
-            .collection('users')
-            .doc(targetUserId)
-            .collection('notifications')
-            .doc();
-
-        transaction.set(notifRef, {
-          'type': 'comment',
-          'title': 'New Echo! 💬',
-          'message': '$userName commented: "$text"',
-          'senderId': userId,
-          'senderName': userName,
-          'senderPhotoUrl': userPhotoUrl,
-          'activityId': activityId,
-          'isRead': false,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
-      }
-    });
-  }
-
-  Stream<List<CommunityComment>> streamComments(String activityId) {
-    return _db
-        .collection('community_feed')
-        .doc(activityId)
-        .collection('comments')
-        .orderBy('createdAt', descending: false)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return CommunityComment.fromFirestore(doc.data(), doc.id);
-      }).toList();
-    });
-  }
-
   // ── Scenario Operations ────────────────────────────────────────────────
 
   Stream<List<Scenario>> getScenarios() {
@@ -4772,11 +4704,6 @@ final pendingLessonsCountProvider =
 
 final communityFeedProvider = StreamProvider<List<CommunityActivity>>((ref) {
   return ref.watch(firebaseServiceProvider).getCommunityFeed();
-});
-
-final activityCommentsProvider =
-    StreamProvider.family<List<CommunityComment>, String>((ref, activityId) {
-  return ref.watch(firebaseServiceProvider).streamComments(activityId);
 });
 
 final appConfigProvider = StreamProvider<AppConfig>((ref) {

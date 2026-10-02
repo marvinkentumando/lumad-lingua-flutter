@@ -21,7 +21,8 @@ import '../utils/app_localization.dart';
 import '../widgets/phonetic_guide_widget.dart';
 
 class DictionaryScreen extends ConsumerStatefulWidget {
-  const DictionaryScreen({super.key});
+  final String? initialQuery;
+  const DictionaryScreen({super.key, this.initialQuery});
 
   @override
   ConsumerState<DictionaryScreen> createState() => _DictionaryScreenState();
@@ -30,7 +31,20 @@ class DictionaryScreen extends ConsumerStatefulWidget {
 class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
   Timer? _debounce;
   String? _expandedWordId;
-  final _searchController = TextEditingController();
+  late final TextEditingController _searchController;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController(text: widget.initialQuery ?? '');
+    if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(dictionaryFilterProvider.notifier).update(
+          (s) => s.copyWith(query: widget.initialQuery!),
+        );
+      });
+    }
+  }
 
   @override
   void dispose() {

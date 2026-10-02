@@ -2,30 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import '../theme/app_typography.dart';
 import '../theme/app_colors.dart';
+import 'package:lumad_lingua/models/sentiment_post.dart';
 import 'package:lumad_lingua/services/sentiment_service.dart';
-import 'package:lumad_lingua/services/firebase_service.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_background.dart';
 import '../widgets/app_shimmer_skeleton.dart';
-import 'package:fl_chart/fl_chart.dart';
-import 'package:intl/intl.dart';
 
 class SentimentDashboardScreen extends ConsumerStatefulWidget {
   const SentimentDashboardScreen({super.key});
 
   @override
-  ConsumerState<SentimentDashboardScreen> createState() => _SentimentDashboardScreenState();
+  ConsumerState<SentimentDashboardScreen> createState() =>
+      _SentimentDashboardScreenState();
 }
 
-class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScreen> {
+class _SentimentDashboardScreenState
+    extends ConsumerState<SentimentDashboardScreen> {
   final ScrollController _scrollController = ScrollController();
-
-  @override
-  void initState() {
-    super.initState();
-  }
+  final Set<String> _savedPostIds = {};
+  final Set<String> _sparkedPostIds = {};
 
   @override
   void dispose() {
@@ -35,8 +33,7 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
 
   @override
   Widget build(BuildContext context) {
-    final allModelsAsync = ref.watch(allModelsSentimentProvider);
-    final configAsync = ref.watch(appConfigProvider);
+    final postsAsync = ref.watch(communitySentimentPostsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -44,31 +41,36 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
       body: BrandBackground(
         child: SafeArea(
           bottom: false,
-          child: configAsync.when(
-            data: (config) => allModelsAsync.when(
-              data: (allData) => _buildMainContent(allData, config.activeSentimentAlgorithm, isDark),
-              loading: () => _buildDashboardSkeleton(isDark),
-              error: (e, _) => Center(child: Text('Monitor Error: $e', style: TextStyle(color: isDark ? Colors.white : AppColors.forest900))),
-            ),
+          child: postsAsync.when(
+            data: (posts) => _buildMainContent(posts, isDark),
             loading: () => _buildDashboardSkeleton(isDark),
-            error: (e, _) => Center(child: Text('Config Error: $e')),
+            error: (e, _) => Center(
+              child: Text(
+                'Monitor Error: $e',
+                style: TextStyle(
+                  color: isDark ? Colors.white : AppColors.forest900,
+                ),
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildMainContent(Map<SentimentModelType, List<SentimentData>> allData, String activeModelName, bool isDark) {
-    final activeModel = SentimentModelType.values.firstWhere(
-      (e) => e.name == activeModelName,
-      orElse: () => SentimentModelType.naiveBayes,
-    );
-    final data = allData[activeModel] ?? [];
-    final bool hasData = data.isNotEmpty;
+  Widget _buildMainContent(List<SentimentPost> posts, bool isDark) {
+    final bool hasData = posts.isNotEmpty;
 
-    // Calculate aggregate vitality
-    final avgScore = !hasData ? 0.0 : data.fold(0.0, (sum, item) => sum + item.sentimentScore) / data.length;
-    final vitalityPercent = !hasData ? 0.0 : (avgScore + 1) / 2; // Map -1..1 to 0..1
+    // Aggregate metrics if data exists
+    final totalPosts = posts.length;
+    final posCount =
+        posts.where((p) => p.sentimentCategory == 'positive').length;
+    final neuCount =
+        posts.where((p) => p.sentimentCategory == 'neutral').length;
+    final negCount =
+        posts.where((p) => p.sentimentCategory == 'negative').length;
+
+    final overallIndex = !hasData ? 0 : ((posCount / totalPosts) * 100).toInt();
 
     return CustomScrollView(
       controller: _scrollController,
@@ -82,23 +84,34 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 20),
-                _buildVitalityGauge(vitalityPercent, avgScore, hasData, true),
-                const SizedBox(height: 32),
-                if (hasData) ...[
-                  _buildInsightGrid(data, isDark),
-                  const SizedBox(height: 32),
-                  _buildSectionHeader('Multi-Model Health Trends', isDark),
-                  const SizedBox(height: 16),
-                  _buildVitalityChart(allData, isDark),
-                  const SizedBox(height: 12),
-                  _buildLegend(isDark),
-                  const SizedBox(height: 32),
-                  _buildKeywordCloud(data, isDark),
-                  const SizedBox(height: 32),
-                  _buildSectionHeader('Community Analysis Archive (${_getSentimentModelName(activeModel)})', isDark),
-                  const SizedBox(height: 16),
-                ] else
-                  _buildNoDataState(isDark),
+                _buildSentimentSummaryCard(
+                  overallIndex: overallIndex,
+                  hasData: hasData,
+                  totalPosts: totalPosts,
+                  posCount: posCount,
+                  neuCount: neuCount,
+                  negCount: negCount,
+                  isDark: isDark,
+                ),
+                const SizedBox(height: 28),
+                _buildSectionHeader('Sentiment Distribution', isDark),
+                const SizedBox(height: 12),
+                _buildSentimentDistributionSection(
+                  hasData: hasData,
+                  totalPosts: totalPosts,
+                  posCount: posCount,
+                  neuCount: neuCount,
+                  negCount: negCount,
+                  isDark: isDark,
+                ),
+                const SizedBox(height: 28),
+                _buildSectionHeader('Dominant Keywords', isDark),
+                const SizedBox(height: 12),
+                _buildKeywordCloud(posts, isDark),
+                const SizedBox(height: 28),
+                _buildSectionHeader('Community Sentiment Entries', isDark),
+                const SizedBox(height: 16),
+                if (!hasData) _buildNoDataState(isDark),
               ],
             ),
           ),
@@ -108,11 +121,12 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
             padding: const EdgeInsets.symmetric(horizontal: 20),
             sliver: SliverList(
               delegate: SliverChildBuilderDelegate(
-                (context, index) => _buildSentimentCard(data[index], index, true)
-                    .animate(delay: (100 * index).ms)
-                    .fadeIn()
-                    .slideX(begin: 0.1),
-                childCount: data.length,
+                (context, index) => _buildSentimentPostCard(
+                  posts[index],
+                  index,
+                  isDark,
+                ).animate(delay: (80 * index).ms).fadeIn().slideX(begin: 0.05),
+                childCount: posts.length,
               ),
             ),
           ),
@@ -126,10 +140,13 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
       backgroundColor: Colors.transparent,
       elevation: 0,
       leading: IconButton(
-        icon: Icon(Icons.arrow_back_ios_new_rounded, color: isDark ? Colors.white : AppColors.forest900),
+        icon: Icon(
+          Icons.arrow_back_ios_new_rounded,
+          color: isDark ? Colors.white : AppColors.forest900,
+        ),
         onPressed: () => context.pop(),
       ),
-      expandedHeight: 120,
+      expandedHeight: 110,
       pinned: true,
       flexibleSpace: FlexibleSpaceBar(
         titlePadding: const EdgeInsets.only(left: 60, bottom: 16),
@@ -145,9 +162,9 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
                   color: AppColors.gold500,
                   size: 10,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Text(
-                  'COMMUNITY HEALTH MONITOR',
+                  'COMMUNITY SENTIMENT MONITOR',
                   style: AppTypography.label.copyWith(
                     color: AppColors.gold500,
                     letterSpacing: 2,
@@ -157,7 +174,7 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
               ],
             ),
             Text(
-              'Mansaka Digital Pulse',
+              'Mansaka Community Sentiment',
               style: AppTypography.h3.copyWith(
                 color: isDark ? Colors.white : AppColors.forest900,
                 fontSize: 14,
@@ -169,79 +186,101 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
     );
   }
 
-  Widget _buildVitalityGauge(double percent, double score, bool hasData, bool isDark) {
-    final statusColor = !hasData 
-        ? Colors.white12 
-        : (score > 0.4 ? AppColors.semanticGreen : (score > 0 ? AppColors.gold500 : AppColors.semanticRed));
+  Widget _buildSentimentSummaryCard({
+    required int overallIndex,
+    required bool hasData,
+    required int totalPosts,
+    required int posCount,
+    required int neuCount,
+    required int negCount,
+    required bool isDark,
+  }) {
+    final statusColor = !hasData
+        ? Colors.white24
+        : (overallIndex >= 60
+            ? AppColors.semanticGreen
+            : (overallIndex >= 40 ? AppColors.gold500 : AppColors.semanticRed));
 
     return Theme(
       data: Theme.of(context).copyWith(brightness: Brightness.dark),
       child: BrandCard(
         theme: BrandCardTheme.vibrant,
-        padding: const EdgeInsets.all(32),
-        borderRadius: 40,
-        child: Row(
+        padding: const EdgeInsets.all(28),
+        borderRadius: 32,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'VITALITY SCORE',
-                    style: AppTypography.label.copyWith(
-                      color: hasData ? statusColor.withValues(alpha: 0.7) : Colors.white24,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Overall Index',
-                    style: AppTypography.h2.copyWith(
-                      color: Colors.white,
-                      fontSize: 24,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    hasData 
-                      ? 'Aggregated analysis based on internal linguistic models and archived digital footprints.'
-                      : 'Linguistic monitoring system active. Awaiting community data retrieval for analysis.',
-                    style: AppTypography.body.copyWith(
-                      color: Colors.white60,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 20),
-            Stack(
-              alignment: Alignment.center,
+            Row(
               children: [
-                SizedBox(
-                  width: 100,
-                  height: 100,
-                  child: CircularProgressIndicator(
-                    value: hasData ? percent : 0,
-                    strokeWidth: 12,
-                    backgroundColor: Colors.white10,
-                    color: statusColor,
-                    strokeCap: StrokeCap.round,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'SENTIMENT OVERVIEW',
+                        style: AppTypography.label.copyWith(
+                          color: hasData
+                              ? statusColor.withValues(alpha: 0.8)
+                              : Colors.white24,
+                          letterSpacing: 2,
+                          fontSize: 11,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Overall Index',
+                        style: AppTypography.h2.copyWith(
+                          color: Colors.white,
+                          fontSize: 22,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        hasData
+                            ? 'Aggregated analysis based on human-validated community dataset.'
+                            : 'Community sentiment monitoring active. Awaiting validated sentiment dataset connection.',
+                        style: AppTypography.body.copyWith(
+                          color: Colors.white60,
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
+                const SizedBox(width: 16),
+                Stack(
+                  alignment: Alignment.center,
                   children: [
-                    Text(
-                      hasData ? '${(percent * 100).toInt()}' : '--',
-                      style: AppTypography.h2.copyWith(color: Colors.white),
-                    ),
-                    Text(
-                      'INDEX',
-                      style: AppTypography.label.copyWith(
-                        color: Colors.white24,
-                        fontSize: 8,
+                    SizedBox(
+                      width: 84,
+                      height: 84,
+                      child: CircularProgressIndicator(
+                        value: hasData ? overallIndex / 100 : 0,
+                        strokeWidth: 10,
+                        backgroundColor: Colors.white10,
+                        color: statusColor,
+                        strokeCap: StrokeCap.round,
                       ),
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          hasData ? '$overallIndex%' : '--',
+                          style: AppTypography.h3.copyWith(
+                            color: Colors.white,
+                            fontSize: 18,
+                          ),
+                        ),
+                        Text(
+                          'INDEX',
+                          style: AppTypography.label.copyWith(
+                            color: Colors.white24,
+                            fontSize: 8,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -253,70 +292,139 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
     );
   }
 
-  Widget _buildNoDataState(bool isDark) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 60),
+  Widget _buildSentimentDistributionSection({
+    required bool hasData,
+    required int totalPosts,
+    required int posCount,
+    required int neuCount,
+    required int negCount,
+    required bool isDark,
+  }) {
+    if (!hasData) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.03)
+              : AppColors.forest900.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.05)
+                : AppColors.forest900.withValues(alpha: 0.05),
+          ),
+        ),
         child: Column(
           children: [
             Icon(
-              Icons.sensors_off_rounded,
-              size: 48,
-              color: isDark ? Colors.white10 : Colors.black12,
+              Icons.pie_chart_outline_rounded,
+              color: isDark
+                  ? Colors.white24
+                  : AppColors.forest900.withValues(alpha: 0.2),
+              size: 32,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
             Text(
-              'Awaiting Community Pulse',
-              style: AppTypography.h3.copyWith(
-                color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.2),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'No linguistic data entries found for this period.',
-              style: AppTypography.body.copyWith(
-                color: isDark ? Colors.white10 : AppColors.forest900.withValues(alpha: 0.1),
+              'Sentiment distribution data will appear here once the validated dataset is connected. 🌿',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isDark
+                    ? Colors.white60
+                    : AppColors.forest900.withValues(alpha: 0.6),
                 fontSize: 12,
+                height: 1.4,
               ),
             ),
           ],
         ),
-      ),
+      );
+    }
+
+    final posPct = totalPosts > 0 ? (posCount / totalPosts * 100).toInt() : 0;
+    final neuPct = totalPosts > 0 ? (neuCount / totalPosts * 100).toInt() : 0;
+    final negPct = totalPosts > 0 ? (negCount / totalPosts * 100).toInt() : 0;
+
+    return Row(
+      children: [
+        Expanded(
+          child: _buildCategoryCard(
+            'Positive',
+            '$posPct%',
+            '$posCount posts',
+            Icons.sentiment_satisfied_alt_rounded,
+            AppColors.semanticGreen,
+            isDark,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildCategoryCard(
+            'Neutral',
+            '$neuPct%',
+            '$neuCount posts',
+            Icons.sentiment_neutral_rounded,
+            AppColors.gold500,
+            isDark,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildCategoryCard(
+            'Negative',
+            '$negPct%',
+            '$negCount posts',
+            Icons.sentiment_dissatisfied_rounded,
+            AppColors.semanticRed,
+            isDark,
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildInsightGrid(List<SentimentData> data, bool isDark) {
-    final positiveCount = data.where((d) => d.sentimentScore > 0).length;
-    return _buildSmallStatCard(
-      'Positive Content Ratio',
-      '${(positiveCount / data.length * 100).toInt()}%',
-      Icons.trending_up_rounded,
-      AppColors.semanticGreen,
-      isDark,
-    );
-  }
-
-  Widget _buildSmallStatCard(String label, String val, IconData icon, Color color, bool isDark) {
+  Widget _buildCategoryCard(
+    String label,
+    String percentage,
+    String countStr,
+    IconData icon,
+    Color color,
+    bool isDark,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.forest900.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.forest900.withValues(alpha: 0.05)),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.04)
+            : AppColors.forest900.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 12),
+          Icon(icon, color: color, size: 22),
+          const SizedBox(height: 10),
           Text(
-            val,
-            style: AppTypography.h3.copyWith(color: isDark ? Colors.white : AppColors.forest900),
+            percentage,
+            style: AppTypography.h3.copyWith(
+              color: isDark ? Colors.white : AppColors.forest900,
+              fontSize: 18,
+            ),
           ),
+          const SizedBox(height: 2),
           Text(
             label,
             style: AppTypography.label.copyWith(
-              color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.5),
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 11,
+            ),
+          ),
+          Text(
+            countStr,
+            style: TextStyle(
+              color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.4),
               fontSize: 10,
             ),
           ),
@@ -325,56 +433,108 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
     );
   }
 
-  Widget _buildKeywordCloud(List<SentimentData> data, bool isDark) {
-    final keywords = data.expand((d) => d.detectedKeywords).toList();
+  Widget _buildKeywordCloud(List<SentimentPost> posts, bool isDark) {
+    if (posts.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.03)
+              : AppColors.forest900.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.05)
+                : AppColors.forest900.withValues(alpha: 0.05),
+          ),
+        ),
+        child: Text(
+          'Dominant keywords will appear once community sentiment posts are loaded. 🌿',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: isDark
+                ? Colors.white60
+                : AppColors.forest900.withValues(alpha: 0.6),
+            fontSize: 12,
+          ),
+        ),
+      );
+    }
+
+    final keywords = posts.expand((p) => p.keywords).toList();
     final counts = <String, int>{};
     for (var k in keywords) {
       counts[k] = (counts[k] ?? 0) + 1;
     }
 
-    final sorted = counts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final sorted = counts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader('Dominant Keywords', isDark),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: sorted.take(10).map((entry) {
-            final isPopular = entry.value > 1;
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: isPopular ? AppColors.gold500 : (isDark ? Colors.white10 : AppColors.forest900.withValues(alpha: 0.05)),
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: isPopular ? [
-                  BoxShadow(
-                    color: AppColors.gold500.withValues(alpha: 0.3),
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                  )
-                ] : null,
-              ),
-              child: Text(
-                entry.key,
-                style: AppTypography.body.copyWith(
-                  color: isPopular ? Colors.black : (isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7)),
-                  fontWeight: isPopular ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 13,
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: sorted.take(12).map((entry) {
+        final isPopular = entry.value > 1;
+        return ActionChip(
+          onPressed: () {
+            context.push('/dictionary?q=${Uri.encodeComponent(entry.key)}');
+          },
+          avatar: const Icon(
+            Icons.menu_book_rounded,
+            size: 14,
+            color: AppColors.gold500,
+          ),
+          label: Text(
+            '#${entry.key}',
+            style: TextStyle(
+              color: isDark ? Colors.white : AppColors.forest900,
+              fontSize: 12,
+              fontWeight: isPopular ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+          backgroundColor: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : AppColors.forest900.withValues(alpha: 0.05),
+          side: BorderSide(
+            color: isPopular
+                ? AppColors.gold500.withValues(alpha: 0.5)
+                : Colors.transparent,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        );
+      }).toList(),
     );
   }
 
-  Widget _buildSentimentCard(SentimentData data, int index, bool isDark) {
-    final isPositive = data.sentimentScore > 0;
-    final timeAgo = _getTimeAgo(data.timestamp);
+  Widget _buildSentimentPostCard(
+    SentimentPost post,
+    int index,
+    bool isDark,
+  ) {
+    final isSaved = _savedPostIds.contains(post.id);
+    final isSparked = _sparkedPostIds.contains(post.id);
+
+    Color categoryColor;
+    IconData categoryIcon;
+
+    switch (post.sentimentCategory) {
+      case 'positive':
+        categoryColor = AppColors.semanticGreen;
+        categoryIcon = Icons.sentiment_satisfied_alt_rounded;
+        break;
+      case 'negative':
+        categoryColor = AppColors.semanticRed;
+        categoryIcon = Icons.sentiment_dissatisfied_rounded;
+        break;
+      case 'neutral':
+      default:
+        categoryColor = AppColors.gold500;
+        categoryIcon = Icons.sentiment_neutral_rounded;
+        break;
+    }
 
     return Theme(
       data: Theme.of(context).copyWith(brightness: Brightness.dark),
@@ -393,280 +553,243 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
                     Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: AppColors.gold500.withValues(alpha: 0.1),
+                        color: categoryColor.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.storage_rounded, color: AppColors.gold500, size: 12),
+                      child: Icon(categoryIcon, color: categoryColor, size: 14),
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Archived Entry • $timeAgo',
+                      post.sentimentCategory.toUpperCase(),
                       style: AppTypography.label.copyWith(
-                        color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.5),
+                        color: categoryColor,
+                        fontWeight: FontWeight.bold,
                         fontSize: 10,
+                        letterSpacing: 1,
                       ),
                     ),
                   ],
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: (isPositive ? AppColors.semanticGreen : AppColors.semanticRed).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        isPositive ? Icons.sentiment_satisfied_alt : Icons.sentiment_dissatisfied,
-                        color: isPositive ? AppColors.semanticGreen : AppColors.semanticRed,
-                        size: 14,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${(data.sentimentScore * 100).toInt()}',
-                        style: TextStyle(
-                          color: isPositive ? AppColors.semanticGreen : AppColors.semanticRed,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                Text(
+                  post.relativeTime,
+                  style: TextStyle(
+                    color: isDark
+                        ? Colors.white38
+                        : AppColors.forest900.withValues(alpha: 0.4),
+                    fontSize: 11,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             Text(
-              data.postText,
+              post.originalText,
               style: AppTypography.body.copyWith(
                 color: isDark ? Colors.white : AppColors.forest900,
-                fontSize: 14,
-                height: 1.5,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                height: 1.4,
               ),
             ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 6,
-              children: data.detectedKeywords.map((k) => Text(
-                '#$k',
-                style: TextStyle(
-                  color: AppColors.gold500.withValues(alpha: 0.6),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+            if (post.filipinoTranslation.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Filipino: ${post.filipinoTranslation}',
+                style: AppTypography.body.copyWith(
+                  color: isDark ? Colors.white70 : AppColors.forest700,
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic,
                 ),
-              )).toList(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildVitalityChart(Map<SentimentModelType, List<SentimentData>> allData, bool isDark) {
-    if (allData.isEmpty) return const SizedBox.shrink();
-
-    // Use Naive Bayes as reference for time axis
-    final referenceData = allData[SentimentModelType.naiveBayes] ?? [];
-    if (referenceData.isEmpty) return const SizedBox.shrink();
-    
-    final sortedRef = List<SentimentData>.from(referenceData)..sort((a, b) => a.timestamp.compareTo(b.timestamp));
-
-    return Container(
-      height: 260,
-      padding: const EdgeInsets.only(right: 20, top: 20, bottom: 10),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.02) : AppColors.forest900.withValues(alpha: 0.02),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.forest900.withValues(alpha: 0.05)),
-      ),
-      child: LineChart(
-        LineChartData(
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            horizontalInterval: 0.5,
-            getDrawingHorizontalLine: (value) => FlLine(
-              color: isDark ? Colors.white10 : AppColors.forest900.withValues(alpha: 0.05),
-              strokeWidth: 1,
-            ),
-          ),
-          titlesData: FlTitlesData(
-            show: true,
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 30,
-                interval: 1,
-                getTitlesWidget: (value, meta) {
-                  final index = value.toInt();
-                  if (index >= 0 && index < sortedRef.length) {
-                    if (index == 0 || index == sortedRef.length - 1 || index == (sortedRef.length / 2).floor()) {
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
+              ),
+            ],
+            if (post.englishTranslation.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                'English: ${post.englishTranslation}',
+                style: AppTypography.body.copyWith(
+                  color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.6),
+                  fontSize: 12,
+                ),
+              ),
+            ],
+            if (post.keywords.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: post.keywords
+                    .map(
+                      (k) => InkWell(
+                        onTap: () => context.push('/dictionary?q=${Uri.encodeComponent(k)}'),
                         child: Text(
-                          DateFormat('MM/dd').format(sortedRef[index].timestamp),
+                          '#$k',
                           style: TextStyle(
-                            color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.5),
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                            color: AppColors.gold500.withValues(alpha: 0.8),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                      );
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+            const SizedBox(height: 16),
+            const Divider(color: Colors.white10, height: 1),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                // Learn this word / dictionary link
+                InkWell(
+                  onTap: () {
+                    final query = post.keywords.isNotEmpty
+                        ? post.keywords.first
+                        : (post.linkedDictionaryEntryIds.isNotEmpty
+                            ? post.linkedDictionaryEntryIds.first
+                            : '');
+                    if (query.isNotEmpty) {
+                      context.push('/dictionary?q=${Uri.encodeComponent(query)}');
+                    } else {
+                      context.push('/dictionary');
                     }
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-            ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                interval: 0.5,
-                getTitlesWidget: (value, meta) {
-                  return Text(
-                    value.toStringAsFixed(1),
-                    style: TextStyle(
-                      color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.5),
-                      fontSize: 10,
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.menu_book_rounded,
+                          color: AppColors.gold500,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Learn this word',
+                          style: AppTypography.label.copyWith(
+                            color: AppColors.gold500,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
                     ),
-                  );
-                },
-                reservedSize: 35,
-              ),
-            ),
-          ),
-          borderData: FlBorderData(show: false),
-          minX: 0,
-          maxX: (sortedRef.length - 1).toDouble(),
-          minY: -1.1,
-          maxY: 1.1,
-          lineBarsData: allData.entries.map((entry) {
-            final model = entry.key;
-            final data = entry.value;
-            final sortedModelData = List<SentimentData>.from(data)..sort((a, b) => a.timestamp.compareTo(b.timestamp));
-            final spots = sortedModelData.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.sentimentScore)).toList();
-
-            final color = _getModelColor(model);
-            
-            return LineChartBarData(
-              spots: spots,
-              isCurved: true,
-              color: color,
-              barWidth: model == SentimentModelType.naiveBayes ? 4 : 2,
-              isStrokeCapRound: true,
-              dotData: FlDotData(
-                show: model == SentimentModelType.naiveBayes,
-                getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
-                  radius: 3,
-                  color: color,
-                  strokeWidth: 1,
-                  strokeColor: Colors.white,
+                  ),
                 ),
-              ),
-              belowBarData: BarAreaData(
-                show: model == SentimentModelType.naiveBayes,
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    color.withValues(alpha: 0.15),
-                    color.withValues(alpha: 0),
-                  ],
+                const Spacer(),
+                // Spark / Appreciate
+                IconButton(
+                  onPressed: () {
+                    setState(() {
+                      if (isSparked) {
+                        _sparkedPostIds.remove(post.id);
+                      } else {
+                        _sparkedPostIds.add(post.id);
+                      }
+                    });
+                  },
+                  icon: Icon(
+                    isSparked
+                        ? Icons.bolt_rounded
+                        : Icons.bolt_outlined,
+                    color: isSparked ? AppColors.gold500 : Colors.white38,
+                    size: 20,
+                  ),
+                  tooltip: 'Spark',
                 ),
-              ),
-            );
-          }).toList(),
-          lineTouchData: LineTouchData(
-            touchTooltipData: LineTouchTooltipData(
-              getTooltipColor: (spot) => isDark ? AppColors.forest800 : Colors.white,
-              tooltipRoundedRadius: 12,
-              fitInsideHorizontally: true,
-              fitInsideVertically: true,
-              getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
-                return touchedBarSpots.map((barSpot) {
-                  final model = SentimentModelType.values[barSpot.barIndex];
-                  return LineTooltipItem(
-                    '${_getSentimentModelName(model)}: ${barSpot.y.toStringAsFixed(2)}',
-                    TextStyle(
-                      color: _getModelColor(model),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  );
-                }).toList();
-              },
+                // Save
+                IconButton(
+                  onPressed: () {
+                    setState(() {
+                      if (isSaved) {
+                        _savedPostIds.remove(post.id);
+                      } else {
+                        _savedPostIds.add(post.id);
+                      }
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          isSaved ? 'Post removed from saved' : 'Post saved to profile 🌿',
+                        ),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  icon: Icon(
+                    isSaved
+                        ? Icons.bookmark_rounded
+                        : Icons.bookmark_outline_rounded,
+                    color: isSaved ? AppColors.gold500 : Colors.white38,
+                    size: 20,
+                  ),
+                  tooltip: 'Save',
+                ),
+                // Share
+                IconButton(
+                  onPressed: () {
+                    final shareText =
+                        '${post.originalText}\n${post.englishTranslation.isNotEmpty ? "(${post.englishTranslation})" : ""}\n\nVia LUMAD Lingua';
+                    SharePlus.instance.share(ShareParams(text: shareText));
+                  },
+                  icon: const Icon(
+                    Icons.share_outlined,
+                    color: Colors.white38,
+                    size: 18,
+                  ),
+                  tooltip: 'Share',
+                ),
+              ],
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildLegend(bool isDark) {
-    return Wrap(
-      spacing: 16,
-      runSpacing: 8,
-      children: SentimentModelType.values.map((model) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
+  Widget _buildNoDataState(bool isDark) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        child: Column(
           children: [
-            Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(
-                color: _getModelColor(model),
-                shape: BoxShape.circle,
+            Icon(
+              Icons.analytics_outlined,
+              size: 48,
+              color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.2),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Awaiting Validated Dataset',
+              style: AppTypography.h3.copyWith(
+                color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.4),
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(height: 8),
             Text(
-              _getSentimentModelName(model),
-              style: AppTypography.label.copyWith(
-                color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.6),
-                fontSize: 10,
+              'No community sentiment posts found yet. Community sentiment analysis entries will appear here once connected. 🌿',
+              textAlign: TextAlign.center,
+              style: AppTypography.body.copyWith(
+                color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.3),
+                fontSize: 12,
+                height: 1.4,
               ),
             ),
           ],
-        );
-      }).toList(),
+        ),
+      ),
     );
-  }
-
-  Color _getModelColor(SentimentModelType type) {
-    switch (type) {
-      case SentimentModelType.naiveBayes: return AppColors.gold500;
-      case SentimentModelType.svm: return AppColors.semanticBlue;
-      case SentimentModelType.biLstm: return AppColors.terracotta;
-    }
-  }
-
-  String _getSentimentModelName(SentimentModelType type) {
-    switch (type) {
-      case SentimentModelType.naiveBayes: return 'Naïve Bayes';
-      case SentimentModelType.svm: return 'SVM';
-      case SentimentModelType.biLstm: return 'BiLSTM';
-    }
   }
 
   Widget _buildSectionHeader(String title, bool isDark) {
     return Text(
       title.toUpperCase(),
       style: AppTypography.label.copyWith(
-        color: AppColors.gold500.withValues(alpha: 0.5),
+        color: AppColors.gold500.withValues(alpha: 0.6),
         letterSpacing: 1.5,
         fontSize: 11,
       ),
     );
-  }
-
-  String _getTimeAgo(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inDays > 0) return '${diff.inDays}d ago';
-    if (diff.inHours > 0) return '${diff.inHours}h ago';
-    if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
-    return 'Just now';
   }
 
   Widget _buildDashboardSkeleton(bool isDark) {
@@ -681,42 +804,27 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 20),
-                const AppShimmerSkeleton(height: 160, borderRadius: 40),
-                const SizedBox(height: 32),
-                const AppShimmerSkeleton(height: 90, borderRadius: 24),
-                const SizedBox(height: 32),
-                const AppShimmerSkeleton(width: 180, height: 14, borderRadius: 4),
-                const SizedBox(height: 16),
-                const AppShimmerSkeleton(height: 260, borderRadius: 24),
+                const AppShimmerSkeleton(height: 150, borderRadius: 32),
+                const SizedBox(height: 28),
+                const AppShimmerSkeleton(width: 160, height: 14, borderRadius: 4),
                 const SizedBox(height: 12),
                 Row(
-                  children: List.generate(3, (i) => Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 16.0),
-                      child: Row(
-                        children: [
-                          const AppShimmerSkeleton(width: 12, height: 12, isCircle: true),
-                          const SizedBox(width: 6),
-                          Expanded(child: const AppShimmerSkeleton(height: 10, borderRadius: 2)),
-                        ],
+                  children: List.generate(
+                    3,
+                    (i) => const Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4.0),
+                        child: AppShimmerSkeleton(height: 90, borderRadius: 20),
                       ),
                     ),
-                  )),
+                  ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 28),
                 const AppShimmerSkeleton(width: 140, height: 14, borderRadius: 4),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: List.generate(6, (i) => AppShimmerSkeleton(
-                    width: (60 + (i * 15) % 50).toDouble(),
-                    height: 32,
-                    borderRadius: 30,
-                  )),
-                ),
-                const SizedBox(height: 32),
-                const AppShimmerSkeleton(width: 220, height: 14, borderRadius: 4),
+                const SizedBox(height: 12),
+                const AppShimmerSkeleton(height: 50, borderRadius: 20),
+                const SizedBox(height: 28),
+                const AppShimmerSkeleton(width: 200, height: 14, borderRadius: 4),
                 const SizedBox(height: 16),
               ],
             ),
@@ -728,9 +836,9 @@ class _SentimentDashboardScreenState extends ConsumerState<SentimentDashboardScr
             delegate: SliverChildBuilderDelegate(
               (context, index) => const Padding(
                 padding: EdgeInsets.only(bottom: 16.0),
-                child: AppShimmerSkeleton(height: 140, borderRadius: 24),
+                child: AppShimmerSkeleton(height: 160, borderRadius: 24),
               ),
-              childCount: 3,
+              childCount: 2,
             ),
           ),
         ),
