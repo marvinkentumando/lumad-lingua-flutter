@@ -402,7 +402,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
               .toList() ??
           [],
       sentenceParts: List<String>.from(step.data['parts'] ?? []),
-      expectedSentence: step.data['sentence'] ?? '',
+      expectedSentence: step.data['expectedSentence'] ?? step.data['sentence'] ?? '',
       nativeWord: step.data['word'] ?? '',
       phoneticGuide: step.data['phonetic'] ?? '',
       hintMetadata: step.data['scenarioText'] ?? step.data['definition'] ?? '',

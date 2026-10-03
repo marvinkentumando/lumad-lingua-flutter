@@ -9,6 +9,9 @@ import 'matching_preview.dart';
 import 'sentence_reordering_preview.dart';
 import 'listening_preview.dart';
 import 'scenario_preview.dart';
+import 'word_hunt_preview.dart';
+import 'true_false_preview.dart';
+import 'fill_blanks_preview.dart';
 
 class LessonPreviewPanel extends StatelessWidget {
   final LessonStep? selectedStep;
@@ -110,11 +113,11 @@ class LessonPreviewPanel extends StatelessWidget {
       case ActivityType.scenario:
         return ScenarioPreview(step: step);
       case ActivityType.wordHunt:
-        return _buildPlaceholderPreview('Word Hunt');
+        return WordHuntPreview(step: step);
       case ActivityType.trueOrFalse:
-        return _buildPlaceholderPreview('True or False');
+        return TrueFalsePreview(step: step);
       case ActivityType.fillInTheBlanks:
-        return _buildPlaceholderPreview('Fill in the Blanks');
+        return FillBlanksPreview(step: step);
     }
   }
 

@@ -73,6 +73,8 @@
   - 📁 `lib/screens/dictionary_screen.dart`
 - [ ] **Bulk Audio Import**: Admin utility to match and bulk-upload audio recordings by dictionary term keys.
   - 📁 `lib/screens/admin_dictionary_screen.dart`, `lib/services/firebase_service.dart`
+- [ ] **Elder Voice Contributor Verification**: Community validation queue for elder audio recordings submitted via contributor requests before publishing to official dictionary entries.
+  - 📁 `lib/screens/admin_requests_screen.dart`, `lib/models/contributor_request.dart`
 
 ### ⚙️ Admin Gamification & Economics Screen
 - [x] **Number Parsing Crash Prevention**: Add `tryParse` or form validation in reward and shop dialogs to prevent crashes when empty or invalid inputs are submitted.
@@ -91,6 +93,8 @@
   - 📁 `lib/screens/lesson_session_screen.dart`, `lib/services/firebase_service.dart`
 - [x] **Lesson Audio Pre-Caching**: Pre-download all lesson module audio assets into Hive/Cache before starting a session.
   - 📁 `lib/services/audio_service.dart`, `lib/screens/learning_path_screen.dart`, `lib/providers/learning_provider.dart`
+- [ ] **Adaptive Difficulty Scaling**: Dynamically adjust SRS intervals and task distractors based on learner error history and accuracy metrics.
+  - 📁 `lib/services/srs_service.dart`, `lib/providers/learning_provider.dart`
 
 ### 🏆 Gamification, Customization & Social
 - [x] **Claim Reward Modal & Animations**: Expand Tribal Quests & Daily Challenge claim reward modal and particle effects.
@@ -103,6 +107,18 @@
   - 📁 `lib/screens/leaderboard_screen.dart`, `lib/services/firebase_service.dart`
 - [x] **Fix Leaderboard Salute Build Error**: `_buildSaluteButton` was referenced in the leaderboard compact list but never defined, breaking compilation of `lib/screens/leaderboard_screen.dart` and failing `test/widget_test.dart`. Implemented the missing button (podium spots) reusing `_sendCheer`, and wired the previously unused `_salutedUids` set so a member can only be saluted once per session in both podium and rank-row salute UIs.
   - 📁 `lib/screens/leaderboard_screen.dart`
+
+### 🏫 Educator & Classroom Management (Village Sanctuary)
+- [ ] **Educator Class Analytics Export**: Export student progress, quiz accuracy, and active streak metrics to CSV or PDF reports for village educators.
+  - 📁 `lib/screens/educator_analytics_screen.dart`, `lib/screens/educator_students_screen.dart`
+- [ ] **Village Custom Mini-Quizzes**: Allow educators to build and assign custom vocabulary checks or short assessments directly to connected village learners.
+  - 📁 `lib/screens/educator_lessons_screen.dart`, `lib/models/educator_models.dart`
+
+### 🗺️ Cultural Heritage & Map Archive
+- [ ] **Geotagged Heritage Explorer**: Interactive map view displaying cultural stories, oral folklore audio recordings, and tribal landmarks across Mansaka heritage locations.
+  - 📁 `lib/screens/archive_map_screen.dart`, `lib/models/geo_recording.dart`
+- [ ] **Printable Certificates of Completion**: Generate downloadable PDF completion certificates featuring ancestral artwork when learners finish major units or milestones.
+  - 📁 `lib/services/certificate_service.dart`, `lib/screens/learner_profile_screen.dart`
 
 ### 📊 Sentiment & Community Analytics
 - [ ] **Facebook Graph API Integration**: Replace mock/secondary post data with real retrieval of publicly available Mansaka-language Facebook posts via the Facebook Graph API (last open Functional Requirement; unblocks real-data sentiment classification).
@@ -124,6 +140,12 @@
 - [ ] **Voice Comments in Community Feed**: Allow learners to attach short voice messages to community discussions.
   - 📁 `lib/screens/community_feed_screen.dart`, `lib/services/audio_service.dart`
 
+### 🌐 Accessibility & Full UI Localization
+- [ ] **Dynamic Trilingual UI Switching**: Expand localization engine to support instant language switching (English, Tagalog/Filipino, Mansaka) across all app UI components.
+  - 📁 `lib/utils/app_localization.dart`, `lib/providers/user_preferences_provider.dart`
+- [ ] **High Contrast & Font Scaling**: Implement high contrast color scheme mode and dynamic font scale adjustments for elder community members and visually impaired learners.
+  - 📁 `lib/providers/theme_provider.dart`, `lib/screens/learner_profile_screen.dart`
+
 ---
 
 ## 🛠 Low Priority, Refactoring & Infrastructure
@@ -137,6 +159,12 @@
   - 📁 `lib/providers/router_provider.dart`
 - [x] **Haptic Consistency Audit**: Ensure all critical success/error actions across screens trigger appropriate haptic patterns (roadmap Phase 4 open item).
   - 📁 `lib/services/haptic_service.dart` + call sites
+- [ ] **Audio Asset Compression Pipeline**: Compress recorded WAV files to AAC/Ogg Opus before Cloud Storage uploads to minimize cellular bandwidth usage in remote communities.
+  - 📁 `lib/services/supabase_storage_service.dart`, `lib/utils/audio_validator.dart`
+- [ ] **Hive Storage Compaction & Cache Pruning**: Scheduled local database box compaction and media cache cleanup to maintain low storage footprint (<100MB) on budget devices.
+  - 📁 `lib/services/offline_service.dart`
+- [ ] **Encrypted Token Storage**: Migrate user authentication session credentials and sensitive tokens from plain preferences to encrypted storage.
+  - 📁 `lib/services/auth_service.dart`
 
 ---
 
@@ -147,3 +175,7 @@
   - 📁 `test/providers/dictionary_filter_notifier_test.dart`, `test/widgets/claim_reward_modal_test.dart`
 - [ ] **Duel Matchmaking Race Tests**: Firestore-emulator integration test where two clients concurrently claim the same waiting match — exactly one joiner must win the lobby.
   - 📁 `test/duel_sync_logic_test.dart`, `test/` (emulator harness)
+- [ ] **Automated CI/CD Pipeline Workflow**: Configure GitHub Actions workflow to run static analysis (`flutter analyze`), unit tests, and release APK compilation on pull requests.
+  - 📁 `.github/workflows/flutter_ci.yml`
+- [ ] **End-to-End Integration Tests**: E2E integration test suite covering onboarding, lesson session execution, reward collection, and offline dictionary lookup.
+  - 📁 `integration_test/app_test.dart`
