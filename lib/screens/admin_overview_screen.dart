@@ -86,27 +86,32 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeroBanner(context, l10n),
-                  const SizedBox(height: 24),
-                  _sectionLabel(l10n.translate('village_pulse')),
-                  const SizedBox(height: 16),
-                  const WotdWidget(),
-                  const SizedBox(height: 12),
-                  _buildWotdAdminControls(l10n),
-                  const SizedBox(height: 32),
-                  _sectionLabel(l10n.translate('platform_stats')),
-                  const SizedBox(height: 16),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.45,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1200),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      _buildHeroBanner(context, l10n),
+                      const SizedBox(height: 24),
+                      _sectionLabel(l10n.translate('village_pulse')),
+                      const SizedBox(height: 16),
+                      const WotdWidget(),
+                      const SizedBox(height: 12),
+                      _buildWotdAdminControls(l10n),
+                      const SizedBox(height: 32),
+                      _sectionLabel(l10n.translate('platform_stats')),
+                      const SizedBox(height: 16),
+                      GridView(
+                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 220,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 1.45,
+                        ),
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        children: [
                       ref.watch(totalUsersCountProvider).when(
                             data: (count) => _statCard(
                               count.toString(),

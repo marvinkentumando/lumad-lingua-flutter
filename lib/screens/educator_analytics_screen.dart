@@ -638,6 +638,14 @@ class _EducatorAnalyticsScreenState
           rows.add(['Top Learners', i + 1, topLearners[i]['username'], topLearners[i]['xp']]);
         }
 
+        // Student Roster & Active Streak Metrics
+        rows.add([]);
+        rows.add(['Student Roster & Active Streak Metrics']);
+        rows.add(['Name', 'Email', 'Role', 'XP', 'Active Streak (Days)', 'Municipality / Group']);
+        for (var u in users) {
+          rows.add([u.name, u.email, u.role, u.xp, u.streak, u.municipality ?? u.indigenousGroup ?? 'N/A']);
+        }
+
         final csvData = const CsvEncoder().convert(rows);
         final directory = await getTemporaryDirectory();
         final file = File('${directory.path}/$filename.csv');
@@ -693,6 +701,17 @@ class _EducatorAnalyticsScreenState
                   ['Rank', 'Username', 'Municipality', 'XP'],
                   ...topLearners.asMap().entries.map((e) => [
                     e.key + 1, e.value['username'], e.value['municipality'] ?? 'Unknown', e.value['xp']
+                  ]),
+                ],
+              ),
+
+              pw.Header(level: 1, child: pw.Text('Student Roster & Active Streak Metrics')),
+              pw.TableHelper.fromTextArray(
+                context: context,
+                data: [
+                  ['Name', 'Email', 'XP', 'Active Streak', 'Group/Municipality'],
+                  ...users.map((u) => [
+                    u.name, u.email, '${u.xp} XP', '${u.streak}d', u.municipality ?? u.indigenousGroup ?? 'N/A'
                   ]),
                 ],
               ),

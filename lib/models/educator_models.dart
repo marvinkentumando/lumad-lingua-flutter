@@ -1,4 +1,5 @@
 import 'lesson.dart';
+import 'lesson_task.dart';
 
 class EducatorLesson {
   final String id;
@@ -95,6 +96,75 @@ class StudentLessonProgress {
     required this.status,
     this.accuracy = 0.8,
   });
+}
+
+class VillageMiniQuiz {
+  final String id;
+  final String title;
+  final String description;
+  final String educatorId;
+  final String dialect;
+  final List<LessonTask> tasks;
+  final DateTime createdAt;
+  final bool isAssigned;
+  final int totalSubmissions;
+
+  const VillageMiniQuiz({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.educatorId,
+    required this.dialect,
+    required this.tasks,
+    required this.createdAt,
+    this.isAssigned = true,
+    this.totalSubmissions = 0,
+  });
+
+  factory VillageMiniQuiz.fromFirestore(Map<String, dynamic> data, String id) {
+    return VillageMiniQuiz(
+      id: id,
+      title: data['title'] ?? '',
+      description: data['description'] ?? '',
+      educatorId: data['educatorId'] ?? '',
+      dialect: data['dialect'] ?? 'Mansaka',
+      tasks: (data['tasks'] as List? ?? [])
+          .map((t) => LessonTask.fromFirestore(Map<String, dynamic>.from(t)))
+          .toList(),
+      createdAt: data['createdAt'] != null
+          ? (data['createdAt'] as dynamic).toDate()
+          : DateTime.now(),
+      isAssigned: data['isAssigned'] ?? true,
+      totalSubmissions: data['totalSubmissions'] ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'title': title,
+      'description': description,
+      'educatorId': educatorId,
+      'dialect': dialect,
+      'tasks': tasks.map((t) => t.toFirestore()).toList(),
+      'createdAt': createdAt,
+      'isAssigned': isAssigned,
+      'totalSubmissions': totalSubmissions,
+    };
+  }
+
+  Lesson toLesson() {
+    return Lesson(
+      id: id,
+      title: title,
+      description: description,
+      category: 'Mini-Quiz',
+      language: dialect,
+      level: 1,
+      unitNumber: 1,
+      tasks: tasks,
+      status: isAssigned ? 'PUBLISHED' : 'DRAFT',
+    );
+  }
 }
 
 

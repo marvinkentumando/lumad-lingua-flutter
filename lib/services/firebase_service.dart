@@ -23,6 +23,7 @@ import '../models/app_config.dart';
 import '../models/scenario_models.dart';
 import '../models/broadcast.dart';
 import '../models/feedback.dart';
+import '../models/educator_models.dart';
 import '../models/assessment.dart';
 import 'offline_service.dart';
 
@@ -1053,6 +1054,55 @@ class FirebaseService {
 
   Future<void> deleteVillageBroadcast(String id) async {
     await _db.collection('broadcasts').doc(id).delete();
+  }
+
+  // ── Village Mini-Quizzes Operations ──────────────────────────────────────────
+
+  Future<String> createVillageMiniQuiz(VillageMiniQuiz quiz) async {
+    final docRef = _db.collection('village_mini_quizzes').doc();
+    final quizWithId = VillageMiniQuiz(
+      id: docRef.id,
+      title: quiz.title,
+      description: quiz.description,
+      educatorId: quiz.educatorId,
+      dialect: quiz.dialect,
+      tasks: quiz.tasks,
+      createdAt: quiz.createdAt,
+      isAssigned: quiz.isAssigned,
+      totalSubmissions: quiz.totalSubmissions,
+    );
+    await docRef.set(quizWithId.toFirestore());
+    return docRef.id;
+  }
+
+  Stream<List<VillageMiniQuiz>> getVillageMiniQuizzes(String educatorId) {
+    return _db
+        .collection('village_mini_quizzes')
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((doc) => VillageMiniQuiz.fromFirestore(doc.data(), doc.id))
+            .where((q) => educatorId.isEmpty || q.educatorId == educatorId)
+            .toList());
+  }
+
+  Stream<List<VillageMiniQuiz>> getAssignedVillageMiniQuizzes(String educatorId) {
+    return _db
+        .collection('village_mini_quizzes')
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((doc) => VillageMiniQuiz.fromFirestore(doc.data(), doc.id))
+            .where((q) => (educatorId.isEmpty || q.educatorId == educatorId) && q.isAssigned)
+            .toList());
+  }
+
+  Future<void> toggleMiniQuizAssignment(String quizId, bool isAssigned) async {
+    await _db.collection('village_mini_quizzes').doc(quizId).update({
+      'isAssigned': isAssigned,
+    });
+  }
+
+  Future<void> deleteVillageMiniQuiz(String quizId) async {
+    await _db.collection('village_mini_quizzes').doc(quizId).delete();
   }
 
   // ── Student Feedback Operations ───────────────────────────────────────────
@@ -4708,6 +4758,16 @@ final communityFeedProvider = StreamProvider<List<CommunityActivity>>((ref) {
 
 final appConfigProvider = StreamProvider<AppConfig>((ref) {
   return ref.watch(firebaseServiceProvider).getAppConfig();
+});
+
+final villageMiniQuizzesProvider =
+    StreamProvider.family<List<VillageMiniQuiz>, String>((ref, educatorId) {
+  return ref.watch(firebaseServiceProvider).getVillageMiniQuizzes(educatorId);
+});
+
+final assignedVillageMiniQuizzesProvider =
+    StreamProvider.family<List<VillageMiniQuiz>, String>((ref, educatorId) {
+  return ref.watch(firebaseServiceProvider).getAssignedVillageMiniQuizzes(educatorId);
 });
 
 final shopItemsStreamProvider = StreamProvider<List<ShopItem>>((ref) {

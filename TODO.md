@@ -54,10 +54,11 @@
 - [x] **Shimmer Skeleton Loading Optimization**:
   - Replaced high-overhead multi-ticker `.animate().shimmer()` with hardware-accelerated `_OptimizedShimmerBox` wrapped in `RepaintBoundary` for zero parent layout repaints.
   - Added specialized `DictionaryCardSkeleton` and `HubCardSkeleton` structured loading components for `DictionaryScreen` and `LearningHubScreen`.
-- [x] **Avatar Cultural Customization Shop**:
-  - Added category filter chips (ALL, TITLES 📜, FRAMES 🌿, BADGES 🏺) in `AncestralVaultShopScreen`.
-  - Added default shop catalog with cultural titles, avatar frames, and sacred badges.
-  - Integrated customization equipping (`equippedTitle`, `equippedBadge`, `equippedFrame`) in `StudentNotifier` with offline persistence.
+- [x] **Educator Lessons Screen Layout Improvements**:
+  - Set List View as the default layout mode.
+  - Added explicit meatball action button (`...`) to list cards to trigger the management bottom sheet.
+  - Displayed student count badge (`Icons.people_rounded`) alongside view count on list items.
+  - Added metadata badge chips (`Language • Level • Unit N`) for quick lesson scope recognition.
 
 ---
 

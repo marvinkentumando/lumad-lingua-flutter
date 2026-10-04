@@ -26,7 +26,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
   bool get isDark => Theme.of(context).brightness == Brightness.dark;
   String _selectedTab = 'All';
   LessonSort _currentSort = LessonSort.newest;
-  bool _isGridView = true;
+  bool _isGridView = false;
   bool _isMapView = false;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -843,6 +843,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
   }
 
   Widget _buildListItem(EducatorLesson lesson) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isDraft = lesson.status == 'DRAFT';
     return Dismissible(
       key: Key(lesson.id),
@@ -864,7 +865,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
         return await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            backgroundColor: AppColors.forest800,
+            backgroundColor: isDark ? AppColors.forest800 : Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
@@ -874,14 +875,14 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
             ),
             content: Text(
               'Are you sure you want to delete "${lesson.title}"?',
-              style: const TextStyle(color: Colors.white70),
+              style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
-                child: const Text(
+                child: Text(
                   'Cancel',
-                  style: TextStyle(color: Colors.white54),
+                  style: TextStyle(color: isDark ? Colors.white54 : Colors.black54),
                 ),
               ),
               TextButton(
@@ -921,22 +922,30 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.forestDarkCard,
+            color: isDark
+                ? AppColors.forestDarkCard
+                : Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.03)),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.03)
+                  : AppColors.creamBorder,
+            ),
           ),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: (isDraft ? Colors.white : AppColors.gold500)
+                  color: (isDraft ? (isDark ? Colors.white : Colors.black) : AppColors.gold500)
                       .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   isDraft ? Icons.edit_note_rounded : Icons.menu_book_rounded,
-                  color: isDraft ? Colors.white60 : AppColors.gold500,
+                  color: isDark
+                      ? (isDraft ? Colors.white60 : AppColors.gold500)
+                      : AppColors.forest900,
                   size: 20,
                 ),
               ),
@@ -948,33 +957,83 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                     Text(
                       lesson.title,
                       style: AppTypography.h3.copyWith(
-                        color: Colors.white,
+                        color: isDark ? Colors.white : AppColors.forest900,
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 4),
+                    // Metadata Chip Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppColors.gold500.withValues(alpha: 0.1)
+                            : AppColors.forest900.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '${lesson.language} • ${lesson.level} • Unit ${lesson.unitNumber}',
+                        style: AppTypography.label.copyWith(
+                          color: isDark ? AppColors.gold500 : AppColors.forest900,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
                     Row(
                       children: [
-                        Text(
-                          lesson.subtitle,
-                          style: AppTypography.body.copyWith(
-                            color: Colors.white24,
-                            fontSize: 11,
+                        Expanded(
+                          child: Text(
+                            lesson.subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.body.copyWith(
+                              color: isDark
+                                  ? Colors.white38
+                                  : AppColors.forest700.withValues(alpha: 0.7),
+                              fontSize: 11,
+                            ),
                           ),
                         ),
                         if (!isDraft) ...[
-                          const SizedBox(width: 10),
-                          const Icon(
+                          const SizedBox(width: 8),
+                          Icon(
                             Icons.visibility_rounded,
-                            color: Colors.white24,
+                            color: isDark
+                                ? Colors.white24
+                                : AppColors.forest700.withValues(alpha: 0.5),
                             size: 12,
                           ),
                           const SizedBox(width: 3),
                           Text(
                             _formatViewCount(lesson.viewCount),
                             style: AppTypography.label.copyWith(
-                              color: Colors.white24,
+                              color: isDark
+                                  ? Colors.white24
+                                  : AppColors.forest700.withValues(alpha: 0.5),
+                              fontSize: 9,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.people_rounded,
+                            color: isDark
+                                ? Colors.white24
+                                : AppColors.forest700.withValues(alpha: 0.5),
+                            size: 12,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            lesson.studentCount.toString(),
+                            style: AppTypography.label.copyWith(
+                              color: isDark
+                                  ? Colors.white24
+                                  : AppColors.forest700.withValues(alpha: 0.5),
                               fontSize: 9,
                             ),
                           ),
@@ -984,25 +1043,46 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: isDraft
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : AppColors.semanticGreen.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  lesson.status,
-                  style: AppTypography.label.copyWith(
-                    color: isDraft ? Colors.white24 : AppColors.semanticGreen,
-                    fontSize: 8,
-                    fontWeight: FontWeight.w900,
+              const SizedBox(width: 10),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isDraft
+                          ? (isDark
+                                ? Colors.white.withValues(alpha: 0.05)
+                                : Colors.black.withValues(alpha: 0.05))
+                          : AppColors.semanticGreen.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      lesson.status,
+                      style: AppTypography.label.copyWith(
+                        color: isDraft
+                            ? (isDark ? Colors.white38 : AppColors.forest700.withValues(alpha: 0.6))
+                            : (isDark ? AppColors.semanticGreen : AppColors.forest900),
+                        fontSize: 8,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                   ),
-                ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.more_vert_rounded,
+                      color: isDark
+                          ? Colors.white38
+                          : AppColors.forest900.withValues(alpha: 0.4),
+                      size: 20,
+                    ),
+                    tooltip: 'Lesson Actions',
+                    onPressed: () => _showLessonActions(lesson),
+                  ),
+                ],
               ),
             ],
           ),

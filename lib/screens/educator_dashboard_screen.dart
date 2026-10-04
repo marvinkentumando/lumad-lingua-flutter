@@ -13,6 +13,7 @@ import '../widgets/wotd_widget.dart';
 import '../providers/educator_provider.dart';
 import '../models/educator_models.dart';
 import '../widgets/brand_background.dart';
+import '../widgets/admin/create_mini_quiz_modal.dart';
 
 class EducatorDashboardScreen extends ConsumerStatefulWidget {
   const EducatorDashboardScreen({super.key});
@@ -87,6 +88,8 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
                   const WotdWidget(),
                   const SizedBox(height: 32),
                   _buildStrugglingStudentsAlert(educatorStudentsAsync),
+                  const SizedBox(height: 24),
+                  _buildMiniQuizManagementSection(userAuth?.uid ?? ''),
                   const SizedBox(height: 24),
                   _buildCulturalMilestone(totalWordsAsync),
                   const SizedBox(height: 24),
@@ -256,5 +259,163 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
 
   Widget _buildSectionTitle(String title) {
     return Text(title.toUpperCase(), style: AppTypography.label.copyWith(color: AppColors.gold500, letterSpacing: 2, fontWeight: FontWeight.w900));
+  }
+
+  Widget _buildMiniQuizManagementSection(String educatorId) {
+    final miniQuizzesAsync = ref.watch(villageMiniQuizzesProvider(educatorId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildSectionTitle('Village Custom Mini-Quizzes'),
+            GestureDetector(
+              onTap: () {
+                HapticService.selection();
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => const CreateMiniQuizModal(),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.gold500.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.add, color: AppColors.gold500, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      'CREATE',
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.gold500,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        miniQuizzesAsync.when(
+          data: (quizzes) {
+            if (quizzes.isEmpty) {
+              return BrandCard(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    const Text('📝', style: TextStyle(fontSize: 24)),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        'No custom mini-quizzes created yet. Tap CREATE to build assessments for your village.',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return Column(
+              children: quizzes.map((q) => _buildEducatorQuizCard(q)).toList(),
+            );
+          },
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: AppColors.gold500),
+          ),
+          error: (e, _) => Text(
+            'Error: $e',
+            style: const TextStyle(color: AppColors.semanticRed),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEducatorQuizCard(VillageMiniQuiz quiz) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: BrandCard(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.gold500.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.quiz_rounded,
+                color: AppColors.gold500,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    quiz.title,
+                    style: AppTypography.h3.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${quiz.dialect} • ${quiz.tasks.length} questions',
+                    style: AppTypography.label.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurfaceVariant
+                          .withValues(alpha: 0.6),
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Switch(
+              value: quiz.isAssigned,
+              activeThumbColor: AppColors.gold500,
+              onChanged: (val) async {
+                HapticService.toggle();
+                await ref
+                    .read(firebaseServiceProvider)
+                    .toggleMiniQuizAssignment(quiz.id, val);
+              },
+            ),
+            IconButton(
+              icon: const Icon(
+                Icons.delete_outline_rounded,
+                color: AppColors.semanticRed,
+                size: 20,
+              ),
+              onPressed: () async {
+                HapticService.delete();
+                await ref
+                    .read(firebaseServiceProvider)
+                    .deleteVillageMiniQuiz(quiz.id);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

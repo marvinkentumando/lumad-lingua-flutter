@@ -83,7 +83,7 @@ class LessonTask {
     this.expectedSentence = '',
     this.nativeWord = '',
     this.phoneticGuide = '',
-    required this.hintMetadata,
+    this.hintMetadata = '',
     this.audioUrl,
     this.imageUrl,
     this.grammarTitle,
@@ -110,6 +110,44 @@ class LessonTask {
       'grammarDescription': grammarDescription,
       'grammarExamples': grammarExamples,
     };
+  }
+
+  LessonTask copyWith({
+    String? id,
+    TaskType? type,
+    String? questionText,
+    List<String>? options,
+    int? correctAnswerIndex,
+    List<Map<String, String>>? pairs,
+    List<String>? sentenceParts,
+    String? expectedSentence,
+    String? nativeWord,
+    String? phoneticGuide,
+    String? hintMetadata,
+    String? audioUrl,
+    String? imageUrl,
+    String? grammarTitle,
+    String? grammarDescription,
+    List<String>? grammarExamples,
+  }) {
+    return LessonTask(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      questionText: questionText ?? this.questionText,
+      options: options ?? this.options,
+      correctAnswerIndex: correctAnswerIndex ?? this.correctAnswerIndex,
+      pairs: pairs ?? this.pairs,
+      sentenceParts: sentenceParts ?? this.sentenceParts,
+      expectedSentence: expectedSentence ?? this.expectedSentence,
+      nativeWord: nativeWord ?? this.nativeWord,
+      phoneticGuide: phoneticGuide ?? this.phoneticGuide,
+      hintMetadata: hintMetadata ?? this.hintMetadata,
+      audioUrl: audioUrl ?? this.audioUrl,
+      imageUrl: imageUrl ?? this.imageUrl,
+      grammarTitle: grammarTitle ?? this.grammarTitle,
+      grammarDescription: grammarDescription ?? this.grammarDescription,
+      grammarExamples: grammarExamples ?? this.grammarExamples,
+    );
   }
 
   factory LessonTask.fromFirestore(Map<String, dynamic> map) {

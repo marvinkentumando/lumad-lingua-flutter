@@ -14,6 +14,8 @@ import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../services/haptic_service.dart';
 import '../models/broadcast.dart';
+import '../models/educator_models.dart';
+import '../providers/learning_provider.dart';
 import '../utils/app_localization.dart';
 
 class VillageDashboardScreen extends ConsumerWidget {
@@ -70,6 +72,7 @@ class VillageDashboardScreen extends ConsumerWidget {
     final educatorProfileAsync = ref.watch(otherUserProfileProvider(educatorId));
     final leaderboardAsync = ref.watch(villageTopLearnersProvider(educatorId));
     final broadcastsAsync = ref.watch(villageBroadcastsProvider(educatorId));
+    final assignedQuizzesAsync = ref.watch(assignedVillageMiniQuizzesProvider(educatorId));
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -88,6 +91,8 @@ class VillageDashboardScreen extends ConsumerWidget {
                       _buildVillageHeaderBanner(context, educatorProfileAsync, leaderboardAsync, l10n),
                       const SizedBox(height: 24),
                       _buildAnnouncementsSection(context, broadcastsAsync, l10n),
+                      const SizedBox(height: 24),
+                      _buildAssignedMiniQuizzesSection(context, ref, assignedQuizzesAsync),
                       const SizedBox(height: 24),
                       _buildVillageLeaderboardSection(context, user.uid, leaderboardAsync, l10n),
                       const SizedBox(height: 32),
@@ -396,6 +401,129 @@ class VillageDashboardScreen extends ConsumerWidget {
             Text(
               broadcast.message,
               style: AppTypography.body.copyWith(color: Colors.white, fontSize: 14, height: 1.4),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAssignedMiniQuizzesSection(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<VillageMiniQuiz>> quizzesAsync,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.assignment_turned_in_rounded, color: AppColors.gold500, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'VILLAGE SANCTUARY ASSESSMENTS',
+              style: AppTypography.label.copyWith(
+                color: AppColors.gold500,
+                letterSpacing: 1.5,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        quizzesAsync.when(
+          loading: () => const AppShimmerSkeleton(height: 100),
+          error: (e, _) => Text('Error loading quizzes: $e', style: const TextStyle(color: Colors.white38)),
+          data: (quizzes) {
+            if (quizzes.isEmpty) {
+              return BrandCard(
+                padding: const EdgeInsets.all(20),
+                child: const Row(
+                  children: [
+                    Text('🎯', style: TextStyle(fontSize: 24)),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        'No custom mini-quizzes assigned by your educator at this time.',
+                        style: TextStyle(color: Colors.white54, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return Column(
+              children: quizzes.map((q) => _buildMiniQuizCard(context, ref, q)).toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMiniQuizCard(BuildContext context, WidgetRef ref, VillageMiniQuiz quiz) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: BrandCard(
+        padding: const EdgeInsets.all(16),
+        borderRadius: 16,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold500.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${quiz.dialect.toUpperCase()} • ${quiz.tasks.length} QUESTIONS',
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.gold500,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Text(
+                  _formatRelativeTime(quiz.createdAt),
+                  style: AppTypography.caption.copyWith(color: Colors.white38, fontSize: 11),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              quiz.title,
+              style: AppTypography.h3.copyWith(color: Colors.white, fontSize: 16),
+            ),
+            if (quiz.description.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                quiz.description,
+                style: AppTypography.body.copyWith(color: Colors.white70, fontSize: 13),
+              ),
+            ],
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.gold500,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                label: const Text('TAKE ASSESSMENT', style: TextStyle(fontWeight: FontWeight.bold)),
+                onPressed: () {
+                  HapticService.selection();
+                  ref.read(quizSessionProvider.notifier).loadTasks(quiz.tasks);
+                  context.push('/lesson_session');
+                },
+              ),
             ),
           ],
         ),

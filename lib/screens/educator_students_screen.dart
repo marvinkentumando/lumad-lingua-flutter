@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:csv/csv.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'package:share_plus/share_plus.dart';
+import 'package:intl/intl.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
@@ -138,6 +145,8 @@ class _EducatorStudentsScreenState
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
+                      _buildExportButton(allStudents),
+                      const SizedBox(width: 8),
                       _buildSortDropdown(),
                     ],
                   ),
@@ -188,6 +197,152 @@ class _EducatorStudentsScreenState
           : 'No students have joined your village yet.',
       icon: _searchQuery.isNotEmpty ? Icons.person_search_rounded : Icons.people_outline_rounded,
     );
+  }
+
+  Widget _buildExportButton(List<EducatorStudent> students) {
+    return PopupMenuButton<String>(
+      onSelected: (val) => _exportRosterData(val, students),
+      color: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.05)
+                : AppColors.creamBorder,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.download_rounded, color: AppColors.gold500, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              'EXPORT',
+              style: AppTypography.label.copyWith(
+                color: AppColors.gold500,
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+      ),
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'CSV',
+          child: Text(
+            'Export CSV Report',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+          ),
+        ),
+        PopupMenuItem(
+          value: 'PDF',
+          child: Text(
+            'Export PDF Report',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _exportRosterData(String format, List<EducatorStudent> students) async {
+    HapticService.selection();
+    try {
+      final now = DateTime.now();
+      final dateStr = DateFormat('yyyyMMdd_HHmm').format(now);
+      final filename = 'Village_Learners_Report_$dateStr';
+
+      if (format == 'CSV') {
+        final List<List<dynamic>> rows = [
+          ['Student Roster Metrics'],
+          ['Name', 'Municipality', 'Level', 'Progress %', 'Active Streak (Days)', 'Lessons Completed', 'Needs Help'],
+          ...students.map((s) => [
+            s.name,
+            s.municipality,
+            s.level,
+            '${(s.progress * 100).toInt()}%',
+            s.streakDays,
+            s.lessonsCompleted,
+            s.isStruggling ? 'Yes' : 'No',
+          ]),
+          [],
+          ['Quiz Accuracy Breakdown'],
+          ['Student Name', 'Lesson Title', 'Status', 'Accuracy %', 'Progress %'],
+        ];
+
+        for (var s in students) {
+          for (var lp in s.lessonBreakdown) {
+            rows.add([
+              s.name,
+              lp.lessonTitle,
+              lp.status,
+              '${(lp.accuracy * 100).toInt()}%',
+              '${(lp.progress * 100).toInt()}%',
+            ]);
+          }
+        }
+
+        final csvData = const CsvEncoder().convert(rows);
+        final directory = await getTemporaryDirectory();
+        final file = File('${directory.path}/$filename.csv');
+        await file.writeAsString(csvData);
+
+        await SharePlus.instance.share(ShareParams(
+          files: [XFile(file.path)],
+          text: 'Village Class Analytics Report (CSV)',
+        ));
+      } else {
+        // PDF Export
+        final pdf = pw.Document();
+        pdf.addPage(
+          pw.MultiPage(
+            pageFormat: PdfPageFormat.a4,
+            build: (context) => [
+              pw.Header(level: 0, child: pw.Text('Lumad Lingua - Village Learner Class Analytics')),
+              pw.Paragraph(text: 'Generated on: ${DateFormat('MMMM dd, yyyy HH:mm').format(now)}'),
+              pw.Paragraph(text: 'Total Village Learners: ${students.length}'),
+              pw.SizedBox(height: 10),
+              pw.Header(level: 1, child: pw.Text('Student Progress & Active Streak Metrics')),
+              pw.TableHelper.fromTextArray(
+                context: context,
+                data: [
+                  ['Name', 'Municipality', 'Level', 'Progress', 'Streak', 'Lessons', 'Struggling'],
+                  ...students.map((s) => [
+                    s.name,
+                    s.municipality,
+                    s.level,
+                    '${(s.progress * 100).toInt()}%',
+                    '${s.streakDays}d',
+                    '${s.lessonsCompleted}',
+                    s.isStruggling ? 'YES' : 'No',
+                  ]),
+                ],
+              ),
+            ],
+          ),
+        );
+
+        final directory = await getTemporaryDirectory();
+        final file = File('${directory.path}/$filename.pdf');
+        await file.writeAsBytes(await pdf.save());
+
+        await SharePlus.instance.share(ShareParams(
+          files: [XFile(file.path)],
+          text: 'Village Class Analytics Report (PDF)',
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to export report: $e'), backgroundColor: AppColors.semanticRed),
+        );
+      }
+    }
   }
 
   Widget _buildSortDropdown() {
