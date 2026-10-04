@@ -18,6 +18,19 @@ import '../widgets/admin/import_dictionary_modal.dart';
 import '../widgets/admin/bulk_audio_import_modal.dart';
 import '../widgets/lesson_editors/editor_utils.dart';
 
+enum DictionarySortOption {
+  alphabeticalAsc('A-Z (Indigenous)', Icons.sort_by_alpha_rounded),
+  alphabeticalDesc('Z-A (Indigenous)', Icons.sort_by_alpha_rounded),
+  newestFirst('Newest First', Icons.arrow_downward_rounded),
+  oldestFirst('Oldest First', Icons.arrow_upward_rounded),
+  partOfSpeech('Part of Speech', Icons.category_rounded),
+  hasAudio('Has Audio First', Icons.volume_up_rounded);
+
+  final String label;
+  final IconData icon;
+  const DictionarySortOption(this.label, this.icon);
+}
+
 class AdminDictionaryScreen extends ConsumerStatefulWidget {
   const AdminDictionaryScreen({super.key});
 
@@ -29,11 +42,128 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _selectedDialect = 'All';
+  DictionarySortOption _selectedSort = DictionarySortOption.alphabeticalAsc;
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  List<DictionaryEntry> _sortWords(List<DictionaryEntry> words) {
+    final list = List<DictionaryEntry>.from(words);
+    switch (_selectedSort) {
+      case DictionarySortOption.alphabeticalAsc:
+        list.sort((a, b) => a.indigenousWord.toLowerCase().compareTo(b.indigenousWord.toLowerCase()));
+        break;
+      case DictionarySortOption.alphabeticalDesc:
+        list.sort((a, b) => b.indigenousWord.toLowerCase().compareTo(a.indigenousWord.toLowerCase()));
+        break;
+      case DictionarySortOption.newestFirst:
+        list.sort((a, b) {
+          final dateA = a.submittedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+          final dateB = b.submittedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+          return dateB.compareTo(dateA);
+        });
+        break;
+      case DictionarySortOption.oldestFirst:
+        list.sort((a, b) {
+          final dateA = a.submittedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+          final dateB = b.submittedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+          return dateA.compareTo(dateB);
+        });
+        break;
+      case DictionarySortOption.partOfSpeech:
+        list.sort((a, b) => a.partOfSpeechLabel.compareTo(b.partOfSpeechLabel));
+        break;
+      case DictionarySortOption.hasAudio:
+        list.sort((a, b) {
+          final hasAudioA = a.audioUrl != null && a.audioUrl!.isNotEmpty ? 1 : 0;
+          final hasAudioB = b.audioUrl != null && b.audioUrl!.isNotEmpty ? 1 : 0;
+          if (hasAudioA != hasAudioB) {
+            return hasAudioB.compareTo(hasAudioA);
+          }
+          return a.indigenousWord.toLowerCase().compareTo(b.indigenousWord.toLowerCase());
+        });
+        break;
+    }
+    return list;
+  }
+
+  Widget _buildSortButton(bool isDark) {
+    return PopupMenuButton<DictionarySortOption>(
+      initialValue: _selectedSort,
+      tooltip: 'Sort dictionary entries',
+      onSelected: (sort) {
+        HapticService.selection();
+        setState(() => _selectedSort = sort);
+      },
+      color: isDark ? AppColors.forest800 : Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white10 : Colors.black12,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark ? Colors.white10 : Colors.black12,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _selectedSort.icon,
+              size: 14,
+              color: isDark ? AppColors.gold500 : AppColors.forest900,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              _selectedSort.label,
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black87,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 2),
+            Icon(
+              Icons.arrow_drop_down_rounded,
+              size: 16,
+              color: isDark ? Colors.white70 : Colors.black87,
+            ),
+          ],
+        ),
+      ),
+      itemBuilder: (context) => DictionarySortOption.values.map((sort) {
+        final isSelected = sort == _selectedSort;
+        return PopupMenuItem<DictionarySortOption>(
+          value: sort,
+          child: Row(
+            children: [
+              Icon(
+                sort.icon,
+                size: 16,
+                color: isSelected ? AppColors.gold500 : (isDark ? Colors.white70 : Colors.black87),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                sort.label,
+                style: TextStyle(
+                  color: isSelected ? AppColors.gold500 : (isDark ? Colors.white : Colors.black87),
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  fontSize: 12,
+                ),
+              ),
+              if (isSelected) ...[
+                const Spacer(),
+                const Icon(Icons.check_rounded, size: 16, color: AppColors.gold500),
+              ],
+            ],
+          ),
+        );
+      }).toList(),
+    );
   }
 
   @override
@@ -65,12 +195,12 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
           IconButton(
             icon: const Icon(Icons.audio_file_rounded, color: AppColors.gold500),
             tooltip: 'Bulk Audio Import',
-            onPressed: () => _showBulkAudioModal(context, wordsAsync.value ?? []),
+            onPressed: () => _showBulkAudioModal(context, _sortWords(wordsAsync.value ?? [])),
           ),
           IconButton(
             icon: const Icon(Icons.download_rounded, color: AppColors.gold500),
             tooltip: 'Export CSV',
-            onPressed: () => _exportDictionary(wordsAsync.value ?? []),
+            onPressed: () => _exportDictionary(_sortWords(wordsAsync.value ?? [])),
           ),
           IconButton(
             icon: const Icon(Icons.upload_file_rounded, color: AppColors.gold500),
@@ -88,19 +218,29 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
               children: [
                 _buildSearchBar(),
                 const SizedBox(height: 8),
-                _buildDialectFilters(dialectsAsync, isDark),
+                Row(
+                  children: [
+                    Expanded(child: _buildDialectFilters(dialectsAsync, isDark)),
+                    const SizedBox(width: 8),
+                    _buildSortButton(isDark),
+                  ],
+                ),
+                const SizedBox(height: 12),
               ],
             ),
           ),
           Expanded(
             child: wordsAsync.when(
-              data: (words) => words.isEmpty
-                  ? _buildEmptyState(isDark)
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: words.length,
-                      itemBuilder: (context, index) => _buildWordCard(words[index], isDark, index),
-                    ),
+              data: (words) {
+                final sortedWords = _sortWords(words);
+                return sortedWords.isEmpty
+                    ? _buildEmptyState(isDark)
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: sortedWords.length,
+                        itemBuilder: (context, index) => _buildWordCard(sortedWords[index], isDark, index),
+                      );
+              },
               loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
               error: (e, _) => Center(child: Text('Error: $e')),
             ),

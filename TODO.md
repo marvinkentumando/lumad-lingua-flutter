@@ -13,6 +13,7 @@
   - Streamlined Add/Edit Entry Modal by removing standalone translation fields while preserving example sentence translations.
   - Supported CSV export and import modal for dictionary bulk uploads.
   - Supported native audio recording and file uploads directly from the Admin Entry Form modal.
+  - Implemented multi-criteria dictionary sorting menu (Alphabetical A-Z/Z-A, Newest/Oldest, Part of Speech, Has Audio First).
 - [x] **Admin Gamification Screen**:
   - Added `tryParse` number parsing, form validation, non-negative entry checks, and SnackBar feedback for reward XP and shop item price dialogs.
   - Added delete action buttons with confirmation dialogs calling `deleteShopItem`.
