@@ -133,7 +133,7 @@ class BrandCard extends StatelessWidget {
           ],
         ),
         child: DefaultTextStyle(
-          style: TextStyle(color: isDark ? Colors.white : AppColors.forest900),
+          style: const TextStyle(color: AppColors.forest900),
           child: child,
         ),
       );

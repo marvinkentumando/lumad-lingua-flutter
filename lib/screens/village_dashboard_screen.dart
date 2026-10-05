@@ -40,11 +40,11 @@ class VillageDashboardScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.fort_rounded, size: 64, color: AppColors.gold500),
+                    Icon(Icons.fort_rounded, size: 64, color: isDark ? AppColors.gold500 : AppColors.forest900),
                     const SizedBox(height: 16),
                     Text(
                       l10n.translate('not_in_village'),
-                      style: AppTypography.h2.copyWith(color: AppColors.gold500),
+                      style: AppTypography.h2.copyWith(color: isDark ? AppColors.gold500 : AppColors.forest900),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -136,7 +136,7 @@ class VillageDashboardScreen extends ConsumerWidget {
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.gold500),
+            icon: Icon(Icons.arrow_back_ios_new_rounded, color: isDark ? AppColors.gold500 : AppColors.forest900),
             onPressed: () => context.pop(),
           ),
           const SizedBox(width: 8),
@@ -144,7 +144,7 @@ class VillageDashboardScreen extends ConsumerWidget {
             child: Text(
               l10n.translate('village_sanctuary_title'),
               style: AppTypography.label.copyWith(
-                color: AppColors.gold500,
+                color: isDark ? AppColors.gold500 : AppColors.forest900,
                 letterSpacing: 2,
                 fontSize: 15,
               ),
@@ -224,11 +224,11 @@ class VillageDashboardScreen extends ConsumerWidget {
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: AppColors.gold500.withValues(alpha: 0.2),
+                      color: isDark ? AppColors.gold500.withValues(alpha: 0.2) : AppColors.forest900.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.gold500, width: 2),
+                      border: Border.all(color: isDark ? AppColors.gold500 : AppColors.forest900, width: 2),
                     ),
-                    child: const Icon(Icons.fort_rounded, color: AppColors.gold500, size: 30),
+                    child: Icon(Icons.fort_rounded, color: isDark ? AppColors.gold500 : AppColors.forest900, size: 30),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -237,7 +237,7 @@ class VillageDashboardScreen extends ConsumerWidget {
                       children: [
                         Text(
                           villageName,
-                          style: AppTypography.h2.copyWith(color: AppColors.gold500, fontSize: 20),
+                          style: AppTypography.h2.copyWith(color: isDark ? AppColors.gold500 : AppColors.forest900, fontSize: 20),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -290,17 +290,20 @@ class VillageDashboardScreen extends ConsumerWidget {
                       decoration: BoxDecoration(
                         color: isDark
                             ? Colors.black.withValues(alpha: 0.3)
-                            : AppColors.gold500.withValues(alpha: 0.15),
+                            : AppColors.forest900.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.gold500.withValues(alpha: 0.4)),
+                        border: Border.all(color: isDark ? AppColors.gold500.withValues(alpha: 0.4) : AppColors.forest900.withValues(alpha: 0.2)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.key_rounded, color: AppColors.gold500, size: 14),
+                          Icon(Icons.key_rounded, color: isDark ? AppColors.gold500 : AppColors.forest900, size: 14),
                           const SizedBox(width: 6),
                           Text(
                             villageCode,
-                            style: AppTypography.labelBold.copyWith(color: AppColors.gold500, fontSize: 12),
+                            style: AppTypography.labelBold.copyWith(
+                              color: isDark ? AppColors.gold500 : AppColors.forest900,
+                              fontSize: 12,
+                            ),
                           ),
                           const SizedBox(width: 4),
                           Icon(
@@ -329,7 +332,7 @@ class VillageDashboardScreen extends ConsumerWidget {
   }) {
     return Row(
       children: [
-        Icon(icon, color: AppColors.gold500, size: 18),
+        Icon(icon, color: isDark ? AppColors.gold500 : AppColors.forest900, size: 18),
         const SizedBox(width: 6),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -366,12 +369,12 @@ class VillageDashboardScreen extends ConsumerWidget {
       children: [
         Row(
           children: [
-            const Icon(Icons.campaign_rounded, color: AppColors.gold500, size: 20),
+            Icon(Icons.campaign_rounded, color: isDark ? AppColors.gold500 : AppColors.forest900, size: 20),
             const SizedBox(width: 8),
             Text(
               l10n.translate('village_announcements'),
               style: AppTypography.label.copyWith(
-                color: AppColors.gold500,
+                color: isDark ? AppColors.gold500 : AppColors.forest900,
                 letterSpacing: 1.5,
                 fontSize: 13,
               ),
@@ -420,8 +423,8 @@ class VillageDashboardScreen extends ConsumerWidget {
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.gold500,
-                        side: const BorderSide(color: AppColors.gold500, width: 1.5),
+                        foregroundColor: isDark ? AppColors.gold500 : AppColors.forest900,
+                        side: BorderSide(color: isDark ? AppColors.gold500 : AppColors.forest900, width: 1.5),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
@@ -486,11 +489,14 @@ class VillageDashboardScreen extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.campaign_rounded, color: AppColors.gold500, size: 22),
+                          Icon(Icons.campaign_rounded, color: isDark ? AppColors.gold500 : AppColors.forest900, size: 22),
                           const SizedBox(width: 8),
                           Text(
                             l10n.translate('village_announcements'),
-                            style: AppTypography.h2.copyWith(color: AppColors.gold500, fontSize: 18),
+                            style: AppTypography.h2.copyWith(
+                              color: isDark ? AppColors.gold500 : AppColors.forest900,
+                              fontSize: 18,
+                            ),
                           ),
                         ],
                       ),
@@ -541,18 +547,25 @@ class VillageDashboardScreen extends ConsumerWidget {
                   children: [
                     Container(
                       padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: AppColors.gold500,
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.gold500 : AppColors.forest900,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.verified_rounded, color: Colors.black, size: 12),
+                      child: Icon(
+                        Icons.verified_rounded,
+                        color: isDark ? Colors.black : Colors.white,
+                        size: 12,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       broadcast.educatorName.isNotEmpty
                           ? broadcast.educatorName
                           : l10n.translate('researcher_educator'),
-                      style: AppTypography.labelBold.copyWith(color: AppColors.gold500, fontSize: 13),
+                      style: AppTypography.labelBold.copyWith(
+                        color: isDark ? AppColors.gold500 : AppColors.forest900,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
@@ -592,12 +605,12 @@ class VillageDashboardScreen extends ConsumerWidget {
       children: [
         Row(
           children: [
-            const Icon(Icons.assignment_turned_in_rounded, color: AppColors.gold500, size: 20),
+            Icon(Icons.assignment_turned_in_rounded, color: isDark ? AppColors.gold500 : AppColors.forest900, size: 20),
             const SizedBox(width: 8),
             Text(
               l10n.translate('village_sanctuary_assessments'),
               style: AppTypography.label.copyWith(
-                color: AppColors.gold500,
+                color: isDark ? AppColors.gold500 : AppColors.forest900,
                 letterSpacing: 1.5,
                 fontSize: 13,
               ),
@@ -665,13 +678,13 @@ class VillageDashboardScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.gold500.withValues(alpha: 0.2),
+                    color: isDark ? AppColors.gold500.withValues(alpha: 0.2) : AppColors.forest900.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     '${quiz.dialect.toUpperCase()} • ${quiz.tasks.length} ${l10n.translate('questions_caps')}',
                     style: AppTypography.label.copyWith(
-                      color: AppColors.gold500,
+                      color: isDark ? AppColors.gold500 : AppColors.forest900,
                       fontSize: 9,
                       fontWeight: FontWeight.bold,
                     ),
@@ -743,12 +756,12 @@ class VillageDashboardScreen extends ConsumerWidget {
       children: [
         Row(
           children: [
-            const Icon(Icons.emoji_events_rounded, color: AppColors.gold500, size: 20),
+            Icon(Icons.emoji_events_rounded, color: isDark ? AppColors.gold500 : AppColors.forest900, size: 20),
             const SizedBox(width: 8),
             Text(
               l10n.translate('tribe_rankings'),
               style: AppTypography.label.copyWith(
-                color: AppColors.gold500,
+                color: isDark ? AppColors.gold500 : AppColors.forest900,
                 letterSpacing: 1.5,
                 fontSize: 13,
               ),
@@ -829,12 +842,12 @@ class VillageDashboardScreen extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: isMe
-            ? AppColors.gold500.withValues(alpha: 0.15)
+            ? (isDark ? AppColors.gold500.withValues(alpha: 0.15) : AppColors.forest900.withValues(alpha: 0.08))
             : (isDark ? AppColors.forest800.withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.8)),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isMe
-              ? AppColors.gold500
+              ? (isDark ? AppColors.gold500 : AppColors.forest900)
               : (isDark ? Colors.white12 : AppColors.forest900.withValues(alpha: 0.1)),
           width: isMe ? 1.5 : 1,
         ),
@@ -860,7 +873,7 @@ class VillageDashboardScreen extends ConsumerWidget {
                         name,
                         style: AppTypography.labelBold.copyWith(
                           color: isMe
-                              ? AppColors.gold500
+                              ? (isDark ? AppColors.gold500 : AppColors.forest900)
                               : (isDark ? Colors.white : AppColors.forest900),
                           fontSize: 14,
                         ),
@@ -907,16 +920,19 @@ class VillageDashboardScreen extends ConsumerWidget {
             decoration: BoxDecoration(
               color: isDark
                   ? Colors.black.withValues(alpha: 0.3)
-                  : AppColors.gold500.withValues(alpha: 0.15),
+                  : AppColors.forest900.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
-                const Icon(Icons.bolt_rounded, color: AppColors.gold500, size: 14),
+                Icon(Icons.bolt_rounded, color: isDark ? AppColors.gold500 : AppColors.forest900, size: 14),
                 const SizedBox(width: 4),
                 Text(
                   '$xp XP',
-                  style: AppTypography.labelBold.copyWith(color: AppColors.gold500, fontSize: 12),
+                  style: AppTypography.labelBold.copyWith(
+                    color: isDark ? AppColors.gold500 : AppColors.forest900,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
@@ -958,7 +974,9 @@ class VillageDashboardScreen extends ConsumerWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           l10n.translate('leave_village_title'),
-          style: AppTypography.h2.copyWith(color: AppColors.gold500),
+          style: AppTypography.h2.copyWith(
+            color: isDark ? AppColors.gold500 : AppColors.forest900,
+          ),
         ),
         content: Text(
           l10n.translate('leave_village_desc'),

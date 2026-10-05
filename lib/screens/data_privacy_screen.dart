@@ -37,7 +37,7 @@ class DataPrivacyScreen extends ConsumerWidget {
                 child: profileAsync.when(
                   data: (profile) => _buildContent(context, ref, profile, l10n),
                   loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
-                  error: (err, _) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+                  error: (err, _) => Center(child: Text('Error: $err', style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white : AppColors.forest900))),
                 ),
               ),
             ],
@@ -57,11 +57,11 @@ class DataPrivacyScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionLabel(l10n.translate('account_security')),
+          _sectionLabel(context, l10n.translate('account_security')),
           const SizedBox(height: 16),
           _buildSecurityCard(context, ref, l10n),
           const SizedBox(height: 32),
-          _sectionLabel(l10n.translate('data_management')),
+          _sectionLabel(context, l10n.translate('data_management')),
           const SizedBox(height: 16),
           _buildManagementTile(
             context,
@@ -79,7 +79,7 @@ class DataPrivacyScreen extends ConsumerWidget {
             onTap: () => _showComingSoon(context, l10n.translate('activity_logs'), l10n),
           ),
           const SizedBox(height: 32),
-          _sectionLabel(l10n.translate('privacy_controls')),
+          _sectionLabel(context, l10n.translate('privacy_controls')),
           const SizedBox(height: 16),
           _buildPrivacyToggle(
             context,
@@ -107,18 +107,19 @@ class DataPrivacyScreen extends ConsumerWidget {
   }
 
   Widget _buildHeader(BuildContext context, AppLocalization l10n) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Row(
         children: [
           IconButton(
             onPressed: () => context.pop(),
-            icon: const Icon(
+            icon: Icon(
               Icons.arrow_back_ios_new_rounded,
-              color: AppColors.gold500,
+              color: isDark ? AppColors.gold500 : AppColors.forest900,
             ),
             style: IconButton.styleFrom(
-              backgroundColor: Colors.white.withValues(alpha: 0.05),
+              backgroundColor: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.forest900.withValues(alpha: 0.05),
               padding: const EdgeInsets.all(12),
             ),
           ),
@@ -126,9 +127,7 @@ class DataPrivacyScreen extends ConsumerWidget {
           Text(
             l10n.translate('data_privacy'),
             style: AppTypography.h2ExtraBold.copyWith(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white
-                  : AppColors.forest900,
+              color: isDark ? Colors.white : AppColors.forest900,
             ),
           ),
         ],
@@ -136,15 +135,18 @@ class DataPrivacyScreen extends ConsumerWidget {
     );
   }
 
-  Widget _sectionLabel(String label) => Text(
-        label,
-        style: AppTypography.label.copyWith(
-          color: AppColors.gold500,
-          letterSpacing: 2,
-          fontWeight: FontWeight.w900,
-          fontSize: 10,
-        ),
-      );
+  Widget _sectionLabel(BuildContext context, String label) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Text(
+      label,
+      style: AppTypography.label.copyWith(
+        color: isDark ? AppColors.gold500 : AppColors.forest900,
+        letterSpacing: 2,
+        fontWeight: FontWeight.w900,
+        fontSize: 10,
+      ),
+    );
+  }
 
   String _getProviderName(User? user) {
     if (user == null || user.providerData.isEmpty) return 'Identity Provider';
@@ -256,14 +258,15 @@ class DataPrivacyScreen extends ConsumerWidget {
     String sub, {
     VoidCallback? onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return BrandCard(
       onTap: onTap,
-      theme: BrandCardTheme.vibrant,
+      theme: isDark ? BrandCardTheme.vibrant : BrandCardTheme.cream,
       padding: const EdgeInsets.all(20),
       borderRadius: 24,
       child: Row(
         children: [
-          Icon(icon, color: AppColors.gold500, size: 24),
+          Icon(icon, color: isDark ? AppColors.gold500 : AppColors.forest900, size: 24),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -272,21 +275,24 @@ class DataPrivacyScreen extends ConsumerWidget {
                 Text(
                   title,
                   style: AppTypography.h3.copyWith(
-                    color: Colors.white,
+                    color: isDark ? Colors.white : AppColors.forest900,
                     fontSize: 16,
                   ),
                 ),
                 Text(
                   sub,
                   style: AppTypography.body.copyWith(
-                    color: Colors.white60,
+                    color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.6),
                     fontSize: 11,
                   ),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right_rounded, color: Colors.white24),
+          Icon(
+            Icons.chevron_right_rounded,
+            color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
+          ),
         ],
       ),
     );
@@ -378,6 +384,7 @@ class DataPrivacyScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           _buildDangerActionItem(
+            context: context,
             title: 'Reset Learning Progress',
             description: 'Reset your XP, day streak, and lesson completion history to restart learning from level 1. Your account profile remains active.',
             buttonText: 'RESET PROGRESS',
@@ -385,9 +392,10 @@ class DataPrivacyScreen extends ConsumerWidget {
             onPressed: () => _showResetProgressConfirmation(context, ref, l10n),
           ),
           const SizedBox(height: 20),
-          const Divider(color: Colors.white12),
+          Divider(color: Theme.of(context).brightness == Brightness.dark ? Colors.white12 : AppColors.forest900.withValues(alpha: 0.1)),
           const SizedBox(height: 20),
           _buildDangerActionItem(
+            context: context,
             title: l10n.translate('sacrifice_account'),
             description: l10n.translate('delete_account_desc'),
             buttonText: l10n.translate('delete_account_btn'),
@@ -400,19 +408,21 @@ class DataPrivacyScreen extends ConsumerWidget {
   }
 
   Widget _buildDangerActionItem({
+    required BuildContext context,
     required String title,
     required String description,
     required String buttonText,
     required bool isOutline,
     required VoidCallback onPressed,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
           style: AppTypography.h3.copyWith(
-            color: Colors.white,
+            color: isDark ? Colors.white : AppColors.forest900,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -421,7 +431,7 @@ class DataPrivacyScreen extends ConsumerWidget {
         Text(
           description,
           style: AppTypography.body.copyWith(
-            color: Colors.white60,
+            color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.7),
             fontSize: 12,
           ),
         ),
@@ -638,16 +648,20 @@ class _UpdatePasswordDialogState extends State<_UpdatePasswordDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = widget.l10n;
     final pwdValidation = PasswordValidator.validate(_newPasswordController.text);
     final isConfirmMismatch = _confirmPasswordController.text.isNotEmpty && !_doPasswordsMatch;
 
     return AlertDialog(
-      backgroundColor: AppColors.forest800,
+      backgroundColor: isDark ? AppColors.forest800 : AppColors.creamBg,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       title: Text(
         l10n.translate('update_password'),
-        style: AppTypography.h3.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+        style: AppTypography.h3.copyWith(
+          color: isDark ? Colors.white : AppColors.forest900,
+          fontWeight: FontWeight.bold,
+        ),
       ),
       content: SingleChildScrollView(
         child: Column(
@@ -730,7 +744,9 @@ class _UpdatePasswordDialogState extends State<_UpdatePasswordDialog> {
           child: Text(
             l10n.translate('cancel').toUpperCase(),
             style: TextStyle(
-              color: _isLoading ? Colors.white24 : Colors.white60,
+              color: _isLoading
+                  ? (isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3))
+                  : (isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.7)),
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -816,22 +832,29 @@ class _ResetProgressDialogState extends State<_ResetProgressDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return AlertDialog(
-      backgroundColor: AppColors.forest800,
+      backgroundColor: isDark ? AppColors.forest800 : AppColors.creamBg,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       title: Row(
         children: [
-          const Icon(Icons.restart_alt_rounded, color: AppColors.gold500),
+          Icon(Icons.restart_alt_rounded, color: isDark ? AppColors.gold500 : AppColors.forest900),
           const SizedBox(width: 10),
           Text(
             'Reset Progress?',
-            style: AppTypography.h3.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+            style: AppTypography.h3.copyWith(
+              color: isDark ? Colors.white : AppColors.forest900,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),
       content: Text(
         'Are you sure you want to reset your learning progress? Your XP, streak, crystals, and completed lesson history will be set to 0. Your account will remain active.',
-        style: AppTypography.body.copyWith(color: Colors.white70, fontSize: 13),
+        style: AppTypography.body.copyWith(
+          color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.8),
+          fontSize: 13,
+        ),
       ),
       actions: [
         TextButton(
@@ -839,7 +862,9 @@ class _ResetProgressDialogState extends State<_ResetProgressDialog> {
           child: Text(
             widget.l10n.translate('cancel').toUpperCase(),
             style: TextStyle(
-              color: _isLoading ? Colors.white24 : Colors.white60,
+              color: _isLoading
+                  ? (isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3))
+                  : (isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.7)),
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -992,11 +1017,12 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = widget.l10n;
     final expectedWord = widget.username.isNotEmpty ? '"DELETE" or "${widget.username}"' : '"DELETE"';
 
     return AlertDialog(
-      backgroundColor: AppColors.forest800,
+      backgroundColor: isDark ? AppColors.forest800 : AppColors.creamBg,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       title: Row(
         children: [
@@ -1005,7 +1031,10 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
           Expanded(
             child: Text(
               l10n.translate('sacrifice_account'),
-              style: AppTypography.h3.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+              style: AppTypography.h3.copyWith(
+                color: isDark ? Colors.white : AppColors.forest900,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -1017,7 +1046,10 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
           children: [
             Text(
               l10n.translate('irreversible_desc'),
-              style: const TextStyle(color: Colors.white70, fontSize: 13),
+              style: TextStyle(
+                color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.8),
+                fontSize: 13,
+              ),
             ),
             const SizedBox(height: 16),
             // Grace Period Notice
@@ -1030,12 +1062,16 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.schedule_rounded, color: AppColors.gold500, size: 20),
+                  Icon(Icons.schedule_rounded, color: isDark ? AppColors.gold500 : AppColors.forest900, size: 20),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       '30-Day Grace Period: Permanent data removal occurs 30 days after deletion request.',
-                      style: AppTypography.body.copyWith(color: AppColors.gold500, fontSize: 11, fontWeight: FontWeight.bold),
+                      style: AppTypography.body.copyWith(
+                        color: isDark ? AppColors.gold500 : AppColors.forest900,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -1055,17 +1091,24 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.2),
+                  color: isDark ? Colors.black.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.security_rounded, color: Colors.white70, size: 18),
+                    Icon(
+                      Icons.security_rounded,
+                      color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7),
+                      size: 18,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Re-authenticating via $_providerName upon confirmation.',
-                        style: AppTypography.body.copyWith(color: Colors.white70, fontSize: 11),
+                        style: AppTypography.body.copyWith(
+                          color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7),
+                          fontSize: 11,
+                        ),
                       ),
                     ),
                   ],
@@ -1075,7 +1118,10 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
             ],
             Text(
               'To confirm, type $expectedWord below:',
-              style: AppTypography.label.copyWith(color: Colors.white70, fontSize: 12),
+              style: AppTypography.label.copyWith(
+                color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7),
+                fontSize: 12,
+              ),
             ),
             const SizedBox(height: 8),
             BrandTextField(
@@ -1111,7 +1157,9 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
           child: Text(
             l10n.translate('cancel').toUpperCase(),
             style: TextStyle(
-              color: _isLoading ? Colors.white24 : Colors.white60,
+              color: _isLoading
+                  ? (isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3))
+                  : (isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.7)),
               fontWeight: FontWeight.bold,
             ),
           ),
