@@ -741,18 +741,18 @@ class LearnerProfileScreen extends ConsumerWidget {
                       onPressed: () async {
                         if (controller.text.length < 6) return;
                         try {
-                          await ref.read(firebaseServiceProvider).joinVillage(userId, controller.text);
+                          HapticService.selection();
+                          final educatorInfo = await ref
+                              .read(firebaseServiceProvider)
+                              .joinVillage(userId, controller.text);
                           if (context.mounted) {
                             context.pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(l10n.translate('welcome_village')),
-                                backgroundColor: AppColors.semanticGreen,
-                              ),
-                            );
+                            HapticService.success();
+                            _showVillageWelcomeDialog(context, educatorInfo, l10n);
                           }
                         } catch (e) {
                           if (context.mounted) {
+                            HapticService.error();
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.semanticRed),
                             );
@@ -766,6 +766,111 @@ class LearnerProfileScreen extends ConsumerWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showVillageWelcomeDialog(
+    BuildContext context,
+    Map<String, dynamic> educatorInfo,
+    AppLocalization l10n,
+  ) {
+    final educatorName = educatorInfo['fullName'] ?? educatorInfo['username'] ?? educatorInfo['name'] ?? 'Educator';
+    final villageName = educatorInfo['villageName'] ?? l10n.translate('educators_tribe', params: {'name': educatorName});
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            color: AppColors.forest800,
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(color: AppColors.gold500, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.5),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.gold500.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.gold500, width: 2),
+                ),
+                child: const Icon(Icons.fort_rounded, color: AppColors.gold500, size: 48),
+              ).animate().scale(duration: 400.ms, curve: Curves.easeOutBack),
+              const SizedBox(height: 20),
+              Text(
+                l10n.translate('welcome_tribe_title'),
+                textAlign: TextAlign.center,
+                style: AppTypography.h2.copyWith(color: AppColors.gold500, fontSize: 22),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                villageName,
+                textAlign: TextAlign.center,
+                style: AppTypography.h3.copyWith(color: Colors.white, fontSize: 18),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                l10n.translate('led_by', params: {'name': educatorName}),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                l10n.translate('village_joined_desc'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white60, fontSize: 12, height: 1.4),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.gold500,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  icon: const Icon(Icons.castle_rounded, size: 20),
+                  label: Text(
+                    l10n.translate('enter_village_sanctuary'),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  onPressed: () {
+                    HapticService.success();
+                    Navigator.pop(ctx);
+                    context.push('/village_dashboard');
+                  },
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(
+                  l10n.translate('close').toUpperCase(),
+                  style: const TextStyle(color: Colors.white38),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
         ),
       ),
     );

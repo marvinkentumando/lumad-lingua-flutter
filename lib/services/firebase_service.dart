@@ -80,7 +80,7 @@ class FirebaseService {
     });
   }
 
-  Future<void> joinVillage(String userId, String code) async {
+  Future<Map<String, dynamic>> joinVillage(String userId, String code) async {
     final educatorSnap = await _db
         .collection('users')
         .where('role', isEqualTo: 'educator')
@@ -92,7 +92,9 @@ class FirebaseService {
       throw Exception("Village code not found. Please check with your educator.");
     }
 
-    final educatorId = educatorSnap.docs.first.id;
+    final educatorDoc = educatorSnap.docs.first;
+    final educatorId = educatorDoc.id;
+    final educatorData = educatorDoc.data();
 
     await _db.collection('users').doc(userId).update({
       'educatorId': educatorId,
@@ -107,6 +109,11 @@ class FirebaseService {
       'message': '$userName has joined your village.',
       'type': 'broadcast',
     });
+
+    return {
+      'educatorId': educatorId,
+      ...educatorData,
+    };
   }
 
   Future<void> leaveVillage(String userId) async {
