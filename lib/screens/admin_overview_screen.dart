@@ -60,6 +60,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final healthAsync = ref.watch(systemHealthProvider);
     final activityAsync = ref.watch(platformActivityProvider);
     final l10n = ref.watch(localizationProvider);
@@ -250,7 +251,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                   const SizedBox(height: 16),
                   activityAsync.when(
                     data: (data) => BrandCard(
-                      theme: BrandCardTheme.vibrant,
+                      theme: isDark ? BrandCardTheme.vibrant : BrandCardTheme.gold,
                       child: _buildInteractiveBarChart(
                         values: data['growth'] ?? [0, 0, 0, 0, 0, 0, 0],
                         labels: [
@@ -692,6 +693,10 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
     required void Function(int) onTap,
   }) {
     final max = values.reduce((a, b) => a > b ? a : b);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final defaultLabelColor = isDark ? Colors.white : AppColors.forest900;
+    final activeLabelColor = isDark ? AppColors.gold500 : AppColors.forest900;
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Row(
@@ -712,7 +717,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                     Text(
                       '${values[i]}',
                       style: AppTypography.mono.copyWith(
-                        color: isTapped ? color : color.withValues(alpha: 0.7),
+                        color: isTapped ? activeLabelColor : (isDark ? color : AppColors.forest700),
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
@@ -728,14 +733,14 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                           end: Alignment.bottomCenter,
                           colors: [
                             color,
-                            color.withValues(alpha: isTapped ? 0.8 : 0.3),
+                            color.withValues(alpha: isTapped ? 0.9 : 0.4),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(6),
                         boxShadow: isTapped
                             ? [
                                 BoxShadow(
-                                  color: color.withValues(alpha: 0.4),
+                                  color: color.withValues(alpha: 0.5),
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
                                 ),
@@ -753,8 +758,8 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                     Text(
                       labels[i],
                       style: AppTypography.mono.copyWith(
-                        color: isTapped ? color : Colors.white60,
-                        fontSize: 8,
+                        color: isTapped ? activeLabelColor : defaultLabelColor,
+                        fontSize: 10,
                         fontWeight: FontWeight.w900,
                       ),
                     ),

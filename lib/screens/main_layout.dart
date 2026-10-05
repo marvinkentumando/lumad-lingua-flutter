@@ -152,6 +152,7 @@ class MainLayout extends ConsumerWidget {
     UserRole role,
     AppLocalization l10n,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final profile = ref.watch(userProfileProvider).value;
     String label = '';
     IconData icon = Icons.flash_on;
@@ -238,12 +239,14 @@ class MainLayout extends ConsumerWidget {
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.05)
+                      : Colors.black.withValues(alpha: 0.05),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.help_outline_rounded,
-                  color: Colors.white70,
+                  color: isDark ? Colors.white70 : AppColors.forest900,
                   size: 22,
                 ),
               ),
@@ -257,14 +260,16 @@ class MainLayout extends ConsumerWidget {
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.05)
+                      : Colors.black.withValues(alpha: 0.05),
                   shape: BoxShape.circle,
                 ),
                 child: Stack(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.notifications_none_rounded,
-                      color: Colors.white70,
+                      color: isDark ? Colors.white70 : AppColors.forest900,
                       size: 22,
                     ),
                     if (unreadCount > 0)
@@ -316,6 +321,7 @@ class MainLayout extends ConsumerWidget {
 
   Widget _buildStreakStat(BuildContext context, WidgetRef ref) {
     final student = ref.watch(studentProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: () {
         HapticService.light();
@@ -324,7 +330,9 @@ class MainLayout extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.05),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.black.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(25),
           border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
         ),

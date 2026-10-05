@@ -5,7 +5,6 @@ import '../services/haptic_service.dart';
 import '../models/gamification_models.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
-import '../widgets/glass_box.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_text_field.dart';
 
@@ -33,17 +32,20 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AppColors.forest900,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: Text('GAMIFICATION & ECONOMICS', style: AppTypography.h3.copyWith(color: AppColors.gold500)),
-        backgroundColor: AppColors.forest900,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        elevation: 0,
         bottom: TabBar(
           controller: _tabController,
           isScrollable: false,
           indicatorColor: AppColors.gold500,
           labelColor: AppColors.gold500,
-          unselectedLabelColor: Colors.white60,
+          unselectedLabelColor: isDark ? Colors.white60 : Theme.of(context).colorScheme.onSurfaceVariant,
           tabs: const [
             Tab(text: 'REWARDS', icon: Icon(Icons.military_tech_rounded)),
             Tab(text: 'SHOP', icon: Icon(Icons.shopping_bag_rounded)),
@@ -53,80 +55,103 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildRewardsTab(),
-          _buildShopTab(),
+          _buildRewardsTab(isDark),
+          _buildShopTab(isDark),
         ],
       ),
     );
   }
 
-  Widget _buildRewardsTab() {
+  Widget _buildRewardsTab(bool isDark) {
     final configAsync = ref.watch(appConfigProvider);
     return configAsync.when(
       data: (config) => ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _buildRewardCategory('CONTRIBUTIONS', [
-            _rewardTile('Word Approval', config.wordApprovalXp, (val) => _updateConfig('wordApprovalXp', val, 'Word Approval')),
-            _rewardTile('Lesson Approval', config.lessonApprovalXp, (val) => _updateConfig('lessonApprovalXp', val, 'Lesson Approval')),
-          ]),
+            _rewardTile('Word Approval', config.wordApprovalXp, (val) => _updateConfig('wordApprovalXp', val, 'Word Approval'), isDark),
+            _rewardTile('Lesson Approval', config.lessonApprovalXp, (val) => _updateConfig('lessonApprovalXp', val, 'Lesson Approval'), isDark),
+          ], isDark),
           const SizedBox(height: 24),
           _buildRewardCategory('LEARNING PATH', [
-            _rewardTile('Lesson Completion (Base)', config.lessonCompletionBaseXp, (val) => _updateConfig('lessonCompletionBaseXp', val, 'Lesson Completion (Base)')),
-            _rewardTile('Perfect Task Bonus', config.lessonTaskPerfectXp, (val) => _updateConfig('lessonTaskPerfectXp', val, 'Perfect Task Bonus')),
-            _rewardTile('Task Retry Reward', config.lessonTaskRetryXp, (val) => _updateConfig('lessonTaskRetryXp', val, 'Task Retry Reward')),
-          ]),
+            _rewardTile('Lesson Completion (Base)', config.lessonCompletionBaseXp, (val) => _updateConfig('lessonCompletionBaseXp', val, 'Lesson Completion (Base)'), isDark),
+            _rewardTile('Perfect Task Bonus', config.lessonTaskPerfectXp, (val) => _updateConfig('lessonTaskPerfectXp', val, 'Perfect Task Bonus'), isDark),
+            _rewardTile('Task Retry Reward', config.lessonTaskRetryXp, (val) => _updateConfig('lessonTaskRetryXp', val, 'Task Retry Reward'), isDark),
+          ], isDark),
           const SizedBox(height: 24),
           _buildRewardCategory('DAILY RITUALS', [
-            _rewardTile('SRS Card Review', config.cardReviewXp, (val) => _updateConfig('cardReviewXp', val, 'SRS Card Review')),
-            _rewardTile('SRS Completion Bonus (per card)', config.cardCompletionBonusXp, (val) => _updateConfig('cardCompletionBonusXp', val, 'SRS Completion Bonus')),
-          ]),
+            _rewardTile('SRS Card Review', config.cardReviewXp, (val) => _updateConfig('cardReviewXp', val, 'SRS Card Review'), isDark),
+            _rewardTile('SRS Completion Bonus (per card)', config.cardCompletionBonusXp, (val) => _updateConfig('cardCompletionBonusXp', val, 'SRS Completion Bonus'), isDark),
+          ], isDark),
         ],
       ),
       loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
-      error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: Colors.white))),
+      error: (e, _) => Center(child: Text('Error: $e', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
     );
   }
 
-  Widget _buildRewardCategory(String title, List<Widget> children) {
+  Widget _buildRewardCategory(String title, List<Widget> children, bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: AppTypography.mono.copyWith(color: Colors.white24, fontSize: 10, letterSpacing: 2)),
+        Text(
+          title, 
+          style: AppTypography.mono.copyWith(
+            color: isDark ? Colors.white24 : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6), 
+            fontSize: 10, 
+            letterSpacing: 2,
+          ),
+        ),
         const SizedBox(height: 12),
-        GlassBox(
-          borderRadius: 16,
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.forestDarkCard : Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.creamBorder,
+            ),
+          ),
           child: Column(children: children),
         ),
       ],
     );
   }
 
-  Widget _rewardTile(String label, int value, Function(int) onUpdate) {
+  Widget _rewardTile(String label, int value, Function(int) onUpdate, bool isDark) {
     return ListTile(
-      title: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      title: Text(
+        label, 
+        style: TextStyle(
+          color: isDark ? Colors.white : Theme.of(context).colorScheme.onSurface, 
+          fontWeight: FontWeight.bold,
+        ),
+      ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text('$value XP', style: const TextStyle(color: AppColors.gold500, fontWeight: FontWeight.w900)),
           const SizedBox(width: 8),
           IconButton(
-            icon: const Icon(Icons.edit, size: 18, color: Colors.white60),
-            onPressed: () => _showRewardEditDialog(label, value, onUpdate),
+            icon: Icon(
+              Icons.edit, 
+              size: 18, 
+              color: isDark ? Colors.white60 : Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            onPressed: () => _showRewardEditDialog(label, value, onUpdate, isDark),
           ),
         ],
       ),
     );
   }
 
-  void _showRewardEditDialog(String label, int currentValue, Function(int) onUpdate) {
+  void _showRewardEditDialog(String label, int currentValue, Function(int) onUpdate, bool isDark) {
     final controller = TextEditingController(text: currentValue.toString());
     final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        backgroundColor: AppColors.forest800,
+        backgroundColor: isDark ? AppColors.forest800 : Theme.of(context).colorScheme.surface,
         title: Text('Edit $label', style: const TextStyle(color: AppColors.gold500)),
         content: Form(
           key: formKey,
@@ -156,7 +181,10 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('CANCEL')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx), 
+            child: Text('CANCEL', style: TextStyle(color: isDark ? Colors.white70 : AppColors.forest700)),
+          ),
           ElevatedButton(
             onPressed: () async {
               if (formKey.currentState?.validate() ?? false) {
@@ -195,7 +223,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
     }
   }
 
-  Widget _buildShopTab() {
+  Widget _buildShopTab(bool isDark) {
     final shopAsync = ref.watch(shopItemsStreamProvider);
     return shopAsync.when(
       data: (items) => ListView.builder(
@@ -203,15 +231,24 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
         itemCount: items.length + 1,
         itemBuilder: (context, index) {
           if (index == items.length) {
-            return _buildAddShopItemCard();
+            return _buildAddShopItemCard(isDark);
           }
           final item = items[index];
           final isAvail = item.isAvailable;
 
+          final titleColor = isDark
+              ? Colors.white
+              : (isAvail ? AppColors.forest900 : Theme.of(context).colorScheme.onSurfaceVariant);
+          final subtitleColor = isDark
+              ? (isAvail ? Colors.white70 : Colors.white38)
+              : (isAvail ? AppColors.forest700 : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6));
+
           return Opacity(
             opacity: isAvail ? 1.0 : 0.65,
             child: BrandCard(
-              theme: isAvail ? BrandCardTheme.cream : BrandCardTheme.vibrant,
+              theme: isDark
+                  ? (isAvail ? BrandCardTheme.vibrant : BrandCardTheme.gold)
+                  : (isAvail ? BrandCardTheme.gold : BrandCardTheme.cream),
               margin: const EdgeInsets.only(bottom: 12),
               child: ListTile(
                 leading: Container(
@@ -219,14 +256,16 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                   height: 40,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: AppColors.forest900.withValues(alpha: 0.1),
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : AppColors.forest900.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: item.icon.length < 3 
                       ? Text(item.icon, style: const TextStyle(fontSize: 24))
                       : Icon(
                           Icons.inventory_2_rounded,
-                          color: isAvail ? AppColors.forest900 : Colors.white,
+                          color: isDark ? AppColors.gold500 : AppColors.forest900,
                         ),
                 ),
                 title: Row(
@@ -235,7 +274,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                       child: Text(
                         item.title,
                         style: AppTypography.h3.copyWith(
-                          color: isAvail ? AppColors.forest900 : Colors.white,
+                          color: titleColor,
                         ),
                       ),
                     ),
@@ -244,10 +283,10 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                       decoration: BoxDecoration(
                         color: isAvail
                             ? AppColors.semanticGreen.withValues(alpha: 0.15)
-                            : Colors.black.withValues(alpha: 0.3),
+                            : (isDark ? Colors.black.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.08)),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isAvail ? AppColors.semanticGreen : Colors.white30,
+                          color: isAvail ? AppColors.semanticGreen : (isDark ? Colors.white30 : AppColors.creamBorder),
                         ),
                       ),
                       child: Text(
@@ -255,7 +294,9 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                         style: AppTypography.mono.copyWith(
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
-                          color: isAvail ? AppColors.semanticGreen : Colors.white70,
+                          color: isAvail
+                              ? AppColors.semanticGreen
+                              : (isDark ? Colors.white70 : AppColors.creamText3),
                         ),
                       ),
                     ),
@@ -264,7 +305,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                 subtitle: Text(
                   item.description,
                   style: TextStyle(
-                    color: isAvail ? AppColors.forest500 : Colors.white70,
+                    color: subtitleColor,
                   ),
                 ),
                 trailing: IntrinsicWidth(
@@ -274,7 +315,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                         '${item.price}',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: isAvail ? AppColors.forest900 : Colors.white,
+                          color: titleColor,
                         ),
                       ),
                       const SizedBox(width: 4),
@@ -316,9 +357,9 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                         icon: Icon(
                           Icons.edit,
                           size: 18,
-                          color: isAvail ? AppColors.forest900 : Colors.white70,
+                          color: isDark ? Colors.white70 : AppColors.forest900,
                         ),
-                        onPressed: () => _showShopItemDialog(item),
+                        onPressed: () => _showShopItemDialog(item, isDark),
                       ),
                       IconButton(
                         icon: const Icon(
@@ -326,7 +367,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                           size: 20,
                           color: AppColors.semanticRed,
                         ),
-                        onPressed: () => _confirmDeleteShopItem(item),
+                        onPressed: () => _confirmDeleteShopItem(item, isDark),
                       ),
                     ],
                   ),
@@ -337,43 +378,53 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
         },
       ),
       loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
-      error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: Colors.white))),
+      error: (e, _) => Center(child: Text('Error: $e', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
     );
   }
 
-  Widget _buildAddShopItemCard() {
+  Widget _buildAddShopItemCard(bool isDark) {
     return GestureDetector(
-      onTap: () => _showShopItemDialog(),
-      child: GlassBox(
-        borderRadius: 16,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              const Icon(Icons.add_shopping_cart_rounded, color: AppColors.gold500, size: 32),
-              const SizedBox(height: 8),
-              Text('ADD NEW SHOP ITEM', style: AppTypography.label.copyWith(color: AppColors.gold500)),
-            ],
+      onTap: () => _showShopItemDialog(null, isDark),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.forestDarkCard : Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? AppColors.gold500.withValues(alpha: 0.3) : AppColors.creamBorder,
           ),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            const Icon(Icons.add_shopping_cart_rounded, color: AppColors.gold500, size: 32),
+            const SizedBox(height: 8),
+            Text(
+              'ADD NEW SHOP ITEM', 
+              style: AppTypography.label.copyWith(
+                color: isDark ? AppColors.gold500 : AppColors.forest900,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  void _confirmDeleteShopItem(ShopItem item) {
+  void _confirmDeleteShopItem(ShopItem item, bool isDark) {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        backgroundColor: AppColors.forest800,
+        backgroundColor: isDark ? AppColors.forest800 : Theme.of(context).colorScheme.surface,
         title: Text('Delete ${item.title}', style: const TextStyle(color: AppColors.gold500)),
         content: Text(
           'Are you sure you want to delete "${item.title}"? This action cannot be undone.',
-          style: const TextStyle(color: Colors.white70),
+          style: TextStyle(color: isDark ? Colors.white70 : Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text('CANCEL'),
+            child: Text('CANCEL', style: TextStyle(color: isDark ? Colors.white70 : AppColors.forest700)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticRed),
@@ -412,7 +463,8 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
     );
   }
 
-  void _showShopItemDialog([ShopItem? item]) {
+  void _showShopItemDialog([ShopItem? item, bool? isDarkParam]) {
+    final isDark = isDarkParam ?? (Theme.of(context).brightness == Brightness.dark);
     final titleController = TextEditingController(text: item?.title ?? '');
     final descController = TextEditingController(text: item?.description ?? '');
     final priceController = TextEditingController(text: item?.price.toString() ?? '100');
@@ -425,7 +477,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
       context: context,
       builder: (dialogCtx) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) => AlertDialog(
-          backgroundColor: AppColors.forest800,
+          backgroundColor: isDark ? AppColors.forest800 : Theme.of(context).colorScheme.surface,
           title: Text(item == null ? 'New Shop Item' : 'Edit ${item.title}', style: const TextStyle(color: AppColors.gold500)),
           content: SingleChildScrollView(
             child: Form(
@@ -494,20 +546,26 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                   const SizedBox(height: 12),
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
+                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white12),
+                      border: Border.all(color: isDark ? Colors.white12 : AppColors.creamBorder),
                     ),
                     child: SwitchListTile(
                       activeThumbColor: AppColors.gold500,
-                      title: const Text(
+                      title: Text(
                         'Item Availability',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Theme.of(context).colorScheme.onSurface, 
+                          fontWeight: FontWeight.bold, 
+                          fontSize: 13,
+                        ),
                       ),
                       subtitle: Text(
                         isAvailable ? 'Visible to learners in Ancestral Vault' : 'Hidden from shop catalog',
                         style: TextStyle(
-                          color: isAvailable ? AppColors.gold500 : Colors.white54,
+                          color: isAvailable
+                              ? AppColors.gold500
+                              : (isDark ? Colors.white54 : AppColors.creamText3),
                           fontSize: 11,
                         ),
                       ),
@@ -524,7 +582,10 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('CANCEL')),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx), 
+              child: Text('CANCEL', style: TextStyle(color: isDark ? Colors.white70 : AppColors.forest700)),
+            ),
             ElevatedButton(
               onPressed: () async {
                 if (formKey.currentState?.validate() ?? false) {

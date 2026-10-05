@@ -74,6 +74,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     final profile = profileAsync.value;
     final displayName = profile?['username'] ?? l10n.translate('tribe_member');
+    final isDesktop = MediaQuery.of(context).size.width >= 800;
 
     return Stack(
       children: [
@@ -83,7 +84,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: SafeArea(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isDesktop ? 32 : 20,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -91,11 +94,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     _buildSyncIndicator(ref, l10n),
                     _buildConflictBanner(ref, l10n),
                     const SizedBox(height: 16),
-                    _buildHeroBanner(context, displayName, student, l10n),
-                    const SizedBox(height: 24),
-                    if (currentRole == UserRole.learner) ...[
-                      _buildStreakSummaryCard(context, student, l10n),
+                    if (isDesktop && currentRole == UserRole.learner) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 6,
+                            child: _buildHeroBanner(context, displayName, student, l10n),
+                          ),
+                          const SizedBox(width: 20),
+                          Expanded(
+                            flex: 4,
+                            child: _buildStreakSummaryCard(context, student, l10n, isDesktop: true),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 24),
+                    ] else ...[
+                      _buildHeroBanner(context, displayName, student, l10n),
+                      const SizedBox(height: 24),
+                      if (currentRole == UserRole.learner) ...[
+                        _buildStreakSummaryCard(context, student, l10n),
+                        const SizedBox(height: 24),
+                      ],
                     ],
                     const WotdWidget(),
                     const SizedBox(height: 24),

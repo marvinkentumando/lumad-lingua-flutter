@@ -168,6 +168,7 @@ class _AncestralVaultShopScreenState
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final artifactsAsync = ref.watch(artifactsStreamProvider);
     final studentState = ref.watch(studentProvider);
     final userProfile = ref.watch(userProfileProvider).value;
@@ -177,7 +178,7 @@ class _AncestralVaultShopScreenState
     final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.forest900,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -192,7 +193,7 @@ class _AncestralVaultShopScreenState
       ),
       body: Column(
         children: [
-          _buildFilterChips(),
+          _buildFilterChips(isDark),
           Expanded(
             child: artifactsAsync.when(
               data: (artifacts) {
@@ -227,7 +228,12 @@ class _AncestralVaultShopScreenState
                     child: Text(
                       l10n.translate('vault_sealed'),
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white24),
+                      style: TextStyle(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurfaceVariant
+                            .withValues(alpha: 0.5),
+                      ),
                     ),
                   );
                 }
@@ -248,6 +254,7 @@ class _AncestralVaultShopScreenState
                     filtered[index],
                     crystals,
                     l10n,
+                    isDark,
                   ),
                 );
               },
@@ -280,6 +287,7 @@ class _AncestralVaultShopScreenState
                     filtered[index],
                     crystals,
                     l10n,
+                    isDark,
                   ),
                 );
               },
@@ -290,7 +298,7 @@ class _AncestralVaultShopScreenState
     );
   }
 
-  Widget _buildFilterChips() {
+  Widget _buildFilterChips(bool isDark) {
     final categories = [
       {'key': 'ALL', 'label': 'ALL'},
       {'key': 'TITLES', 'label': 'TITLES 📜'},
@@ -314,9 +322,13 @@ class _AncestralVaultShopScreenState
             selected: isSelected,
             label: Text(cat['label']!),
             selectedColor: AppColors.gold500,
-            backgroundColor: AppColors.forest800,
+            backgroundColor: isDark
+                ? AppColors.forest800
+                : Theme.of(context).colorScheme.surfaceContainerHighest,
             labelStyle: AppTypography.mono.copyWith(
-              color: isSelected ? Colors.black : Colors.white70,
+              color: isSelected
+                  ? Colors.black
+                  : (isDark ? Colors.white70 : AppColors.creamText2),
               fontSize: 11,
               fontWeight: FontWeight.bold,
             ),
@@ -325,7 +337,9 @@ class _AncestralVaultShopScreenState
               side: BorderSide(
                 color: isSelected
                     ? AppColors.gold500
-                    : AppColors.gold500.withValues(alpha: 0.2),
+                    : (isDark
+                          ? AppColors.gold500.withValues(alpha: 0.2)
+                          : AppColors.creamBorder),
               ),
             ),
             onSelected: (_) {
@@ -390,6 +404,7 @@ class _AncestralVaultShopScreenState
     Artifact artifact,
     int userCrystals,
     AppLocalization l10n,
+    bool isDark,
   ) {
     final canAfford = userCrystals >= artifact.crystalCost;
     final tierColor = _getTierColor(artifact.tier);
@@ -418,8 +433,13 @@ class _AncestralVaultShopScreenState
       }
     }
 
+    final cardTheme = isDark ? BrandCardTheme.vibrant : BrandCardTheme.gold;
+    final cardTextColor = isDark ? Colors.white : AppColors.forest900;
+    final costTextColor = isDark ? Colors.white : AppColors.forest900;
+    final dividerColor = isDark ? Colors.white10 : AppColors.creamBorder;
+
     Widget content = BrandCard(
-      theme: BrandCardTheme.vibrant,
+      theme: cardTheme,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -445,7 +465,7 @@ class _AncestralVaultShopScreenState
           Text(
             artifact.title,
             style: AppTypography.h3.copyWith(
-              color: isHighTier ? tierColor : Colors.white,
+              color: isHighTier ? tierColor : cardTextColor,
               fontSize: 14,
             ),
             maxLines: 1,
@@ -455,11 +475,12 @@ class _AncestralVaultShopScreenState
           Text(
             artifact.passiveBonus ?? l10n.translate('ancestral_blessing'),
             style: AppTypography.label.copyWith(
-              color: AppColors.semanticGreen,
+              color: isDark ? AppColors.semanticGreen : AppColors.forest700,
               fontSize: 10,
+              fontWeight: isDark ? null : FontWeight.bold,
             ),
           ),
-          const Divider(color: Colors.white10, height: 20),
+          Divider(color: dividerColor, height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -474,8 +495,9 @@ class _AncestralVaultShopScreenState
                   Text(
                     "${artifact.crystalCost}",
                     style: AppTypography.mono.copyWith(
-                      color: Colors.white,
+                      color: costTextColor,
                       fontSize: 12,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
@@ -516,7 +538,7 @@ class _AncestralVaultShopScreenState
                             ? AppColors.gold500
                             : (canAfford
                                 ? AppColors.gold500
-                                : Colors.white10)),
+                                : (isDark ? Colors.white10 : AppColors.creamBorder))),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -530,7 +552,9 @@ class _AncestralVaultShopScreenState
                           ? Colors.black
                           : (artifact.isEarned
                               ? Colors.black
-                              : (canAfford ? Colors.black : Colors.white24)),
+                              : (canAfford
+                                  ? Colors.black
+                                  : (isDark ? Colors.white24 : AppColors.creamText3))),
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
