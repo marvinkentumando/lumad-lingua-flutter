@@ -14,6 +14,7 @@ import '../widgets/brand_button.dart';
 import '../widgets/brand_search_bar.dart';
 import '../widgets/brand_text_field.dart';
 import '../widgets/preview_audio_player.dart';
+import '../widgets/pagination_bar.dart';
 import '../widgets/admin/import_dictionary_modal.dart';
 import '../widgets/admin/bulk_audio_import_modal.dart';
 import '../widgets/lesson_editors/editor_utils.dart';
@@ -43,6 +44,8 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
   String _searchQuery = '';
   String _selectedDialect = 'All';
   DictionarySortOption _selectedSort = DictionarySortOption.alphabeticalAsc;
+  int _currentPage = 1;
+  int _pageSize = 15;
 
   @override
   void dispose() {
@@ -96,7 +99,10 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
       tooltip: 'Sort dictionary entries',
       onSelected: (sort) {
         HapticService.selection();
-        setState(() => _selectedSort = sort);
+        setState(() {
+          _selectedSort = sort;
+          _currentPage = 1;
+        });
       },
       color: isDark ? AppColors.forest800 : Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -169,8 +175,11 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth >= 768;
+
     final wordsAsync = ref.watch(globalDictionaryStreamProvider(
-      ValidatorQuery('', 100, search: _searchQuery, dialect: _selectedDialect),
+      ValidatorQuery('', 500, search: _searchQuery, dialect: _selectedDialect),
     ));
     final dialectsAsync = ref.watch(dialectsProvider);
 
@@ -233,13 +242,54 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
             child: wordsAsync.when(
               data: (words) {
                 final sortedWords = _sortWords(words);
-                return sortedWords.isEmpty
-                    ? _buildEmptyState(isDark)
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        itemCount: sortedWords.length,
-                        itemBuilder: (context, index) => _buildWordCard(sortedWords[index], isDark, index),
-                      );
+                if (sortedWords.isEmpty) return _buildEmptyState(isDark);
+
+                final totalPages = (sortedWords.length / _pageSize).ceil().clamp(1, 9999);
+                if (_currentPage > totalPages) {
+                  _currentPage = totalPages;
+                }
+
+                final startIndex = ((_currentPage - 1) * _pageSize).clamp(0, sortedWords.length);
+                final pagedWords = sortedWords.skip(startIndex).take(_pageSize).toList();
+
+                return Column(
+                  children: [
+                    Expanded(
+                      child: isDesktop
+                          ? GridView.builder(
+                              physics: const BouncingScrollPhysics(),
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: screenWidth >= 1200 ? 3 : 2,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                                mainAxisExtent: 110,
+                              ),
+                              itemCount: pagedWords.length,
+                              itemBuilder: (context, index) => _buildWordCard(pagedWords[index], isDark, index),
+                            )
+                          : ListView.builder(
+                              physics: const BouncingScrollPhysics(),
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              itemCount: pagedWords.length,
+                              itemBuilder: (context, index) => _buildWordCard(pagedWords[index], isDark, index),
+                            ),
+                    ),
+                    PaginationBar(
+                      currentPage: _currentPage,
+                      totalPages: totalPages,
+                      totalItems: sortedWords.length,
+                      pageSize: _pageSize,
+                      pageSizeOptions: const [15, 30, 60, 100],
+                      onPageChanged: (p) => setState(() => _currentPage = p),
+                      onPageSizeChanged: (s) => setState(() {
+                        _pageSize = s;
+                        _currentPage = 1;
+                      }),
+                      isDark: isDark,
+                    ),
+                  ],
+                );
               },
               loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
               error: (e, _) => Center(child: Text('Error: $e')),
@@ -259,7 +309,10 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
     return BrandSearchBar(
       controller: _searchController,
       hintText: 'Search indigenous or translation...',
-      onChanged: (v) => setState(() => _searchQuery = v),
+      onChanged: (v) => setState(() {
+        _searchQuery = v;
+        _currentPage = 1;
+      }),
     );
   }
 
@@ -278,7 +331,10 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
               child: ChoiceChip(
                 label: Text(d),
                 selected: isSelected,
-                onSelected: (s) => setState(() => _selectedDialect = d),
+                onSelected: (s) => setState(() {
+                  _selectedDialect = d;
+                  _currentPage = 1;
+                }),
                 selectedColor: AppColors.gold500,
                 backgroundColor: isDark ? Colors.white10 : Colors.black12,
                 labelStyle: TextStyle(

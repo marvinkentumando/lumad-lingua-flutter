@@ -14,6 +14,7 @@ import '../services/haptic_service.dart';
 import '../providers/saved_words_provider.dart';
 import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 import '../widgets/brand_search_bar.dart';
+import '../widgets/pagination_bar.dart';
 import '../providers/search_history_provider.dart';
 import '../providers/dictionary_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -32,6 +33,8 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
   Timer? _debounce;
   String? _expandedWordId;
   late final TextEditingController _searchController;
+  int _currentPage = 1;
+  int _pageSize = 12;
 
   @override
   void initState() {
@@ -57,6 +60,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
       if (mounted) {
+        setState(() => _currentPage = 1);
         ref.read(dictionaryFilterProvider.notifier).update((s) => s.copyWith(query: query));
       }
     });
@@ -73,6 +77,9 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
         : const AsyncValue.data(<SRSProgress>[]);
     final l10n = ref.watch(localizationProvider);
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth >= 768;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: BrandBackground(
@@ -82,6 +89,14 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
               return srsAsync.when(
                 data: (srsList) {
                   final srsMap = {for (var s in srsList) s.wordId: s};
+
+                  final totalPages = (items.length / _pageSize).ceil().clamp(1, 9999);
+                  if (_currentPage > totalPages) {
+                    _currentPage = totalPages;
+                  }
+
+                  final startIndex = ((_currentPage - 1) * _pageSize).clamp(0, items.length);
+                  final pagedItems = items.skip(startIndex).take(_pageSize).toList();
 
                   return Column(
                     children: [
@@ -114,27 +129,68 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                                   isSavedTab: filter.category == 'SAVED',
                                 ),
                               )
-                            : ListView.builder(
-                                physics: const BouncingScrollPhysics(),
-                                padding: const EdgeInsets.symmetric(horizontal: 20),
-                                itemCount: items.length,
-                                itemBuilder: (context, i) {
-                                  final entry = items[i];
-                                  final srs = srsMap[entry.id];
-                                  return _DictionaryEntryCard(
-                                    entry: entry,
-                                    isExpanded: _expandedWordId == entry.id,
-                                    masteryLevel: srs?.mastery,
-                                    l10n: l10n,
-                                    onToggleExpanded: () {
-                                      setState(() {
-                                        _expandedWordId = _expandedWordId == entry.id ? null : entry.id;
-                                      });
+                            : isDesktop
+                                ? GridView.builder(
+                                    physics: const BouncingScrollPhysics(),
+                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: screenWidth >= 1200 ? 3 : 2,
+                                      crossAxisSpacing: 16,
+                                      mainAxisSpacing: 16,
+                                      mainAxisExtent: _expandedWordId != null ? null : 200,
+                                    ),
+                                    itemCount: pagedItems.length,
+                                    itemBuilder: (context, i) {
+                                      final entry = pagedItems[i];
+                                      final srs = srsMap[entry.id];
+                                      return _DictionaryEntryCard(
+                                        entry: entry,
+                                        isExpanded: _expandedWordId == entry.id,
+                                        masteryLevel: srs?.mastery,
+                                        l10n: l10n,
+                                        onToggleExpanded: () {
+                                          setState(() {
+                                            _expandedWordId = _expandedWordId == entry.id ? null : entry.id;
+                                          });
+                                        },
+                                      );
                                     },
-                                  );
-                                },
-                              ),
+                                  )
+                                : ListView.builder(
+                                    physics: const BouncingScrollPhysics(),
+                                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                                    itemCount: pagedItems.length,
+                                    itemBuilder: (context, i) {
+                                      final entry = pagedItems[i];
+                                      final srs = srsMap[entry.id];
+                                      return _DictionaryEntryCard(
+                                        entry: entry,
+                                        isExpanded: _expandedWordId == entry.id,
+                                        masteryLevel: srs?.mastery,
+                                        l10n: l10n,
+                                        onToggleExpanded: () {
+                                          setState(() {
+                                            _expandedWordId = _expandedWordId == entry.id ? null : entry.id;
+                                          });
+                                        },
+                                      );
+                                    },
+                                  ),
                       ),
+                      if (items.isNotEmpty)
+                        PaginationBar(
+                          currentPage: _currentPage,
+                          totalPages: totalPages,
+                          totalItems: items.length,
+                          pageSize: _pageSize,
+                          pageSizeOptions: const [12, 24, 48, 96],
+                          onPageChanged: (p) => setState(() => _currentPage = p),
+                          onPageSizeChanged: (s) => setState(() {
+                            _pageSize = s;
+                            _currentPage = 1;
+                          }),
+                          isDark: Theme.of(context).brightness == Brightness.dark,
+                        ),
                     ],
                   );
                 },

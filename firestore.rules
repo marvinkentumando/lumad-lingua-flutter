@@ -22,30 +22,31 @@ service cloud.firestore {
       return hasRole('admin');
     }
 
-    function isValidator() {
-      return hasRole('validator') || isAdmin();
+    function isEducator() {
+      return hasRole('educator') || isAdmin();
     }
 
     // --- LESSONS ---
     match /lessons/{lessonId} {
       allow read: if true;
-      allow write: if isSignedIn() && (hasRole('contributor') || hasRole('educator') || isValidator());
+      allow write: if isEducator();
     }
 
     // --- USER PROFILES & DATA ---
     match /users/{userId} {
       allow read: if true;
-      // Signed in user creating their initial profile document
       allow create: if isSignedIn() && request.auth.uid == userId;
-      // Hardened update rules: Users cannot change their own roles, XP, or crystals directly.
       allow update: if isSignedIn() && (
-        (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'xp', 'mistCrystals'])) ||
-        isAdmin() ||
-        (isValidator() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['xp', 'mistCrystals', 'wordCount', 'voiceCount', 'lessonCount', 'status']))
+        (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) ||
+        isEducator()
       );
       allow delete: if isAdmin();
 
       match /progress/{lessonId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      match /lessonProgress/{progressId} {
         allow read, write: if isSignedIn() && request.auth.uid == userId;
       }
 
@@ -55,9 +56,8 @@ service cloud.firestore {
 
       match /notifications/{notifId} {
         allow read: if isSignedIn() && request.auth.uid == userId;
-        // Allow any signed-in user to CREATE a notification for someone else (used for Cheers/Salutes)
         allow create: if isSignedIn();
-        allow update, delete: if isSignedIn() && (request.auth.uid == userId || isValidator());
+        allow update, delete: if isSignedIn() && (request.auth.uid == userId || isEducator());
       }
 
       match /friends/{friendId} {
@@ -73,15 +73,23 @@ service cloud.firestore {
 
       match /achievements/{badgeId} {
         allow read: if true;
-        allow write: if isSignedIn() && (request.auth.uid == userId || isValidator());
+        allow write: if isSignedIn() && (request.auth.uid == userId || isEducator());
       }
 
       match /artifacts/{artifactId} {
         allow read: if true;
-        allow write: if isSignedIn() && (request.auth.uid == userId || isValidator());
+        allow write: if isSignedIn() && (request.auth.uid == userId || isEducator());
       }
 
       match /mastery/{wordId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      match /mastery_history/{dateKey} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      match /duel_history/{historyId} {
         allow read, write: if isSignedIn() && request.auth.uid == userId;
       }
 
@@ -92,76 +100,107 @@ service cloud.firestore {
       match /dailyQuests/{questId} {
         allow read, write: if isSignedIn() && request.auth.uid == userId;
       }
-
-      match /duel_history/{histId} {
-        allow read, write: if isSignedIn() && request.auth.uid == userId;
-      }
     }
 
-    // --- INVITATIONS ---
-    match /invitations/{inviteId} {
-      allow read: if true;
-      allow create, update, delete: if isSignedIn();
-    }
-
-    // --- DICTIONARY (WORDS) ---
+    // --- DICTIONARY & VOICE SUBMISSIONS ---
     match /words/{wordId} {
       allow read: if true;
       allow create: if isSignedIn();
-      allow update, delete: if isSignedIn() && (resource.data.contributorId == request.auth.uid || isValidator());
-    }
-
-    // --- CONTRIBUTOR REQUESTS ---
-    match /contributor_requests/{requestId} {
-      allow read: if isValidator();
-      allow create: if isSignedIn();
-      allow update: if isAdmin();
-    }
-
-    // --- LOCAL VOICES & SUBMISSIONS ---
-    match /municipalities/{muniId} {
-      allow read: if true;
-      match /recordings/{recId} {
-        allow read: if true;
-        allow create: if isSignedIn();
-        allow update, delete: if isValidator();
-      }
+      allow update, delete: if isSignedIn() && (resource.data.contributorId == request.auth.uid || isEducator());
     }
 
     match /voice_submissions/{submissionId} {
       allow read: if true;
       allow create: if isSignedIn();
-      allow update, delete: if isValidator();
+      allow update, delete: if isEducator();
     }
 
-    // --- LINGUA DUEL (real-time multiplayer) ---
+    match /contributor_requests/{requestId} {
+      allow read: if isEducator();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    // --- LINGUA DUEL ---
     match /duel_matches/{matchId} {
-      // Both duelists (and the live matchmaking query) need read access.
       allow read: if isSignedIn();
-      // Only the lobby creator can publish a new waiting match.
       allow create: if isSignedIn()
         && request.resource.data.player1Id == request.auth.uid
         && request.resource.data.status == 'waiting';
-      // Hosts and joined opponents keep maintaining the match: claiming the
-      // lobby (player2 fields + battleStartedAt), HP deltas, heartbeats,
-      // round clock, forfeits and final cleanup.
       allow update: if isSignedIn() && (
         resource.data.player1Id == request.auth.uid ||
         resource.data.player2Id == request.auth.uid ||
-        // Claiming an open lobby: a waiting match may be joined by anyone
-        // who writes themselves in as player2 while it is still waiting.
         (resource.data.status == 'waiting' && request.resource.data.player2Id == request.auth.uid)
       );
-      // The host may delete the doc during cleanup; either duelist may cancel
-      // their own still-waiting lobby.
       allow delete: if isSignedIn() && (
         resource.data.player1Id == request.auth.uid ||
         resource.data.player2Id == request.auth.uid
       );
     }
 
-    // --- CONFIG & METADATA ---
+    match /lingua_duels/{duelId} {
+      allow read: if isSignedIn();
+      allow write: if isEducator();
+    }
+
+    // --- GAMIFICATION, SHOP & ARTIFACTS ---
+    match /shop_items/{itemId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /artifacts/{artifactId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // --- VILLAGE SANCTUARY & CLASSROOM ---
+    match /broadcasts/{broadcastId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isEducator();
+    }
+
+    match /village_mini_quizzes/{quizId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isEducator();
+    }
+
+    match /feedback/{feedbackId} {
+      allow read: if isSignedIn() && (isEducator() || resource.data.studentId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
+      allow update: if isSignedIn() && isEducator();
+      allow delete: if isAdmin();
+    }
+
+    // --- ASSESSMENTS & DAILY CHALLENGES ---
+    match /assessments/{assessmentId} {
+      allow read: if isEducator();
+      allow create: if isSignedIn();
+      allow update, delete: if isEducator();
+    }
+
+    match /daily_challenges/{dateId} {
+      allow read: if isSignedIn();
+      allow write: if isEducator();
+    }
+
+    // --- INVITATIONS & CONFIGS ---
+    match /invitations/{inviteId} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+
     match /config/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /system_configs/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /system/{docId} {
       allow read: if true;
       allow write: if isAdmin();
     }
@@ -171,14 +210,30 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // --- AUDIT TRAIL & VERSION HISTORY ---
+    match /audit_trail/{logId} {
+      allow read: if isEducator();
+      allow create: if isEducator();
+    }
+
+    match /{path=**}/version_history/{versionId} {
+      allow read: if isEducator();
+      allow create: if isEducator();
+    }
+
     // --- TELEMETRY & ANALYTICS ---
     match /telemetry/{docId} {
-      allow read: if isValidator();
+      allow read: if isEducator();
       allow write: if isSignedIn();
       match /points/{pointId} {
-        allow read: if isValidator();
+        allow read: if isEducator();
         allow write: if isSignedIn();
       }
+    }
+
+    match /social_sentiment_data/{docId} {
+      allow read: if true;
+      allow write: if isEducator();
     }
 
     // --- COMMUNITY & SOCIAL ---
@@ -187,43 +242,24 @@ service cloud.firestore {
       allow write: if isSignedIn();
     }
 
-    match /announcements/{announcementId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    // --- GLOBAL STATS ---
+    // --- GLOBAL STATS & SCENARIOS ---
     match /global_stats/{docId} {
       allow read: if true;
-      allow write: if isValidator();
+      allow write: if isEducator();
     }
 
-    // --- SCENARIOS ---
     match /scenarios/{scenarioId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // --- ASSESSMENTS ---
-    match /assessments/{docId} {
-      allow read: if isValidator() || hasRole('educator');
-      allow create: if isSignedIn();
-      allow update, delete: if isValidator();
-    }
-
-    // --- SOCIAL SENTIMENT ---
-    match /social_sentiment_data/{docId} {
-      allow read: if true;
-      allow write: if isValidator();
-    }
-
     // --- COLLECTION GROUPS ---
     match /{path=**}/progress/{lessonId} {
-      allow read: if isValidator() || hasRole('educator');
+      allow read: if isEducator();
     }
 
     match /{path=**}/srs_progress/{wordId} {
-      allow read: if isValidator() || hasRole('educator');
+      allow read: if isEducator();
     }
   }
 }
