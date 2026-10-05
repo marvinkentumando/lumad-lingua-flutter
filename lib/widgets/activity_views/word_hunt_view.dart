@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import '../../services/haptic_service.dart';
 
 class WordHuntView extends StatefulWidget {
   final String question;
@@ -23,30 +24,55 @@ class WordHuntView extends StatefulWidget {
 
 class _WordHuntViewState extends State<WordHuntView> {
   late List<List<String>> _grid;
-  final int _gridSize = 8;
+  late int _gridSize;
   final List<Offset> _selection = [];
   bool _isSelecting = false;
 
   @override
   void initState() {
     super.initState();
+    _gridSize = _calculateGridSize();
     _generateGrid();
   }
 
+  @override
+  void didUpdateWidget(WordHuntView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.wordsToFind != widget.wordsToFind) {
+      setState(() {
+        _gridSize = _calculateGridSize();
+        _generateGrid();
+      });
+    }
+  }
+
+  int _calculateGridSize() {
+    int maxLen = 0;
+    for (String w in widget.wordsToFind) {
+      final normalized = w.replaceAll(' ', '');
+      if (normalized.length > maxLen) {
+        maxLen = normalized.length;
+      }
+    }
+    // Dynamic grid size: adapt between 7 and 10 based on words
+    int size = maxLen + 1;
+    if (size < 7) size = 7;
+    if (size > 10) size = 10;
+    return size;
+  }
+
   void _generateGrid() {
-    // Fill with random letters
     _grid = List.generate(
       _gridSize,
-      (_) => List.generate(_gridSize, (_) => _randomLetter()),
+      (_) => List.generate(_gridSize, (_) => ''),
     );
 
-    // Place words
     final random = Random();
     for (String word in widget.wordsToFind) {
       final normalized = word.toUpperCase().replaceAll(' ', '');
       bool placed = false;
       int attempts = 0;
-      while (!placed && attempts < 100) {
+      while (!placed && attempts < 120) {
         attempts++;
         int row = random.nextInt(_gridSize);
         int col = random.nextInt(_gridSize);
@@ -63,14 +89,28 @@ class _WordHuntViewState extends State<WordHuntView> {
         }
       }
     }
+
+    for (int r = 0; r < _gridSize; r++) {
+      for (int c = 0; c < _gridSize; c++) {
+        if (_grid[r][c].isEmpty) {
+          _grid[r][c] = _randomLetter();
+        }
+      }
+    }
   }
 
   bool _canPlace(String word, int r, int c, int dx, int dy) {
-    if (r + word.length * dy < 0 || r + word.length * dy >= _gridSize) return false;
-    if (c + word.length * dx < 0 || c + word.length * dx >= _gridSize) return false;
+    final endR = r + (word.length - 1) * dy;
+    final endC = c + (word.length - 1) * dx;
+    if (endR < 0 || endR >= _gridSize) return false;
+    if (endC < 0 || endC >= _gridSize) return false;
 
-    // Check for collisions (very simple: allow if letter matches or random was there)
-    // For a real word hunt, we'd track which letters are "original" vs random
+    for (int i = 0; i < word.length; i++) {
+      final existingChar = _grid[r + i * dy][c + i * dx];
+      if (existingChar != '' && existingChar != word[i]) {
+        return false;
+      }
+    }
     return true;
   }
 
@@ -79,19 +119,17 @@ class _WordHuntViewState extends State<WordHuntView> {
     return letters[Random().nextInt(letters.length)];
   }
 
-  void _handlePanStart(DragStartDetails details) {
+  void _handlePanStart(DragStartDetails details, double cellSize) {
     setState(() {
       _isSelecting = true;
       _selection.clear();
-      _addSelection(details.localPosition);
+      _updateSelection(details.localPosition, cellSize);
     });
   }
 
-  void _handlePanUpdate(DragUpdateDetails details) {
+  void _handlePanUpdate(DragUpdateDetails details, double cellSize) {
     if (_isSelecting) {
-      setState(() {
-        _addSelection(details.localPosition);
-      });
+      _updateSelection(details.localPosition, cellSize);
     }
   }
 
@@ -116,41 +154,43 @@ class _WordHuntViewState extends State<WordHuntView> {
     });
   }
 
-  void _addSelection(Offset localPosition) {
-    final double cellSize = 40.0; // Estimate
-    int col = (localPosition.dx / cellSize).floor();
-    int row = (localPosition.dy / cellSize).floor();
+  void _updateSelection(Offset localPosition, double cellSize) {
+    int col = (localPosition.dx / cellSize).floor().clamp(0, _gridSize - 1);
+    int row = (localPosition.dy / cellSize).floor().clamp(0, _gridSize - 1);
 
-    if (row >= 0 && row < _gridSize && col >= 0 && col < _gridSize) {
-      final pos = Offset(col.toDouble(), row.toDouble());
-      if (_selection.isEmpty) {
-        _selection.add(pos);
-      } else {
-        // Enforce straight lines
-        final first = _selection.first;
-        int dr = (row - first.dy).toInt();
-        int dc = (col - first.dx).toInt();
+    final start = _selection.isNotEmpty ? _selection.first : Offset(col.toDouble(), row.toDouble());
+    int dr = (row - start.dy).toInt();
+    int dc = (col - start.dx).toInt();
 
-        if (dr == 0 || dc == 0 || dr.abs() == dc.abs()) {
-          _selection.add(pos);
-        }
+    // Enforce straight orthogonal or diagonal lines
+    if (dr == 0 || dc == 0 || dr.abs() == dc.abs()) {
+      final int steps = max(dr.abs(), dc.abs());
+      final int stepR = dr == 0 ? 0 : dr.sign;
+      final int stepC = dc == 0 ? 0 : dc.sign;
+
+      final List<Offset> newPath = [];
+      for (int i = 0; i <= steps; i++) {
+        newPath.add(Offset((start.dx + i * stepC), (start.dy + i * stepR)));
+      }
+
+      final prevCount = _selection.length;
+      final prevLast = _selection.isNotEmpty ? _selection.last : null;
+
+      if (newPath.length != prevCount || (newPath.isNotEmpty && newPath.last != prevLast)) {
+        setState(() {
+          _selection.clear();
+          _selection.addAll(newPath);
+        });
+        HapticService.light();
       }
     }
   }
 
   String _getSelectedWord() {
     if (_selection.isEmpty) return '';
-    
-    // Sort selection to follow direction
-    // For simplicity, just concat unique ones in order of touch
     String result = '';
-    final Set<String> seen = {};
     for (var pos in _selection) {
-      final key = '${pos.dx},${pos.dy}';
-      if (!seen.contains(key)) {
-        result += _grid[pos.dy.toInt()][pos.dx.toInt()];
-        seen.add(key);
-      }
+      result += _grid[pos.dy.toInt()][pos.dx.toInt()];
     }
     return result;
   }
@@ -158,6 +198,7 @@ class _WordHuntViewState extends State<WordHuntView> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       children: [
         Text(
@@ -168,6 +209,7 @@ class _WordHuntViewState extends State<WordHuntView> {
         const SizedBox(height: 24),
         Wrap(
           spacing: 8,
+          runSpacing: 8,
           children: widget.wordsToFind.map((w) {
             final isFound = widget.foundWords.contains(w);
             return Opacity(
@@ -175,7 +217,9 @@ class _WordHuntViewState extends State<WordHuntView> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: isFound ? AppColors.semanticGreen : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+                  color: isFound
+                      ? AppColors.semanticGreen
+                      : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -193,52 +237,126 @@ class _WordHuntViewState extends State<WordHuntView> {
         ),
         const SizedBox(height: 32),
         Center(
-          child: GestureDetector(
-            onPanStart: _handlePanStart,
-            onPanUpdate: _handlePanUpdate,
-            onPanEnd: _handlePanEnd,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.1),
-                ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(_gridSize, (r) {
-                  return Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: List.generate(_gridSize, (c) {
-                      final isSelected = _selection.any((p) => p.dx == c && p.dy == r);
-                      return Container(
-                        width: 40,
-                        height: 40,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: isSelected ? AppColors.gold500.withValues(alpha: 0.6) : null,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          _grid[r][c],
-                          style: AppTypography.mono.copyWith(
-                            color: isSelected
-                                ? Colors.black
-                                : (isDark ? Colors.white : AppColors.forest900),
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final double maxGridWidth = min(constraints.maxWidth, 380.0);
+              final double cellSize = (maxGridWidth / _gridSize).clamp(28.0, 48.0);
+              final double gridDimension = cellSize * _gridSize;
+
+              return GestureDetector(
+                onPanStart: (d) => _handlePanStart(d, cellSize),
+                onPanUpdate: (d) => _handlePanUpdate(d, cellSize),
+                onPanEnd: _handlePanEnd,
+                child: Container(
+                  width: gridDimension + 8,
+                  height: gridDimension + 8,
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.black.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.1),
+                    ),
+                  ),
+                  child: Stack(
+                    children: [
+                      // Selection Line/Pill Canvas Painter
+                      if (_selection.isNotEmpty)
+                        CustomPaint(
+                          size: Size(gridDimension, gridDimension),
+                          painter: _WordHuntSelectionPainter(
+                            selection: _selection,
+                            cellSize: cellSize,
                           ),
                         ),
-                      );
-                    }),
-                  );
-                }),
-              ),
-            ),
+                      // Grid Letters
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: List.generate(_gridSize, (r) {
+                          return Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: List.generate(_gridSize, (c) {
+                              final isSelected = _selection.any((p) => p.dx == c && p.dy == r);
+                              return Container(
+                                width: cellSize,
+                                height: cellSize,
+                                alignment: Alignment.center,
+                                child: Text(
+                                  _grid[r][c],
+                                  style: AppTypography.mono.copyWith(
+                                    color: isSelected
+                                        ? AppColors.forest900
+                                        : (isDark ? Colors.white : AppColors.forest900),
+                                    fontWeight: isSelected ? FontWeight.w900 : FontWeight.w500,
+                                    fontSize: cellSize * 0.45,
+                                  ),
+                                ),
+                              );
+                            }),
+                          );
+                        }),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ],
     );
+  }
+}
+
+class _WordHuntSelectionPainter extends CustomPainter {
+  final List<Offset> selection;
+  final double cellSize;
+
+  _WordHuntSelectionPainter({
+    required this.selection,
+    required this.cellSize,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (selection.isEmpty) return;
+
+    final fillPaint = Paint()
+      ..color = AppColors.gold500.withValues(alpha: 0.45)
+      ..style = PaintingStyle.fill;
+
+    final strokePaint = Paint()
+      ..color = AppColors.gold500
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    final linePaint = Paint()
+      ..color = AppColors.gold500.withValues(alpha: 0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = cellSize * 0.75
+      ..strokeCap = StrokeCap.round;
+
+    final startCenter = Offset(
+      (selection.first.dx + 0.5) * cellSize,
+      (selection.first.dy + 0.5) * cellSize,
+    );
+
+    if (selection.length == 1) {
+      canvas.drawCircle(startCenter, cellSize * 0.38, fillPaint);
+      canvas.drawCircle(startCenter, cellSize * 0.38, strokePaint);
+    } else {
+      final endCenter = Offset(
+        (selection.last.dx + 0.5) * cellSize,
+        (selection.last.dy + 0.5) * cellSize,
+      );
+      canvas.drawLine(startCenter, endCenter, linePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _WordHuntSelectionPainter oldDelegate) {
+    return oldDelegate.selection != selection || oldDelegate.cellSize != cellSize;
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import '../../services/haptic_service.dart';
 
 class MatchingView extends StatefulWidget {
   final String question;
@@ -29,8 +30,6 @@ class MatchingView extends StatefulWidget {
 }
 
 class _MatchingViewState extends State<MatchingView> {
-  // Fix #8: Shuffle the meanings column once when the widget is first built,
-  // so the order doesn't match the native words and the task is a real challenge.
   late List<String> _shuffledMeanings;
 
   @override
@@ -62,7 +61,19 @@ class _MatchingViewState extends State<MatchingView> {
             color: isDark ? Colors.white : AppColors.forest900,
           ),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 8),
+        Text(
+          'TAP OR DRAG NATIVE WORDS TO THEIR MEANINGS',
+          style: AppTypography.label.copyWith(
+            color: isDark
+                ? Colors.white30
+                : AppColors.forest900.withValues(alpha: 0.3),
+            fontSize: 10,
+            letterSpacing: 1.2,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 24),
         ...List.generate(natives.length, (index) {
           final native = natives[index];
           final meaning = index < _shuffledMeanings.length
@@ -72,84 +83,165 @@ class _MatchingViewState extends State<MatchingView> {
           final isNativeMatched = widget.matchedPairs.containsKey(native);
           final isMeaningMatched = widget.matchedPairs.containsValue(meaning);
 
-          return Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: (widget.isReadOnly || isNativeMatched)
-                      ? null
-                      : () => widget.onNativeTap(native),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isNativeMatched
-                          ? AppColors.gold500.withValues(alpha: 0.2)
-                          : (widget.selectedNative == native
-                                ? AppColors.semanticBlue.withValues(alpha: 0.3)
-                                : (isDark ? AppColors.forestDarkCard : Colors.black.withValues(alpha: 0.03))),
-                      border: Border.all(
-                        color: isNativeMatched
-                            ? AppColors.gold500
-                            : (widget.selectedNative == native
-                                  ? AppColors.semanticBlue
-                                  : (isDark ? Colors.white24 : Colors.black.withValues(alpha: 0.1))),
-                        width:
-                            isNativeMatched || widget.selectedNative == native
-                            ? 2
-                            : 1,
+          Widget nativeCard = GestureDetector(
+            onTap: (widget.isReadOnly || isNativeMatched)
+                ? null
+                : () => widget.onNativeTap(native),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isNativeMatched
+                    ? AppColors.gold500.withValues(alpha: 0.2)
+                    : (widget.selectedNative == native
+                        ? AppColors.semanticBlue.withValues(alpha: 0.3)
+                        : (isDark
+                            ? AppColors.forestDarkCard
+                            : Colors.black.withValues(alpha: 0.03))),
+                border: Border.all(
+                  color: isNativeMatched
+                      ? AppColors.gold500
+                      : (widget.selectedNative == native
+                          ? AppColors.semanticBlue
+                          : (isDark
+                              ? Colors.white24
+                              : Colors.black.withValues(alpha: 0.1))),
+                  width:
+                      isNativeMatched || widget.selectedNative == native ? 2 : 1,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                native.isEmpty ? 'Native' : native,
+                style: TextStyle(
+                  color: isDark ? Colors.white : AppColors.forest900,
+                  fontWeight: widget.selectedNative == native || isNativeMatched
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+
+          if (!widget.isReadOnly && !isNativeMatched) {
+            nativeCard = Draggable<String>(
+              data: native,
+              feedback: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: 150,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold500,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        blurRadius: 10,
+                        spreadRadius: 2,
                       ),
-                      borderRadius: BorderRadius.circular(12),
+                    ],
+                  ),
+                  child: Text(
+                    native,
+                    style: const TextStyle(
+                      color: AppColors.forest900,
+                      fontWeight: FontWeight.bold,
                     ),
-                    child: Text(
-                      native.isEmpty ? 'Native' : native,
-                      style: TextStyle(
-                        color: isDark ? Colors.white : AppColors.forest900,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ),
+              childWhenDragging: Opacity(
+                opacity: 0.3,
+                child: nativeCard,
+              ),
+              child: nativeCard,
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: nativeCard),
               const SizedBox(width: 16),
               Expanded(
-                child: GestureDetector(
-                  onTap: (widget.isReadOnly || isMeaningMatched)
-                      ? null
-                      : () => widget.onMeaningTap(meaning),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isMeaningMatched
-                          ? AppColors.gold500.withValues(alpha: 0.2)
-                          : (widget.selectedMeaning == meaning
-                                ? AppColors.semanticBlue.withValues(alpha: 0.3)
-                                : (isDark ? AppColors.forest800 : Colors.black.withValues(alpha: 0.03))),
-                      border: Border.all(
-                        color: isMeaningMatched
-                            ? AppColors.gold500
-                            : (widget.selectedMeaning == meaning
-                                  ? AppColors.semanticBlue
-                                  : (isDark ? Colors.white24 : Colors.black.withValues(alpha: 0.1))),
-                        width:
-                            isMeaningMatched ||
-                                widget.selectedMeaning == meaning
-                            ? 2
-                            : 1,
+                child: DragTarget<String>(
+                  onWillAcceptWithDetails: (details) =>
+                      !widget.isReadOnly && !isMeaningMatched,
+                  onAcceptWithDetails: (details) {
+                    HapticService.success();
+                    widget.onNativeTap(details.data);
+                    widget.onMeaningTap(meaning);
+                  },
+                  builder: (context, candidateData, rejectedData) {
+                    final isHovered = candidateData.isNotEmpty;
+
+                    return GestureDetector(
+                      onTap: (widget.isReadOnly || isMeaningMatched)
+                          ? null
+                          : () => widget.onMeaningTap(meaning),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isMeaningMatched
+                              ? AppColors.gold500.withValues(alpha: 0.2)
+                              : (isHovered
+                                  ? AppColors.gold500.withValues(alpha: 0.25)
+                                  : (widget.selectedMeaning == meaning
+                                      ? AppColors.semanticBlue
+                                          .withValues(alpha: 0.3)
+                                      : (isDark
+                                          ? AppColors.forest800
+                                          : Colors.black
+                                              .withValues(alpha: 0.03)))),
+                          border: Border.all(
+                            color: isMeaningMatched || isHovered
+                                ? AppColors.gold500
+                                : (widget.selectedMeaning == meaning
+                                    ? AppColors.semanticBlue
+                                    : (isDark
+                                        ? Colors.white24
+                                        : Colors.black
+                                            .withValues(alpha: 0.1))),
+                            width: isMeaningMatched ||
+                                    widget.selectedMeaning == meaning ||
+                                    isHovered
+                                ? 2
+                                : 1,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: isHovered
+                              ? [
+                                  BoxShadow(
+                                    color:
+                                        AppColors.gold500.withValues(alpha: 0.3),
+                                    blurRadius: 8,
+                                    spreadRadius: 1,
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Text(
+                          meaning.isEmpty ? 'Meaning' : meaning,
+                          style: TextStyle(
+                            color: isDark
+                                ? Colors.white70
+                                : AppColors.forest900.withValues(alpha: 0.7),
+                            fontWeight: isMeaningMatched ||
+                                    widget.selectedMeaning == meaning ||
+                                    isHovered
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      meaning.isEmpty ? 'Meaning' : meaning,
-                      style: TextStyle(
-                        color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -159,6 +251,3 @@ class _MatchingViewState extends State<MatchingView> {
     );
   }
 }
-
-
-

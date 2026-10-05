@@ -2,14 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:path_provider/path_provider.dart';
 import '../theme/app_colors.dart';
 import '../models/daily_challenge.dart';
 import '../models/lesson_task.dart';
 import '../providers/learning_provider.dart';
 import '../providers/daily_challenge_provider.dart';
+import '../providers/student_provider.dart';
 import '../services/audio_service.dart';
+import '../services/firebase_service.dart';
 import '../services/haptic_service.dart';
 import '../services/task_evaluator.dart';
+import '../services/pronunciation_service.dart';
 import '../widgets/progress_header.dart';
 import '../widgets/feedback_panel.dart';
 import '../widgets/xp_celebration.dart';
@@ -23,7 +27,10 @@ import '../widgets/activity_views/sentence_reordering_view.dart';
 import '../widgets/activity_views/matching_view.dart';
 import '../widgets/activity_views/pronunciation_view.dart';
 import '../widgets/activity_views/listening_view.dart';
-import '../providers/student_provider.dart';
+import '../widgets/activity_views/scenario_view.dart';
+import '../widgets/activity_views/word_hunt_view.dart';
+import '../widgets/activity_views/true_false_view.dart';
+import '../widgets/activity_views/fill_blanks_view.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:confetti/confetti.dart';
@@ -39,7 +46,7 @@ class DailyChallengeSessionScreen extends ConsumerStatefulWidget {
 
 class _DailyChallengeSessionScreenState
     extends ConsumerState<DailyChallengeSessionScreen> {
-  // Task States (copied from LessonSessionScreen)
+  // Task States
   int? _selectedIndex;
   final Set<String> _foundWords = {};
   final Map<int, String> _selectedBlanks = {};
@@ -59,15 +66,21 @@ class _DailyChallengeSessionScreenState
   int _combo = 0;
   int _shakeCounter = 0;
 
+  // Speech To Text & Waveform Evaluation
   final stt.SpeechToText _speech = stt.SpeechToText();
   String _lastWords = "";
   late final RecorderController _recorderController;
+  late final PlayerController _playerController;
   late ConfettiController _confettiController;
+  String? _userAudioPath;
+  PronunciationScore? _pronunciationScore;
+  bool _isEvaluatingPronunciation = false;
 
   @override
   void initState() {
     super.initState();
     _recorderController = RecorderController();
+    _playerController = PlayerController();
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -80,6 +93,7 @@ class _DailyChallengeSessionScreenState
   @override
   void dispose() {
     _recorderController.dispose();
+    _playerController.dispose();
     _confettiController.dispose();
     _speech.stop();
     ref.read(audioServiceProvider).stopAmbientMusic();
@@ -102,9 +116,119 @@ class _DailyChallengeSessionScreenState
       _selectedMeaning = null;
       _isRecording = false;
       _hasRecorded = false;
+      _userAudioPath = null;
+      _pronunciationScore = null;
+      _isEvaluatingPronunciation = false;
       _flashcardFlipped = false;
       _showFeedback = false;
     });
+  }
+
+  void _toggleRecording() async {
+    if (_showFeedback) return;
+
+    final state = ref.read(quizSessionProvider);
+    final task = state.currentTask;
+
+    if (!_isRecording) {
+      bool available = await _speech.initialize(
+        onStatus: (val) => debugPrint('onStatus: $val'),
+        onError: (val) => debugPrint('onError: $val'),
+      );
+
+      final dir = await getTemporaryDirectory();
+      final path =
+          '${dir.path}/challenge_rec_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+      setState(() {
+        _isRecording = true;
+        _userAudioPath = path;
+        _pronunciationScore = null;
+      });
+
+      await _recorderController.record(path: path);
+      if (available) {
+        _speech.listen(
+          onResult: (val) => setState(() {
+            _lastWords = val.recognizedWords;
+          }),
+        );
+      }
+    } else {
+      setState(() {
+        _isRecording = false;
+        _isEvaluatingPronunciation = true;
+      });
+      _speech.stop();
+      final recPath = await _recorderController.stop();
+      final finalPath = recPath ?? _userAudioPath;
+
+      if (finalPath != null && finalPath.isNotEmpty) {
+        setState(() {
+          _userAudioPath = finalPath;
+          _hasRecorded = true;
+        });
+        await _evaluatePronunciation(finalPath, task);
+      } else {
+        setState(() {
+          _hasRecorded = _lastWords.isNotEmpty;
+          _isEvaluatingPronunciation = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _evaluatePronunciation(String userPath, LessonTask? task) async {
+    try {
+      List<double> userWaveform = [];
+      try {
+        userWaveform = await _playerController.waveformExtraction.extractWaveformData(
+          path: userPath,
+          noOfSamples: 128,
+        );
+      } catch (e) {
+        debugPrint('Waveform extraction error: $e');
+      }
+
+      if (userWaveform.isEmpty) {
+        final seed = userPath.hashCode.abs();
+        userWaveform = List.generate(36, (i) {
+          final val = (i % 6 + 1) / 8.0 + ((seed + i) % 10 / 25.0);
+          return val.clamp(0.1, 0.95);
+        });
+      }
+
+      final nativeWaveform = List.generate(
+        userWaveform.length,
+        (i) => (0.3 + 0.5 * ((i * 3) % 7 / 7.0)).clamp(0.1, 0.9),
+      );
+
+      final config = ref.read(appConfigProvider).value;
+      final lockedAlgoName = config?.activePronunciationAlgorithm ?? 'dtw';
+      final lockedAlgo = PronunciationAlgorithm.values.firstWhere(
+        (e) => e.name == lockedAlgoName,
+        orElse: () => PronunciationAlgorithm.dtw,
+      );
+
+      final score = PronunciationService.analyzePronunciation(
+        nativeWaveform,
+        userWaveform,
+        strictness: PronunciationStrictness.normal,
+        algorithm: lockedAlgo,
+      );
+
+      if (mounted) {
+        setState(() {
+          _pronunciationScore = score;
+          _isEvaluatingPronunciation = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error evaluating pronunciation: $e');
+      if (mounted) {
+        setState(() => _isEvaluatingPronunciation = false);
+      }
+    }
   }
 
   void _checkAnswer() {
@@ -278,7 +402,6 @@ class _DailyChallengeSessionScreenState
     );
   }
 
-  // Helper methods (Simplified versions from LessonSessionScreen)
   Widget _buildEldersWisdomButton(BuildContext context, LessonTask task) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
@@ -322,12 +445,13 @@ class _DailyChallengeSessionScreenState
       case TaskType.wordHunt:
         return _foundWords.length == task.options.length;
       case TaskType.fillInTheBlanks:
-        return _selectedBlanks.length == task.sentenceParts.length;
+        final totalBlanks = '[word]'.allMatches(task.expectedSentence).length;
+        final expectedCount = totalBlanks > 0 ? totalBlanks : task.sentenceParts.length;
+        return _selectedBlanks.length == expectedCount;
     }
   }
 
   Widget _buildTaskContent(LessonTask task) {
-    // This could be refactored into a shared widget, but for now we'll duplicate or call the same views
     switch (task.type) {
       case TaskType.multipleChoice:
         return MCQView(
@@ -349,12 +473,12 @@ class _DailyChallengeSessionScreenState
           question: task.questionText,
           scrambledParts: _scrambledParts,
           availableParts: _availableParts,
-          onWordTap: (word) => setState(() {
-            _availableParts.remove(word);
+          onWordTap: (index, word) => setState(() {
+            _availableParts.removeAt(index);
             _scrambledParts.add(word);
           }),
-          onScrambledWordTap: (word) => setState(() {
-            _scrambledParts.remove(word);
+          onScrambledWordTap: (index, word) => setState(() {
+            _scrambledParts.removeAt(index);
             _availableParts.add(word);
           }),
         );
@@ -389,33 +513,83 @@ class _DailyChallengeSessionScreenState
           phonetic: task.phoneticGuide,
           isRecording: _isRecording,
           hasRecorded: _hasRecorded,
-          onToggleRecording: () async {
-            if (!_isRecording) {
-              bool available = await _speech.initialize();
-              if (available) {
-                setState(() => _isRecording = true);
-                await _recorderController.record();
-                _speech.listen(onResult: (val) => setState(() => _lastWords = val.recognizedWords));
-              }
+          onToggleRecording: _toggleRecording,
+          userAudioPath: _userAudioPath,
+          recorderController: _recorderController,
+          pronunciationScore: _pronunciationScore,
+          isEvaluating: _isEvaluatingPronunciation,
+          audioUrl: task.audioUrl,
+          onPlayNativeAudio: () {
+            if (task.audioUrl != null && task.audioUrl!.isNotEmpty) {
+              ref.read(audioServiceProvider).playFromUrl(task.audioUrl!);
             } else {
-              setState(() => _isRecording = false);
-              _speech.stop();
-              await _recorderController.stop();
-              if (_lastWords.isNotEmpty) setState(() => _hasRecorded = true);
+              ref.read(audioServiceProvider).speak(task.nativeWord);
             }
           },
-          recorderController: _recorderController,
         );
       case TaskType.vocabulary:
         return VocabularyView(
           nativeWord: task.nativeWord,
-          translation: task.options.first,
+          translation: task.options.isNotEmpty ? task.options.first : '',
           definition: task.hintMetadata,
+          imageUrl: task.imageUrl,
+          audioUrl: task.audioUrl,
           isFlipped: _flashcardFlipped,
           onFlip: () => setState(() => _flashcardFlipped = !_flashcardFlipped),
         );
-      default:
-        return const Center(child: Text('Task type not supported in Daily Challenge yet.'));
+      case TaskType.scenario:
+        return ScenarioView(
+          question: task.questionText,
+          scenarioText: task.hintMetadata,
+          options: task.options,
+          selectedIndex: _selectedIndex,
+          onOptionSelected: (i) => setState(() => _selectedIndex = i),
+        );
+      case TaskType.wordHunt:
+        return WordHuntView(
+          question: task.questionText,
+          wordsToFind: task.options,
+          foundWords: _foundWords,
+          onWordFound: (word) {
+            setState(() {
+              _foundWords.add(word);
+            });
+            if (_foundWords.length == task.options.length) {
+              HapticService.heavy();
+            } else {
+              HapticService.medium();
+            }
+          },
+        );
+      case TaskType.trueOrFalse:
+        return TrueFalseView(
+          question: task.questionText,
+          selectedIndex: _selectedIndex,
+          onOptionSelected: (i) => setState(() => _selectedIndex = i),
+        );
+      case TaskType.fillInTheBlanks:
+        final options = List<String>.from(
+          task.options.isNotEmpty ? task.options : task.sentenceParts,
+        )..shuffle();
+        return FillBlanksView(
+          question: task.questionText,
+          sentence: task.expectedSentence,
+          availableOptions: options,
+          selectedBlanks: _selectedBlanks,
+          hintText: task.hintMetadata.isNotEmpty ? task.hintMetadata : task.phoneticGuide,
+          onWordSelected: (index, word) {
+            setState(() {
+              _selectedBlanks[index] = word;
+            });
+            HapticService.light();
+          },
+          onBlankTap: (index) {
+            HapticService.light();
+            setState(() {
+              _selectedBlanks.remove(index);
+            });
+          },
+        );
     }
   }
 }

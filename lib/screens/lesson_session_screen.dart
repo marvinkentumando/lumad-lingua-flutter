@@ -323,7 +323,9 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
       case TaskType.wordHunt:
         return _foundWords.length == task.options.length;
       case TaskType.fillInTheBlanks:
-        return _selectedBlanks.length == task.sentenceParts.length;
+        final totalBlanks = '[word]'.allMatches(task.expectedSentence).length;
+        final expectedCount = totalBlanks > 0 ? totalBlanks : task.sentenceParts.length;
+        return _selectedBlanks.length == expectedCount;
     }
   }
 
@@ -1328,17 +1330,17 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           question: task.questionText,
           scrambledParts: _scrambledParts,
           availableParts: _availableParts,
-          onWordTap: (word) {
+          onWordTap: (index, word) {
             HapticService.light();
             setState(() {
-              _availableParts.remove(word);
+              _availableParts.removeAt(index);
               _scrambledParts.add(word);
             });
           },
-          onScrambledWordTap: (word) {
+          onScrambledWordTap: (index, word) {
             HapticService.light();
             setState(() {
-              _scrambledParts.remove(word);
+              _scrambledParts.removeAt(index);
               _availableParts.add(word);
             });
           },
@@ -1463,14 +1465,15 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           onOptionSelected: _onOptionSelected,
         );
       case TaskType.fillInTheBlanks:
-        // Ensure we have shuffled options including the correct ones
-        // In a real app, you might add some distractors
-        final options = List<String>.from(task.sentenceParts)..shuffle();
+        final options = List<String>.from(
+          task.options.isNotEmpty ? task.options : task.sentenceParts,
+        )..shuffle();
         return FillBlanksView(
           question: task.questionText,
           sentence: task.expectedSentence,
           availableOptions: options,
           selectedBlanks: _selectedBlanks,
+          hintText: task.hintMetadata.isNotEmpty ? task.hintMetadata : task.phoneticGuide,
           onWordSelected: (index, word) {
             setState(() {
               _selectedBlanks[index] = word;
