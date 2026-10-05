@@ -123,6 +123,32 @@ class FirebaseService {
     await _db.collection('users').doc(userId).update(data);
   }
 
+  Future<void> resetUserLearningProgress(String userId) async {
+    await _db.collection('users').doc(userId).update({
+      'xp': 0,
+      'streak': 0,
+      'mistCrystals': 0,
+      'wordCount': 0,
+      'lastProgressReset': FieldValue.serverTimestamp(),
+    });
+
+    try {
+      final progressBatch = _db.batch();
+      final userProgressSnap = await _db
+          .collection('users')
+          .doc(userId)
+          .collection('lessonProgress')
+          .get();
+
+      for (var doc in userProgressSnap.docs) {
+        progressBatch.delete(doc.reference);
+      }
+      await progressBatch.commit();
+    } catch (e) {
+      if (kDebugMode) debugPrint("Error deleting lesson progress: $e");
+    }
+  }
+
   // Dictionary Streams
   Stream<List<DictionaryEntry>> getValidatedDictionaryWords() {
     return _db

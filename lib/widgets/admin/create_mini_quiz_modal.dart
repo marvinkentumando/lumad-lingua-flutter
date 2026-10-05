@@ -381,10 +381,13 @@ class _CreateMiniQuizModalState extends ConsumerState<CreateMiniQuizModal> {
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Row(
                   children: [
+                    // ignore: deprecated_member_use
                     Radio<int>(
                       value: optIdx,
+                      // ignore: deprecated_member_use
                       groupValue: task.correctAnswerIndex,
                       fillColor: WidgetStateProperty.all(AppColors.gold500),
+                      // ignore: deprecated_member_use
                       onChanged: (v) {
                         setState(() {
                           _tasks[index] = task.copyWith(correctAnswerIndex: v ?? 0);

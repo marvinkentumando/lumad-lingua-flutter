@@ -215,7 +215,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                         .animate(interval: 80.ms)
                         .fadeIn(delay: 100.ms)
                         .scale(begin: const Offset(0.92, 0.92)),
-                  ),
+                      ),
                   const SizedBox(height: 20),
                   SizedBox(
                     width: double.infinity,
@@ -331,7 +331,9 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 
   Widget _buildWotdAdminControls(AppLocalization l10n) {

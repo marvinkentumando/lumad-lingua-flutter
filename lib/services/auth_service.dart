@@ -387,6 +387,40 @@ class AuthService {
       return false;
     }
   }
+
+  Future<bool> reauthenticateGoogle() async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+
+    if (kIsWeb) {
+      try {
+        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+        googleProvider.addScope('email');
+        googleProvider.addScope('profile');
+        await user.reauthenticateWithPopup(googleProvider);
+        return true;
+      } catch (e) {
+        if (kDebugMode) debugPrint("Google re-auth web error: $e");
+        return false;
+      }
+    }
+
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return false;
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      await user.reauthenticateWithCredential(credential);
+      return true;
+    } catch (e) {
+      if (kDebugMode) debugPrint("Google re-auth native error: $e");
+      return false;
+    }
+  }
 }
 
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());

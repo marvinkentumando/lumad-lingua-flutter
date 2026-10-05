@@ -121,15 +121,6 @@ class LessonPreviewPanel extends StatelessWidget {
     }
   }
 
-  Widget _buildPlaceholderPreview(String type) {
-    return Center(
-      child: Text(
-        'Preview for $type coming soon',
-        style: const TextStyle(color: Colors.white24),
-      ),
-    );
-  }
-
   Widget _buildSessionControls() {
     final isLastActivity = currentActivityNumber >= totalActivities;
 
