@@ -6,6 +6,24 @@ import 'package:flutter/foundation.dart';
 class SupabaseStorageService {
   final SupabaseClient _client = Supabase.instance.client;
 
+  /// Uploads image bytes to the 'images' bucket.
+  Future<String?> uploadImageBytes(Uint8List bytes, String fileName) async {
+    try {
+      await _client.storage.from('images').uploadBinary(
+            fileName,
+            bytes,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+          );
+
+      final String publicUrl = _client.storage.from('images').getPublicUrl(fileName);
+      debugPrint('Successfully uploaded image bytes: $publicUrl');
+      return publicUrl;
+    } catch (e) {
+      debugPrint('Error uploading image bytes to Supabase: $e');
+      return null;
+    }
+  }
+
   /// Uploads an image to the 'images' bucket.
   /// Returns the public URL of the uploaded image.
   Future<String?> uploadImage(File file, String fileName) async {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
@@ -589,10 +590,11 @@ class StaffProfileScreen extends ConsumerWidget {
     final result = await FilePicker.pickFiles(
       type: FileType.image,
       allowMultiple: false,
+      withData: true,
     );
 
-    if (result != null && result.files.single.path != null) {
-      final file = File(result.files.single.path!);
+    if (result != null && result.files.isNotEmpty) {
+      final platformFile = result.files.single;
       try {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -600,20 +602,32 @@ class StaffProfileScreen extends ConsumerWidget {
           );
         }
 
-        final url = await ref
-            .read(supabaseStorageServiceProvider)
-            .uploadImage(file, 'profile_${userId}_${DateTime.now().millisecondsSinceEpoch}.jpg');
-        await ref.read(firebaseServiceProvider).updateUserProfile(userId, {
-          'photoURL': url,
-        });
+        final fileName = 'profile_${userId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        String? url;
 
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.translate('pic_updated')),
-              backgroundColor: AppColors.semanticGreen,
-            ),
-          );
+        if (kIsWeb || platformFile.bytes != null) {
+          url = await ref
+              .read(supabaseStorageServiceProvider)
+              .uploadImageBytes(platformFile.bytes!, fileName);
+        } else if (platformFile.path != null) {
+          url = await ref
+              .read(supabaseStorageServiceProvider)
+              .uploadImage(File(platformFile.path!), fileName);
+        }
+
+        if (url != null) {
+          await ref.read(firebaseServiceProvider).updateUserProfile(userId, {
+            'photoURL': url,
+          });
+
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(l10n.translate('pic_updated')),
+                backgroundColor: AppColors.semanticGreen,
+              ),
+            );
+          }
         }
       } catch (e) {
         if (context.mounted) {

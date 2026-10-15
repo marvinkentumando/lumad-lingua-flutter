@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:cross_file/cross_file.dart';
 import 'dart:async';
-import 'dart:io';
+import 'dart:io' show File;
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
@@ -305,14 +307,15 @@ class EditorUtils {
       final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: allowedExtensions,
+        withData: true,
       );
 
-      if (result != null && result.files.single.path != null) {
-        final filePath = result.files.single.path!;
+      if (result != null && result.files.isNotEmpty) {
+        final platformFile = result.files.single;
         final isAudio = path.contains('audio');
         
-        if (isAudio) {
-          final error = await AudioValidator.validate(filePath);
+        if (isAudio && platformFile.path != null && !kIsWeb) {
+          final error = await AudioValidator.validate(platformFile.path!);
           if (error != null) {
             if (!context.mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
@@ -334,13 +337,24 @@ class EditorUtils {
         );
 
         final String bucket = isAudio ? 'audio' : 'images';
-        final String fileName = '${DateTime.now().millisecondsSinceEpoch}_${result.files.single.name}';
+        final String fileName = '${DateTime.now().millisecondsSinceEpoch}_${platformFile.name}';
         
-        await Supabase.instance.client.storage.from(bucket).upload(
-          fileName,
-          File(filePath),
-          fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
-        );
+        if (kIsWeb || platformFile.bytes != null) {
+          final bytes = platformFile.bytes!;
+          await Supabase.instance.client.storage.from(bucket).uploadBinary(
+            fileName,
+            bytes,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+          );
+        } else if (platformFile.path != null) {
+          await Supabase.instance.client.storage.from(bucket).upload(
+            fileName,
+            File(platformFile.path!),
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+          );
+        } else {
+          throw Exception('Unable to access selected file bytes.');
+        }
 
         final String downloadUrl = Supabase.instance.client.storage.from(bucket).getPublicUrl(fileName);
 
@@ -363,6 +377,7 @@ class EditorUtils {
         ),
       );
     }
+  }
   }
 }
 
@@ -534,11 +549,20 @@ class _AudioRecorderDialogState extends State<AudioRecorderDialog> {
 
       final String fileName = p.basename(path);
       
-      await Supabase.instance.client.storage.from('audio').upload(
-        fileName,
-        File(path),
-        fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
-      );
+      if (kIsWeb) {
+        final bytes = await XFile(path).readAsBytes();
+        await Supabase.instance.client.storage.from('audio').uploadBinary(
+          fileName,
+          bytes,
+          fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+        );
+      } else {
+        await Supabase.instance.client.storage.from('audio').upload(
+          fileName,
+          File(path),
+          fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+        );
+      }
 
       final url = Supabase.instance.client.storage.from('audio').getPublicUrl(fileName);
 

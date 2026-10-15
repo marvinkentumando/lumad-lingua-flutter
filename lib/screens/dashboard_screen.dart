@@ -105,7 +105,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           const SizedBox(width: 20),
                           Expanded(
                             flex: 4,
-                            child: _buildStreakSummaryCard(context, student, l10n, isDesktop: true),
+                            child: _buildStreakSummaryCard(context, student, l10n),
                           ),
                         ],
                       ),
@@ -1066,7 +1066,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildStreakSummaryCard(BuildContext context, StudentState student, AppLocalization l10n) {
+  Widget _buildStreakSummaryCard(
+    BuildContext context,
+    StudentState student,
+    AppLocalization l10n,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: () {

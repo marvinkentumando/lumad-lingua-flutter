@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
@@ -20,6 +21,7 @@ import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/brand_background.dart';
 import '../widgets/artifacts/artifact_inventory_section.dart';
+import 'package:lumad_lingua/services/haptic_service.dart';
 import '../providers/theme_provider.dart';
 import '../providers/user_preferences_provider.dart';
 import '../utils/app_localization.dart';
@@ -544,10 +546,11 @@ class LearnerProfileScreen extends ConsumerWidget {
     final result = await FilePicker.pickFiles(
       type: FileType.image,
       allowMultiple: false,
+      withData: true,
     );
 
-    if (result != null && result.files.single.path != null) {
-      final file = File(result.files.single.path!);
+    if (result != null && result.files.isNotEmpty) {
+      final platformFile = result.files.single;
       try {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -555,20 +558,32 @@ class LearnerProfileScreen extends ConsumerWidget {
           );
         }
 
-        final url = await ref
-            .read(supabaseStorageServiceProvider)
-            .uploadImage(file, 'profile_${userId}_${DateTime.now().millisecondsSinceEpoch}.jpg');
-        await ref.read(firebaseServiceProvider).updateUserProfile(userId, {
-          'photoURL': url,
-        });
+        final fileName = 'profile_${userId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        String? url;
 
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.translate('pic_updated')),
-              backgroundColor: AppColors.semanticGreen,
-            ),
-          );
+        if (kIsWeb || platformFile.bytes != null) {
+          url = await ref
+              .read(supabaseStorageServiceProvider)
+              .uploadImageBytes(platformFile.bytes!, fileName);
+        } else if (platformFile.path != null) {
+          url = await ref
+              .read(supabaseStorageServiceProvider)
+              .uploadImage(File(platformFile.path!), fileName);
+        }
+
+        if (url != null) {
+          await ref.read(firebaseServiceProvider).updateUserProfile(userId, {
+            'photoURL': url,
+          });
+
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(l10n.translate('pic_updated')),
+                backgroundColor: AppColors.semanticGreen,
+              ),
+            );
+          }
         }
       } catch (e) {
         if (context.mounted) {
@@ -679,98 +694,6 @@ class LearnerProfileScreen extends ConsumerWidget {
     );
   }
 
-  void _showJoinVillageDialog(BuildContext context, WidgetRef ref, String userId, AppLocalization l10n) {
-    final controller = TextEditingController();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Container(
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: AppColors.forest900.withValues(alpha: 0.95),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
-              const SizedBox(height: 24),
-              const Icon(Icons.fort_rounded, color: AppColors.gold500, size: 48),
-              const SizedBox(height: 16),
-              Text(
-                l10n.translate('join_comm_village'),
-                style: AppTypography.h2.copyWith(color: AppColors.gold500),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n.translate('village_code_entry'),
-                textAlign: TextAlign.center,
-                style: AppTypography.body.copyWith(color: Colors.white70, fontSize: 13),
-              ),
-              const SizedBox(height: 24),
-              TextField(
-                controller: controller,
-                maxLength: 6,
-                textAlign: TextAlign.center,
-                style: AppTypography.displayBold.copyWith(color: Colors.white, letterSpacing: 8),
-                decoration: InputDecoration(
-                  hintText: l10n.translate('code'),
-                  hintStyle: const TextStyle(color: Colors.white10),
-                  filled: true,
-                  fillColor: Colors.black.withValues(alpha: 0.2),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                  counterText: '',
-                ),
-              ),
-              const SizedBox(height: 32),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => context.pop(),
-                      child: Text(l10n.translate('close').toUpperCase(), style: const TextStyle(color: Colors.white38)),
-                    ),
-                  ),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500),
-                      onPressed: () async {
-                        if (controller.text.length < 6) return;
-                        try {
-                          HapticService.selection();
-                          final educatorInfo = await ref
-                              .read(firebaseServiceProvider)
-                              .joinVillage(userId, controller.text);
-                          if (context.mounted) {
-                            context.pop();
-                            HapticService.success();
-                            _showVillageWelcomeDialog(context, educatorInfo, l10n);
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            HapticService.error();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.semanticRed),
-                            );
-                          }
-                        }
-                      },
-                      child: Text(l10n.translate('join'), style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   void _showVillageWelcomeDialog(
     BuildContext context,
     Map<String, dynamic> educatorInfo,
@@ -871,6 +794,94 @@ class LearnerProfileScreen extends ConsumerWidget {
       ),
     );
   }
+
+  void _showJoinVillageDialog(BuildContext context, WidgetRef ref, String userId, AppLocalization l10n) {
+    final controller = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: AppColors.forest900.withValues(alpha: 0.95),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 24),
+              const Icon(Icons.fort_rounded, color: AppColors.gold500, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                l10n.translate('join_comm_village'),
+                style: AppTypography.h2.copyWith(color: AppColors.gold500),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.translate('village_code_entry'),
+                textAlign: TextAlign.center,
+                style: AppTypography.body.copyWith(color: Colors.white70, fontSize: 13),
+              ),
+              const SizedBox(height: 24),
+              TextField(
+                controller: controller,
+                maxLength: 6,
+                textAlign: TextAlign.center,
+                style: AppTypography.displayBold.copyWith(color: Colors.white, letterSpacing: 8),
+                decoration: InputDecoration(
+                  hintText: l10n.translate('code'),
+                  hintStyle: const TextStyle(color: Colors.white10),
+                  filled: true,
+                  fillColor: Colors.black.withValues(alpha: 0.2),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                  counterText: '',
+                ),
+              ),
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => context.pop(),
+                      child: Text(l10n.translate('close').toUpperCase(), style: const TextStyle(color: Colors.white38)),
+                    ),
+                  ),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500),
+                      onPressed: () async {
+                        if (controller.text.length < 6) return;
+                        try {
+                          HapticService.selection();
+                          final educatorInfo = await ref
+                              .read(firebaseServiceProvider)
+                              .joinVillage(userId, controller.text);
+                          if (context.mounted) {
+                            context.pop();
+                            HapticService.success();
+                            _showVillageWelcomeDialog(context, educatorInfo, l10n);
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            HapticService.error();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.semanticRed),
+                            );
+                          }
+                        }
+                      },
+                      child: Text(l10n.translate('join'), style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
