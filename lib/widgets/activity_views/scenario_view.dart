@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import '../../utils/app_localization.dart';
 
-class ScenarioView extends StatelessWidget {
+class ScenarioView extends ConsumerWidget {
   final String question;
   final String scenarioText;
   final List<String> options;
@@ -21,8 +23,10 @@ class ScenarioView extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = ref.watch(localizationProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -54,7 +58,7 @@ class ScenarioView extends StatelessWidget {
             border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
           ),
           child: Text(
-            scenarioText.isEmpty ? 'Scenario details...' : scenarioText,
+            scenarioText.isEmpty ? l10n.translate('scenario_details_placeholder') : scenarioText,
             style: AppTypography.body.copyWith(
               color: isDark ? Colors.white : AppColors.forest900,
               fontStyle: FontStyle.italic,
@@ -64,7 +68,7 @@ class ScenarioView extends StatelessWidget {
         ),
         const SizedBox(height: 32),
         Text(
-          question.isEmpty ? 'What would you say?' : question,
+          question.isEmpty ? l10n.translate('what_would_you_say') : question,
           style: AppTypography.h3.copyWith(color: AppColors.gold500),
         ),
         const SizedBox(height: 20),
@@ -89,7 +93,7 @@ class ScenarioView extends StatelessWidget {
                 ),
               ),
               child: Text(
-                options[index].isEmpty ? 'Option ${index + 1}' : options[index],
+                options[index].isEmpty ? l10n.translate('option_index', params: {'index': '${index + 1}'}) : options[index],
                 style: AppTypography.bodyLarge.copyWith(
                   color: isSelected
                       ? AppColors.semanticBlue

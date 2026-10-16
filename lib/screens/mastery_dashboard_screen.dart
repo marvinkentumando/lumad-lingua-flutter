@@ -9,7 +9,8 @@ import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_background.dart';
-import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
+import '../widgets/app_shimmer_skeleton.dart';
+import '../utils/app_localization.dart';
 
 class MasteryDashboardScreen extends ConsumerWidget {
   const MasteryDashboardScreen({super.key});
@@ -17,16 +18,17 @@ class MasteryDashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(srsStatsProvider);
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       body: BrandBackground(
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(context),
+              _buildHeader(context, l10n),
               Expanded(
                 child: statsAsync.when(
-                  data: (stats) => _buildContent(context, stats),
+                  data: (stats) => _buildContent(context, stats, l10n),
                   loading: () => const Center(
                     child: CircularProgressIndicator(color: AppColors.gold500),
                   ),
@@ -45,7 +47,7 @@ class MasteryDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, AppLocalization l10n) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : AppColors.forest900;
     
@@ -66,7 +68,7 @@ class MasteryDashboardScreen extends ConsumerWidget {
           ),
           const SizedBox(width: 16),
           Text(
-            'Mastery Trends',
+            l10n.translate('mastery_dashboard'),
             style: AppTypography.h2ExtraBold.copyWith(color: textColor),
           ),
         ],
@@ -74,23 +76,23 @@ class MasteryDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildContent(BuildContext context, SRSStats stats) {
+  Widget _buildContent(BuildContext context, SRSStats stats, AppLocalization l10n) {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        _buildOverallMasteryCard(stats.overallMastery),
+        _buildOverallMasteryCard(stats.overallMastery, l10n),
         const SizedBox(height: 32),
-        _buildMasteryBreakdown(context, stats.counts),
+        _buildMasteryBreakdown(context, stats.counts, l10n),
         const SizedBox(height: 32),
-        _buildRetentionDecayCard(context),
-        _buildWeeklyTrend(context, stats.weeklyProgress),
+        _buildRetentionDecayCard(context, l10n),
+        _buildWeeklyTrend(context, stats.weeklyProgress, l10n),
         const SizedBox(height: 32),
-        _buildReviewAction(context),
+        _buildReviewAction(context, l10n),
       ],
     );
   }
 
-  Widget _buildRetentionDecayCard(BuildContext context) {
+  Widget _buildRetentionDecayCard(BuildContext context, AppLocalization l10n) {
     return Consumer(
       builder: (context, ref, _) {
         final lowRetentionAsync = ref.watch(lowRetentionWordsProvider);
@@ -113,7 +115,7 @@ class MasteryDashboardScreen extends ConsumerWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'SMART RETENTION RECOMMENDATION',
+                            l10n.translate('memory_retention').toUpperCase(),
                             style: AppTypography.label.copyWith(
                               color: AppColors.forest900,
                               fontWeight: FontWeight.bold,
@@ -142,7 +144,7 @@ class MasteryDashboardScreen extends ConsumerWidget {
                           ),
                           alignment: Alignment.center,
                           child: Text(
-                            'BOOST RETENTION (${list.length})',
+                            '${l10n.translate('start_srs_review')} (${list.length})',
                             style: AppTypography.label.copyWith(
                               color: Colors.black,
                               fontWeight: FontWeight.bold,
@@ -164,7 +166,7 @@ class MasteryDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildOverallMasteryCard(double mastery) {
+  Widget _buildOverallMasteryCard(double mastery, AppLocalization l10n) {
     return BrandCard(
       theme: BrandCardTheme.gold,
       padding: const EdgeInsets.all(28),
@@ -177,7 +179,7 @@ class MasteryDashboardScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'TOTAL MASTERY',
+                    l10n.translate('mastery_dashboard').toUpperCase(),
                     style: AppTypography.label.copyWith(
                       color: Colors.black54,
                       fontWeight: FontWeight.w900,
@@ -220,14 +222,14 @@ class MasteryDashboardScreen extends ConsumerWidget {
     ).animate().fadeIn().scale(delay: 200.ms);
   }
 
-  Widget _buildMasteryBreakdown(BuildContext context, Map<MasteryLevel, int> counts) {
+  Widget _buildMasteryBreakdown(BuildContext context, Map<MasteryLevel, int> counts, AppLocalization l10n) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'VOCABULARY STATUS',
+          l10n.translate('srs_stages_breakdown').toUpperCase(),
           style: AppTypography.label.copyWith(
             color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.4),
             letterSpacing: 2,
@@ -298,7 +300,7 @@ class MasteryDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildWeeklyTrend(BuildContext context, List<double> progress) {
+  Widget _buildWeeklyTrend(BuildContext context, List<double> progress, AppLocalization l10n) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BrandCard(
@@ -308,7 +310,7 @@ class MasteryDashboardScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'WEEKLY PROGRESS',
+            l10n.translate('wisdom_progression').toUpperCase(),
             style: AppTypography.label.copyWith(
               color: isDark ? AppColors.gold500 : AppColors.forest900.withValues(alpha: 0.5),
               letterSpacing: 2,
@@ -350,7 +352,7 @@ class MasteryDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildReviewAction(BuildContext context) {
+  Widget _buildReviewAction(BuildContext context, AppLocalization l10n) {
     return Consumer(
       builder: (context, ref, _) {
         final userId = ref.watch(authServiceProvider).currentUser?.uid;
@@ -381,14 +383,16 @@ class MasteryDashboardScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            hasDue ? '$count Words Ready for Review' : 'All Caught Up!',
+                            hasDue
+                                ? '${l10n.translate('words_due_review')} ($count)'
+                                : l10n.translate('no_words_due'),
                             style: AppTypography.h3.copyWith(
                               color: hasDue ? Colors.white : AppColors.forest900,
                               fontSize: 16,
                             ),
                           ),
                           Text(
-                            hasDue ? 'Keep your streak alive!' : 'Come back later for more reviews.',
+                            hasDue ? l10n.translate('keep_flame_alive') : l10n.translate('no_words_due'),
                             style: AppTypography.body.copyWith(
                               color: hasDue ? Colors.white60 : AppColors.forest700,
                               fontSize: 12,
@@ -402,15 +406,12 @@ class MasteryDashboardScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-            ).animate(target: hasDue ? 1 : 0).shimmer(duration: 2.seconds);
+            ).animate(target: hasDue ? 1 : 0).shimmer(duration: const Duration(seconds: 2));
           },
-          loading: () => AppShimmerSkeleton(height: 80, borderRadius: 24),
+          loading: () => const AppShimmerSkeleton(height: 80, borderRadius: 24),
           error: (_, __) => const SizedBox.shrink(),
         );
       },
     );
   }
 }
-
-
-

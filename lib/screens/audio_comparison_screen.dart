@@ -19,6 +19,7 @@ import '../models/voice_submission.dart';
 import '../services/firebase_service.dart';
 import '../services/supabase_storage_service.dart';
 import '../utils/audio_validator.dart';
+import '../utils/app_localization.dart';
 
 enum PracticeSource { words, phrases }
 
@@ -344,6 +345,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = ref.watch(localizationProvider);
 
     // Fetch data based on source
     final AsyncValue dataAsync = _source == PracticeSource.words
@@ -360,7 +362,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'AUDIO COMPARISON',
+          l10n.translate('audio_comparison'),
           style: AppTypography.label.copyWith(
             color: AppColors.gold500,
             letterSpacing: 2,
@@ -374,7 +376,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
               color: _isShuffled ? AppColors.gold500 : Colors.white70,
             ),
             onPressed: _toggleShuffle,
-            tooltip: 'Shuffle Content',
+            tooltip: l10n.translate('shuffle_content'),
           ),
         ],
       ),
@@ -416,7 +418,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildSourceSelector(isDark),
+                    _buildSourceSelector(isDark, l10n),
                     const SizedBox(height: 40),
                     Text(
                       'No ${_source.name} available yet.',
@@ -436,13 +438,13 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildSourceSelector(isDark),
+                    _buildSourceSelector(isDark, l10n),
                     const SizedBox(height: 24),
-                    _buildNativeSpeakerCard(isDark, currentItem),
+                    _buildNativeSpeakerCard(isDark, currentItem, l10n),
                     const SizedBox(height: 32),
-                    _buildUserRecordingCard(isDark),
+                    _buildUserRecordingCard(isDark, l10n),
                     const SizedBox(height: 32),
-                    if (_hasResult) _buildResultCard(isDark).animate().scale().fadeIn(),
+                    if (_hasResult) _buildResultCard(isDark, l10n).animate().scale().fadeIn(),
                   ],
                 ),
               ),
@@ -455,7 +457,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     );
   }
 
-  Widget _buildSourceSelector(bool isDark) {
+  Widget _buildSourceSelector(bool isDark, AppLocalization l10n) {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -465,8 +467,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _sourceButton(PracticeSource.words, 'WORDS', Icons.menu_book_rounded),
-          _sourceButton(PracticeSource.phrases, 'PHRASES', Icons.map_rounded),
+          _sourceButton(PracticeSource.words, l10n.translate('words_caps'), Icons.menu_book_rounded),
+          _sourceButton(PracticeSource.phrases, l10n.translate('phrases_caps'), Icons.map_rounded),
         ],
       ),
     );
@@ -504,7 +506,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     );
   }
 
-  Widget _buildNativeSpeakerCard(bool isDark, ComparisonItem item) {
+  Widget _buildNativeSpeakerCard(bool isDark, ComparisonItem item, AppLocalization l10n) {
     return Column(
       children: [
         BrandCard(
@@ -523,7 +525,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Native Speaker (${item.language})',
+                          l10n.translate('native_speaker', params: {'lang': item.language}),
                           style: AppTypography.label.copyWith(color: AppColors.gold500),
                         ),
                         Text(
@@ -562,7 +564,10 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
               ),
             ),
             Text(
-              'Item ${_currentIndex + 1} of ${_gameItems.length}',
+              l10n.translate('item_progress', params: {
+                'current': '${_currentIndex + 1}',
+                'total': '${_gameItems.length}',
+              }),
               style: AppTypography.mono.copyWith(color: Colors.white24, fontSize: 10),
             ),
             IconButton(
@@ -578,7 +583,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     );
   }
 
-  Widget _buildUserRecordingCard(bool isDark) {
+  Widget _buildUserRecordingCard(bool isDark, AppLocalization l10n) {
     return BrandCard(
       theme: BrandCardTheme.vibrant,
       padding: const EdgeInsets.all(24),
@@ -596,11 +601,11 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
               ),
             )
           else if (_isComparing)
-            const Column(
+            Column(
               children: [
-                CircularProgressIndicator(color: Colors.white),
-                SizedBox(height: 16),
-                Text('Comparing Tones...', style: TextStyle(color: Colors.white70)),
+                const CircularProgressIndicator(color: Colors.white),
+                const SizedBox(height: 16),
+                Text(l10n.translate('comparing_tones'), style: const TextStyle(color: Colors.white70)),
               ],
             )
           else
@@ -608,7 +613,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           
           const SizedBox(height: 24),
           BrandButton(
-            text: _isRecording ? 'STOP & COMPARE' : 'START RECORDING',
+            text: _isRecording ? l10n.translate('stop_and_compare') : l10n.translate('start_recording'),
             onTap: _isComparing ? null : _toggleRecording,
             type: _isRecording ? BrandButtonType.primary : BrandButtonType.secondary,
             icon: _isRecording ? Icons.stop_rounded : Icons.mic_rounded,
@@ -618,19 +623,19 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     );
   }
 
-  Widget _buildResultCard(bool isDark) {
+  Widget _buildResultCard(bool isDark, AppLocalization l10n) {
     final percentage = (_score * 100).toInt();
     
     // Determine color and feedback based on MFCC similarity
     Color scoreColor = AppColors.gold500;
-    String feedback = 'Good effort! Focus on the vowel length.';
+    String feedback = l10n.translate('feedback_good_effort');
     
     if (_score >= 0.8) {
       scoreColor = Colors.greenAccent;
-      feedback = 'Excellent! Your tones are true.';
+      feedback = l10n.translate('feedback_excellent');
     } else if (_score < 0.6) {
       scoreColor = Colors.orangeAccent;
-      feedback = 'Needs work. Try matching the elder\'s rhythm.';
+      feedback = l10n.translate('feedback_needs_work');
     }
 
     return BrandCard(
@@ -639,7 +644,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       child: Column(
         children: [
           Text(
-            'ACOUSTIC MATCH',
+            l10n.translate('acoustic_match'),
             style: AppTypography.label.copyWith(color: Colors.black54, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
@@ -657,10 +662,10 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('REWARD:', style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold)),
+              Text(l10n.translate('reward'), style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.bold)),
               const SizedBox(width: 8),
               const Icon(Icons.flash_on, color: Colors.black, size: 16),
-              const Text(' +15 XP', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              Text(' +15 XP', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
             ],
           ),
         ],

@@ -8,6 +8,7 @@ import '../widgets/brand_background.dart';
 import '../services/offline_service.dart';
 import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
+import '../utils/app_localization.dart';
 import 'dart:async';
 
 class OfflineWisdomScreen extends ConsumerStatefulWidget {
@@ -23,6 +24,7 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = ref.watch(localizationProvider);
     final lessonCountAsync = ref.watch(offlineLessonCountProvider);
     final dictionaryCountAsync = ref.watch(offlineDictionaryCountProvider);
     final artifactCountAsync = ref.watch(offlineArtifactCountProvider);
@@ -33,7 +35,7 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(context),
+              _buildHeader(context, l10n),
               if (_isSyncing)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
@@ -49,7 +51,7 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Syncing Ancestral Knowledge... ${(_syncProgress * 100).toInt()}%',
+                        l10n.translate('syncing_ancestral_knowledge', params: {'percent': '${(_syncProgress * 100).toInt()}'}),
                         style: AppTypography.label.copyWith(color: AppColors.gold500, fontSize: 10),
                       ),
                     ],
@@ -64,54 +66,55 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
                     children: [
                       _buildStorageOverview(
                         context,
+                        l10n,
                         lessonCountAsync.value ?? 0,
                         dictionaryCountAsync.value ?? 0,
                         artifactCountAsync.value ?? 0,
                       ),
                       const SizedBox(height: 32),
-                      _sectionLabel('OFFLINE MODULES'),
+                      _sectionLabel(l10n.translate('offline_modules')),
                       const SizedBox(height: 16),
                       _buildSyncTile(
                         context,
-                        'Dictionary Core',
-                        '${dictionaryCountAsync.value ?? 0} approved words cached',
+                        l10n.translate('dictionary_core'),
+                        l10n.translate('approved_words_cached', params: {'count': '${dictionaryCountAsync.value ?? 0}'}),
                         '${((dictionaryCountAsync.value ?? 0) * 0.01).toStringAsFixed(1)} MB',
                         (dictionaryCountAsync.value ?? 0) > 0,
                       ),
                       const SizedBox(height: 12),
                       _buildSyncTile(
                         context,
-                        'Lesson Archive',
-                        '${lessonCountAsync.value ?? 0} modules available offline',
+                        l10n.translate('lesson_archive'),
+                        l10n.translate('modules_available_offline', params: {'count': '${lessonCountAsync.value ?? 0}'}),
                         '${((lessonCountAsync.value ?? 0) * 0.5).toStringAsFixed(1)} MB',
                         (lessonCountAsync.value ?? 0) > 0,
                       ),
                       const SizedBox(height: 12),
                       _buildSyncTile(
                         context,
-                        'Artifact Archive',
-                        '${artifactCountAsync.value ?? 0} sacred items archived',
+                        l10n.translate('artifact_archive'),
+                        l10n.translate('sacred_items_archived', params: {'count': '${artifactCountAsync.value ?? 0}'}),
                         '${((artifactCountAsync.value ?? 0) * 0.05).toStringAsFixed(1)} MB',
                         (artifactCountAsync.value ?? 0) > 0,
                       ),
                       const SizedBox(height: 32),
-                      _sectionLabel('MANAGEMENT'),
+                      _sectionLabel(l10n.translate('management')),
                       const SizedBox(height: 16),
                       _buildActionCard(
                         context,
                         Icons.sync_rounded,
-                        'Sync All Wisdom',
-                        'Update all offline data to the latest versions',
-                        onTap: _isSyncing ? null : () => _handleSyncAll(),
+                        l10n.translate('sync_all_wisdom'),
+                        l10n.translate('sync_all_desc'),
+                        onTap: _isSyncing ? null : () => _handleSyncAll(l10n),
                       ),
                       const SizedBox(height: 12),
                       _buildActionCard(
                         context,
                         Icons.delete_sweep_rounded,
-                        'Clear Cache',
-                        'Remove all downloaded assets to free up space',
+                        l10n.translate('clear_cache'),
+                        l10n.translate('clear_cache_desc'),
                         isDanger: true,
-                        onTap: _isSyncing ? null : () => _showClearConfirmation(),
+                        onTap: _isSyncing ? null : () => _showClearConfirmation(l10n),
                       ),
                       const SizedBox(height: 40),
                     ],
@@ -125,7 +128,7 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, AppLocalization l10n) {
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Row(
@@ -143,7 +146,7 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
           ),
           const SizedBox(width: 16),
           Text(
-            'Offline Wisdom',
+            l10n.translate('offline_wisdom'),
             style: AppTypography.h2ExtraBold.copyWith(
               color: Theme.of(context).brightness == Brightness.dark
                   ? Colors.white
@@ -165,7 +168,7 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
         ),
       );
 
-  Widget _buildStorageOverview(BuildContext context, int lessons, int words, int artifacts) {
+  Widget _buildStorageOverview(BuildContext context, AppLocalization l10n, int lessons, int words, int artifacts) {
     // Estimating 10KB per word, 500KB per lesson, 50KB per artifact
     double mbUsed = (words * 0.01) + (lessons * 0.5) + (artifacts * 0.05);
     double pct = (mbUsed / 200).clamp(0.05, 1.0); // 200MB as a theoretical "full" cache limit
@@ -181,14 +184,14 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'OFFLINE STORAGE',
+                l10n.translate('offline_storage'),
                 style: AppTypography.label.copyWith(
                   color: Colors.black54,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
-                '${mbUsed.toStringAsFixed(1)} MB USED',
+                l10n.translate('mb_used', params: {'mb': mbUsed.toStringAsFixed(1)}),
                 style: AppTypography.mono.copyWith(
                   color: Colors.black,
                   fontWeight: FontWeight.bold,
@@ -209,7 +212,7 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Capacity managed by village protocols.',
+            l10n.translate('capacity_village_protocols'),
             style: AppTypography.body.copyWith(
               color: Colors.black54,
               fontSize: 11,
@@ -275,7 +278,7 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
           ),
           if (!isSynced)
             IconButton(
-              onPressed: _handleSyncAll,
+              onPressed: () => _handleSyncAll(ref.read(localizationProvider)),
               icon: const Icon(
                 Icons.download_rounded,
                 color: AppColors.gold500,
@@ -332,7 +335,7 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
     );
   }
 
-  Future<void> _handleSyncAll() async {
+  Future<void> _handleSyncAll(AppLocalization l10n) async {
     setState(() {
       _isSyncing = true;
       _syncProgress = 0.1;
@@ -367,13 +370,13 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ancestral knowledge successfully cached!'), backgroundColor: AppColors.semanticGreen),
+          SnackBar(content: Text(l10n.translate('wisdom_cached_success')), backgroundColor: AppColors.semanticGreen),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sync failed: $e'), backgroundColor: AppColors.semanticRed),
+          SnackBar(content: Text(l10n.translate('sync_failed', params: {'error': '$e'})), backgroundColor: AppColors.semanticRed),
         );
       }
     } finally {
@@ -381,18 +384,18 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
     }
   }
 
-  void _showClearConfirmation() {
+  void _showClearConfirmation(AppLocalization l10n) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.forest800,
-        title: const Text('Clear Wisdom Cache?', style: TextStyle(color: Colors.white)),
-        content: const Text(
-          'All offline lessons and dictionary terms will be removed from this device. You will need a connection to access them again.',
-          style: TextStyle(color: Colors.white70),
+        title: Text(l10n.translate('clear_wisdom_cache_title'), style: const TextStyle(color: Colors.white)),
+        content: Text(
+          l10n.translate('clear_wisdom_cache_desc'),
+          style: const TextStyle(color: Colors.white70),
         ),
         actions: [
-          TextButton(onPressed: () => context.pop(), child: const Text('CANCEL')),
+          TextButton(onPressed: () => context.pop(), child: Text(l10n.translate('cancel'))),
           ElevatedButton(
             onPressed: () async {
               await ref.read(offlineServiceProvider).clearCache();
@@ -402,11 +405,11 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
               ref.invalidate(cachedArtifactsProvider);
               if (context.mounted) {
                 context.pop();
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cache cleared.')));
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.translate('cache_cleared'))));
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticRed),
-            child: const Text('CLEAR ALL'),
+            child: Text(l10n.translate('clear_all')),
           ),
         ],
       ),

@@ -184,7 +184,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  '+$maxXP Peak',
+                  '+$maxXP ${l10n.translate('peak')}',
                   style: AppTypography.mono.copyWith(color: AppColors.gold500, fontSize: 10),
                 ),
               ],
@@ -311,7 +311,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
                       ),
                     ),
                     Text(
-                      'ACCURACY',
+                      l10n.translate('accuracy'),
                       style: AppTypography.label.copyWith(
                         color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.5),
                         fontSize: 8,
@@ -372,7 +372,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        'CRITICAL',
+                        l10n.translate('critical'),
                         style: AppTypography.label.copyWith(color: AppColors.semanticRed, fontSize: 8, fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -386,7 +386,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
                   children: taskStruggles.entries.map((ts) {
                     final intensity = ts.value / maxStumble;
                     return Tooltip(
-                      message: 'Task ${ts.key}: ${ts.value} slips',
+                      message: '${l10n.translate('task')} ${ts.key}: ${ts.value} ${l10n.translate('slips')}',
                       child: Container(
                         width: 40,
                         height: 40,
@@ -417,7 +417,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Color intensity represents frequency of learner slips.',
+                  l10n.translate('heatmap_intensity_desc'),
                   style: AppTypography.label.copyWith(
                     color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
                     fontSize: 8,
@@ -563,7 +563,7 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
   }
 
   Widget _emptyState(String message, AppLocalization l10n) => BrandedEmptyState(
-    title: 'Trail is Fresh',
+    title: l10n.translate('trail_fresh_title'),
     message: message,
     icon: Icons.analytics_outlined,
   );

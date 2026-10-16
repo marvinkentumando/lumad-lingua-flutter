@@ -232,144 +232,162 @@ class LearnerProfileScreen extends ConsumerWidget {
     Map<String, dynamic>? profile,
     AppLocalization l10n,
   ) {
+    final bool isLearner = role == UserRole.learner;
+    final bool isAdmin = profile?['role']?.toString().toLowerCase() == 'admin';
+    final bool isEducator = role == UserRole.educator;
+    final String userId = user?.uid ?? '';
+
+    final List<Widget> items = [
+      Text(
+        l10n.translate('journey_management'),
+        style: AppTypography.h3.copyWith(
+          color: AppColors.gold500,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      const SizedBox(height: 20),
+      _buildManagementTile(
+        context,
+        Icons.settings_suggest_rounded,
+        l10n.translate('edit_profile'),
+        l10n.translate('update_location_bio'),
+        onTap: () => _showEditProfileDialog(
+          context,
+          ref,
+          userId: userId,
+          profile: profile,
+          l10n: l10n,
+        ),
+      ),
+      const SizedBox(height: 12),
+      _buildManagementTile(
+        context,
+        Icons.translate_rounded,
+        'App Language',
+        ref.watch(userPreferencesProvider).appLanguage.toUpperCase(),
+        onTap: () => _showLanguageSelector(context, ref, l10n),
+      ),
+      const SizedBox(height: 12),
+    ];
+
+    if (!isAdmin && !isEducator) {
+      items.add(
+        _buildManagementTile(
+          context,
+          Icons.trending_up_rounded,
+          l10n.translate('wisdom_progression'),
+          l10n.translate('wisdom_requirements'),
+          onTap: () => context.push('/wisdom-progression'),
+        ),
+      );
+      items.add(const SizedBox(height: 12));
+    }
+
+    items.addAll([
+      _buildManagementTile(
+        context,
+        Icons.notifications_active_rounded,
+        l10n.translate('notification_sanctuary'),
+        l10n.translate('notification_desc'),
+        onTap: () => context.push('/notifications'),
+      ),
+      const SizedBox(height: 12),
+      _buildManagementTile(
+        context,
+        Icons.alarm_rounded,
+        'Daily Streak Reminders',
+        'Set daily practice alerts & schedule',
+        onTap: () => showStreakReminderSettingsDialog(context),
+      ),
+      const SizedBox(height: 12),
+      _buildManagementTile(
+        context,
+        Icons.security_rounded,
+        l10n.translate('data_privacy'),
+        l10n.translate('data_privacy_desc'),
+        onTap: () => context.push('/privacy-settings'),
+      ),
+      const SizedBox(height: 12),
+      _buildManagementTile(
+        context,
+        Icons.cloud_download_rounded,
+        l10n.translate('offline_wisdom'),
+        l10n.translate('offline_wisdom_desc'),
+        onTap: () => context.push('/offline-wisdom'),
+      ),
+      const SizedBox(height: 12),
+      _buildManagementTile(
+        context,
+        Theme.of(context).brightness == Brightness.dark
+            ? Icons.light_mode_rounded
+            : Icons.dark_mode_rounded,
+        Theme.of(context).brightness == Brightness.dark
+            ? l10n.translate('light_sanctuary')
+            : l10n.translate('dark_forest'),
+        l10n.translate('switch_themes'),
+        onTap: () {
+          ref.read(themeProvider.notifier).toggleTheme();
+        },
+      ),
+      const SizedBox(height: 12),
+    ]);
+
+    if (isLearner) {
+      items.add(
+        _buildManagementTile(
+          context,
+          Icons.fort_rounded,
+          profile?['educatorId'] == null
+              ? l10n.translate('join_village')
+              : 'My Village Sanctuary 🌿',
+          profile?['educatorId'] == null
+              ? l10n.translate('join_village_desc')
+              : 'View announcements, leaderboard & tribe stats',
+          onTap: () => profile?['educatorId'] == null
+              ? _showJoinVillageDialog(context, ref, userId, l10n)
+              : context.push('/village-dashboard'),
+        ),
+      );
+      items.add(const SizedBox(height: 12));
+      items.add(
+        _buildManagementTile(
+          context,
+          Icons.forum_rounded,
+          l10n.translate('send_feedback'),
+          l10n.translate('feedback_desc'),
+          onTap: () => _showFeedbackDialog(context, ref, profile, l10n),
+        ),
+      );
+      items.add(const SizedBox(height: 12));
+    }
+
+    if (isAdmin) {
+      items.add(
+        _buildManagementTile(
+          context,
+          ref.watch(isSimulatingProvider)
+              ? Icons.admin_panel_settings_rounded
+              : Icons.supervised_user_circle_rounded,
+          ref.watch(isSimulatingProvider)
+              ? l10n.translate('exit_simulation')
+              : l10n.translate('simulation_mode'),
+          ref.watch(isSimulatingProvider)
+              ? l10n.translate('admin_overview')
+              : l10n.translate('test_content_desc'),
+          onTap: () => ref.read(isSimulatingProvider.notifier).state =
+              !ref.read(isSimulatingProvider),
+        ),
+      );
+      items.add(const SizedBox(height: 12));
+    }
+
+    items.add(const SizedBox(height: 40));
+    items.add(_buildLogOut(context, ref, l10n));
+    items.add(const SizedBox(height: 40));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n.translate('journey_management'),
-          style: AppTypography.h3.copyWith(
-            color: AppColors.gold500,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 20),
-        _buildManagementTile(
-          context,
-          Icons.settings_suggest_rounded,
-          l10n.translate('edit_profile'),
-          l10n.translate('update_location_bio'),
-          onTap: () => _showEditProfileDialog(
-            context,
-            ref,
-            userId: user?.uid ?? '',
-            profile: profile,
-            l10n: l10n,
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildManagementTile(
-          context,
-          Icons.translate_rounded,
-          'App Language',
-          ref.watch(userPreferencesProvider).appLanguage.toUpperCase(),
-          onTap: () => _showLanguageSelector(context, ref, l10n),
-        ),
-        const SizedBox(height: 12),
-        if (profile?['role']?.toString().toLowerCase() != 'admin' &&
-            role != UserRole.educator) ...[
-          _buildManagementTile(
-            context,
-            Icons.trending_up_rounded,
-            l10n.translate('wisdom_progression'),
-            l10n.translate('wisdom_requirements'),
-            onTap: () => context.push('/wisdom-progression'),
-          ),
-          const SizedBox(height: 12),
-        ],
-        _buildManagementTile(
-          context,
-          Icons.notifications_active_rounded,
-          l10n.translate('notification_sanctuary'),
-          l10n.translate('notification_desc'),
-          onTap: () => context.push('/notifications'),
-        ),
-        const SizedBox(height: 12),
-          _buildManagementTile(
-            context,
-            Icons.alarm_rounded,
-            'Daily Streak Reminders',
-            'Set daily practice alerts & schedule',
-            onTap: () => showStreakReminderSettingsDialog(context),
-          ),
-          const SizedBox(height: 12),
-        ],
-        _buildManagementTile(
-          context,
-          Icons.security_rounded,
-          l10n.translate('data_privacy'),
-          l10n.translate('data_privacy_desc'),
-          onTap: () => context.push('/privacy-settings'),
-        ),
-        const SizedBox(height: 12),
-        _buildManagementTile(
-          context,
-          Icons.cloud_download_rounded,
-          l10n.translate('offline_wisdom'),
-          l10n.translate('offline_wisdom_desc'),
-          onTap: () => context.push('/offline-wisdom'),
-        ),
-        const SizedBox(height: 12),
-        _buildManagementTile(
-          context,
-          Theme.of(context).brightness == Brightness.dark
-              ? Icons.light_mode_rounded
-              : Icons.dark_mode_rounded,
-          Theme.of(context).brightness == Brightness.dark
-              ? l10n.translate('light_sanctuary')
-              : l10n.translate('dark_forest'),
-          l10n.translate('switch_themes'),
-          onTap: () => ref.read(themeProvider.notifier).toggleTheme(),
-        ),
-        const SizedBox(height: 12),
-        if (role == UserRole.learner) ...[
-          if (profile?['educatorId'] == null) ...[
-            _buildManagementTile(
-              context,
-              Icons.fort_rounded,
-              l10n.translate('join_village'),
-              l10n.translate('join_village_desc'),
-              onTap: () => _showJoinVillageDialog(context, ref, user?.uid ?? '', l10n),
-            ),
-            const SizedBox(height: 12),
-          ] else ...[
-            _buildManagementTile(
-              context,
-              Icons.fort_rounded,
-              'My Village Sanctuary 🌿',
-              'View announcements, leaderboard & tribe stats',
-              onTap: () => context.push('/village-dashboard'),
-            ),
-            const SizedBox(height: 12),
-          ],
-          _buildManagementTile(
-            context,
-            Icons.forum_rounded,
-            l10n.translate('send_feedback'),
-            l10n.translate('feedback_desc'),
-            onTap: () => _showFeedbackDialog(context, ref, profile, l10n),
-          ),
-          const SizedBox(height: 12),
-        ],
-        if (profile?['role']?.toString().toLowerCase() == 'admin') ...[
-          _buildManagementTile(
-            context,
-            ref.watch(isSimulatingProvider) 
-                ? Icons.admin_panel_settings_rounded 
-                : Icons.supervised_user_circle_rounded,
-            ref.watch(isSimulatingProvider) 
-                ? l10n.translate('exit_simulation') 
-                : l10n.translate('simulation_mode'),
-            ref.watch(isSimulatingProvider)
-                ? l10n.translate('admin_overview')
-                : l10n.translate('test_content_desc'),
-            onTap: () => ref.read(isSimulatingProvider.notifier).state = !ref.read(isSimulatingProvider),
-          ),
-          const SizedBox(height: 12),
-        ],
-        const SizedBox(height: 40),
-        _buildLogOut(context, ref, l10n),
-        const SizedBox(height: 40),
-      ],
+      children: items,
     ).animate().fadeIn(delay: 600.ms).slideY(begin: 0.1);
   }
 

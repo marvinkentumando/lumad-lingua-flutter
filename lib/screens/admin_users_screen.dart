@@ -16,6 +16,7 @@ import '../widgets/brand_search_bar.dart';
 import '../widgets/brand_text_field.dart';
 import '../widgets/branded_empty_state.dart';
 import '../providers/admin_users_provider.dart';
+import '../utils/app_localization.dart';
 
 class AdminUsersScreen extends ConsumerStatefulWidget {
   const AdminUsersScreen({super.key});
@@ -67,6 +68,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     final usersState = ref.watch(adminUsersProvider);
     final filtered = _getFiltered(usersState.users);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -76,17 +78,17 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
             SafeArea(
               child: Column(
                 children: [
-                  _buildHeader(context),
+                  _buildHeader(context, l10n),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                     child: BrandSearchBar(
                       controller: _searchCtrl,
-                      hintText: 'Search by name or email...',
+                      hintText: l10n.translate('search_users_placeholder'),
                       onChanged: (v) => setState(() => _userSearch = v),
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _buildRoleTabs(),
+                  _buildRoleTabs(l10n),
                   Expanded(
                     child: Column(
                       children: [
@@ -194,7 +196,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     );
   }
 
-  Widget _buildRoleTabs() {
+  Widget _buildRoleTabs(AppLocalization l10n) {
     final roles = [
       'All',
       'Admin',
@@ -208,6 +210,13 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
       child: Row(
         children: roles.map((r) {
           final isSelected = _roleFilter == r;
+          final String displayLabel = r == 'All'
+              ? l10n.translate('role_filter_all')
+              : r == 'Admin'
+                  ? l10n.translate('role_admin')
+                  : r == 'Educator'
+                      ? l10n.translate('role_educator')
+                      : l10n.translate('role_learner');
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: GestureDetector(
@@ -218,7 +227,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               });
             },
               child: Chip(
-                label: Text(r),
+                label: Text(displayLabel),
                 backgroundColor: isSelected
                     ? AppColors.gold500
                     : (isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.forest900.withValues(alpha: 0.05)),
@@ -236,7 +245,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, AppLocalization l10n) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -276,7 +285,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   ),
                 ),
                 Text(
-                  'User Management',
+                  l10n.translate('user_management'),
                   style: TextStyle(
                     color: isDark ? Colors.white.withValues(alpha: 0.3) : AppColors.forest900.withValues(alpha: 0.3),
                     fontSize: 11,

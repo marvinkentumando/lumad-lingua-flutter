@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../services/haptic_service.dart';
+import '../utils/app_localization.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -17,9 +18,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentIndex = 0;
 
+  void _onActionButtonPressed() {
+    if (_currentIndex == 2) {
+      context.go('/login');
+    } else {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeOutQuart,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = ref.watch(localizationProvider);
+
     return Scaffold(
       backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
       body: Stack(
@@ -57,28 +71,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             children: [
               _buildNarrativePage(
                 context,
-                title: "The Echoes Fade",
-                subtitle: "OUR ANCESTRAL VOICES",
-                description:
-                    "The sacred languages of our tribes are fading like mist at dawn. You have been chosen to gather the remaining echoes.",
+                title: l10n.translate('onboarding_title_1'),
+                subtitle: l10n.translate('onboarding_sub_1'),
+                description: l10n.translate('onboarding_desc_1'),
                 image: 'assets/images/lumad_waves.gif',
                 accentColor: AppColors.gold500,
               ),
               _buildNarrativePage(
                 context,
-                title: "The Ancestral Vault",
-                subtitle: "SACRED KNOWLEDGE",
-                description:
-                    "Every word you learn restores a piece of our history. Unlock ancient artifacts and rebuild the legacy of our people.",
+                title: l10n.translate('onboarding_title_2'),
+                subtitle: l10n.translate('onboarding_sub_2'),
+                description: l10n.translate('onboarding_desc_2'),
                 icon: Icons.auto_awesome,
                 accentColor: isDark ? Colors.cyanAccent : AppColors.semanticBlue,
               ),
               _buildNarrativePage(
                 context,
-                title: "Your Tribal Journey",
-                subtitle: "WISDOM AWAITS",
-                description:
-                    "Join the Warriors' Circle and compete in ritual duels. The path to mastery is long, but the elders walk with you.",
+                title: l10n.translate('onboarding_title_3'),
+                subtitle: l10n.translate('onboarding_sub_3'),
+                description: l10n.translate('onboarding_desc_3'),
                 icon: Icons.fort_rounded,
                 accentColor: isDark ? Colors.orangeAccent : AppColors.terracotta,
               ),
@@ -95,17 +106,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 _buildIndicator(isDark),
                 const SizedBox(height: 40),
                 _buildActionButton(
-                  _currentIndex == 2 ? "BEGIN THE RITUAL" : "CONTINUE",
-                  () {
-                    if (_currentIndex == 2) {
-                      context.go('/login');
-                    } else {
-                      _pageController.nextPage(
-                        duration: 600.ms,
-                        curve: Curves.easeOutQuart,
-                      );
-                    }
-                  },
+                  _currentIndex == 2
+                      ? l10n.translate('begin_ritual')
+                      : l10n.translate('continue').toUpperCase(),
+                  _onActionButtonPressed,
                 ),
               ],
             ),

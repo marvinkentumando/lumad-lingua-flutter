@@ -7,6 +7,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/streak_reminder_settings_dialog.dart';
+import '../utils/app_localization.dart';
 import 'package:go_router/go_router.dart';
 
 class NotificationScreen extends ConsumerStatefulWidget {
@@ -64,18 +65,19 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).value;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = ref.watch(localizationProvider);
 
     if (user == null) {
       return Scaffold(
         backgroundColor: isDark ? AppColors.forest800 : AppColors.creamBg,
         appBar: AppBar(
-          title: const Text('Notifications'),
+          title: Text(l10n.translate('notifications')),
           backgroundColor: Colors.transparent,
           elevation: 0,
         ),
         body: Center(
           child: Text(
-            "Please login to view notifications.",
+            l10n.translate('please_login_notifications'),
             style: TextStyle(color: isDark ? Colors.white : AppColors.forest900),
           ),
         ),
@@ -89,7 +91,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     return Scaffold(
       backgroundColor: isDark ? AppColors.forest800 : AppColors.creamBg,
       appBar: AppBar(
-        title: const Text('Sanctuary Echoes'),
+        title: Text(l10n.translate('sanctuary_echoes')),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
@@ -99,7 +101,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.alarm_rounded, color: AppColors.gold500),
-            tooltip: 'Streak Reminders',
+            tooltip: l10n.translate('daily_streak_reminders'),
             onPressed: () => showStreakReminderSettingsDialog(context),
           ),
         ],
@@ -107,22 +109,22 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       body: notificationsAsync.when(
         loading: () => _limit == 20
             ? const Center(child: CircularProgressIndicator(color: AppColors.gold500))
-            : _buildUnifiedList(notificationsAsync.value ?? []),
+            : _buildUnifiedList(notificationsAsync.value ?? [], l10n),
         error: (err, stack) => Center(
           child: Text(
-            "Error loading echoes: $err",
+            l10n.translate('error_loading_echoes', params: {'error': err.toString()}),
             style: TextStyle(color: isDark ? Colors.white : AppColors.semanticRed),
           ),
         ),
-        data: (notifications) => _buildUnifiedList(notifications),
+        data: (notifications) => _buildUnifiedList(notifications, l10n),
       ),
     );
   }
 
-  Widget _buildUnifiedList(List<Map<String, dynamic>> notifications) {
+  Widget _buildUnifiedList(List<Map<String, dynamic>> notifications, AppLocalization l10n) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     if (notifications.isEmpty) {
-      return _buildEmptyState("🌿", "The village is quiet.", "Your tribal journey's updates will appear here.");
+      return _buildEmptyState("🌿", l10n.translate('village_quiet'), l10n.translate('journey_updates_here'));
     }
 
     final currentUser = ref.read(authStateProvider).value;
@@ -146,7 +148,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         
         // Social fields
         final senderId = n['senderId'] as String?;
-        final senderName = n['senderName'] as String? ?? 'Tribe Member';
+        final senderName = n['senderName'] as String? ?? l10n.translate('tribe_member');
         final senderPhotoUrl = n['senderPhotoUrl'] as String?;
         
         // System fields
@@ -159,16 +161,16 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         if (timestamp is Timestamp) {
           final diff = DateTime.now().difference(timestamp.toDate());
           if (diff.inSeconds < 60) {
-            relativeTime = 'just now';
+            relativeTime = l10n.translate('just_now');
           } else if (diff.inMinutes < 60) {
-            relativeTime = '${diff.inMinutes}m ago';
+            relativeTime = l10n.translate('mins_ago', params: {'mins': '${diff.inMinutes}'});
           } else if (diff.inHours < 24) {
-            relativeTime = '${diff.inHours}h ago';
+            relativeTime = l10n.translate('hours_ago', params: {'hours': '${diff.inHours}'});
           } else {
-            relativeTime = '${diff.inDays}d ago';
+            relativeTime = l10n.translate('days_ago', params: {'days': '${diff.inDays}'});
           }
         } else {
-          relativeTime = 'recently';
+          relativeTime = l10n.translate('recently');
         }
 
         return Padding(

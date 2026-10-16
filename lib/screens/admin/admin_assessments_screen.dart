@@ -10,6 +10,7 @@ import '../../models/assessment.dart';
 import '../../widgets/brand_card.dart';
 import '../../widgets/brand_background.dart';
 import '../../widgets/branded_empty_state.dart';
+import '../../utils/app_localization.dart';
 
 class AdminAssessmentsScreen extends ConsumerWidget {
   const AdminAssessmentsScreen({super.key});
@@ -18,6 +19,7 @@ class AdminAssessmentsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final assessmentsAsync = ref.watch(assessmentResultsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -25,19 +27,19 @@ class AdminAssessmentsScreen extends ConsumerWidget {
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(context, isDark),
+              _buildHeader(context, isDark, l10n),
               Expanded(
                 child: assessmentsAsync.when(
                   data: (data) => data.isEmpty
-                      ? const BrandedEmptyState(
-                          title: 'No Assessments Yet',
-                          message: 'Learning effectiveness tests will appear here once learners complete them.',
+                      ? BrandedEmptyState(
+                          title: l10n.translate('no_assessments_title'),
+                          message: l10n.translate('no_assessments_message'),
                           icon: Icons.assignment_turned_in_rounded,
                         )
                       : ListView.builder(
                           padding: const EdgeInsets.all(20),
                           itemCount: data.length,
-                          itemBuilder: (context, index) => _buildAssessmentCard(data[index], isDark, index),
+                          itemBuilder: (context, index) => _buildAssessmentCard(data[index], isDark, index, l10n),
                         ),
                   loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
                   error: (e, _) => Center(child: Text('Error: $e')),
@@ -50,7 +52,7 @@ class AdminAssessmentsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, bool isDark) {
+  Widget _buildHeader(BuildContext context, bool isDark, AppLocalization l10n) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
@@ -61,7 +63,7 @@ class AdminAssessmentsScreen extends ConsumerWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            'EFFECTIVENESS ASSESSMENTS',
+            l10n.translate('effectiveness_assessments'),
             style: AppTypography.label.copyWith(
               color: AppColors.gold500,
               letterSpacing: 2,
@@ -73,7 +75,7 @@ class AdminAssessmentsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildAssessmentCard(AssessmentResult assessment, bool isDark, int index) {
+  Widget _buildAssessmentCard(AssessmentResult assessment, bool isDark, int index, AppLocalization l10n) {
     return BrandCard(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
@@ -91,7 +93,7 @@ class AdminAssessmentsScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  assessment.type == AssessmentType.preTest ? 'PRE-TEST' : 'POST-TEST',
+                  assessment.type == AssessmentType.preTest ? l10n.translate('pre_test') : l10n.translate('post_test'),
                   style: AppTypography.label.copyWith(
                     color: assessment.type == AssessmentType.preTest ? AppColors.semanticBlue : AppColors.forest900,
                     fontWeight: FontWeight.bold,
@@ -107,12 +109,12 @@ class AdminAssessmentsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'User ID: ${assessment.userId}',
+            '${l10n.translate('user_id')}: ${assessment.userId}',
             style: AppTypography.mono.copyWith(fontSize: 10, color: Colors.black45),
           ),
           if (assessment.lessonTitle != null || assessment.lessonId != null)
             Text(
-              'Lesson: ${assessment.lessonTitle ?? assessment.lessonId}',
+              '${l10n.translate('lesson')}: ${assessment.lessonTitle ?? assessment.lessonId}',
               style: AppTypography.body.copyWith(fontSize: 12, fontWeight: FontWeight.bold),
             ),
           if (assessment.ratingScore != null) ...[
@@ -131,7 +133,7 @@ class AdminAssessmentsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '${assessment.ratingScore}/5 Stars',
+                  l10n.translate('stars_count', params: {'count': '${assessment.ratingScore}'}),
                   style: AppTypography.mono.copyWith(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,

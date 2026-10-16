@@ -9,6 +9,7 @@ import '../../services/pronunciation_service.dart';
 import '../../widgets/brand_card.dart';
 import '../../widgets/brand_button.dart';
 import '../../widgets/brand_background.dart';
+import '../../utils/app_localization.dart';
 
 class AlgorithmSelectionScreen extends ConsumerStatefulWidget {
   const AlgorithmSelectionScreen({super.key});
@@ -38,38 +39,45 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
   Widget build(BuildContext context) {
     final configAsync = ref.watch(appConfigProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: BrandBackground(
         child: SafeArea(
           child: configAsync.when(
-            data: (config) => _buildContent(config, isDark),
+            data: (config) => _buildContent(config, isDark, l10n),
             loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
-            error: (e, _) => Center(child: Text('Error loading config: $e')),
+            error: (e, _) => Center(child: Text('${l10n.translate('error_loading_config')}: $e')),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildContent(dynamic config, bool isDark) {
+  Widget _buildContent(dynamic config, bool isDark, AppLocalization l10n) {
     return Column(
       children: [
-        _buildAppBar(isDark),
+        _buildAppBar(isDark, l10n),
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSectionHeader('Sentiment Analysis Models', 'Evaluation based on labeled community posts'),
+                _buildSectionHeader(
+                  l10n.translate('sentiment_analysis_models'),
+                  l10n.translate('sentiment_eval_desc'),
+                ),
                 const SizedBox(height: 16),
-                _buildSentimentGrid(config, isDark),
+                _buildSentimentGrid(config, isDark, l10n),
                 const SizedBox(height: 40),
-                _buildSectionHeader('Pronunciation Algorithms', 'Evaluation based on acoustic tone similarity'),
+                _buildSectionHeader(
+                  l10n.translate('pronunciation_algorithms'),
+                  l10n.translate('pronunciation_eval_desc'),
+                ),
                 const SizedBox(height: 16),
-                _buildPronunciationGrid(config, isDark),
+                _buildPronunciationGrid(config, isDark, l10n),
                 const SizedBox(height: 80),
               ],
             ),
@@ -79,7 +87,7 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
     );
   }
 
-  Widget _buildAppBar(bool isDark) {
+  Widget _buildAppBar(bool isDark, AppLocalization l10n) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: Row(
@@ -90,7 +98,7 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
           ),
           const SizedBox(width: 8),
           Text(
-            'MODEL DEPLOYMENT CONTROL',
+            l10n.translate('model_deployment_control'),
             style: AppTypography.label.copyWith(
               color: AppColors.gold500,
               letterSpacing: 2,
@@ -112,7 +120,7 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
     );
   }
 
-  Widget _buildSentimentGrid(dynamic config, bool isDark) {
+  Widget _buildSentimentGrid(dynamic config, bool isDark, AppLocalization l10n) {
     final sentimentService = ref.read(sentimentServiceProvider);
     
     return Column(
@@ -124,17 +132,18 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
           title: _getSentimentModelName(model),
           isSelected: isSelected,
           metrics: {
-            'Accuracy': '${(metrics.accuracy * 100).toStringAsFixed(1)}%',
-            'F1-Score': metrics.f1Score.toStringAsFixed(2),
-            'Precision': metrics.precision.toStringAsFixed(2),
+            l10n.translate('accuracy'): '${(metrics.accuracy * 100).toStringAsFixed(1)}%',
+            l10n.translate('f1_score'): metrics.f1Score.toStringAsFixed(2),
+            l10n.translate('precision'): metrics.precision.toStringAsFixed(2),
           },
-          onSelect: () => _updateActiveModel('sentiment', model.name),
+          onSelect: () => _updateActiveModel('sentiment', model.name, l10n),
+          l10n: l10n,
         );
       }).toList(),
     );
   }
 
-  Widget _buildPronunciationGrid(dynamic config, bool isDark) {
+  Widget _buildPronunciationGrid(dynamic config, bool isDark, AppLocalization l10n) {
     return Column(
       children: PronunciationAlgorithm.values.map((algo) {
         final metrics = PronunciationService.calculateMetrics(algo, _pronunciationEvalDataset);
@@ -144,11 +153,12 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
           title: _getPronunciationAlgoName(algo),
           isSelected: isSelected,
           metrics: {
-            'Accuracy': '${(metrics.accuracy * 100).toStringAsFixed(1)}%',
-            'Correlation': metrics.correlation.toStringAsFixed(2),
-            'MAE': metrics.meanAbsoluteError.toStringAsFixed(3),
+            l10n.translate('accuracy'): '${(metrics.accuracy * 100).toStringAsFixed(1)}%',
+            l10n.translate('correlation'): metrics.correlation.toStringAsFixed(2),
+            l10n.translate('mae'): metrics.meanAbsoluteError.toStringAsFixed(3),
           },
-          onSelect: () => _updateActiveModel('pronunciation', algo.name),
+          onSelect: () => _updateActiveModel('pronunciation', algo.name, l10n),
+          l10n: l10n,
         );
       }).toList(),
     );
@@ -159,6 +169,7 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
     required bool isSelected,
     required Map<String, String> metrics,
     required VoidCallback onSelect,
+    required AppLocalization l10n,
   }) {
     return BrandCard(
       margin: const EdgeInsets.only(bottom: 16),
@@ -184,13 +195,13 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    'ACTIVE',
+                    l10n.translate('active'),
                     style: AppTypography.label.copyWith(color: AppColors.gold500, fontSize: 10),
                   ),
                 )
               else
                 BrandButton(
-                  text: 'DEPLOY',
+                  text: l10n.translate('deploy'),
                   type: BrandButtonType.small,
                   onTap: _isSaving ? null : onSelect,
                 ),
@@ -243,7 +254,7 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
     }
   }
 
-  Future<void> _updateActiveModel(String type, String value) async {
+  Future<void> _updateActiveModel(String type, String value, AppLocalization l10n) async {
     setState(() => _isSaving = true);
     try {
       final config = ref.read(appConfigProvider).value;
@@ -261,7 +272,7 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Model "$value" locked for production deployment.'),
+            content: Text(l10n.translate('model_locked_desc', params: {'value': value})),
             backgroundColor: AppColors.semanticGreen,
           ),
         );
@@ -269,7 +280,7 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Deployment failed: $e'), backgroundColor: AppColors.semanticRed),
+          SnackBar(content: Text('${l10n.translate('deployment_failed')}: $e'), backgroundColor: AppColors.semanticRed),
         );
       }
     } finally {

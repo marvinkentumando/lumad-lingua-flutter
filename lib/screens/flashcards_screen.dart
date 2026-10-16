@@ -2,22 +2,23 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_typography.dart';
-import '../widgets/brand_card.dart';
-import '../widgets/brand_button.dart';
+import 'package:lumad_lingua/theme/app_colors.dart';
+import 'package:lumad_lingua/theme/app_typography.dart';
+import 'package:lumad_lingua/widgets/brand_card.dart';
+import 'package:lumad_lingua/widgets/brand_button.dart';
 
-import '../models/dictionary_entry.dart';
-import '../models/srs_models.dart';
-import '../models/app_config.dart';
+import 'package:lumad_lingua/models/dictionary_entry.dart';
+import 'package:lumad_lingua/models/srs_models.dart';
+import 'package:lumad_lingua/models/app_config.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../services/firebase_service.dart';
-import '../services/auth_service.dart';
-import '../services/haptic_service.dart';
-import '../widgets/brand_background.dart';
-import '../widgets/branded_empty_state.dart';
-import '../utils/app_localization.dart';
+import 'package:lumad_lingua/providers/student_provider.dart';
+import 'package:lumad_lingua/services/firebase_service.dart';
+import 'package:lumad_lingua/services/auth_service.dart';
+import 'package:lumad_lingua/services/haptic_service.dart';
+import 'package:lumad_lingua/widgets/brand_background.dart';
+import 'package:lumad_lingua/widgets/branded_empty_state.dart';
+import 'package:lumad_lingua/utils/app_localization.dart';
 
 
 class FlashcardsScreen extends ConsumerStatefulWidget {
@@ -142,7 +143,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
         final overdueDays = max(0, now.difference(currentSrs.nextReview).inDays);
         intervalDays = ((prevInterval + (overdueDays / 2)) * newEaseFactor).round();
       }
-      ref.read(studentProvider.notifier).addXp(config.cardReviewXp); 
+      ref.read(studentProvider.notifier).addXp(config.cardReviewXp);
     } else {
       newLevel = 0; 
       consecutiveCorrect = 0;

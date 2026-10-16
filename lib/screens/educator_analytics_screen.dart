@@ -17,6 +17,7 @@ import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import '../services/haptic_service.dart';
 import '../models/admin_models.dart';
+import '../utils/app_localization.dart';
 import 'package:intl/intl.dart';
 
 class EducatorAnalyticsScreen extends ConsumerStatefulWidget {
@@ -233,14 +234,15 @@ class _EducatorAnalyticsScreenState
     int totalWords,
     List<Map<String, dynamic>> topLearners,
   ) {
+    final l10n = ref.watch(localizationProvider);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Expanded(
           child: Text(
-            'Analytics',
+            l10n.translate('advanced_analytics'),
             style: GoogleFonts.outfit(
-              fontSize: 32,
+              fontSize: 28,
               fontWeight: FontWeight.w900,
               color: AppColors.gold500,
             ),

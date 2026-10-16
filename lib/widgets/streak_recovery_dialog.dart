@@ -6,11 +6,9 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../providers/student_provider.dart';
 import '../services/haptic_service.dart';
-import 'brand_card.dart';
 import 'brand_button.dart';
 
 void showStreakRecoveryDialog(BuildContext context) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
   showDialog(
     context: context,
     barrierDismissible: false,
