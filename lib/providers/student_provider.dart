@@ -96,7 +96,7 @@ class StudentState {
   }
 
   int get displayedStreak {
-    if (lastActive == null) return 0;
+    if (lastActive == null) return dailyStreak;
     final now = DateTime.now();
     final difference = DateTime(now.year, now.month, now.day)
         .difference(

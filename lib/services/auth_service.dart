@@ -54,6 +54,7 @@ class AuthService {
         'wordCount': 0,
         'createdAt': FieldValue.serverTimestamp(),
         'lastLogin': FieldValue.serverTimestamp(),
+        'lastActive': FieldValue.serverTimestamp(),
       });
     } else {
       await firestore
@@ -238,6 +239,7 @@ class AuthService {
             'wordCount': 0,
             'createdAt': FieldValue.serverTimestamp(),
             'lastLogin': FieldValue.serverTimestamp(),
+            'lastActive': FieldValue.serverTimestamp(),
           };
 
           if (assignedRole == 'educator') {

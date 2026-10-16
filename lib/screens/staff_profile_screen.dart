@@ -348,7 +348,8 @@ class StaffProfileScreen extends ConsumerWidget {
           onTap: () => _showLanguageSelector(context, ref, l10n),
         ),
         const SizedBox(height: 12),
-        if (profile?['role']?.toString().toLowerCase() != 'admin') ...[
+        if (profile?['role']?.toString().toLowerCase() != 'admin' &&
+            role != UserRole.educator) ...[
           _buildManagementTile(
             context,
             Icons.trending_up_rounded,
@@ -357,15 +358,15 @@ class StaffProfileScreen extends ConsumerWidget {
             onTap: () => context.push('/wisdom-progression'),
           ),
           const SizedBox(height: 12),
-          _buildManagementTile(
-            context,
-            Icons.notifications_active_rounded,
-            l10n.translate('notification_sanctuary'),
-            l10n.translate('notification_desc'),
-            onTap: () => context.push('/notifications'),
-          ),
-          const SizedBox(height: 12),
         ],
+        _buildManagementTile(
+          context,
+          Icons.notifications_active_rounded,
+          l10n.translate('notification_sanctuary'),
+          l10n.translate('notification_desc'),
+          onTap: () => context.push('/notifications'),
+        ),
+        const SizedBox(height: 12),
         _buildManagementTile(
           context,
           Icons.security_rounded,
@@ -1355,23 +1356,25 @@ class _StaffStatsRow extends ConsumerWidget {
             l10n.translate('students'),
           ),
 
-        impactAsync.when(
-          data: (impact) => _buildMetricCircle(
-            context,
-            Icons.star_rounded,
-            (impact['accuracy'] * 5).toStringAsFixed(1),
-            l10n.translate('accuracy'),
+        if (role != UserRole.educator) ...[
+          impactAsync.when(
+            data: (impact) => _buildMetricCircle(
+              context,
+              Icons.star_rounded,
+              (impact['accuracy'] * 5).toStringAsFixed(1),
+              l10n.translate('accuracy'),
+            ),
+            loading: () => _buildMetricCircle(context, Icons.star_rounded, '...', l10n.translate('rating')),
+            error: (_, __) => _buildMetricCircle(context, Icons.star_rounded, l10n.translate('na'), l10n.translate('rating')),
           ),
-          loading: () => _buildMetricCircle(context, Icons.star_rounded, '...', l10n.translate('rating')),
-          error: (_, __) => _buildMetricCircle(context, Icons.star_rounded, l10n.translate('na'), l10n.translate('rating')),
-        ),
 
-        _buildMetricCircle(
-          context,
-          Icons.workspace_premium_rounded,
-          _getStaffRank(xp),
-          l10n.translate('rank'),
-        ),
+          _buildMetricCircle(
+            context,
+            Icons.workspace_premium_rounded,
+            _getStaffRank(xp),
+            l10n.translate('rank'),
+          ),
+        ],
       ],
     ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1);
   }

@@ -142,7 +142,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
         final overdueDays = max(0, now.difference(currentSrs.nextReview).inDays);
         intervalDays = ((prevInterval + (overdueDays / 2)) * newEaseFactor).round();
       }
-      ref.read(firebaseServiceProvider).addXp(user.uid, config.cardReviewXp); 
+      ref.read(studentProvider.notifier).addXp(config.cardReviewXp); 
     } else {
       newLevel = 0; 
       consecutiveCorrect = 0;
@@ -485,7 +485,10 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
     final config = ref.read(appConfigProvider).value ?? AppConfig.fromFirestore({});
     final bonusXp = _deck!.length * config.cardCompletionBonusXp;
     final uid = ref.read(authStateProvider).value?.uid;
-    if (uid != null) ref.read(firebaseServiceProvider).addXp(uid, bonusXp.toInt());
+    if (uid != null) {
+      ref.read(studentProvider.notifier).addXp(bonusXp.toInt());
+      ref.read(studentProvider.notifier).incrementStreak();
+    }
     showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.7),

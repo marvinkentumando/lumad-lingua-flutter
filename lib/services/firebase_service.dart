@@ -1250,41 +1250,16 @@ class FirebaseService {
       if (!completedChallenges.contains(dateId)) {
         completedChallenges.add(dateId);
 
-        // Update XP, Crystals, and Streak
-        int currentStreak = data['streak'] ?? 0;
-        String? lastStreakDate = data['lastStreakDate'];
-
-        DateTime now = DateTime.now();
-        String today = dateId; // YYYY-MM-DD
-
-        if (lastStreakDate == null) {
-          currentStreak = 1;
-        } else {
-          DateTime lastDate = DateTime.parse(lastStreakDate);
-          DateTime yesterday = now.subtract(const Duration(days: 1));
-
-          if (lastDate.year == yesterday.year &&
-              lastDate.month == yesterday.month &&
-              lastDate.day == yesterday.day) {
-            currentStreak += 1;
-          } else if (lastDate.year == now.year &&
-              lastDate.month == now.month &&
-              lastDate.day == now.day) {
-            // Already updated today, don't increment streak again but we record completion
-          } else {
-            currentStreak = 1;
-          }
-        }
-
         transaction.update(userRef, {
           'xp': FieldValue.increment(xp),
           'mistCrystals': FieldValue.increment(crystals),
-          'streak': currentStreak,
-          'lastStreakDate': today,
           'completedChallenges': completedChallenges,
         });
       }
     });
+
+    // Reliably increment streak via unified streak engine
+    await incrementStreak(userId);
   }
 
   Future<List<LessonTask>> getRandomTasks(int count, {String? language}) async {
