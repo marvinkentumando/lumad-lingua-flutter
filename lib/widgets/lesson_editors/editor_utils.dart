@@ -378,7 +378,6 @@ class EditorUtils {
       );
     }
   }
-  }
 }
 
 class SafeDataTextField extends StatefulWidget {

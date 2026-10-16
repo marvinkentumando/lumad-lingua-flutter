@@ -43,6 +43,7 @@ dependencies:
   firebase_crashlytics: ^5.0.0
   google_sign_in: ^6.2.2
   share_plus: ^13.1.0
+  cross_file: ^0.3.4+2
   speech_to_text: ^7.3.0
   flutter_dotenv: ^6.0.1
   record: ^6.2.0

@@ -2846,6 +2846,46 @@ class FirebaseService {
     });
   }
 
+  Future<void> buyMultiDayShieldBundle(String userId) async {
+    return _db.runTransaction((transaction) async {
+      final userRef = _db.collection('users').doc(userId);
+      final userDoc = await transaction.get(userRef);
+      final crystals = userDoc.data()?['mistCrystals'] ?? 0;
+
+      if (crystals >= 250) {
+        transaction.update(userRef, {
+          'mistCrystals': FieldValue.increment(-250),
+          'streakShields': FieldValue.increment(3),
+        });
+      } else {
+        throw Exception("Not enough crystals for Multi-Day Shield Bundle");
+      }
+    });
+  }
+
+  Future<void> repairStreak(String userId) async {
+    final now = DateTime.now();
+    final dateKey = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+    return _db.runTransaction((transaction) async {
+      final userRef = _db.collection('users').doc(userId);
+      final userDoc = await transaction.get(userRef);
+      if (!userDoc.exists) return;
+
+      final data = userDoc.data()!;
+      final previousStreak = data['previousStreak'] as int? ?? (data['streak'] as int? ?? 0);
+      final restoredStreak = (previousStreak > 0 ? previousStreak : 0) + 1;
+
+      transaction.update(userRef, {
+        'streak': restoredStreak,
+        'previousStreak': 0,
+        'streakBrokenAt': null,
+        'lastActive': FieldValue.serverTimestamp(),
+        'activityMap.$dateKey': true,
+      });
+    });
+  }
+
   Future<void> updateQuestProgress(
     String userId,
     String questId,
@@ -3006,14 +3046,23 @@ class FirebaseService {
               });
             }
           } else {
-            // Streak broken? Check shields
-            if (currentShields > 0) {
-              debugPrint("Streak: Saved by shield for $userId. Gaps: $difference days.");
-              updates['streakShields'] = FieldValue.increment(-1);
+            // Gap > 1 day: Check multi-day shield protection vs streak recovery
+            final missedDays = difference - 1;
+            if (currentShields >= missedDays) {
+              debugPrint("Streak: Saved by multi-day shields for $userId. Missed $missedDays days.");
+              updates['streakShields'] = FieldValue.increment(-missedDays);
               updates['streak'] = FieldValue.increment(1);
-              // Streak preserved and incremented
+            } else if (currentShields > 0) {
+              // Shields covered part of the gap but not all -> Streak broken, save previous streak for recovery
+              debugPrint("Streak: Insufficient shields for $userId. Saving previous streak for recovery.");
+              updates['previousStreak'] = currentStreak;
+              updates['streakBrokenAt'] = FieldValue.serverTimestamp();
+              updates['streakShields'] = 0;
+              updates['streak'] = 1;
             } else {
-              debugPrint("Streak: Broken for $userId. Resetting to 1. Gaps: $difference days.");
+              debugPrint("Streak: Broken for $userId. Saving previous streak for recovery. Gap: $difference days.");
+              updates['previousStreak'] = currentStreak;
+              updates['streakBrokenAt'] = FieldValue.serverTimestamp();
               updates['streak'] = 1;
             }
           }

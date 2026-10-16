@@ -9,6 +9,8 @@ class StudentState {
   final int mistCrystals;
   final int xp;
   final int dailyStreak;
+  final int previousStreak;
+  final DateTime? streakBrokenAt;
   final int hearts;
   final int streakShields;
   final Map<String, dynamic> lessonProgress;
@@ -23,6 +25,8 @@ class StudentState {
     required this.mistCrystals,
     required this.xp,
     required this.dailyStreak,
+    this.previousStreak = 0,
+    this.streakBrokenAt,
     required this.hearts,
     required this.streakShields,
     required this.lessonProgress,
@@ -38,6 +42,8 @@ class StudentState {
     int? mistCrystals,
     int? xp,
     int? dailyStreak,
+    int? previousStreak,
+    DateTime? streakBrokenAt,
     int? hearts,
     int? streakShields,
     Map<String, dynamic>? lessonProgress,
@@ -52,6 +58,8 @@ class StudentState {
       mistCrystals: mistCrystals ?? this.mistCrystals,
       xp: xp ?? this.xp,
       dailyStreak: dailyStreak ?? this.dailyStreak,
+      previousStreak: previousStreak ?? this.previousStreak,
+      streakBrokenAt: streakBrokenAt ?? this.streakBrokenAt,
       hearts: hearts ?? this.hearts,
       streakShields: streakShields ?? this.streakShields,
       lessonProgress: lessonProgress ?? this.lessonProgress,
@@ -67,7 +75,6 @@ class StudentState {
   // Leveling Logic
   int get level {
     if (xp <= 0) return 1;
-    // Level = floor(sqrt(xp / 50)) + 1
     return (sqrt(xp / 50)).floor() + 1;
   }
 
@@ -97,13 +104,20 @@ class StudentState {
         )
         .inDays;
 
-    // If more than 1 day has passed, the streak is potentially broken
     if (difference > 1) {
-      // If we have shields, the streak is visually preserved until an activity is completed
-      if (streakShields > 0) return dailyStreak;
+      final missedDays = difference - 1;
+      if (streakShields >= missedDays) return dailyStreak;
       return 0;
     }
     return dailyStreak;
+  }
+
+  bool get canRepairStreak {
+    if (previousStreak <= 0) return false;
+    if (streakBrokenAt == null) return false;
+    final now = DateTime.now();
+    final hoursSinceBreak = now.difference(streakBrokenAt!).inHours;
+    return hoursSinceBreak <= 72; // Eligible within 3 days (72 hrs) of streak break
   }
 }
 
@@ -138,10 +152,19 @@ class StudentNotifier extends Notifier<StudentState> {
         lastActiveDt = DateTime.tryParse(profile['lastActive']);
       }
 
+      DateTime? streakBrokenAtDt;
+      if (profile['streakBrokenAt'] is Timestamp) {
+        streakBrokenAtDt = (profile['streakBrokenAt'] as Timestamp).toDate();
+      } else if (profile['streakBrokenAt'] is String) {
+        streakBrokenAtDt = DateTime.tryParse(profile['streakBrokenAt']);
+      }
+
       final newState = StudentState(
         mistCrystals: profile['mistCrystals'] ?? 0,
         xp: profile['xp'] ?? 0,
         dailyStreak: profile['streak'] ?? 0,
+        previousStreak: profile['previousStreak'] ?? 0,
+        streakBrokenAt: streakBrokenAtDt,
         hearts: resolvedHearts,
         streakShields: profile['streakShields'] ?? 0,
         lessonProgress: progress,
@@ -165,10 +188,16 @@ class StudentNotifier extends Notifier<StudentState> {
         if (cached['lastActive'] is String) {
           cachedActive = DateTime.tryParse(cached['lastActive']);
         }
+        DateTime? cachedBrokenAt;
+        if (cached['streakBrokenAt'] is String) {
+          cachedBrokenAt = DateTime.tryParse(cached['streakBrokenAt']);
+        }
         state = StudentState(
           mistCrystals: cached['mistCrystals'] ?? 0,
           xp: cached['xp'] ?? 0,
           dailyStreak: cached['streak'] ?? 0,
+          previousStreak: cached['previousStreak'] ?? 0,
+          streakBrokenAt: cachedBrokenAt,
           hearts: cached['hearts'] ?? 5,
           streakShields: cached['streakShields'] ?? 0,
           lessonProgress: progress,
@@ -183,6 +212,8 @@ class StudentNotifier extends Notifier<StudentState> {
       mistCrystals: 0,
       xp: 0,
       dailyStreak: 0,
+      previousStreak: 0,
+      streakBrokenAt: null,
       hearts: 5,
       streakShields: 0,
       lessonProgress: progress,
@@ -198,6 +229,8 @@ class StudentNotifier extends Notifier<StudentState> {
         'mistCrystals': state.mistCrystals,
         'xp': state.xp,
         'streak': state.dailyStreak,
+        'previousStreak': state.previousStreak,
+        'streakBrokenAt': state.streakBrokenAt?.toIso8601String(),
         'hearts': state.hearts,
         'streakShields': state.streakShields,
         'lastActive': state.lastActive?.toIso8601String(),
@@ -308,6 +341,8 @@ class StudentNotifier extends Notifier<StudentState> {
 
       int nextStreak = state.dailyStreak + 1;
       int nextShields = state.streakShields;
+      int nextPreviousStreak = state.previousStreak;
+      DateTime? nextBrokenAt = state.streakBrokenAt;
 
       if (lastActive != null) {
         final difference = DateTime(now.year, now.month, now.day)
@@ -317,12 +352,16 @@ class StudentNotifier extends Notifier<StudentState> {
             .inDays;
 
         if (difference > 1) {
-          if (state.streakShields > 0) {
-            // Shield used: streak preserved and incremented for today
-            nextShields = state.streakShields - 1;
+          final missedDays = difference - 1;
+          if (state.streakShields >= missedDays) {
+            // Multi-Day Shield covers all missed days
+            nextShields = state.streakShields - missedDays;
             nextStreak = state.dailyStreak + 1;
           } else {
-            // No shield: reset
+            // Not enough shields: streak breaks, record previous streak for recovery
+            nextPreviousStreak = state.dailyStreak;
+            nextBrokenAt = now;
+            nextShields = 0;
             nextStreak = 1;
           }
         }
@@ -330,12 +369,13 @@ class StudentNotifier extends Notifier<StudentState> {
 
       state = state.copyWith(
         dailyStreak: nextStreak,
+        previousStreak: nextPreviousStreak,
+        streakBrokenAt: nextBrokenAt,
         streakShields: nextShields,
         lastActive: now,
         activityMap: newActivityMap,
       );
     } else if (!state.activityMap.containsKey(dateKey)) {
-      // Just mark as active today if not already marked, even if streak doesn't increment
       final newActivityMap = Map<String, bool>.from(state.activityMap);
       newActivityMap[dateKey] = true;
       state = state.copyWith(activityMap: newActivityMap);
@@ -348,6 +388,55 @@ class StudentNotifier extends Notifier<StudentState> {
       ref.read(firebaseServiceProvider).incrementStreak(user.uid).catchError((_) {
         _queueSyncAction('incrementStreak', {'uid': user.uid});
       });
+    }
+  }
+
+  void repairStreak() {
+    final now = DateTime.now();
+    final dateKey = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+    final prev = state.previousStreak > 0 ? state.previousStreak : state.dailyStreak;
+    final restoredStreak = (prev > 0 ? prev : 0) + 1;
+
+    final newActivityMap = Map<String, bool>.from(state.activityMap);
+    newActivityMap[dateKey] = true;
+
+    state = state.copyWith(
+      dailyStreak: restoredStreak,
+      previousStreak: 0,
+      streakBrokenAt: null,
+      lastActive: now,
+      activityMap: newActivityMap,
+    );
+    _persistLocalState();
+
+    final user = ref.read(authStateProvider).value;
+    if (user != null) {
+      ref.read(firebaseServiceProvider).repairStreak(user.uid).catchError((_) {
+        _queueSyncAction('repairStreak', {'uid': user.uid});
+      });
+
+      ref.read(firebaseServiceProvider).addNotification(user.uid, {
+        'title': 'Streak Restored! 🔥',
+        'message': 'Your $restoredStreak-day streak has been successfully repaired!',
+        'type': 'reward',
+      }).catchError((_) {});
+    }
+  }
+
+  bool buyStreakRepair() {
+    if (state.canRepairStreak && state.mistCrystals >= 200) {
+      spendMistCrystals(200);
+      repairStreak();
+      return true;
+    }
+    return false;
+  }
+
+  void completeStreakRecoveryQuest() {
+    if (state.canRepairStreak) {
+      addXp(50);
+      addMistCrystals(30);
+      repairStreak();
     }
   }
 
@@ -452,6 +541,25 @@ class StudentNotifier extends Notifier<StudentState> {
       if (user != null) {
         ref.read(firebaseServiceProvider).buyStreakShield(user.uid).catchError((_) {
           _queueSyncAction('buyStreakShield', {'uid': user.uid});
+        });
+      }
+      return true;
+    }
+    return false;
+  }
+
+  bool buyMultiDayShieldBundle() {
+    if (state.mistCrystals >= 250) {
+      state = state.copyWith(
+        mistCrystals: state.mistCrystals - 250,
+        streakShields: state.streakShields + 3,
+      );
+      _persistLocalState();
+
+      final user = ref.read(authStateProvider).value;
+      if (user != null) {
+        ref.read(firebaseServiceProvider).buyMultiDayShieldBundle(user.uid).catchError((_) {
+          _queueSyncAction('buyMultiDayShieldBundle', {'uid': user.uid});
         });
       }
       return true;

@@ -13,6 +13,7 @@ import '../widgets/brand_button.dart';
 import '../widgets/topo_background.dart';
 import '../widgets/mist_crystal_store.dart';
 import '../widgets/claim_reward_modal.dart';
+import '../widgets/streak_recovery_dialog.dart';
 import '../utils/app_localization.dart';
 
 class StreakHistoryScreen extends ConsumerWidget {
@@ -36,6 +37,10 @@ class StreakHistoryScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildHeader(context, l10n),
+                  if (student.canRepairStreak) ...[
+                    const SizedBox(height: 24),
+                    _buildStreakRecoveryBanner(context, ref, student),
+                  ],
                   const SizedBox(height: 32),
                   _buildStreakHero(context, student, l10n),
                   const SizedBox(height: 32),
@@ -72,6 +77,116 @@ class StreakHistoryScreen extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  Widget _buildStreakRecoveryBanner(BuildContext context, WidgetRef ref, StudentState student) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.terracotta,
+            AppColors.terracotta.withValues(alpha: 0.85),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.terracotta.withValues(alpha: 0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: Colors.white24,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.build_circle_rounded, color: Colors.white, size: 28),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Streak Repair Available!',
+                  style: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Your previous ${student.previousStreak}-day streak was broken recently! Complete the Recovery Quest or use 200 Crystals to restore it now.',
+            style: AppTypography.body.copyWith(
+              color: Colors.white.withValues(alpha: 0.95),
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: BrandButton(
+                  text: 'Recovery Quest',
+                  onTap: () => showStreakRecoveryDialog(context),
+                  type: BrandButtonType.small,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    final success = ref.read(studentProvider.notifier).buyStreakRepair();
+                    if (success) {
+                      HapticService.celebration();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('🔥 Streak Repaired! Restored successfully.'),
+                          backgroundColor: AppColors.semanticGreen,
+                        ),
+                      );
+                    } else {
+                      HapticService.error();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Need 200 Crystals to repair streak!'),
+                          backgroundColor: AppColors.terracotta,
+                        ),
+                      );
+                    }
+                  },
+                  child: Container(
+                    height: 40,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Repair (200 ✨)',
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.terracotta,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ).animate().fadeIn().slideY(begin: -0.1, end: 0);
   }
 
   Widget _buildStreakHero(BuildContext context, StudentState student, AppLocalization l10n) {
@@ -171,15 +286,23 @@ class StreakHistoryScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  l10n.translate('streak_shields'),
+                  'STREAK & MULTI-DAY SHIELDS',
                   style: AppTypography.label.copyWith(
                     color: isDark ? AppColors.gold500 : AppColors.gold700,
+                    fontSize: 10,
                   ),
                 ),
                 Text(
                   '${student.streakShields} ${l10n.translate('available')}',
                   style: AppTypography.h3.copyWith(
                     color: isDark ? Colors.white : AppColors.forest900,
+                  ),
+                ),
+                Text(
+                  'Auto-consumes 1 shield per missed day',
+                  style: AppTypography.body.copyWith(
+                    color: isDark ? Colors.white54 : Colors.black45,
+                    fontSize: 11,
                   ),
                 ),
               ],

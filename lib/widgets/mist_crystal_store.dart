@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../providers/student_provider.dart';
-import '../services/auth_service.dart';
-import '../services/firebase_service.dart';
 import '../services/haptic_service.dart';
 import 'brand_card.dart';
 
@@ -92,6 +90,22 @@ void showMistCrystalStore(BuildContext context, WidgetRef ref) {
                 Expanded(
                   child: ListView(
                     children: [
+                      if (student.canRepairStreak)
+                        _buildStoreItem(
+                          context,
+                          ref,
+                          title: 'Instant Streak Repair',
+                          description:
+                              'Restore your recent broken ${student.previousStreak}-day streak.',
+                          price: 200,
+                          icon: Icons.build_circle_rounded,
+                          iconColor: AppColors.terracotta,
+                          onPurchase: () {
+                            return ref
+                                .read(studentProvider.notifier)
+                                .buyStreakRepair();
+                          },
+                        ),
                       _buildStoreItem(
                         context,
                         ref,
@@ -114,6 +128,36 @@ void showMistCrystalStore(BuildContext context, WidgetRef ref) {
                       _buildStoreItem(
                         context,
                         ref,
+                        title: 'Streak Shield (1x)',
+                        description:
+                            'Protects your streak if you miss a day.',
+                        price: 100,
+                        icon: Icons.shield_rounded,
+                        iconColor: AppColors.semanticBlue,
+                        onPurchase: () {
+                          return ref
+                              .read(studentProvider.notifier)
+                              .buyStreakShield();
+                        },
+                      ),
+                      _buildStoreItem(
+                        context,
+                        ref,
+                        title: 'Multi-Day Shield Pack (3x)',
+                        description:
+                            'Covers multi-day gaps (up to 3 missed days).',
+                        price: 250,
+                        icon: Icons.security_rounded,
+                        iconColor: AppColors.gold500,
+                        onPurchase: () {
+                          return ref
+                              .read(studentProvider.notifier)
+                              .buyMultiDayShieldBundle();
+                        },
+                      ),
+                      _buildStoreItem(
+                        context,
+                        ref,
                         title: 'Mountain Guide Map',
                         description: 'Unlock a hidden locale on the map.',
                         price: 200,
@@ -124,32 +168,6 @@ void showMistCrystalStore(BuildContext context, WidgetRef ref) {
                               .read(studentProvider.notifier)
                               .spendMistCrystals(200);
                           return true;
-                        },
-                      ),
-                      _buildStoreItem(
-                        context,
-                        ref,
-                        title: 'Streak Shield',
-                        description:
-                            'Protects your streak if you miss a day.',
-                        price: 100,
-                        icon: Icons.shield_rounded,
-                        iconColor: AppColors.semanticBlue,
-                        onPurchase: () {
-                          try {
-                            final user = ref
-                                .read(authServiceProvider)
-                                .currentUser;
-                            if (user != null) {
-                              ref
-                                  .read(firebaseServiceProvider)
-                                  .buyStreakShield(user.uid);
-                              return true;
-                            }
-                          } catch (e) {
-                            debugPrint("Purchase failed: $e");
-                          }
-                          return false;
                         },
                       ),
                       _buildStoreItem(

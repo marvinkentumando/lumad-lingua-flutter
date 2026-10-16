@@ -229,6 +229,12 @@ class UploadQueueService extends Notifier<UploadQueueState> {
       case 'buyStreakShield':
         await firebaseService.buyStreakShield(uid);
         break;
+      case 'buyMultiDayShieldBundle':
+        await firebaseService.buyMultiDayShieldBundle(uid);
+        break;
+      case 'repairStreak':
+        await firebaseService.repairStreak(uid);
+        break;
       case 'buyHeart':
         await firebaseService.db.collection('users').doc(uid).update({
           'mistCrystals': FieldValue.increment(-50),
