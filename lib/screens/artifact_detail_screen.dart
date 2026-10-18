@@ -103,7 +103,9 @@ class ArtifactDetailScreen extends ConsumerWidget {
                       ),
                     ),
                     child: Text(
-                      artifact.type.toUpperCase(),
+                      l10n.translate(
+                        'type_${artifact.type.toLowerCase()}',
+                      ).toUpperCase(),
                       style: AppTypography.label.copyWith(
                         color: AppColors.gold500,
                         fontSize: 10,
@@ -133,7 +135,9 @@ class ArtifactDetailScreen extends ConsumerWidget {
                           ),
                         ),
                         child: Text(
-                          artifact.tier.name.toUpperCase(),
+                          l10n.translate(
+                            'tier_${artifact.tier.name.toLowerCase()}',
+                          ).toUpperCase(),
                           style: AppTypography.label.copyWith(
                             color: _getTierColor(artifact.tier),
                             fontSize: 10,
@@ -239,11 +243,15 @@ class ArtifactDetailScreen extends ConsumerWidget {
                     children: [
                       _buildOriginChip(
                         context,
-                        "Mountain Region",
+                        l10n.translate('mountain_region'),
                         Icons.terrain_outlined,
                       ),
                       const SizedBox(width: 12),
-                      _buildOriginChip(context, "Abaca Fiber", Icons.grass_outlined),
+                      _buildOriginChip(
+                        context,
+                        l10n.translate('abaca_fiber'),
+                        Icons.grass_outlined,
+                      ),
                     ],
                   ).animate().fadeIn(delay: 800.ms),
 

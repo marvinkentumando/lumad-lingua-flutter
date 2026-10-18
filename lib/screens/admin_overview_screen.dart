@@ -31,33 +31,6 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
   bool get isDark => Theme.of(context).brightness == Brightness.dark;
   int? _tappedGrowthBar;
 
-  final List<Map<String, dynamic>> _defaultHealth = [
-    {
-      'label': 'API Status',
-      'value': 'Online',
-      'color': AppColors.semanticGreen,
-      'icon': Icons.cloud_done_rounded,
-    },
-    {
-      'label': 'Storage',
-      'value': '75%',
-      'color': AppColors.gold500,
-      'icon': Icons.storage_rounded,
-    },
-    {
-      'label': 'Database',
-      'value': 'Healthy',
-      'color': AppColors.semanticGreen,
-      'icon': Icons.dns_rounded,
-    },
-    {
-      'label': 'Uptime',
-      'value': '99.8%',
-      'color': AppColors.semanticBlue,
-      'icon': Icons.timer_rounded,
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -194,8 +167,8 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                           context.push('/admin/algorithm-selection');
                         },
                         child: _statCard(
-                          'AI MODELS',
-                          'DEPLOYMENT',
+                          l10n.translate('ai_models'),
+                          l10n.translate('deployment'),
                           Icons.psychology_rounded,
                           AppColors.semanticBlue,
                         ),
@@ -230,7 +203,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                         ),
                         const SizedBox(height: 12),
                         BrandButton(
-                          text: 'VIEW TEST ASSESSMENTS',
+                          text: l10n.translate('view_test_assessments'),
                           type: BrandButtonType.secondary,
                           icon: Icons.assignment_turned_in_rounded,
                           onTap: () => context.push('/admin/assessments'),
@@ -242,9 +215,9 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                   _sectionLabel(l10n.translate('system_health_label')),
                   const SizedBox(height: 16),
                   healthAsync.when(
-                    data: (health) => _buildSystemHealthGrid(health),
-                    loading: () => _buildSystemHealthGrid(null),
-                    error: (_, __) => _buildSystemHealthGrid(null),
+                    data: (health) => _buildSystemHealthGrid(health, l10n),
+                    loading: () => _buildSystemHealthGrid(null, l10n),
+                    error: (_, __) => _buildSystemHealthGrid(null, l10n),
                   ),
                   const SizedBox(height: 32),
                   _sectionLabel(l10n.translate('user_growth_label')),
@@ -270,7 +243,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                       ),
                     ).animate().fadeIn(delay: 400.ms),
                     loading: () => _buildChartAppShimmerSkeleton(),
-                    error: (_, __) => const Text('Error loading growth data'),
+                    error: (_, __) => Text(l10n.translate('error_loading_growth_data')),
                   ),
                   const SizedBox(height: 32),
                   _sectionLabel(l10n.translate('gamification_economics')),
@@ -335,7 +308,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
     ),
   ),
 );
-  }
+}
 
   Widget _buildWotdAdminControls(AppLocalization l10n) {
     final metadataAsync = ref.watch(wotdMetadataProvider);
@@ -393,22 +366,23 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Rotation failed: $e')),
+        SnackBar(content: Text(l10n.translate('rotation_failed', params: {'error': e.toString()}))),
       );
     }
   }
 
   Future<void> _resumeAutoRotation() async {
+    final l10n = ref.read(localizationProvider);
     try {
       await ref.read(wordOfDayServiceProvider).resumeAutomaticRotation();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Automatic rotation resumed.')),
+        SnackBar(content: Text(l10n.translate('auto_rotation_resumed'))),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to resume: $e')),
+        SnackBar(content: Text(l10n.translate('failed_to_resume', params: {'error': e.toString()}))),
       );
     }
   }
@@ -458,7 +432,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '${l10n.translate('system_overseer')}  •  COMMANDER',
+                      '${l10n.translate('system_overseer')}  •  ${l10n.translate('commander')}',
                       style: AppTypography.label.copyWith(
                         color: Colors.black,
                         fontWeight: FontWeight.w900,
@@ -488,32 +462,70 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
     );
   }
 
-  Widget _buildSystemHealthGrid(Map<String, dynamic>? data) {
+  Widget _buildSystemHealthGrid(Map<String, dynamic>? data, AppLocalization l10n) {
+    final defaultHealth = [
+      {
+        'labelKey': 'api_status',
+        'valueKey': 'online',
+        'value': 'Online',
+        'color': AppColors.semanticGreen,
+        'icon': Icons.cloud_done_rounded,
+      },
+      {
+        'labelKey': 'storage_label',
+        'valueKey': null,
+        'value': '75%',
+        'color': AppColors.gold500,
+        'icon': Icons.storage_rounded,
+      },
+      {
+        'labelKey': 'database_label',
+        'valueKey': 'healthy',
+        'value': 'Healthy',
+        'color': AppColors.semanticGreen,
+        'icon': Icons.dns_rounded,
+      },
+      {
+        'labelKey': 'uptime_label',
+        'valueKey': null,
+        'value': '99.8%',
+        'color': AppColors.semanticBlue,
+        'icon': Icons.timer_rounded,
+      },
+    ];
+
     return Row(
-      children: _defaultHealth.map((h) {
-        String value = h['value'];
+      children: defaultHealth.map((h) {
+        String value = h['value'] as String;
         if (data != null) {
-          switch (h['label']) {
-            case 'API Status':
+          switch (h['labelKey']) {
+            case 'api_status':
               value = data['apiStatus'] ?? value;
               break;
-            case 'Storage':
+            case 'storage_label':
               value = data['storage'] ?? value;
               break;
-            case 'Database':
+            case 'database_label':
               value = data['database'] ?? value;
               break;
-            case 'Uptime':
+            case 'uptime_label':
               value = data['uptime'] ?? value;
               break;
           }
         }
 
-        final isPulsing = value == 'Online' || value == 'Healthy';
+        final isPulsing = value == 'Online' || value == 'Healthy' || value == l10n.translate('online') || value == l10n.translate('healthy');
+
+        String displayVal = value;
+        if (value == 'Online') {
+          displayVal = l10n.translate('online');
+        } else if (value == 'Healthy') {
+          displayVal = l10n.translate('healthy');
+        }
 
         return Expanded(
           child: Container(
-            margin: EdgeInsets.only(right: h == _defaultHealth.last ? 0 : 10),
+            margin: EdgeInsets.only(right: h == defaultHealth.last ? 0 : 10),
             padding: const EdgeInsets.symmetric(vertical: 16),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -541,7 +553,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                     ),
                 const SizedBox(height: 8),
                 Text(
-                  value,
+                  displayVal,
                   style: AppTypography.h3.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 13,
@@ -559,7 +571,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                       ),
                     ),
                 Text(
-                  (h['label'] as String).toUpperCase(),
+                  l10n.translate(h['labelKey'] as String).toUpperCase(),
                   style: AppTypography.label.copyWith(
                     color: Theme.of(context)
                         .colorScheme
@@ -806,6 +818,7 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = ref.watch(localizationProvider);
     final dialectsAsync = ref.watch(dialectsProvider);
     final wordsAsync = ref.watch(
       globalDictionaryStreamProvider(
@@ -842,13 +855,13 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Select WOTD',
+                        l10n.translate('select_wotd'),
                         style: AppTypography.h2.copyWith(
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       Text(
-                        'Force a word to be the Word of the Day',
+                        l10n.translate('force_wotd_desc'),
                         style: AppTypography.body.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 12,
@@ -868,7 +881,7 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: BrandTextField(
               controller: _searchController,
-              labelText: 'Search for a word...',
+              labelText: l10n.translate('search_word_hint'),
               prefixIcon: Icons.search_rounded,
               onChanged: _onSearchChanged,
             ),
@@ -883,11 +896,12 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
                 itemCount: dialects.length,
                 itemBuilder: (context, i) {
                   final d = dialects[i];
+                  final label = d == 'All' ? l10n.translate('all_label') : d;
                   final isSelected = _dialect == d;
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(
-                      label: Text(d),
+                      label: Text(label),
                       selected: isSelected,
                       onSelected: (s) => setState(() => _dialect = d),
                       selectedColor: AppColors.gold500,
@@ -917,11 +931,11 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
                 if (approvedWords.isEmpty) {
                   return BrandedEmptyState(
                     title: _search.isNotEmpty
-                        ? 'Word Not Found'
-                        : 'No Sacred Words',
+                        ? l10n.translate('word_not_found')
+                        : l10n.translate('no_sacred_words'),
                     message: _search.isNotEmpty
-                        ? 'Try a different search term.'
-                        : 'No approved words available for rotation.',
+                        ? l10n.translate('try_different_search')
+                        : l10n.translate('no_approved_words_rotation'),
                     icon: Icons.search_off_rounded,
                   );
                 }
@@ -975,8 +989,7 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.translate('confirm_wotd')),
-        content: Text(
-            'Set "${word.indigenousWord}" as the Word of the Day? This will override automatic rotation.'),
+        content: Text(l10n.translate('confirm_set_wotd', params: {'word': word.indigenousWord})),
         actions: [
           TextButton(
             onPressed: () => context.pop(),
@@ -998,18 +1011,19 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
   }
 
   Future<void> _setWord(DictionaryEntry word) async {
+    final l10n = ref.read(localizationProvider);
     try {
       await ref.read(wordOfDayServiceProvider).setManualWord(word.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content:
-                Text('"${word.indigenousWord}" is now the Word of the Day.')),
+                Text(l10n.translate('wotd_set_success', params: {'word': word.indigenousWord}))),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to set word: $e')),
+        SnackBar(content: Text(l10n.translate('failed_set_word', params: {'error': e.toString()}))),
       );
     }
   }

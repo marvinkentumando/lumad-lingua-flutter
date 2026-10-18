@@ -9,12 +9,14 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/brand_card.dart';
+import '../utils/app_localization.dart';
 
 class AdminRequestsScreen extends ConsumerWidget {
   const AdminRequestsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = ref.watch(localizationProvider);
     final requestsAsync = ref.watch(contributorRequestsProvider);
 
     return Scaffold(
@@ -33,7 +35,7 @@ class AdminRequestsScreen extends ConsumerWidget {
           SafeArea(
             child: Column(
               children: [
-                _buildHeader(context),
+                _buildHeader(context, l10n),
                 Expanded(
                   child: requestsAsync.when(
                     data: (requests) {
@@ -56,7 +58,7 @@ class AdminRequestsScreen extends ConsumerWidget {
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                'No requests found.',
+                                l10n.translate('no_requests_found'),
                                 style: AppTypography.h3.copyWith(
                                   color: Colors.white24,
                                 ),
@@ -70,18 +72,24 @@ class AdminRequestsScreen extends ConsumerWidget {
                         padding: const EdgeInsets.all(20),
                         children: [
                           if (pending.isNotEmpty) ...[
-                            _sectionLabel('PENDING REQUESTS'),
+                            _sectionLabel(l10n.translate('pending_requests')),
                             const SizedBox(height: 16),
                             ...pending.asMap().entries.map(
-                              (e) => _requestCard(context, ref, e.value, e.key),
+                              (e) => _requestCard(
+                                context,
+                                ref,
+                                e.value,
+                                e.key,
+                                l10n,
+                              ),
                             ),
                             const SizedBox(height: 32),
                           ],
                           if (history.isNotEmpty) ...[
-                            _sectionLabel('PROCESSED HISTORY'),
+                            _sectionLabel(l10n.translate('processed_history')),
                             const SizedBox(height: 16),
                             ...history.asMap().entries.map(
-                              (e) => _historyTile(e.value),
+                              (e) => _historyTile(e.value, l10n),
                             ),
                           ],
                         ],
@@ -94,7 +102,7 @@ class AdminRequestsScreen extends ConsumerWidget {
                     ),
                     error: (err, _) => Center(
                       child: Text(
-                        'Error: $err',
+                        l10n.translate('error_prefix', params: {'error': '$err'}),
                         style: const TextStyle(color: Colors.white),
                       ),
                     ),
@@ -108,7 +116,7 @@ class AdminRequestsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, AppLocalization l10n) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
@@ -136,7 +144,7 @@ class AdminRequestsScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'CONTRIBUTOR REQUESTS',
+                  l10n.translate('contributor_requests'),
                   style: AppTypography.label.copyWith(
                     color: AppColors.gold500,
                     letterSpacing: 2,
@@ -144,7 +152,7 @@ class AdminRequestsScreen extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  'Review and approve new guardians of culture',
+                  l10n.translate('review_approve_guardians'),
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.3),
                     fontSize: 11,
@@ -172,6 +180,7 @@ class AdminRequestsScreen extends ConsumerWidget {
     WidgetRef ref,
     ContributorRequest request,
     int index,
+    AppLocalization l10n,
   ) {
     return Padding(
           padding: const EdgeInsets.only(bottom: 16),
@@ -188,7 +197,7 @@ class AdminRequestsScreen extends ConsumerWidget {
                         backgroundColor: AppColors.gold500.withValues(alpha: 0.1,
                         ),
                         child: Text(
-                          request.username[0],
+                          request.username.isNotEmpty ? request.username[0] : '?',
                           style: const TextStyle(
                             color: AppColors.gold500,
                             fontWeight: FontWeight.bold,
@@ -218,7 +227,7 @@ class AdminRequestsScreen extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        _formatDate(request.createdAt),
+                        _formatDate(request.createdAt, l10n),
                         style: AppTypography.mono.copyWith(
                           color: Colors.white24,
                           fontSize: 10,
@@ -249,7 +258,7 @@ class AdminRequestsScreen extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: BrandButton(
-                          text: 'REJECT',
+                          text: l10n.translate('reject_caps'),
                           type: BrandButtonType.secondary,
                           onTap: () => _processRequest(
                             context,
@@ -262,7 +271,7 @@ class AdminRequestsScreen extends ConsumerWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: BrandButton(
-                          text: 'APPROVE',
+                          text: l10n.translate('approve_caps'),
                           type: BrandButtonType.primary,
                           onTap: () => _processRequest(
                             context,
@@ -284,7 +293,7 @@ class AdminRequestsScreen extends ConsumerWidget {
         .slideY(begin: 0.1);
   }
 
-  Widget _historyTile(ContributorRequest request) {
+  Widget _historyTile(ContributorRequest request, AppLocalization l10n) {
     final isApproved = request.status == 'approved';
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -323,7 +332,7 @@ class AdminRequestsScreen extends ConsumerWidget {
             ),
           ),
           Text(
-            request.status.toUpperCase(),
+            l10n.translate('status_${request.status.toLowerCase()}').toUpperCase(),
             style: AppTypography.mono.copyWith(
               color: isApproved
                   ? AppColors.semanticGreen
@@ -337,11 +346,15 @@ class AdminRequestsScreen extends ConsumerWidget {
     );
   }
 
-  String _formatDate(DateTime dt) {
+  String _formatDate(DateTime dt, AppLocalization l10n) {
     final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    return '${diff.inDays}d ago';
+    if (diff.inMinutes < 60) {
+      return l10n.translate('minutes_ago', params: {'count': '${diff.inMinutes}'});
+    }
+    if (diff.inHours < 24) {
+      return l10n.translate('hours_ago', params: {'count': '${diff.inHours}'});
+    }
+    return l10n.translate('days_ago', params: {'count': '${diff.inDays}'});
   }
 
   void _processRequest(
@@ -350,27 +363,37 @@ class AdminRequestsScreen extends ConsumerWidget {
     ContributorRequest request,
     String status,
   ) async {
+    final l10n = ref.read(localizationProvider);
+    final actionWord = status == 'approved'
+        ? l10n.translate('approved')
+        : l10n.translate('rejected');
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.forest700,
         title: Text(
-          status == 'approved' ? 'Approve Request?' : 'Reject Request?',
+          status == 'approved'
+              ? l10n.translate('approve_request_title')
+              : l10n.translate('reject_request_title'),
           style: AppTypography.h3.copyWith(color: Colors.white),
         ),
         content: Text(
-          'Are you sure you want to ${status.toLowerCase()} ${request.username}\'s request?',
+          l10n.translate('confirm_process_request', params: {
+            'action': actionWord,
+            'username': request.username,
+          }),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(
-              'CANCEL',
-              style: TextStyle(color: Colors.white54),
+            child: Text(
+              l10n.translate('cancel_caps'),
+              style: const TextStyle(color: Colors.white54),
             ),
           ),
           BrandButton(
-            text: 'CONFIRM',
+            text: l10n.translate('confirm_caps'),
             type: BrandButtonType.primary,
             onTap: () => Navigator.pop(ctx, true),
           ),
@@ -386,7 +409,10 @@ class AdminRequestsScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Request ${status.toLowerCase()} for ${request.username}',
+              l10n.translate('request_processed_msg', params: {
+                'status': actionWord,
+                'username': request.username,
+              }),
             ),
             backgroundColor: status == 'approved'
                 ? AppColors.semanticGreen
@@ -397,7 +423,3 @@ class AdminRequestsScreen extends ConsumerWidget {
     }
   }
 }
-
-
-
-

@@ -193,7 +193,7 @@ class _AncestralVaultShopScreenState
       ),
       body: Column(
         children: [
-          _buildFilterChips(isDark),
+          _buildFilterChips(isDark, l10n),
           Expanded(
             child: artifactsAsync.when(
               data: (artifacts) {
@@ -298,12 +298,12 @@ class _AncestralVaultShopScreenState
     );
   }
 
-  Widget _buildFilterChips(bool isDark) {
+  Widget _buildFilterChips(bool isDark, AppLocalization l10n) {
     final categories = [
-      {'key': 'ALL', 'label': 'ALL'},
-      {'key': 'TITLES', 'label': 'TITLES 📜'},
-      {'key': 'FRAMES', 'label': 'FRAMES 🌿'},
-      {'key': 'BADGES', 'label': 'BADGES 🏺'},
+      {'key': 'ALL', 'label': l10n.translate('all_caps')},
+      {'key': 'TITLES', 'label': '${l10n.translate('titles_caps')} 📜'},
+      {'key': 'FRAMES', 'label': '${l10n.translate('frames_caps')} 🌿'},
+      {'key': 'BADGES', 'label': '${l10n.translate('badges_caps')} 🏺'},
     ];
 
     return Container(
@@ -516,7 +516,12 @@ class _AncestralVaultShopScreenState
                           );
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Equipped: "${artifact.title}"!'),
+                          content: Text(
+                            l10n.translate(
+                              'equipped_item_msg',
+                              params: {'title': artifact.title},
+                            ),
+                          ),
                           backgroundColor: AppColors.semanticGreen,
                         ),
                       );
@@ -543,9 +548,9 @@ class _AncestralVaultShopScreenState
                   ),
                   child: Text(
                     isEquipped
-                        ? 'EQUIPPED ✓'
+                        ? l10n.translate('equipped_check')
                         : (artifact.isEarned
-                            ? 'EQUIP'
+                            ? l10n.translate('equip_caps')
                             : l10n.translate('unlock_caps')),
                     style: AppTypography.mono.copyWith(
                       color: isEquipped
@@ -673,10 +678,7 @@ class _AncestralVaultShopScreenState
                           child: BrandButton(
                             text: isPurchasing
                                 ? l10n.translate('processing')
-                                : l10n
-                                    .translate('unlock_caps')
-                                    .toLowerCase()
-                                    .capitalize(),
+                                : l10n.translate('unlock'),
                             type: BrandButtonType.primary,
                             onTap: isPurchasing
                                 ? null
@@ -782,11 +784,5 @@ class _AncestralVaultShopScreenState
         ),
       ),
     );
-  }
-}
-
-extension StringExtension on String {
-  String capitalize() {
-    return "${this[0].toUpperCase()}${substring(1)}";
   }
 }
