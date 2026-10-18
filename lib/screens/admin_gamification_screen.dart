@@ -5,6 +5,7 @@ import '../services/haptic_service.dart';
 import '../models/gamification_models.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
+import '../utils/app_localization.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_text_field.dart';
 
@@ -33,11 +34,15 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: Text('GAMIFICATION & ECONOMICS', style: AppTypography.h3.copyWith(color: AppColors.gold500)),
+        title: Text(
+          l10n.translate('gamification_economics'), 
+          style: AppTypography.h3.copyWith(color: AppColors.gold500),
+        ),
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         bottom: TabBar(
@@ -46,42 +51,84 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
           indicatorColor: AppColors.gold500,
           labelColor: AppColors.gold500,
           unselectedLabelColor: isDark ? Colors.white60 : Theme.of(context).colorScheme.onSurfaceVariant,
-          tabs: const [
-            Tab(text: 'REWARDS', icon: Icon(Icons.military_tech_rounded)),
-            Tab(text: 'SHOP', icon: Icon(Icons.shopping_bag_rounded)),
+          tabs: [
+            Tab(text: l10n.translate('rewards_caps'), icon: const Icon(Icons.military_tech_rounded)),
+            Tab(text: l10n.translate('shop_caps'), icon: const Icon(Icons.shopping_bag_rounded)),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildRewardsTab(isDark),
-          _buildShopTab(isDark),
+          _buildRewardsTab(isDark, l10n),
+          _buildShopTab(isDark, l10n),
         ],
       ),
     );
   }
 
-  Widget _buildRewardsTab(bool isDark) {
+  Widget _buildRewardsTab(bool isDark, AppLocalization l10n) {
     final configAsync = ref.watch(appConfigProvider);
     return configAsync.when(
       data: (config) => ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _buildRewardCategory('CONTRIBUTIONS', [
-            _rewardTile('Word Approval', config.wordApprovalXp, (val) => _updateConfig('wordApprovalXp', val, 'Word Approval'), isDark),
-            _rewardTile('Lesson Approval', config.lessonApprovalXp, (val) => _updateConfig('lessonApprovalXp', val, 'Lesson Approval'), isDark),
+          _buildRewardCategory(l10n.translate('contributions_caps'), [
+            _rewardTile(
+              l10n.translate('word_approval'), 
+              config.wordApprovalXp, 
+              (val) => _updateConfig('wordApprovalXp', val, l10n.translate('word_approval'), l10n), 
+              isDark, 
+              l10n,
+            ),
+            _rewardTile(
+              l10n.translate('lesson_approval'), 
+              config.lessonApprovalXp, 
+              (val) => _updateConfig('lessonApprovalXp', val, l10n.translate('lesson_approval'), l10n), 
+              isDark, 
+              l10n,
+            ),
           ], isDark),
           const SizedBox(height: 24),
-          _buildRewardCategory('LEARNING PATH', [
-            _rewardTile('Lesson Completion (Base)', config.lessonCompletionBaseXp, (val) => _updateConfig('lessonCompletionBaseXp', val, 'Lesson Completion (Base)'), isDark),
-            _rewardTile('Perfect Task Bonus', config.lessonTaskPerfectXp, (val) => _updateConfig('lessonTaskPerfectXp', val, 'Perfect Task Bonus'), isDark),
-            _rewardTile('Task Retry Reward', config.lessonTaskRetryXp, (val) => _updateConfig('lessonTaskRetryXp', val, 'Task Retry Reward'), isDark),
+          _buildRewardCategory(l10n.translate('learning_path_caps'), [
+            _rewardTile(
+              l10n.translate('lesson_completion_base'), 
+              config.lessonCompletionBaseXp, 
+              (val) => _updateConfig('lessonCompletionBaseXp', val, l10n.translate('lesson_completion_base'), l10n), 
+              isDark, 
+              l10n,
+            ),
+            _rewardTile(
+              l10n.translate('perfect_task_bonus'), 
+              config.lessonTaskPerfectXp, 
+              (val) => _updateConfig('lessonTaskPerfectXp', val, l10n.translate('perfect_task_bonus'), l10n), 
+              isDark, 
+              l10n,
+            ),
+            _rewardTile(
+              l10n.translate('task_retry_reward'), 
+              config.lessonTaskRetryXp, 
+              (val) => _updateConfig('lessonTaskRetryXp', val, l10n.translate('task_retry_reward'), l10n), 
+              isDark, 
+              l10n,
+            ),
           ], isDark),
           const SizedBox(height: 24),
-          _buildRewardCategory('DAILY RITUALS', [
-            _rewardTile('SRS Card Review', config.cardReviewXp, (val) => _updateConfig('cardReviewXp', val, 'SRS Card Review'), isDark),
-            _rewardTile('SRS Completion Bonus (per card)', config.cardCompletionBonusXp, (val) => _updateConfig('cardCompletionBonusXp', val, 'SRS Completion Bonus'), isDark),
+          _buildRewardCategory(l10n.translate('daily_rituals'), [
+            _rewardTile(
+              l10n.translate('srs_card_review'), 
+              config.cardReviewXp, 
+              (val) => _updateConfig('cardReviewXp', val, l10n.translate('srs_card_review'), l10n), 
+              isDark, 
+              l10n,
+            ),
+            _rewardTile(
+              l10n.translate('srs_completion_bonus'), 
+              config.cardCompletionBonusXp, 
+              (val) => _updateConfig('cardCompletionBonusXp', val, l10n.translate('srs_completion_bonus'), l10n), 
+              isDark, 
+              l10n,
+            ),
           ], isDark),
         ],
       ),
@@ -117,7 +164,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
     );
   }
 
-  Widget _rewardTile(String label, int value, Function(int) onUpdate, bool isDark) {
+  Widget _rewardTile(String label, int value, Function(int) onUpdate, bool isDark, AppLocalization l10n) {
     return ListTile(
       title: Text(
         label, 
@@ -137,14 +184,14 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
               size: 18, 
               color: isDark ? Colors.white60 : Theme.of(context).colorScheme.onSurfaceVariant,
             ),
-            onPressed: () => _showRewardEditDialog(label, value, onUpdate, isDark),
+            onPressed: () => _showRewardEditDialog(label, value, onUpdate, isDark, l10n),
           ),
         ],
       ),
     );
   }
 
-  void _showRewardEditDialog(String label, int currentValue, Function(int) onUpdate, bool isDark) {
+  void _showRewardEditDialog(String label, int currentValue, Function(int) onUpdate, bool isDark, AppLocalization l10n) {
     final controller = TextEditingController(text: currentValue.toString());
     final formKey = GlobalKey<FormState>();
 
@@ -152,7 +199,10 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
       context: context,
       builder: (dialogCtx) => AlertDialog(
         backgroundColor: isDark ? AppColors.forest800 : Theme.of(context).colorScheme.surface,
-        title: Text('Edit $label', style: const TextStyle(color: AppColors.gold500)),
+        title: Text(
+          l10n.translate('edit_label', params: {'label': label}), 
+          style: const TextStyle(color: AppColors.gold500),
+        ),
         content: Form(
           key: formKey,
           child: Column(
@@ -160,19 +210,19 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
             children: [
               BrandTextField(
                 controller: controller,
-                labelText: 'XP Points',
+                labelText: l10n.translate('xp_points'),
                 prefixIcon: Icons.stars_rounded,
                 keyboardType: TextInputType.number,
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) {
-                    return 'Please enter an XP value';
+                    return l10n.translate('please_enter_xp');
                   }
                   final parsed = int.tryParse(val.trim());
                   if (parsed == null) {
-                    return 'Please enter a valid whole number';
+                    return l10n.translate('please_enter_valid_number');
                   }
                   if (parsed < 0) {
-                    return 'XP cannot be negative';
+                    return l10n.translate('xp_cannot_be_negative');
                   }
                   return null;
                 },
@@ -183,7 +233,10 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx), 
-            child: Text('CANCEL', style: TextStyle(color: isDark ? Colors.white70 : AppColors.forest700)),
+            child: Text(
+              l10n.translate('cancel').toUpperCase(), 
+              style: TextStyle(color: isDark ? Colors.white70 : AppColors.forest700),
+            ),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -193,20 +246,20 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                 await onUpdate(parsed);
               }
             },
-            child: const Text('UPDATE'),
+            child: Text(l10n.translate('update_caps')),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _updateConfig(String key, int value, [String? label]) async {
+  Future<void> _updateConfig(String key, int value, String label, AppLocalization l10n) async {
     try {
       await ref.read(firebaseServiceProvider).updateAppConfig({key: value});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${label ?? key} updated to $value XP'),
+            content: Text(l10n.translate('config_updated_msg', params: {'label': label, 'value': value.toString()})),
             backgroundColor: AppColors.semanticGreen,
           ),
         );
@@ -215,7 +268,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to update ${label ?? key}: $e'),
+            content: Text(l10n.translate('config_update_failed_msg', params: {'label': label, 'error': e.toString()})),
             backgroundColor: AppColors.semanticRed,
           ),
         );
@@ -223,7 +276,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
     }
   }
 
-  Widget _buildShopTab(bool isDark) {
+  Widget _buildShopTab(bool isDark, AppLocalization l10n) {
     final shopAsync = ref.watch(shopItemsStreamProvider);
     return shopAsync.when(
       data: (items) => ListView.builder(
@@ -231,7 +284,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
         itemCount: items.length + 1,
         itemBuilder: (context, index) {
           if (index == items.length) {
-            return _buildAddShopItemCard(isDark);
+            return _buildAddShopItemCard(isDark, l10n);
           }
           final item = items[index];
           final isAvail = item.isAvailable;
@@ -290,7 +343,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                         ),
                       ),
                       child: Text(
-                        isAvail ? 'ACTIVE' : 'HIDDEN',
+                        isAvail ? l10n.translate('active') : l10n.translate('hidden_caps'),
                         style: AppTypography.mono.copyWith(
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
@@ -334,7 +387,9 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
-                                    val ? '"${item.title}" is now visible in shop.' : '"${item.title}" is now hidden from shop.',
+                                    val 
+                                        ? l10n.translate('item_now_visible', params: {'title': item.title}) 
+                                        : l10n.translate('item_now_hidden', params: {'title': item.title}),
                                   ),
                                   backgroundColor: AppColors.semanticGreen,
                                 ),
@@ -345,7 +400,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                               HapticService.error();
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Failed to update availability: $e'),
+                                  content: Text(l10n.translate('failed_update_availability', params: {'error': e.toString()})),
                                   backgroundColor: AppColors.semanticRed,
                                 ),
                               );
@@ -359,7 +414,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                           size: 18,
                           color: isDark ? Colors.white70 : AppColors.forest900,
                         ),
-                        onPressed: () => _showShopItemDialog(item, isDark),
+                        onPressed: () => _showShopItemDialog(item, isDark, l10n),
                       ),
                       IconButton(
                         icon: const Icon(
@@ -367,7 +422,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                           size: 20,
                           color: AppColors.semanticRed,
                         ),
-                        onPressed: () => _confirmDeleteShopItem(item, isDark),
+                        onPressed: () => _confirmDeleteShopItem(item, isDark, l10n),
                       ),
                     ],
                   ),
@@ -382,9 +437,9 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
     );
   }
 
-  Widget _buildAddShopItemCard(bool isDark) {
+  Widget _buildAddShopItemCard(bool isDark, AppLocalization l10n) {
     return GestureDetector(
-      onTap: () => _showShopItemDialog(null, isDark),
+      onTap: () => _showShopItemDialog(null, isDark, l10n),
       child: Container(
         decoration: BoxDecoration(
           color: isDark ? AppColors.forestDarkCard : Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -399,7 +454,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
             const Icon(Icons.add_shopping_cart_rounded, color: AppColors.gold500, size: 32),
             const SizedBox(height: 8),
             Text(
-              'ADD NEW SHOP ITEM', 
+              l10n.translate('add_new_shop_item'), 
               style: AppTypography.label.copyWith(
                 color: isDark ? AppColors.gold500 : AppColors.forest900,
                 fontWeight: FontWeight.bold,
@@ -411,20 +466,26 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
     );
   }
 
-  void _confirmDeleteShopItem(ShopItem item, bool isDark) {
+  void _confirmDeleteShopItem(ShopItem item, bool isDark, AppLocalization l10n) {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
         backgroundColor: isDark ? AppColors.forest800 : Theme.of(context).colorScheme.surface,
-        title: Text('Delete ${item.title}', style: const TextStyle(color: AppColors.gold500)),
+        title: Text(
+          l10n.translate('delete_item_title', params: {'title': item.title}), 
+          style: const TextStyle(color: AppColors.gold500),
+        ),
         content: Text(
-          'Are you sure you want to delete "${item.title}"? This action cannot be undone.',
+          l10n.translate('delete_item_confirm', params: {'title': item.title}),
           style: TextStyle(color: isDark ? Colors.white70 : Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
-            child: Text('CANCEL', style: TextStyle(color: isDark ? Colors.white70 : AppColors.forest700)),
+            child: Text(
+              l10n.translate('cancel').toUpperCase(), 
+              style: TextStyle(color: isDark ? Colors.white70 : AppColors.forest700),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticRed),
@@ -439,7 +500,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                 }
                 messenger.showSnackBar(
                   SnackBar(
-                    content: Text('"${item.title}" has been deleted.'),
+                    content: Text(l10n.translate('item_deleted_msg', params: {'title': item.title})),
                     backgroundColor: AppColors.semanticGreen,
                   ),
                 );
@@ -450,20 +511,21 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                 HapticService.error();
                 messenger.showSnackBar(
                   SnackBar(
-                    content: Text('Failed to delete shop item: $e'),
+                    content: Text(l10n.translate('failed_delete_item', params: {'error': e.toString()})),
                     backgroundColor: AppColors.semanticRed,
                   ),
                 );
               }
             },
-            child: const Text('DELETE', style: TextStyle(color: Colors.white)),
+            child: Text(l10n.translate('delete_caps'), style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
   }
 
-  void _showShopItemDialog([ShopItem? item, bool? isDarkParam]) {
+  void _showShopItemDialog([ShopItem? item, bool? isDarkParam, AppLocalization? l10nParam]) {
+    final AppLocalization l10n = l10nParam ?? ref.read(localizationProvider);
     final isDark = isDarkParam ?? (Theme.of(context).brightness == Brightness.dark);
     final titleController = TextEditingController(text: item?.title ?? '');
     final descController = TextEditingController(text: item?.description ?? '');
@@ -478,7 +540,12 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
       builder: (dialogCtx) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) => AlertDialog(
           backgroundColor: isDark ? AppColors.forest800 : Theme.of(context).colorScheme.surface,
-          title: Text(item == null ? 'New Shop Item' : 'Edit ${item.title}', style: const TextStyle(color: AppColors.gold500)),
+          title: Text(
+            item == null 
+                ? l10n.translate('new_shop_item') 
+                : l10n.translate('edit_item_title', params: {'title': item.title}), 
+            style: const TextStyle(color: AppColors.gold500),
+          ),
           content: SingleChildScrollView(
             child: Form(
               key: formKey,
@@ -487,11 +554,11 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                 children: [
                   BrandTextField(
                     controller: titleController,
-                    labelText: 'Item Name',
+                    labelText: l10n.translate('item_name_label'),
                     prefixIcon: Icons.shopping_bag_outlined,
                     validator: (val) {
                       if (val == null || val.trim().isEmpty) {
-                        return 'Please enter item name';
+                        return l10n.translate('please_enter_item_name');
                       }
                       return null;
                     },
@@ -499,7 +566,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                   const SizedBox(height: 12),
                   BrandTextField(
                     controller: descController,
-                    labelText: 'Description',
+                    labelText: l10n.translate('description_label'),
                     prefixIcon: Icons.description_outlined,
                   ),
                   const SizedBox(height: 12),
@@ -509,19 +576,19 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                       Expanded(
                         child: BrandTextField(
                           controller: priceController,
-                          labelText: 'Price (Crystals)',
+                          labelText: l10n.translate('price_crystals'),
                           prefixIcon: Icons.diamond_outlined,
                           keyboardType: TextInputType.number,
                           validator: (val) {
                             if (val == null || val.trim().isEmpty) {
-                              return 'Enter price';
+                              return l10n.translate('enter_price');
                             }
                             final parsed = int.tryParse(val.trim());
                             if (parsed == null) {
-                              return 'Invalid number';
+                              return l10n.translate('invalid_number');
                             }
                             if (parsed < 0) {
-                              return 'Min price 0';
+                              return l10n.translate('min_price_zero');
                             }
                             return null;
                           },
@@ -531,7 +598,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                       Expanded(
                         child: BrandTextField(
                           controller: iconController,
-                          labelText: 'Icon/Emoji',
+                          labelText: l10n.translate('icon_emoji'),
                           prefixIcon: Icons.emoji_emotions_outlined,
                         ),
                       ),
@@ -540,7 +607,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                   const SizedBox(height: 12),
                   BrandTextField(
                     controller: typeController,
-                    labelText: 'Item Type',
+                    labelText: l10n.translate('item_type'),
                     prefixIcon: Icons.category_outlined,
                   ),
                   const SizedBox(height: 12),
@@ -553,7 +620,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                     child: SwitchListTile(
                       activeThumbColor: AppColors.gold500,
                       title: Text(
-                        'Item Availability',
+                        l10n.translate('item_availability'),
                         style: TextStyle(
                           color: isDark ? Colors.white : Theme.of(context).colorScheme.onSurface, 
                           fontWeight: FontWeight.bold, 
@@ -561,7 +628,9 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                         ),
                       ),
                       subtitle: Text(
-                        isAvailable ? 'Visible to learners in Ancestral Vault' : 'Hidden from shop catalog',
+                        isAvailable 
+                            ? l10n.translate('visible_to_learners') 
+                            : l10n.translate('hidden_from_shop'),
                         style: TextStyle(
                           color: isAvailable
                               ? AppColors.gold500
@@ -584,7 +653,10 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogCtx), 
-              child: Text('CANCEL', style: TextStyle(color: isDark ? Colors.white70 : AppColors.forest700)),
+              child: Text(
+                l10n.translate('cancel').toUpperCase(), 
+                style: TextStyle(color: isDark ? Colors.white70 : AppColors.forest700),
+              ),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -615,7 +687,11 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                     HapticService.success();
                     messenger.showSnackBar(
                       SnackBar(
-                        content: Text(item == null ? '"${newItem.title}" created successfully!' : '"${newItem.title}" updated successfully!'),
+                        content: Text(
+                          item == null 
+                              ? l10n.translate('item_created_success', params: {'title': newItem.title}) 
+                              : l10n.translate('item_updated_success', params: {'title': newItem.title}),
+                        ),
                         backgroundColor: AppColors.semanticGreen,
                       ),
                     );
@@ -623,14 +699,14 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
                     HapticService.error();
                     messenger.showSnackBar(
                       SnackBar(
-                        content: Text('Failed to save shop item: $e'),
+                        content: Text(l10n.translate('failed_save_shop_item', params: {'error': e.toString()})),
                         backgroundColor: AppColors.semanticRed,
                       ),
                     );
                   }
                 }
               },
-              child: Text(item == null ? 'CREATE' : 'UPDATE'),
+              child: Text(item == null ? l10n.translate('create_caps') : l10n.translate('update_caps')),
             ),
           ],
         ),
