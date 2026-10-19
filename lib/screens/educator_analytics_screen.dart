@@ -35,6 +35,7 @@ class _EducatorAnalyticsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = ref.watch(localizationProvider);
     final userAuth = ref.watch(authStateProvider).value;
     final educatorId = userAuth?.uid ?? '';
 
@@ -69,11 +70,12 @@ class _EducatorAnalyticsScreenState
                     analyticsAsync.value ?? {},
                     totalWordsAsync.value ?? 0,
                     topLearnersAsync.value ?? [],
+                    l10n,
                   ),
                   const SizedBox(height: 24),
                   
                   allUsersAsync.when(
-                    data: (users) => _buildActiveLearnersStats(users),
+                    data: (users) => _buildActiveLearnersStats(users, l10n),
                     loading: () => _buildLoadingCard(100),
                     error: (e, _) => const SizedBox.shrink(),
                   ),
@@ -83,23 +85,23 @@ class _EducatorAnalyticsScreenState
                     data: (analytics) => Row(
                       children: [
                         _buildStatCard(
-                          'Total XP',
+                          l10n.translate('total_xp'),
                           '${analytics['totalXP'] ?? 0}',
-                          'Across Village',
+                          l10n.translate('across_village'),
                           AppColors.gold500,
                         ),
                         const SizedBox(width: 12),
                         _buildStatCard(
-                          'Progress',
+                          l10n.translate('progress'),
                           (analytics['avgLessonsCompleted'] as double? ?? 0).toStringAsFixed(1),
-                          'Avg Lessons',
+                          l10n.translate('avg_lessons'),
                           AppColors.semanticBlue,
                         ),
                         const SizedBox(width: 12),
                         _buildStatCard(
-                          'Accuracy',
+                          l10n.translate('accuracy'),
                           '${((analytics['pronunciationAccuracy'] as double? ?? 0) * 100).toInt()}%',
-                          'Pronunciation',
+                          l10n.translate('pronunciation'),
                           AppColors.semanticGreen,
                         ),
                       ],
@@ -109,11 +111,11 @@ class _EducatorAnalyticsScreenState
                   ),
                   const SizedBox(height: 32),
 
-                  _buildTimeRangeSelector(),
+                  _buildTimeRangeSelector(l10n),
                   const SizedBox(height: 24),
 
                   allUsersAsync.when(
-                    data: (users) => _buildActivityChart(users),
+                    data: (users) => _buildActivityChart(users, l10n),
                     loading: () => _buildLoadingCard(220),
                     error: (e, _) => _buildErrorCard(e),
                   ),
@@ -121,15 +123,15 @@ class _EducatorAnalyticsScreenState
                   const SizedBox(height: 32),
 
                   allUsersAsync.when(
-                    data: (users) => _buildStudentGrowth(users),
+                    data: (users) => _buildStudentGrowth(users, l10n),
                     loading: () => _buildLoadingCard(120),
                     error: (e, _) => const SizedBox.shrink(),
                   ),
 
                   const SizedBox(height: 32),
-                  _buildRetentionCard(allUsersAsync),
+                  _buildRetentionCard(allUsersAsync, l10n),
                   const SizedBox(height: 16),
-                  _buildWordsStatsCard(totalWordsAsync),
+                  _buildWordsStatsCard(totalWordsAsync, l10n),
 
                   const SizedBox(height: 32),
                   analyticsAsync.when(
@@ -140,35 +142,36 @@ class _EducatorAnalyticsScreenState
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildSectionTitle('Quiz Performance'),
+                          _buildSectionTitle(l10n.translate('quiz_performance')),
                           const SizedBox(height: 16),
                           if (quizPerformance.isEmpty)
                             Padding(
                               padding: const EdgeInsets.only(bottom: 32),
                               child: Text(
-                                'No quiz data recorded yet.',
+                                l10n.translate('no_quiz_data_yet'),
                                 style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
                               ),
                             )
                           else
-                            ...quizPerformance.map((q) => _buildQuizItem(q)),
+                            ...quizPerformance.map((q) => _buildQuizItem(q, l10n)),
 
                           const SizedBox(height: 32),
-                          _buildSectionTitle('Common Hurdles'),
+                          _buildSectionTitle(l10n.translate('common_hurdles')),
                           const SizedBox(height: 16),
                           if (commonHurdles.isEmpty)
                             Padding(
                               padding: const EdgeInsets.only(bottom: 32),
                               child: Text(
-                                'No significant hurdles identified yet.',
+                                l10n.translate('no_hurdles_yet'),
                                 style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
                               ),
                             )
                           else
                             ...commonHurdles.map((h) => _buildHurdleItem(
-                                  h['topic'] ?? 'Unknown Topic',
-                                  h['stat'] ?? 'No stats',
-                                  h['lessonName'] ?? 'Unknown Lesson',
+                                  h['topic'] ?? l10n.translate('unknown_topic'),
+                                  h['stat'] ?? l10n.translate('no_stats'),
+                                  h['lessonName'] ?? l10n.translate('unknown_lesson'),
+                                  l10n,
                                 )),
                         ],
                       );
@@ -184,7 +187,7 @@ class _EducatorAnalyticsScreenState
                   ),
 
                   const SizedBox(height: 32),
-                  _buildSectionTitle('Top Learners'),
+                  _buildSectionTitle(l10n.translate('top_learners')),
                   const SizedBox(height: 16),
                   topLearnersAsync.when(
                     data: (learners) => Column(
@@ -193,8 +196,8 @@ class _EducatorAnalyticsScreenState
                         final l = e.value;
                         return _buildLeaderboardItem(
                           '${i + 1}',
-                          l['username'] ?? 'Learner',
-                          l['municipality'] ?? l['indigenousGroup'] ?? 'Unknown',
+                          l['username'] ?? l10n.translate('learner_default'),
+                          l['municipality'] ?? l['indigenousGroup'] ?? l10n.translate('unknown'),
                           l['xp'] ?? 0,
                           i == 0
                               ? AppColors.gold500
@@ -210,7 +213,7 @@ class _EducatorAnalyticsScreenState
                       child: CircularProgressIndicator(color: AppColors.gold500),
                     ),
                     error: (e, _) => Text(
-                      'Error: $e',
+                      l10n.translate('error_prefix', params: {'error': '$e'}),
                       style: TextStyle(
                         color: isDark ? Colors.white54 : AppColors.creamText3,
                       ),
@@ -233,8 +236,8 @@ class _EducatorAnalyticsScreenState
     Map<String, dynamic> analytics,
     int totalWords,
     List<Map<String, dynamic>> topLearners,
+    AppLocalization l10n,
   ) {
-    final l10n = ref.watch(localizationProvider);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -256,6 +259,7 @@ class _EducatorAnalyticsScreenState
               analytics,
               totalWords,
               topLearners,
+              l10n,
             ),
             const SizedBox(width: 8),
             _buildFeedbackBell(),
@@ -293,7 +297,7 @@ class _EducatorAnalyticsScreenState
     );
   }
 
-  Widget _buildActivityChart(List<AdminUser> users) {
+  Widget _buildActivityChart(List<AdminUser> users, AppLocalization l10n) {
     final now = DateTime.now();
     final List<Map<String, dynamic>> bars = [];
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -356,10 +360,10 @@ class _EducatorAnalyticsScreenState
       (m, b) => (b['value'] as int) > m ? (b['value'] as int) : m,
     );
 
-    String chartTitle = 'Active Learners';
-    if (_timeRange == 'Daily') chartTitle = 'Daily Active Learners (7d)';
-    if (_timeRange == 'Weekly') chartTitle = 'Weekly Active Learners (4w)';
-    if (_timeRange == 'Monthly') chartTitle = 'Monthly Active Learners (6m)';
+    String chartTitle = l10n.translate('active_learners');
+    if (_timeRange == 'Daily') chartTitle = l10n.translate('daily_active_learners_7d');
+    if (_timeRange == 'Weekly') chartTitle = l10n.translate('weekly_active_learners_4w');
+    if (_timeRange == 'Monthly') chartTitle = l10n.translate('monthly_active_learners_6m');
 
     return Container(
       height: 240,
@@ -449,7 +453,7 @@ class _EducatorAnalyticsScreenState
     );
   }
 
-  Widget _buildStudentGrowth(List<AdminUser> users) {
+  Widget _buildStudentGrowth(List<AdminUser> users, AppLocalization l10n) {
     final now = DateTime.now();
     final thirtyDaysAgo = now.subtract(const Duration(days: 30));
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -484,14 +488,14 @@ class _EducatorAnalyticsScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Student Growth',
+            l10n.translate('student_growth'),
             style: AppTypography.h3.copyWith(
               color: isDark ? Colors.white : AppColors.forest900,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            '+$recentCount new learners this month',
+            l10n.translate('new_learners_this_month', params: {'count': '$recentCount'}),
             style: AppTypography.body.copyWith(
               color: AppColors.semanticGreen,
               fontSize: 12,
@@ -510,7 +514,10 @@ class _EducatorAnalyticsScreenState
     );
   }
 
-  Widget _buildRetentionCard(AsyncValue<List<AdminUser>> usersAsync) {
+  Widget _buildRetentionCard(
+    AsyncValue<List<AdminUser>> usersAsync,
+    AppLocalization l10n,
+  ) {
     return usersAsync.when(
       data: (users) {
         final active = users.where((u) => u.xp > 0).length;
@@ -518,8 +525,8 @@ class _EducatorAnalyticsScreenState
             ? 0
             : (active / users.length * 100).toInt();
         return _buildAnalyticsCard(
-          'Overall Retention',
-          '$retention% of users have started learning.',
+          l10n.translate('overall_retention'),
+          l10n.translate('retention_started_learning', params: {'percent': '$retention'}),
           Icons.trending_up_rounded,
         );
       },
@@ -528,11 +535,14 @@ class _EducatorAnalyticsScreenState
     );
   }
 
-  Widget _buildWordsStatsCard(AsyncValue<int> countAsync) {
+  Widget _buildWordsStatsCard(
+    AsyncValue<int> countAsync,
+    AppLocalization l10n,
+  ) {
     return countAsync.when(
       data: (count) => _buildAnalyticsCard(
-        'Preservation Status',
-        '$count cultural terms recorded in the dictionary.',
+        l10n.translate('preservation_status'),
+        l10n.translate('terms_recorded_dict', params: {'count': '$count'}),
         Icons.menu_book_rounded,
       ),
       loading: () => _buildLoadingCard(80),
@@ -548,6 +558,7 @@ class _EducatorAnalyticsScreenState
     Map<String, dynamic> analytics,
     int totalWords,
     List<Map<String, dynamic>> topLearners,
+    AppLocalization l10n,
   ) {
     return PopupMenuButton<String>(
       onSelected: (val) => _exportData(
@@ -557,6 +568,7 @@ class _EducatorAnalyticsScreenState
         analytics,
         totalWords,
         topLearners,
+        l10n,
       ),
       color: isDark ? AppColors.forest800 : Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -581,7 +593,7 @@ class _EducatorAnalyticsScreenState
         PopupMenuItem(
           value: 'CSV',
           child: Text(
-            'Export CSV',
+            l10n.translate('export_csv'),
             style: TextStyle(
               color: isDark ? Colors.white70 : AppColors.creamText2,
             ),
@@ -590,7 +602,7 @@ class _EducatorAnalyticsScreenState
         PopupMenuItem(
           value: 'PDF',
           child: Text(
-            'Export PDF',
+            l10n.translate('export_pdf'),
             style: TextStyle(
               color: isDark ? Colors.white70 : AppColors.creamText2,
             ),
@@ -607,6 +619,7 @@ class _EducatorAnalyticsScreenState
     Map<String, dynamic> analytics,
     int totalWords,
     List<Map<String, dynamic>> topLearners,
+    AppLocalization l10n,
   ) async {
     try {
       final now = DateTime.now();
@@ -655,7 +668,7 @@ class _EducatorAnalyticsScreenState
 
         await SharePlus.instance.share(ShareParams(
           files: [XFile(file.path)],
-          text: 'Educator Analytics Report (CSV)',
+          text: l10n.translate('analytics_report_csv'),
         ));
       } else {
         // PDF Implementation
@@ -665,53 +678,53 @@ class _EducatorAnalyticsScreenState
           pw.MultiPage(
             pageFormat: PdfPageFormat.a4,
             build: (context) => [
-              pw.Header(level: 0, child: pw.Text('Lumad Lingua - Educator Analytics Report')),
-              pw.Paragraph(text: 'Generated on: ${DateFormat('MMMM dd, yyyy HH:mm').format(now)}'),
+              pw.Header(level: 0, child: pw.Text(l10n.translate('educator_analytics_report_title'))),
+              pw.Paragraph(text: l10n.translate('generated_on', params: {'date': DateFormat('MMMM dd, yyyy HH:mm').format(now)})),
               
-              pw.Header(level: 1, child: pw.Text('System Overview')),
-              pw.Bullet(text: 'Total Registered Users: ${users.length}'),
-              pw.Bullet(text: 'Total Dictionary Words: $totalWords'),
-              pw.Bullet(text: 'Total XP Earned: ${analytics['totalXP'] ?? 0}'),
-              pw.Bullet(text: 'Avg Lessons per Student: ${(analytics['avgLessonsCompleted'] ?? 0.0).toStringAsFixed(1)}'),
-              pw.Bullet(text: 'Pronunciation Accuracy: ${((analytics['pronunciationAccuracy'] ?? 0.0) * 100).toInt()}%'),
-              pw.Bullet(text: 'Active Learners (XP > 0): ${users.where((u) => u.xp > 0).length}'),
+              pw.Header(level: 1, child: pw.Text(l10n.translate('system_overview'))),
+              pw.Bullet(text: l10n.translate('total_registered_users', params: {'count': '${users.length}'})),
+              pw.Bullet(text: l10n.translate('total_dict_words', params: {'count': '$totalWords'})),
+              pw.Bullet(text: l10n.translate('total_xp_earned', params: {'count': '${analytics['totalXP'] ?? 0}'})),
+              pw.Bullet(text: l10n.translate('avg_lessons_per_student', params: {'val': (analytics['avgLessonsCompleted'] ?? 0.0).toStringAsFixed(1)})),
+              pw.Bullet(text: l10n.translate('pronunciation_accuracy_val', params: {'val': '${((analytics['pronunciationAccuracy'] ?? 0.0) * 100).toInt()}%'})),
+              pw.Bullet(text: l10n.translate('active_learners_count', params: {'count': '${users.where((u) => u.xp > 0).length}'})),
               
-              pw.Header(level: 1, child: pw.Text('Dialect Distribution')),
+              pw.Header(level: 1, child: pw.Text(l10n.translate('dialect_distribution'))),
               pw.TableHelper.fromTextArray(
                 context: context,
                 data: [
-                  ['Dialect', 'Percentage'],
+                  [l10n.translate('dialect'), l10n.translate('percentage')],
                   ...dialectDist.entries.map((e) => [e.key, '${(e.value * 100).toInt()}%']),
                 ],
               ),
 
-              pw.Header(level: 1, child: pw.Text('Quiz Performance')),
+              pw.Header(level: 1, child: pw.Text(l10n.translate('quiz_performance'))),
               pw.TableHelper.fromTextArray(
                 context: context,
                 data: [
-                  ['Lesson Name', 'Pass Rate', 'Fail Rate'],
+                  [l10n.translate('lesson_name'), l10n.translate('pass_rate'), l10n.translate('fail_rate')],
                   ...List<Map<String, dynamic>>.from(analytics['quizPerformance'] ?? []).map((q) => [
                     q['name'], '${q['pass']}%', '${q['fail']}%'
                   ]),
                 ],
               ),
 
-              pw.Header(level: 1, child: pw.Text('Top Learners')),
+              pw.Header(level: 1, child: pw.Text(l10n.translate('top_learners'))),
               pw.TableHelper.fromTextArray(
                 context: context,
                 data: [
-                  ['Rank', 'Username', 'Municipality', 'XP'],
+                  [l10n.translate('rank'), l10n.translate('username'), l10n.translate('municipality'), 'XP'],
                   ...topLearners.asMap().entries.map((e) => [
-                    e.key + 1, e.value['username'], e.value['municipality'] ?? 'Unknown', e.value['xp']
+                    e.key + 1, e.value['username'], e.value['municipality'] ?? l10n.translate('unknown'), e.value['xp']
                   ]),
                 ],
               ),
 
-              pw.Header(level: 1, child: pw.Text('Student Roster & Active Streak Metrics')),
+              pw.Header(level: 1, child: pw.Text(l10n.translate('student_roster_streak_metrics'))),
               pw.TableHelper.fromTextArray(
                 context: context,
                 data: [
-                  ['Name', 'Email', 'XP', 'Active Streak', 'Group/Municipality'],
+                  [l10n.translate('name'), l10n.translate('email'), 'XP', l10n.translate('active_streak'), l10n.translate('group_municipality')],
                   ...users.map((u) => [
                     u.name, u.email, '${u.xp} XP', '${u.streak}d', u.municipality ?? u.indigenousGroup ?? 'N/A'
                   ]),
@@ -727,14 +740,17 @@ class _EducatorAnalyticsScreenState
 
         await SharePlus.instance.share(ShareParams(
           files: [XFile(file.path)],
-          text: 'Educator Analytics Report (PDF)',
+          text: l10n.translate('analytics_report_pdf'),
         ));
       }
     } catch (e) {
       debugPrint('Export Error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to export: $e'), backgroundColor: AppColors.semanticRed),
+          SnackBar(
+            content: Text(l10n.translate('failed_to_export', params: {'error': '$e'})),
+            backgroundColor: AppColors.semanticRed,
+          ),
         );
       }
     }
@@ -798,10 +814,16 @@ class _EducatorAnalyticsScreenState
     );
   }
 
-  Widget _buildTimeRangeSelector() {
+  Widget _buildTimeRangeSelector(AppLocalization l10n) {
     return Row(
       children: ['Daily', 'Weekly', 'Monthly'].map((range) {
         final isSelected = _timeRange == range;
+        final label = range == 'Daily'
+            ? l10n.translate('daily')
+            : range == 'Weekly'
+                ? l10n.translate('weekly')
+                : l10n.translate('monthly');
+
         return Padding(
           padding: const EdgeInsets.only(right: 8),
           child: GestureDetector(
@@ -826,7 +848,7 @@ class _EducatorAnalyticsScreenState
                 ),
               ),
               child: Text(
-                range.toUpperCase(),
+                label.toUpperCase(),
                 style: AppTypography.label.copyWith(
                   color: isSelected
                       ? AppColors.forest900
@@ -842,7 +864,7 @@ class _EducatorAnalyticsScreenState
     );
   }
 
-  Widget _buildQuizItem(Map<String, dynamic> quiz) {
+  Widget _buildQuizItem(Map<String, dynamic> quiz, AppLocalization l10n) {
     final pass = quiz['pass'] as int;
     final fail = quiz['fail'] as int;
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -911,14 +933,14 @@ class _EducatorAnalyticsScreenState
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '$pass% passed',
+                l10n.translate('percent_passed', params: {'percent': '$pass'}),
                 style: AppTypography.label.copyWith(
                   color: AppColors.semanticGreen,
                   fontSize: 10,
                 ),
               ),
               Text(
-                '$fail% failed',
+                l10n.translate('percent_failed', params: {'percent': '$fail'}),
                 style: AppTypography.label.copyWith(
                   color: AppColors.semanticRed,
                   fontSize: 10,
@@ -931,7 +953,12 @@ class _EducatorAnalyticsScreenState
     );
   }
 
-  Widget _buildHurdleItem(String topic, String stat, String lessonName) {
+  Widget _buildHurdleItem(
+    String topic,
+    String stat,
+    String lessonName,
+    AppLocalization l10n,
+  ) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -981,7 +1008,7 @@ class _EducatorAnalyticsScreenState
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
-              'FIX',
+              l10n.translate('fix_caps'),
               style: AppTypography.label.copyWith(
                 color: AppColors.gold500,
                 fontSize: 9,
@@ -1121,7 +1148,7 @@ class _EducatorAnalyticsScreenState
     );
   }
 
-  Widget _buildActiveLearnersStats(List<AdminUser> users) {
+  Widget _buildActiveLearnersStats(List<AdminUser> users, AppLocalization l10n) {
     final now = DateTime.now();
     
     // DAU (Today)
@@ -1138,11 +1165,11 @@ class _EducatorAnalyticsScreenState
 
     return Row(
       children: [
-        _buildStatCard('DAU', dau.toString(), 'Today', AppColors.gold500),
+        _buildStatCard('DAU', dau.toString(), l10n.translate('today'), AppColors.gold500),
         const SizedBox(width: 12),
-        _buildStatCard('WAU', wau.toString(), '7 Days', AppColors.semanticBlue),
+        _buildStatCard('WAU', wau.toString(), l10n.translate('days_count', params: {'count': '7'}), AppColors.semanticBlue),
         const SizedBox(width: 12),
-        _buildStatCard('MAU', mau.toString(), '30 Days', AppColors.semanticGreen),
+        _buildStatCard('MAU', mau.toString(), l10n.translate('days_count', params: {'count': '30'}), AppColors.semanticGreen),
       ],
     );
   }
@@ -1246,6 +1273,3 @@ class _GrowthPainter extends CustomPainter {
   bool shouldRepaint(covariant _GrowthPainter oldDelegate) => 
       oldDelegate.points != points;
 }
-
-
-

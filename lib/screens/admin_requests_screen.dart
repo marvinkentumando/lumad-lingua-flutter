@@ -349,12 +349,12 @@ class AdminRequestsScreen extends ConsumerWidget {
   String _formatDate(DateTime dt, AppLocalization l10n) {
     final diff = DateTime.now().difference(dt);
     if (diff.inMinutes < 60) {
-      return l10n.translate('minutes_ago', params: {'count': '${diff.inMinutes}'});
+      return l10n.translate('mins_ago', params: {'mins': '${diff.inMinutes}'});
     }
     if (diff.inHours < 24) {
-      return l10n.translate('hours_ago', params: {'count': '${diff.inHours}'});
+      return l10n.translate('hours_ago', params: {'hours': '${diff.inHours}'});
     }
-    return l10n.translate('days_ago', params: {'count': '${diff.inDays}'});
+    return l10n.translate('days_ago', params: {'days': '${diff.inDays}'});
   }
 
   void _processRequest(

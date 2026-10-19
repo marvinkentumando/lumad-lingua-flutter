@@ -14,6 +14,7 @@ import '../providers/educator_provider.dart';
 import '../models/educator_models.dart';
 import '../widgets/brand_background.dart';
 import '../widgets/admin/create_mini_quiz_modal.dart';
+import '../utils/app_localization.dart';
 
 class EducatorDashboardScreen extends ConsumerStatefulWidget {
   const EducatorDashboardScreen({super.key});
@@ -41,15 +42,16 @@ class _FeedItem {
 class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScreen> {
   bool get isDark => Theme.of(context).brightness == Brightness.dark;
 
-  String _greeting(String username) {
+  String _greeting(String username, AppLocalization l10n) {
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Maayong Buntag,';
-    if (hour < 18) return 'Maayong Hapon,';
-    return 'Maayong Gabii,';
+    if (hour < 12) return l10n.translate('good_morning');
+    if (hour < 18) return l10n.translate('good_afternoon');
+    return l10n.translate('good_evening');
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = ref.watch(localizationProvider);
     final userProfileAsync = ref.watch(userProfileProvider);
     final userAuth = ref.watch(authStateProvider).value;
     final notificationsAsync = userAuth != null
@@ -83,20 +85,21 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 24),
-                  _buildHeroBanner(userProfileAsync, notificationsAsync),
+                  _buildHeroBanner(userProfileAsync, notificationsAsync, l10n),
                   const SizedBox(height: 24),
                   const WotdWidget(),
                   const SizedBox(height: 32),
-                  _buildStrugglingStudentsAlert(educatorStudentsAsync),
+                  _buildStrugglingStudentsAlert(educatorStudentsAsync, l10n),
                   const SizedBox(height: 24),
-                  _buildMiniQuizManagementSection(userAuth?.uid ?? ''),
+                  _buildMiniQuizManagementSection(userAuth?.uid ?? '', l10n),
                   const SizedBox(height: 24),
-                  _buildCulturalMilestone(totalWordsAsync),
+                  _buildCulturalMilestone(totalWordsAsync, l10n),
                   const SizedBox(height: 24),
                   _buildRecentActivity(
                     educatorStudentsAsync,
                     communityActivitiesAsync,
                     pendingSubmissionsAsync,
+                    l10n,
                   ),
                   const SizedBox(height: 100),
                 ],
@@ -108,10 +111,14 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
     );
   }
 
-  Widget _buildHeroBanner(AsyncValue<Map<String, dynamic>?> profileAsync, AsyncValue<List<Map<String, dynamic>>> notifsAsync) {
+  Widget _buildHeroBanner(
+    AsyncValue<Map<String, dynamic>?> profileAsync,
+    AsyncValue<List<Map<String, dynamic>>> notifsAsync,
+    AppLocalization l10n,
+  ) {
     final profile = profileAsync.value;
     if (profile == null) return const SizedBox.shrink();
-    final name = profile['username'] as String? ?? 'Educator';
+    final name = profile['username'] as String? ?? l10n.translate('role_educator');
     final unreadCount = notifsAsync.value?.where((n) => n['isRead'] == false).length ?? 0;
     return BrandCard(
       theme: BrandCardTheme.gold,
@@ -125,23 +132,51 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${_greeting(name)}\n$name', style: AppTypography.displayBold.copyWith(color: Colors.black, fontSize: 32, height: 1.1)),
+                    Text(
+                      '${_greeting(name, l10n)},\n$name',
+                      style: AppTypography.displayBold.copyWith(color: Colors.black, fontSize: 32, height: 1.1),
+                    ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Text('WISDOM GUIDE  •  ELDER EDUCATOR', style: AppTypography.label.copyWith(color: Colors.black87, fontWeight: FontWeight.w900, fontSize: 9, letterSpacing: 1))),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                          child: Text(
+                            l10n.translate('wisdom_guide_elder_educator'),
+                            style: AppTypography.label.copyWith(color: Colors.black87, fontWeight: FontWeight.w900, fontSize: 9, letterSpacing: 1),
+                          ),
+                        ),
                         if (profile['villageCode'] != null)
                           Padding(
                             padding: const EdgeInsets.only(left: 8),
                             child: GestureDetector(
                               onTap: () {
                                 HapticService.selection();
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Village Code ${profile['villageCode']} copied!')));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      l10n.translate(
+                                        'village_code_copied_val',
+                                        params: {'code': '${profile['villageCode']}'},
+                                      ),
+                                    ),
+                                  ),
+                                );
                               },
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(color: AppColors.gold500.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(8)),
-                                child: Row(children: [const Icon(Icons.fort_rounded, size: 10, color: Colors.black), const SizedBox(width: 4), Text('CODE: ${profile['villageCode']}', style: AppTypography.label.copyWith(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 9, letterSpacing: 1))]),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.fort_rounded, size: 10, color: Colors.black),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      l10n.translate('village_code_val_label', params: {'code': '${profile['villageCode']}'}),
+                                      style: AppTypography.label.copyWith(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 9, letterSpacing: 1),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           )
@@ -153,7 +188,16 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(color: AppColors.semanticRed.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.semanticRed.withValues(alpha: 0.2))),
-                                child: Row(children: [const Icon(Icons.warning_amber_rounded, size: 10, color: AppColors.semanticRed), const SizedBox(width: 4), Text('ACTIVATE VILLAGE', style: AppTypography.label.copyWith(color: AppColors.semanticRed, fontWeight: FontWeight.w900, fontSize: 9))]),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.warning_amber_rounded, size: 10, color: AppColors.semanticRed),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      l10n.translate('activate_village_caps'),
+                                      style: AppTypography.label.copyWith(color: AppColors.semanticRed, fontWeight: FontWeight.w900, fontSize: 9),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -171,7 +215,10 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
     );
   }
 
-  Widget _buildStrugglingStudentsAlert(AsyncValue<List<EducatorStudent>> studentsAsync) {
+  Widget _buildStrugglingStudentsAlert(
+    AsyncValue<List<EducatorStudent>> studentsAsync,
+    AppLocalization l10n,
+  ) {
     final struggling = studentsAsync.value?.where((u) => u.isStruggling).toList() ?? [];
     if (struggling.isEmpty) return const SizedBox.shrink();
     return GestureDetector(
@@ -191,9 +238,9 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Attention Needed', style: AppTypography.h3.copyWith(color: AppColors.semanticRed)),
+                  Text(l10n.translate('attention_needed'), style: AppTypography.h3.copyWith(color: AppColors.semanticRed)),
                   Text(
-                    "${struggling.length} student${struggling.length > 1 ? 's' : ''} might be falling behind based on recent activity.",
+                    l10n.translate('students_falling_behind', params: {'count': '${struggling.length}'}),
                     style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
                   ),
                 ],
@@ -203,7 +250,7 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(color: AppColors.semanticRed.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
               child: Text(
-                'VIEW',
+                l10n.translate('view_caps'),
                 style: AppTypography.label.copyWith(color: AppColors.semanticRed, fontWeight: FontWeight.w900, fontSize: 10),
               ),
             ),
@@ -213,44 +260,151 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
     );
   }
 
-  Widget _buildCulturalMilestone(AsyncValue<int> totalWordsAsync) {
+  Widget _buildCulturalMilestone(
+    AsyncValue<int> totalWordsAsync,
+    AppLocalization l10n,
+  ) {
     final wordsCount = totalWordsAsync.value ?? 0;
     final target = ((wordsCount / 100).floor() + 1) * 100;
     final progress = (wordsCount % 100) / 100.0;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [_buildSectionTitle('Village Milestone'), const SizedBox(height: 12), BrandCard(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Dictionary Expansion', style: AppTypography.h3.copyWith(color: Theme.of(context).colorScheme.onSurface)), Text('${(progress * 100).toInt()}%', style: AppTypography.h3.copyWith(color: AppColors.gold500))]), const SizedBox(height: 12), ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(value: progress, backgroundColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05), valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold500), minHeight: 8)), const SizedBox(height: 8), Text('${target - wordsCount} more words until the community unlocks the next milestone.', style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 11))]))]);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(l10n.translate('village_milestone')),
+        const SizedBox(height: 12),
+        BrandCard(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    l10n.translate('dictionary_expansion'),
+                    style: AppTypography.h3.copyWith(color: Theme.of(context).colorScheme.onSurface),
+                  ),
+                  Text(
+                    '${(progress * 100).toInt()}%',
+                    style: AppTypography.h3.copyWith(color: AppColors.gold500),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold500),
+                  minHeight: 8,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.translate('words_until_next_milestone', params: {'count': '${target - wordsCount}'}),
+                style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
-  String _timeAgo(DateTime d) {
+  String _timeAgo(DateTime d, AppLocalization l10n) {
     final diff = DateTime.now().difference(d);
-    if (diff.inDays > 365) return '${(diff.inDays / 365).floor()}y ago';
-    if (diff.inDays > 30) return '${(diff.inDays / 30).floor()}mo ago';
-    if (diff.inDays > 0) return '${diff.inDays}d ago';
-    if (diff.inHours > 0) return '${diff.inHours}h ago';
-    if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
-    return 'Just now';
+    if (diff.inDays > 365) {
+      return l10n.translate('years_ago', params: {'count': '${(diff.inDays / 365).floor()}'});
+    }
+    if (diff.inDays > 30) {
+      return l10n.translate('months_ago', params: {'count': '${(diff.inDays / 30).floor()}'});
+    }
+    if (diff.inDays > 0) {
+      return l10n.translate('days_ago', params: {'days': '${diff.inDays}'});
+    }
+    if (diff.inHours > 0) {
+      return l10n.translate('hours_ago', params: {'hours': '${diff.inHours}'});
+    }
+    if (diff.inMinutes > 0) {
+      return l10n.translate('mins_ago', params: {'mins': '${diff.inMinutes}'});
+    }
+    return l10n.translate('just_now');
   }
 
-  Widget _buildRecentActivity(AsyncValue<List<EducatorStudent>> studentsAsync, AsyncValue<List<CommunityActivity>> communityActivitiesAsync, AsyncValue<List<DictionaryEntry>> pendingSubmissionsAsync) {
+  Widget _buildRecentActivity(
+    AsyncValue<List<EducatorStudent>> studentsAsync,
+    AsyncValue<List<CommunityActivity>> communityActivitiesAsync,
+    AsyncValue<List<DictionaryEntry>> pendingSubmissionsAsync,
+    AppLocalization l10n,
+  ) {
     final List<_FeedItem> feedItems = [];
     if (studentsAsync.hasValue) {
       for (var u in studentsAsync.value!) {
-        feedItems.add(_FeedItem(text: '${u.name} joined your village', timestamp: DateTime.now(), icon: Icons.person_add_rounded, color: AppColors.semanticGreen));
+        feedItems.add(_FeedItem(
+          text: l10n.translate('user_joined_village', params: {'name': u.name}),
+          timestamp: DateTime.now(),
+          icon: Icons.person_add_rounded,
+          color: AppColors.semanticGreen,
+        ));
       }
     }
     if (communityActivitiesAsync.hasValue) {
       for (var activity in communityActivitiesAsync.value!) {
-        feedItems.add(_FeedItem(text: '${activity.userName} ${activity.message}', timestamp: activity.createdAt ?? DateTime.now(), icon: activity.type == 'lesson_completed' ? Icons.task_alt_rounded : (activity.type == 'streak' ? Icons.local_fire_department_rounded : Icons.emoji_events_rounded), color: activity.type == 'lesson_completed' ? AppColors.semanticBlue : (activity.type == 'streak' ? Colors.orange : AppColors.gold500)));
+        feedItems.add(_FeedItem(
+          text: '${activity.userName} ${activity.message}',
+          timestamp: activity.createdAt ?? DateTime.now(),
+          icon: activity.type == 'lesson_completed'
+              ? Icons.task_alt_rounded
+              : (activity.type == 'streak'
+                  ? Icons.local_fire_department_rounded
+                  : Icons.emoji_events_rounded),
+          color: activity.type == 'lesson_completed'
+              ? AppColors.semanticBlue
+              : (activity.type == 'streak' ? Colors.orange : AppColors.gold500),
+        ));
       }
     }
     if (pendingSubmissionsAsync.hasValue) {
       for (var entry in pendingSubmissionsAsync.value!) {
-        feedItems.add(_FeedItem(text: 'New contribution: "${entry.indigenousWord}" needs review', timestamp: entry.submittedAt ?? DateTime.now(), icon: Icons.rate_review_rounded, color: AppColors.terracotta, onTap: () => context.push('/admin/lessons')));
+        feedItems.add(_FeedItem(
+          text: l10n.translate('new_contribution_needs_review', params: {'word': entry.indigenousWord}),
+          timestamp: entry.submittedAt ?? DateTime.now(),
+          icon: Icons.rate_review_rounded,
+          color: AppColors.terracotta,
+          onTap: () => context.push('/admin/lessons'),
+        ));
       }
     }
     feedItems.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     final displayItems = feedItems.take(8).toList();
     if (displayItems.isEmpty) return const SizedBox.shrink();
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [_buildSectionTitle('Recent Activity Feed'), GestureDetector(onTap: () => context.go('/educator/students'), child: Text('VIEW ALL', style: AppTypography.label.copyWith(color: AppColors.gold500.withValues(alpha: 0.6), fontSize: 10, fontWeight: FontWeight.w900)))]), const SizedBox(height: 12), ...displayItems.map((item) => _buildActivityItem(item.text, _timeAgo(item.timestamp), item.icon, item.color, onTap: item.onTap))]);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildSectionTitle(l10n.translate('recent_activity_feed')),
+            GestureDetector(
+              onTap: () => context.go('/educator/students'),
+              child: Text(
+                l10n.translate('view_all_caps'),
+                style: AppTypography.label.copyWith(color: AppColors.gold500.withValues(alpha: 0.6), fontSize: 10, fontWeight: FontWeight.w900),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ...displayItems.map((item) => _buildActivityItem(
+              item.text,
+              _timeAgo(item.timestamp, l10n),
+              item.icon,
+              item.color,
+              onTap: item.onTap,
+            )),
+      ],
+    );
   }
 
   Widget _buildActivityItem(String text, String time, IconData icon, Color color, {VoidCallback? onTap}) {
@@ -261,7 +415,7 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
     return Text(title.toUpperCase(), style: AppTypography.label.copyWith(color: AppColors.gold500, letterSpacing: 2, fontWeight: FontWeight.w900));
   }
 
-  Widget _buildMiniQuizManagementSection(String educatorId) {
+  Widget _buildMiniQuizManagementSection(String educatorId, AppLocalization l10n) {
     final miniQuizzesAsync = ref.watch(villageMiniQuizzesProvider(educatorId));
 
     return Column(
@@ -270,7 +424,7 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _buildSectionTitle('Village Custom Mini-Quizzes'),
+            _buildSectionTitle(l10n.translate('village_custom_mini_quizzes')),
             GestureDetector(
               onTap: () {
                 HapticService.selection();
@@ -292,7 +446,7 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
                     const Icon(Icons.add, color: AppColors.gold500, size: 16),
                     const SizedBox(width: 4),
                     Text(
-                      'CREATE',
+                      l10n.translate('create_caps'),
                       style: AppTypography.label.copyWith(
                         color: AppColors.gold500,
                         fontSize: 9,
@@ -317,7 +471,7 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
                     const SizedBox(width: 16),
                     Expanded(
                       child: Text(
-                        'No custom mini-quizzes created yet. Tap CREATE to build assessments for your village.',
+                        l10n.translate('no_mini_quizzes_created_yet'),
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 13,
@@ -330,14 +484,14 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
             }
 
             return Column(
-              children: quizzes.map((q) => _buildEducatorQuizCard(q)).toList(),
+              children: quizzes.map((q) => _buildEducatorQuizCard(q, l10n)).toList(),
             );
           },
           loading: () => const Center(
             child: CircularProgressIndicator(color: AppColors.gold500),
           ),
           error: (e, _) => Text(
-            'Error: $e',
+            l10n.translate('error_prefix', params: {'error': '$e'}),
             style: const TextStyle(color: AppColors.semanticRed),
           ),
         ),
@@ -345,7 +499,7 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
     );
   }
 
-  Widget _buildEducatorQuizCard(VillageMiniQuiz quiz) {
+  Widget _buildEducatorQuizCard(VillageMiniQuiz quiz, AppLocalization l10n) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: BrandCard(
@@ -378,7 +532,13 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${quiz.dialect} • ${quiz.tasks.length} questions',
+                    l10n.translate(
+                      'dialect_questions_count',
+                      params: {
+                        'dialect': quiz.dialect,
+                        'count': '${quiz.tasks.length}',
+                      },
+                    ),
                     style: AppTypography.label.copyWith(
                       color: Theme.of(context)
                           .colorScheme
