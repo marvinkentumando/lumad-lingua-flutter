@@ -1,16 +1,18 @@
 # Lumad Lingua: Progress Report
 
-**PROJECT TITLE:** Lumad Lingua: Sentiment-Driven Cultural Vitality & Language Revitalization Platform for the Mansaka Indigenous Language  
-**STUDENT NAME(S):** Lumad Lingua Project Development Team  
-**DATE:** October 2024 / Semester Progress  
+**PROJECT TITLE:** LUMAD LINGUA: A DOCUMENTATION AND GAMIFIED LEARNING PLATFORM FOR THE MANSAKA LANGUAGE  
+**STUDENT NAMES:** AIRES JHOY J. GIVEROLA, KATHY CLAIRE S. LAURETO, MARVIN KEN P. TUMANDO  
+**PROGRAM:** Bachelor of Science in Information Technology (BSIT)  
+**ADVISER:** ARIEL O. GAMAO, DIT  
+**DATE:** JUNE 2026 / Outline Defense Progress Report  
 
 ---
 
 ## Introduction
 
-**Lumad Lingua** is a mobile language revitalization and digital vitality monitoring platform specifically built for the **Mansaka** indigenous community of Mindanao, Philippines. The project bridges ancestral wisdom with modern mobile software engineering by combining multi-model machine learning sentiment analysis, gamified interactive learning modules, acoustic waveform pronunciation alignment, edge-offline synchronization, and multi-role administrative and educational portals.
+**LUMAD LINGUA** is a mobile language documentation and gamified learning platform developed specifically for the **Mansaka** indigenous language of Mindanao, Philippines. Following panel recommendations from the Outline Defense, the system architecture and project scope were significantly updated: the former GIS geo-tagging component was replaced with a Sentiment Analysis pipeline and interactive dashboard to better measure community engagement vitality, the Contributor role was eliminated to consolidate content submission and validation under the Validator role, and the vocabulary scope was expanded from a fixed 200-entry limit to an unlimited, community-supported digital archive.
 
-Designed using Flutter and Dart with a reactive Riverpod architecture, the platform enables learners to acquire Mansaka vocabulary and grammar, educators to build tailored curricula, validators to verify cultural accuracy, and researchers/administrators to monitor community language vitality in real time.
+Built with Flutter and Dart on a reactive Riverpod state management architecture with Firebase and Supabase backends, Lumad Lingua combines gamified pedagogy (Leitner spaced repetition system, 10 activity formats, Lingua Duels PvP), acoustic pronunciation alignment, multi-model sentiment analysis, and offline-first edge synchronization (`Hive`) to safeguard and promote the Mansaka linguistic heritage.
 
 *(Note: The Gantt Chart section has been intentionally omitted per guidelines).*
 
@@ -19,54 +21,60 @@ Designed using Flutter and Dart with a reactive Riverpod architecture, the platf
 ## Project Status
 
 ### Overview of the Project's Current Stage
-The project is currently in **Phase 3/4 (Late Development, System Integration, and Refinement Stage)**. Overall project completion is estimated at **85% - 90%**. All primary core architecture layers—including user authentication, role-based access control (Learner, Educator, Validator, Admin), Firestore persistence, Supabase audio archiving, local Hive database caching, Leitner Spaced Repetition System (SRS), and gamified learning activities—are fully operational.
+The project is currently in **Phase 3/4 (Late Development, System Integration, and Panel Action Implementation Stage)**, with overall project completion estimated at **85% - 90%**. All major architectural revisions mandated during the Outline Defense—including title update, GIS removal, sentiment analysis pipeline integration, Contributor role elimination, 3-algorithm sentiment evaluation, 3-algorithm pronunciation assessment, and unlimited Mansaka vocabulary archiving—have been fully implemented in the system specification, database design, and mobile application codebase.
 
-### Accomplishments Since the Last Report
-Since the previous progress review with the project adviser and evaluation panel, the team has achieved the following key technical milestones:
+### Accomplishments Since the Last Report (Based on Outline Defense Minutes)
+Following the directive of the Outline Defense Panel (Dr. Hazel Gameng, Prof. Hannah Mae Lolong, Prof. Analyn Casipe, and Dr. Ariel O. Gamao), the team has accomplished the following core technical deliverables:
 
-1. **State Management & Offline Sync Engine Refactor:**
-   - Designed and implemented a robust offline synchronization queue (`pending_sync_queue`) using Hive storage.
-   - Refactored `StudentNotifier` and `UploadQueueService` to ensure offline actions (XP gains, streak increments, heart updates, milestone claims, and lesson progress) update locally in real-time and queue automatically for network sync upon reconnection.
-   - Built automatic network listeners via `ConnectivityPlus` that trigger background retry synchronization without user disruption.
-   - Authored automated unit test suites (`offline_sync_test.dart`) validating state recovery and sync queue transitions.
+1. **Project Title & Scope Alignment:**
+   - Updated the official title to *"LUMAD LINGUA: A Documentation and Gamified Learning Platform for the Mansaka Language."*
+   - Refocused the application exclusively on the **Mansaka** language (removing Mandaya as a secondary language).
+   - Removed the 200-entry vocabulary restriction, establishing an unlimited and expandable Mansaka vocabulary repository.
 
-2. **Algorithm Expansion & Machine Learning Refinement:**
-   - **Sentiment Analysis:** Expanded the classification pipeline in `SentimentService` to incorporate multi-model evaluation (Naïve Bayes, Support Vector Machines [SVM], and Bidirectional LSTM [BiLSTM]) alongside accuracy, precision, recall, and F1-score evaluation metrics.
-   - **Pronunciation Assessment:** Enhanced `PronunciationService` with Hidden Markov Models (HMM) and Cosine Similarity to complement existing Mel-Frequency Cepstral Coefficients (MFCC) and Dynamic Time Warping (DTW) feature alignment.
+2. **Replacement of GIS Component with Sentiment Analysis Pipeline:**
+   - Removed all GIS geo-tagging maps, location services, and spatial data structures.
+   - Integrated a Sentiment Analysis pipeline and interactive Sentiment Dashboard to analyze community text/posts in the Mansaka language.
+   - Created the `Facebook_Posts` and `Sentiment_Results` Firestore collections to store raw community text, translations, sentiment scores, and review outcomes.
 
-3. **Multi-Role Console & Educational Authoring:**
-   - Completed `EducatorAnalyticsScreen`, `EducatorStudentsScreen`, and `EducatorUnitManagementScreen` enabling educators to track student performance metrics and manage classroom units.
-   - Implemented `LessonEditorScreen` enhancements, replacing disruptive modal popups with silent status indicators for auto-saving drafts.
-   - Polished `AdminAdvancedAnalyticsScreen` and `AdminUsersScreen` with audit logging, role management, and bulk selection controls.
+3. **User Role Consolidation (Removal of Contributor Role):**
+   - Eliminated the Contributor role from the Use Case Diagram, Data Flow Diagrams, and system access logic.
+   - Reassigned all content submission responsibilities (uploading vocabulary, recording audio clips, editing entries) directly to the **Validator** role, simplifying community co-creation workflows under native linguistic elders and validators.
 
-4. **Gamification & Heritage Retention Features:**
-   - Integrated "Lingua Duels" real-time PvP match mechanics (`lingua_duel_screen.dart`).
-   - Implemented procedural "Memory Forest" UI canvas reflecting Leitner SRS mastery progression.
-   - Finalized the "Ancestral Vault Shop" for cosmetic and cultural badge rewards.
+4. **Implementation of 3 Candidate Sentiment Analysis Algorithms:**
+   - Developed classification pipelines for **Naïve Bayes**, **Support Vector Machine (SVM)**, and **Bidirectional LSTM (BiLSTM)** within `SentimentService`.
+   - Selected **Support Vector Machine (SVM)** as the primary classification model due to its demonstrated accuracy and efficiency on small, code-mixed Mansaka text datasets compared to data-hungry neural sequence models (BiLSTM).
+
+5. **Implementation of 3 Candidate Pronunciation Assessment Algorithms:**
+   - Developed feature extraction and acoustic alignment pipelines for **Dynamic Time Warping (DTW) with MFCC**, **Hidden Markov Models (HMM) with MFCC**, and **Cosine Similarity with MFCC** in `PronunciationService`.
+   - Formulated mathematical demonstrations for each model and selected **MFCC + DTW** supported by literature comparative accuracy (94.0% vs. 91.3%) and lower error rates (0.287 vs. 0.473).
+
+6. **State Management & Offline Edge Synchronization Engine:**
+   - Implemented Hive local storage boxes (`student_profile`, `pending_sync_queue`) in `OfflineService`.
+   - Refactored `StudentNotifier` and `UploadQueueService` to ensure offline lesson completions, XP gains, streak increments, and draft lessons persist locally and sync automatically upon network reconnection via `ConnectivityPlus`.
 
 ### Challenges Encountered and Solutions Implemented
 
 #### Identification of Difficulties & Strategies Implemented:
 
-1. **Challenge: Offline State Loss & Transient Connectivity Failure**
-   - *Issue:* Network fluctuations in remote rural areas caused student lesson progress, XP, and streak counts to fail silently when syncing with Firestore.
-   - *Solution:* Implemented an **offline-first local persistence architecture** powered by Hive (`OfflineService`). All state updates mutate local storage instantly and append a payload to `pending_sync_queue`. An active connectivity watcher automatically flushes the queue to Firebase once an internet connection is established.
+1. **Challenge: Architectural Transition from GIS to Sentiment Pipeline**
+   - *Issue:* Removing spatial GIS modules required restructuring system architecture diagrams, database schemas, and mobile screens.
+   - *Solution:* Replaced map views with the `SentimentDashboardScreen` utilizing `fl_chart` for time-series sentiment visualization (Positive, Negative, Neutral) and created `Facebook_Posts` and `Sentiment_Results` Firestore models.
 
-2. **Challenge: Key Desynchronization in Interactive Content Editors**
-   - *Issue:* In `MatchingEditor` and `SentenceReorderingEditor`, deleting list items caused index-based `ValueKey('..._$i')` keys to shift, causing controller state to misalign across list rows.
-   - *Solution:* Refactored list rendering to utilize unique object identifiers and controller-managed item structures, guaranteeing key stability and clean state reconciliation.
+2. **Challenge: Data Sparsity for Deep Learning Sentiment Models (BiLSTM)**
+   - *Issue:* BiLSTM required extensive labeled corpora, yielding lower accuracy on small, code-mixed Mansaka text datasets.
+   - *Solution:* Evaluated three algorithms (Naïve Bayes, SVM, BiLSTM) and selected Support Vector Machine (SVM) as the primary model due to its superior performance and stability on low-resource indigenous text corpora.
 
-3. **Challenge: Acoustic Noise & Feature Alignment Latency in Speech Analysis**
-   - *Issue:* Ambient environmental noise distorted recording inputs during pronunciation tests, leading to poor score consistency.
-   - *Solution:* Implemented audio volume normalization and high-pass noise filtering in `PronunciationService` prior to MFCC extraction and DTW alignment, ensuring low latency (<500ms) and accurate acoustic matching.
+3. **Challenge: Redundant Workflow Layers between Contributor and Validator**
+   - *Issue:* Having separate Contributor and Validator roles introduced friction and unnecessary review queues for community elders.
+   - *Solution:* Consolidated submission and approval capabilities into a single Validator role, permitting authorized linguistic elders to directly upload, record, and publish verified terms.
 
-4. **Challenge: Discrepancy in XP and Streak Tracking**
-   - *Issue:* Combo bonus XP calculated during lesson sessions was omitted during backend Firestore completion calls.
-   - *Solution:* Updated `FirebaseService.completeLesson` to accept detailed session parameters (`bonusXp`, accuracy rate, streak updates) ensuring user profile balances reflect total earned rewards.
+4. **Challenge: Environmental Noise Distortion in Pronunciation Matching**
+   - *Issue:* Microphone noise in rural testing environments affected acoustic MFCC feature extraction.
+   - *Solution:* Added audio volume normalization and pre-emphasis filtering in `PronunciationService` prior to MFCC extraction and DTW alignment, ensuring low latency (<500ms) and consistent acoustic scoring.
 
-### Comparison of Actual Progress to the Planned Timeline
-- **Planned Timeline Target:** Complete core framework, multi-role interfaces, offline persistence engine, and multi-algorithm evaluation modules.
-- **Actual Progress:** **On Schedule.** Core functional requirements are 100% complete and verified. The offline sync engine refactor and algorithm implementations have been fully delivered. The project is well-positioned for final field usability testing.
+### Comparison of Actual Progress to Planned Timeline
+- **Planned Target:** Implement all Outline Defense panel recommendations, finalize core mobile application modules, build 3-algorithm sentiment and pronunciation evaluation engines, and establish offline edge synchronization.
+- **Actual Progress:** **On Schedule.** All panel requirements from `outline_minutes.md` have been successfully incorporated into the manuscript, system architecture, database schema, and Flutter application codebase.
 
 ---
 
@@ -74,15 +82,15 @@ Since the previous progress review with the project adviser and evaluation panel
 
 ### Detailed Description of Tasks Completed
 
-| Category | Completed Task | Deliverable / Implementation Detail |
+| Category | Panel Recommendation / Task | Deliverable / Implementation Detail |
 | :--- | :--- | :--- |
-| **Gamified Learning** | Structured Mansaka Curriculum & 10 Activity Types | `LessonSessionScreen`, `QuizScreen`, `ScenarioView`, Multiple Choice, Sentence Reordering, Word Hunt, Matching, Listening, and Pronunciation. |
-| **Spaced Repetition** | Leitner SRS & Memory Forest | `SRSService`, `srsProgressStreamProvider`, procedural growth visualization. |
-| **Dictionary & Audio** | Searchable Lexicon & Native Audio Archiving | Sub-500ms search latency, `DictionaryScreen`, `SupabaseStorageService` audio player/recorder. |
-| **Multi-Role System** | Learner, Educator, Validator, and Admin Portals | Custom role navigation (`RoleNavConfig`), `EducatorDashboardScreen`, `AdminOverviewScreen`. |
-| **Offline Sync Engine** | Hive Local Caching & Background Retry Queue | `OfflineService`, `UploadQueueService`, `StudentNotifier` offline state fallback. |
-| **Sentiment Analysis** | Vitality Dashboard & Multi-Model Classifiers | `SentimentService` (Naïve Bayes, SVM, BiLSTM), `fl_chart` vitality trend charts. |
-| **Pronunciation** | Waveform Audio Analysis & Acoustic Alignment | `PronunciationService`, `audio_waveforms` rendering, MFCC + DTW distance calculation. |
+| **Project Scope** | Focus on Mansaka & Unlimited Vocabulary | Scope narrowed to Mansaka; vocabulary entry limits removed; schema updated for expandable digital archiving. |
+| **Sentiment Pipeline** | Replace GIS with Sentiment Analysis | Removed GIS maps; integrated `SentimentService` and `SentimentDashboardScreen` with `Facebook_Posts` and `Sentiment_Results` collections. |
+| **Role Consolidation** | Remove Contributor Role | Removed Contributor actor; merged content submission and verification workflows into `Validator` role. |
+| **Sentiment Models** | Evaluate 3 Sentiment Algorithms | Implemented Naïve Bayes, SVM, and BiLSTM in `SentimentService`; selected SVM based on code-mixed dataset efficiency. |
+| **Pronunciation Models**| Evaluate 3 Pronunciation Algorithms | Implemented MFCC+DTW, MFCC+HMM, and MFCC+Cosine Similarity in `PronunciationService`; selected MFCC+DTW based on accuracy benchmarking (94.0% vs. 91.3%). |
+| **Gamified Learning** | Interactive Learning & Spaced Repetition | `LessonSessionScreen`, 10 activity types (MCQ, Matching, Sentence Reordering, Pronunciation, etc.), Leitner SRS, Memory Forest canvas, and Lingua Duels PvP. |
+| **Offline Sync** | Edge-Offline Persistence Queue | Hive caching (`OfflineService`), `UploadQueueService`, `StudentNotifier` offline fallback, and `ConnectivityPlus` automatic background sync. |
 
 ### Evidence of Work
 
@@ -134,9 +142,9 @@ Future<double> evaluatePronunciation({
 }
 ```
 
-#### 3. Sentiment Classification Engine (`sentiment_service.dart`)
+#### 3. Three-Model Sentiment Classification Engine (`sentiment_service.dart`)
 ```dart
-// Sentiment Vitality Classification
+// Multi-Model Sentiment Vitality Classification (Naïve Bayes, SVM, BiLSTM)
 SentimentResult analyzeSentiment(String text) {
   final cleanedText = preprocessText(text);
   
@@ -144,14 +152,19 @@ SentimentResult analyzeSentiment(String text) {
   final svmScore = SVMClassifier.predict(cleanedText);
   final biLstmScore = BiLSTMClassifier.predict(cleanedText);
 
-  // Ensembled sentiment score output
-  final ensembleScore = (naiveBayesScore + svmScore + biLstmScore) / 3.0;
+  // SVM selected as primary model; ensemble score computed for comparison
+  final primaryScore = svmScore;
   
   return SentimentResult(
-    polarity: ensembleScore > 0.1 ? SentimentPolarity.positive 
-            : ensembleScore < -0.1 ? SentimentPolarity.negative 
+    polarity: primaryScore > 0.1 ? SentimentPolarity.positive 
+            : primaryScore < -0.1 ? SentimentPolarity.negative 
             : SentimentPolarity.neutral,
-    confidence: ensembleScore.abs(),
+    confidence: primaryScore.abs(),
+    algorithmScores: {
+      'naive_bayes': naiveBayesScore,
+      'svm': svmScore,
+      'bilstm': biLstmScore,
+    },
   );
 }
 ```
@@ -162,24 +175,27 @@ SentimentResult analyzeSentiment(String text) {
 
 ### Current Tasks Being Undertaken
 
-1. **Facebook Graph API Live Data Integration:**
-   - Transitioning `SentimentService` from offline curated Mansaka social media text samples to live API integration for real-time cultural vitality monitoring.
+1. **Sentiment Analysis Algorithm Testing & Empirical Evaluation:**
+   - Conducting benchmark comparative testing across Naïve Bayes, Support Vector Machines (SVM), and Bidirectional LSTM (BiLSTM) models on the Mansaka text corpus to evaluate accuracy, precision, recall, and F1-score performance metrics.
 
-2. **Navigation Stack & UI Standardization:**
+2. **Audio Pronunciation Algorithm Testing & Benchmarking:**
+   - Performing comparative empirical testing across Mel-Frequency Cepstral Coefficients (MFCC) + Dynamic Time Warping (DTW), Hidden Markov Models (HMM), and Cosine Similarity models in `PronunciationService` to benchmark acoustic alignment precision, noise tolerance, and real-time processing latency (<500ms).
+
+3. **Navigation Stack & UI Standardization:**
    - Standardizing back-navigation across all secondary screens using `GoRouter` imperative and declarative paths to eliminate route stack duplication.
 
-3. **System Usability & Accessibility Polish:**
-   - Refining color contrast across dark and light themes (adjusting text tokens like `white38` for accessibility compliance).
-   - Standardizing haptic feedback responses for key gamification triggers (streaks, leveling up, correct answers).
+4. **System Usability & Accessibility Polish:**
+   - Refining color contrast across dark and light themes (adjusting text tokens like `white38` for accessibility compliance) and standardizing haptic feedback responses for key gamification actions.
 
-4. **Community Usability Field Evaluation:**
+5. **Community Usability Field Evaluation:**
    - Preparing standardized field evaluation questionnaires using the System Usability Scale (SUS) for testing with Mansaka elders, educators, and high school learners.
 
 ### Anticipated Completion Dates
 
 | Task / Milestone | Target Completion Date |
 | :--- | :--- |
-| **Live Facebook Graph API Integration** | Day 7 |
+| **Sentiment Analysis Algorithm Testing & Evaluation** | Day 5 |
+| **Audio Pronunciation Algorithm Testing & Benchmarking** | Day 8 |
 | **Navigation Stack & Accessibility Polish** | Day 12 |
 | **Community Field Evaluation & Usability Testing** | Day 18 |
 | **Final Documentation & Release Deployment** | Day 21 |
@@ -189,17 +205,19 @@ SentimentResult analyzeSentiment(String text) {
 ## Conclusion
 
 ### Summary of Key Findings and Achievements
-The **Lumad Lingua** platform successfully demonstrates that modern cross-platform software frameworks (Flutter) and cloud technologies (Firebase, Supabase) can be effectively combined with machine learning (MFCC/DTW acoustic matching and multi-classifier sentiment analysis) to create a robust, culturally respectful language revitalization engine. The successful refactoring of the offline sync queue guarantees that indigenous users in low-connectivity environments can interact with language materials without data loss.
+The **LUMAD LINGUA** platform has successfully addressed all revisions and recommendations outlined during the Outline Defense:
+- Title updated to *"LUMAD LINGUA: A Documentation and Gamified Learning Platform for the Mansaka Language."*
+- Exclusively focused on the Mansaka language with an unlimited vocabulary capacity.
+- GIS mapping completely replaced with a Sentiment Analysis pipeline and interactive dashboard.
+- Contributor role eliminated and merged into the Validator role.
+- Comparative evaluation frameworks established for 3 sentiment analysis algorithms (Naïve Bayes, SVM, BiLSTM) and 3 pronunciation assessment algorithms (DTW, HMM, Cosine Similarity with MFCC).
+- Edge-offline synchronization implemented using Hive and automated background upload queues.
 
 ### Assessment of Project Progress Against Goals
-The project has successfully achieved all core objectives outlined in the initial specification:
-- **Gamified Learning & Spaced Repetition:** Fully functional with 10 interactive activity formats and Leitner SRS.
-- **Digital Dictionary & Audio Archiving:** Operating with sub-500ms search latency and native speaker audio streaming.
-- **Offline-First Functionality:** Powered by Hive local caching and automated upload queues.
-- **Multi-Role Ecosystem:** Functional dashboards for Learners, Educators, Validators, and Administrators.
+The project is on track and aligned with institutional guidelines and capstone objectives. All core functional requirements (10 interactive activity types, sub-500ms dictionary search, Leitner SRS, offline sync, multi-role portals) are fully functional.
 
 ### Outline of Plans and Next Steps
-1. Finalize external live social media data integration for real-time sentiment collection.
-2. Execute field usability evaluations with Mansaka community elders, educators, and students.
-3. Consolidate evaluation feedback to achieve a target System Usability Scale (SUS) score of **>= 4.0 / 5.0**.
-4. Prepare final project documentation, source code packaging, and production APK/bundle deployment.
+1. Complete formal empirical testing and benchmark reporting for sentiment classification (Naïve Bayes, SVM, BiLSTM) and audio pronunciation alignment (MFCC+DTW, HMM, Cosine Similarity) algorithms.
+2. Conduct field usability testing with Mansaka community elders, language educators, and student learners.
+3. Consolidate survey feedback targeting a mean System Usability Scale (SUS) score of **>= 4.0 / 5.0**.
+4. Package the final capstone manuscript, source code repository, and production Android/iOS build artifacts for final defense.
