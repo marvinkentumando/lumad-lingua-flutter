@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 import 'mfcc_service.dart';
+import '../utils/wav_decoder.dart';
+import 'pronunciation_comparer_interface.dart';
 
 enum PronunciationAlgorithm {
   dtw,
@@ -8,13 +10,8 @@ enum PronunciationAlgorithm {
 }
 
 enum PronunciationStrictness {
-  /// Very forgiving, good for absolute beginners.
   easy(1.5),
-
-  /// Balanced, the default setting.
   normal(3.0),
-
-  /// Strict, requires high precision in rhythm and tone.
   hard(5.5);
 
   final double sensitivity;
@@ -55,23 +52,54 @@ class PronunciationModelMetrics {
   });
 }
 
-class PronunciationService {
-  /// Compares two waveforms using the specified algorithm.
+class PronunciationService implements IPronunciationComparer {
+  @override
+  Future<PronunciationComparisonResult> compare(PronunciationComparisonRequest request) async {
+    final score = analyzePronunciation(
+      request.referencePcmSamples,
+      request.learnerPcmSamples,
+      strictness: PronunciationStrictness.normal,
+      algorithm: PronunciationAlgorithm.dtw,
+    );
+
+    return PronunciationComparisonResult(
+      scorePercentage: score.overallScore,
+      isCandidateEvaluation: true,
+      feedbackKey: _getFeedbackKey(score.overallScore / 100.0),
+      rawMetrics: {
+        'accuracy': score.accuracy,
+        'fluency': score.fluency,
+        'clarity': score.clarity,
+        'algorithm': score.algorithmUsed.name,
+        'runId': request.metadata.runId,
+        'configHash': request.metadata.configHash,
+      },
+    );
+  }
+
+  /// Compares two 16kHz mono PCM waveforms using the Recommended (v1) preprocessing pipeline.
   static PronunciationScore analyzePronunciation(
     List<double> nativeSamples,
     List<double> userSamples, {
     PronunciationStrictness strictness = PronunciationStrictness.normal,
     PronunciationAlgorithm algorithm = PronunciationAlgorithm.dtw,
   }) {
-    // 1. Preprocessing (Noise Reduction and Normalization)
-    final processedNative = _preprocessAudio(nativeSamples);
-    final processedUser = _preprocessAudio(userSamples);
+    // 1. Preprocessing using the exact Recommended (v1) pipeline
+    List<double> processedNative = [];
+    List<double> processedUser = [];
+
+    try {
+      processedNative = WavDecoder.preprocessPcmRecommendedV1(nativeSamples);
+      processedUser = WavDecoder.preprocessPcmRecommendedV1(userSamples);
+    } catch (e) {
+      return _emptyScore(nativeSamples, userSamples);
+    }
 
     if (processedNative.isEmpty || processedUser.isEmpty) {
       return _emptyScore(nativeSamples, userSamples);
     }
 
-    // 2. Feature Extraction
+    // 2. Feature Extraction (13 MFCC coefficients)
     final nativeMFCC = MFCCService.extractMFCC(processedNative);
     final userMFCC = MFCCService.extractMFCC(processedUser);
 
@@ -90,7 +118,6 @@ class PronunciationService {
         break;
     }
 
-    // 4. Heuristic-based metrics
     final accuracy = similarity;
     final durationRatio = math.min(processedNative.length, processedUser.length) / 
                          math.max(processedNative.length, processedUser.length);
@@ -109,8 +136,23 @@ class PronunciationService {
     );
   }
 
-  /// Runs model evaluation against a labeled dataset.
-  /// Each sample in [dataset] should have 'native', 'user' (`List<double>`) and 'label' (0.0-1.0).
+  static double compareWaveforms(
+    List<double> nativeWave,
+    List<double> userWave, {
+    PronunciationStrictness strictness = PronunciationStrictness.normal,
+    PronunciationAlgorithm algorithm = PronunciationAlgorithm.dtw,
+  }) {
+    if (nativeWave.isEmpty || userWave.isEmpty) return 0.0;
+
+    final result = analyzePronunciation(
+      nativeWave, 
+      userWave, 
+      strictness: strictness,
+      algorithm: algorithm,
+    );
+    return result.overallScore / 100;
+  }
+
   static PronunciationModelMetrics calculateMetrics(
     PronunciationAlgorithm algorithm,
     List<Map<String, dynamic>> dataset,
@@ -135,7 +177,6 @@ class PronunciationService {
 
       totalError += (score - truth).abs();
 
-      // For binary accuracy (pass/fail threshold at 0.6)
       bool predictedPass = score >= 0.6;
       bool actualPass = truth >= 0.6;
       if (predictedPass == actualPass) correctPredictions++;
@@ -143,8 +184,6 @@ class PronunciationService {
 
     final mae = totalError / dataset.length;
     final accuracy = correctPredictions / dataset.length;
-    
-    // Simple Pearson Correlation calculation
     double correlation = _calculateCorrelation(predictedScores, groundTruthScores);
 
     return PronunciationModelMetrics(
@@ -171,67 +210,11 @@ class PronunciationService {
 
     double numerator = n * sumXY - sumX * sumY;
     double denominator = math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
-    
+
     if (denominator == 0) return 0.0;
     return numerator / denominator;
   }
 
-  /// Compatibility method for existing waveform comparison.
-  static double compareWaveforms(
-    List<double> nativeWave,
-    List<double> userWave, {
-    PronunciationStrictness strictness = PronunciationStrictness.normal,
-    PronunciationAlgorithm algorithm = PronunciationAlgorithm.dtw,
-  }) {
-    if (nativeWave.isEmpty || userWave.isEmpty) return 0.0;
-    
-    final result = analyzePronunciation(
-      nativeWave, 
-      userWave, 
-      strictness: strictness,
-      algorithm: algorithm,
-    );
-    return result.overallScore / 100;
-  }
-
-  /// Preprocessing pipeline including Noise Reduction and Volume Normalization
-  static List<double> _preprocessAudio(List<double> samples) {
-    if (samples.isEmpty) return [];
-
-    // 1. D.C. Offset Removal (Centering the waveform)
-    final mean = samples.reduce((a, b) => a + b) / samples.length;
-    var processed = samples.map((s) => s - mean).toList();
-
-    // 2. RMS-based Volume Normalization
-    // Calculates root-mean-square to gauge average energy instead of just peaks
-    double rms = math.sqrt(processed.map((s) => s * s).reduce((a, b) => a + b) / processed.length);
-    if (rms > 0) {
-      const targetRms = 0.15; // Standardized average energy level
-      double scale = targetRms / rms;
-      // Clamp scale to prevent extreme amplification of silence
-      scale = scale.clamp(0.0, 5.0);
-      processed = processed.map((s) => (s * scale).clamp(-1.0, 1.0)).toList();
-    }
-
-    // 3. Dynamic Noise Gate (Noise Reduction)
-    // Estimates noise floor from the quietest samples (first 100ms usually)
-    int noiseEstimationWindow = math.min(processed.length, 800); // ~50ms at 16kHz
-    double noiseFloor = 0.0;
-    if (noiseEstimationWindow > 0) {
-      noiseFloor = processed.take(noiseEstimationWindow).map((s) => s.abs()).reduce(math.max);
-    }
-    
-    // Apply soft noise gate
-    final threshold = math.max(noiseFloor * 1.2, 0.02);
-    return processed.map((s) {
-      if (s.abs() < threshold) {
-        return s * 0.1; // Soft attenuation instead of hard cut
-      }
-      return s;
-    }).toList();
-  }
-
-  /// 1. Dynamic Time Warping (Existing Algorithm)
   static double _calculateDTWScore(
     List<List<double>> s, 
     List<List<double>> t, 
@@ -239,13 +222,9 @@ class PronunciationService {
   ) {
     final distance = MFCCService.calculateMFCCDistance(s, t);
     if (distance == double.infinity) return 0.0;
-    
-    // Convert distance to 0.0-1.0 similarity score
     return math.exp(-strictness.sensitivity * (distance / 15.0)).clamp(0.0, 1.0);
   }
 
-  /// 2. Hidden Markov Model (HMM) Likelihood Estimation
-  /// Uses a Forward Algorithm approach treating native frames as states.
   static double _calculateHMMScore(
     List<List<double>> modelFrames, 
     List<List<double>> observationFrames,
@@ -253,41 +232,30 @@ class PronunciationService {
   ) {
     if (modelFrames.isEmpty || observationFrames.isEmpty) return 0.0;
 
-    // Treat the native recording as a sequence of hidden states
-    // Calculate log-likelihood of observation sequence given the model
     double logLikelihood = 0.0;
-    
     for (int i = 0; i < observationFrames.length; i++) {
       final obs = observationFrames[i];
-      
-      // Find "emission probability" (closest match in model states)
       double bestFrameDist = double.infinity;
       for (final state in modelFrames) {
         double d = _euclideanDistance(obs, state);
         if (d < bestFrameDist) bestFrameDist = d;
       }
-      
       logLikelihood -= bestFrameDist;
     }
 
     final avgLogLikelihood = logLikelihood / observationFrames.length;
-    // Map log likelihood to a similarity score
     return math.exp(strictness.sensitivity * 0.4 * avgLogLikelihood).clamp(0.0, 1.0);
   }
 
-  /// 3. Global Cosine Similarity
-  /// Aggregates frame-wise cosine similarity for a spectral correlation score.
   static double _calculateCosineScore(
     List<List<double>> s, 
     List<List<double>> t,
     PronunciationStrictness strictness
   ) {
-    // For a global score, we align using DTW but use Cosine distance as the cost function
     final n = s.length;
     final m = t.length;
-    
     List<List<double>> dtw = List.generate(n + 1, (_) => List.filled(m + 1, 0.0));
-    
+
     for (int i = 1; i <= n; i++) {
       for (int j = 1; j <= m; j++) {
         double cost = 1.0 - _cosineSimilarity(s[i - 1], t[j - 1]);
@@ -336,7 +304,7 @@ class PronunciationService {
       clarity: 0,
       nativeWaveform: n,
       studentWaveform: u,
-      feedback: "Audio processing failed. Please try again.",
+      feedback: "Audio processing failed. Please check your recording and try again.",
     );
   }
 
@@ -346,5 +314,11 @@ class PronunciationService {
     if (score >= 0.50) return "Good attempt. Listen closely to the native accent and try again.";
     if (score >= 0.30) return "Understandable, but needs more practice on rhythm.";
     return "Needs improvement. Focus on the individual sounds of the word.";
+  }
+
+  static String _getFeedbackKey(double score) {
+    if (score >= 0.80) return 'feedback_excellent';
+    if (score >= 0.60) return 'feedback_good_effort';
+    return 'feedback_needs_work';
   }
 }

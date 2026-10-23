@@ -171,7 +171,7 @@ class _BulkAudioImportModalState extends ConsumerState<BulkAudioImportModal> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Select audio files (MP3/WAV). Files will be automatically matched to dictionary entries by term or ID.',
+            'Attach audio to dictionary entries. Note: Reference audio for the Audio Comparison Feature is separately resolved from "audio/dataset/<word-folder>/".',
             style: AppTypography.body.copyWith(
               color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.6),
               fontSize: 12,

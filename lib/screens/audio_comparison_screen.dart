@@ -2,10 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:audioplayers/audioplayers.dart' as ap;
 import 'package:http/http.dart' as http;
+import 'package:record/record.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -14,30 +14,12 @@ import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import '../services/haptic_service.dart';
 import '../services/pronunciation_service.dart';
-import '../models/dictionary_entry.dart';
-import '../models/voice_submission.dart';
-import '../services/firebase_service.dart';
 import '../services/supabase_storage_service.dart';
-import '../utils/audio_validator.dart';
+import '../services/supabase_dataset_service.dart';
+import '../models/supabase_dataset_entry.dart';
+import '../utils/wav_decoder.dart';
 import '../utils/app_localization.dart';
-
-enum PracticeSource { words, phrases }
-
-class ComparisonItem {
-  final String id;
-  final String title;
-  final String subtitle;
-  final String audioUrl;
-  final String language;
-
-  ComparisonItem({
-    required this.id,
-    required this.title,
-    required this.subtitle,
-    required this.audioUrl,
-    required this.language,
-  });
-}
+import '../services/pronunciation_comparer_interface.dart';
 
 class AudioComparisonScreen extends ConsumerStatefulWidget {
   const AudioComparisonScreen({super.key});
@@ -49,51 +31,71 @@ class AudioComparisonScreen extends ConsumerStatefulWidget {
 class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   bool _isRecording = false;
   bool _hasResult = false;
-  double _score = 0.0;
-  PracticeSource _source = PracticeSource.words;
+  double _scorePercentage = 0.0;
   int _currentIndex = 0;
   bool _isShuffled = false;
-  List<ComparisonItem> _gameItems = [];
+  List<SupabaseDatasetEntry> _items = [];
   bool _isComparing = false;
   bool _isLoadingAudio = false;
+  List<double> _userVisualWaveform = [];
+  List<double> _nativeVisualWaveform = [];
 
-  late final RecorderController _recorderController;
-  late final PlayerController _playerController;
+  final AudioRecorder _audioRecorder = AudioRecorder();
   final ap.AudioPlayer _nativePlayer = ap.AudioPlayer();
-
-  @override
-  void initState() {
-    super.initState();
-    _recorderController = RecorderController();
-    _playerController = PlayerController();
-  }
+  final ap.AudioPlayer _userPlayer = ap.AudioPlayer();
 
   @override
   void dispose() {
-    _recorderController.dispose();
-    _playerController.dispose();
+    _audioRecorder.dispose();
     _nativePlayer.dispose();
+    _userPlayer.dispose();
     super.dispose();
   }
 
-  Future<void> _playNativeAudio(String audioUrl) async {
+  Future<void> _playNativeAudio(String url) async {
+    if (url.isEmpty) return;
     setState(() => _isLoadingAudio = true);
     try {
-      final resolvedUrl = ref.read(supabaseStorageServiceProvider).getAudioUrl(audioUrl);
+      final resolvedUrl = ref.read(supabaseStorageServiceProvider).getAudioUrl(url);
+      await _nativePlayer.stop();
       await _nativePlayer.play(ap.UrlSource(resolvedUrl));
     } catch (e) {
-      debugPrint('Error playing native audio: $e');
+      debugPrint('Error playing native reference audio: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to play reference audio: ${e.toString().split(':').last.trim()}'),
+            backgroundColor: AppColors.semanticRed,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoadingAudio = false);
     }
   }
 
+  Future<void> _playUserAudio() async {
+    try {
+      final directory = await getTemporaryDirectory();
+      final path = '${directory.path}/user_pronunciation_16k.wav';
+      final file = File(path);
+      if (await file.exists()) {
+        await _userPlayer.stop();
+        await _userPlayer.play(ap.DeviceFileSource(path));
+      }
+    } catch (e) {
+      debugPrint('Error playing learner attempt audio: $e');
+    }
+  }
+
   void _nextItem() {
-    if (_currentIndex < _gameItems.length - 1) {
+    if (_currentIndex < _items.length - 1) {
       setState(() {
         _currentIndex++;
         _hasResult = false;
-        _score = 0.0;
+        _scorePercentage = 0.0;
+        _userVisualWaveform = [];
+        _nativeVisualWaveform = [];
       });
       HapticService.light();
     }
@@ -104,87 +106,64 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       setState(() {
         _currentIndex--;
         _hasResult = false;
-        _score = 0.0;
+        _scorePercentage = 0.0;
+        _userVisualWaveform = [];
+        _nativeVisualWaveform = [];
       });
       HapticService.light();
     }
   }
 
   void _toggleShuffle() {
+    if (_items.isEmpty) return;
     setState(() {
       _isShuffled = !_isShuffled;
-      if (_isShuffled) {
-        _gameItems.shuffle();
-      } else {
-        // Simple shuffle again if untoggled, since we don't store original order
-        _gameItems.shuffle();
-      }
+      _items.shuffle();
       _currentIndex = 0;
       _hasResult = false;
-    });
-    HapticService.medium();
-  }
-
-  List<double> _trimSilence(List<double> waveform, {double threshold = 0.05}) {
-    if (waveform.isEmpty) return waveform;
-    
-    int start = 0;
-    while (start < waveform.length && waveform[start].abs() < threshold) {
-      start++;
-    }
-
-    int end = waveform.length - 1;
-    while (end > start && waveform[end].abs() < threshold) {
-      end--;
-    }
-
-    return waveform.sublist(start, end + 1);
-  }
-
-  void _switchSource(PracticeSource newSource) {
-    if (_source == newSource) return;
-    setState(() {
-      _source = newSource;
-      _gameItems = []; // Force reload
-      _currentIndex = 0;
-      _hasResult = false;
-      _score = 0.0;
+      _scorePercentage = 0.0;
     });
     HapticService.medium();
   }
 
   void _toggleRecording() async {
-    if (_gameItems.isEmpty) return;
-    final currentItem = _gameItems[_currentIndex];
+    if (_items.isEmpty) return;
+    final currentItem = _items[_currentIndex];
 
     HapticService.selection();
     if (!_isRecording) {
+      // Check microphone permission
+      if (!await _audioRecorder.hasPermission()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Microphone permission is required for audio recording.'),
+              backgroundColor: AppColors.semanticRed,
+            ),
+          );
+        }
+        return;
+      }
+
       final directory = await getTemporaryDirectory();
-      final path = '${directory.path}/user_pronunciation.m4a';
-      await _recorderController.record(path: path);
+      final recordPath = '${directory.path}/user_pronunciation_16k.wav';
+
+      // Record direct 16kHz mono 16-bit PCM WAV
+      const config = RecordConfig(
+        encoder: AudioEncoder.wav,
+        sampleRate: 16000,
+        numChannels: 1,
+      );
+
+      await _audioRecorder.start(config, path: recordPath);
       setState(() {
         _isRecording = true;
         _hasResult = false;
       });
     } else {
-      final path = await _recorderController.stop();
+      final path = await _audioRecorder.stop();
       if (path == null) {
         setState(() => _isRecording = false);
-        return;
-      }
-
-      // Validate recording
-      final error = await AudioValidator.validate(path);
-      if (error != null) {
-        setState(() => _isRecording = false);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(error),
-              backgroundColor: AppColors.semanticRed,
-            ),
-          );
-        }
         return;
       }
 
@@ -194,149 +173,98 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       });
 
       try {
-        // 1. Extract waveform from User recording
-        var userWaveform = await _playerController.waveformExtraction.extractWaveformData(
-          path: path,
-          noOfSamples: 256, // Reduced for better compatibility
-        );
-
-        if (userWaveform.isEmpty) {
-          // Fallback if 256 samples fails
-          userWaveform = await _playerController.waveformExtraction.extractWaveformData(
-            path: path,
-            noOfSamples: 128,
-          );
+        final learnerFile = File(path);
+        if (!await learnerFile.exists()) {
+          throw Exception('Learner audio recording file not found.');
         }
 
-        // Trim Silence from User
-        userWaveform = _trimSilence(userWaveform);
+        // 1. Decode learner 16-bit PCM WAV into 16kHz mono List<double>
+        final learnerWavResult = await WavDecoder.decodeWavFile(learnerFile);
+        final learnerPcm = learnerWavResult.pcmSamples;
 
-        // 2. Extract Native Waveform from URL
-        List<double> nativeWaveform;
-        try {
-          final resolvedUrl = ref.read(supabaseStorageServiceProvider).getAudioUrl(currentItem.audioUrl);
-          
-          if (resolvedUrl.isEmpty) {
-            throw Exception('Resolved audio URL is empty');
-          }
-
-          final directory = await getTemporaryDirectory();
-          
-          // Improved extension detection
-          String extension = 'mp3';
-          if (currentItem.audioUrl.contains('.')) {
-            final parts = currentItem.audioUrl.split('?').first.split('.');
-            if (parts.length > 1) {
-              extension = parts.last.toLowerCase();
-            }
-          }
-          
-          // Sanitize ID for filename to avoid FileSystemExceptions
-          final sanitizedId = currentItem.id.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
-          final nativeFile = File('${directory.path}/native_temp_$sanitizedId.$extension');
-
-          // Robust check for existing file
-          bool needsDownload = true;
-          if (await nativeFile.exists()) {
-            final size = await nativeFile.length();
-            if (size > 100) { 
-              needsDownload = false;
-            } else {
-              await nativeFile.delete();
-            }
-          }
-
-          if (needsDownload) {
-             final response = await http.get(Uri.parse(resolvedUrl)).timeout(const Duration(seconds: 10));
-             if (response.statusCode == 200) {
-               await nativeFile.writeAsBytes(response.bodyBytes);
-               debugPrint('Downloaded native audio to: ${nativeFile.path}');
-             } else {
-               throw Exception('HTTP ${response.statusCode}: Failed to download audio');
-             }
-          }
-
-          // Ensure the file exists before extraction
-          if (!await nativeFile.exists()) {
-            throw Exception('Native audio file could not be saved');
-          }
-
-          nativeWaveform = await _playerController.waveformExtraction.extractWaveformData(
-            path: nativeFile.path,
-            noOfSamples: 256,
-          );
-
-          if (nativeWaveform.isEmpty) {
-             // Fallback attempt
-             nativeWaveform = await _playerController.waveformExtraction.extractWaveformData(
-               path: nativeFile.path,
-               noOfSamples: 128,
-             );
-          }
-
-          if (nativeWaveform.isEmpty) {
-            throw Exception('Could not extract waveform from native audio');
-          }
-
-          // Trim Silence from Native
-          nativeWaveform = _trimSilence(nativeWaveform);
-        } catch (e) {
-          debugPrint('Failed to extract native waveform: $e');
-          if (mounted) {
-            setState(() => _isComparing = false);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text("Native audio processing failed: ${e.toString().split(':').last.trim()}"),
-                backgroundColor: Colors.redAccent,
-              ),
-            );
-          }
-          return;
+        if (learnerPcm.length < 1600) {
+          throw Exception('Recording is too short (minimum 0.1s required). Please speak clearly.');
         }
 
-        // 3. Compare using the upgraded PronunciationService with Locked Algorithm
-        final config = ref.read(appConfigProvider).value;
-        final lockedAlgoName = config?.activePronunciationAlgorithm ?? 'dtw';
-        final lockedAlgo = PronunciationAlgorithm.values.firstWhere(
-          (e) => e.name == lockedAlgoName,
-          orElse: () => PronunciationAlgorithm.dtw,
+        // Downsample PCM for UI display waveform only
+        _userVisualWaveform = WavDecoder.extractVisualWaveform(learnerPcm, noOfSamples: 128);
+
+        // 2. Load & decode native reference WAV
+        final directory = await getTemporaryDirectory();
+        final sanitizedFolder = currentItem.folderName.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
+        final nativeFile = File('${directory.path}/ref_$sanitizedFolder.wav');
+
+        bool needsDownload = true;
+        if (await nativeFile.exists()) {
+          if (await nativeFile.length() > 500) {
+            needsDownload = false;
+          } else {
+            await nativeFile.delete();
+          }
+        }
+
+        if (needsDownload) {
+          final response = await http.get(Uri.parse(currentItem.referenceAudioUrl)).timeout(const Duration(seconds: 15));
+          if (response.statusCode == 200) {
+            await nativeFile.writeAsBytes(response.bodyBytes);
+          } else {
+            throw Exception('Failed to download reference WAV (HTTP ${response.statusCode})');
+          }
+        }
+
+        final nativeWavResult = await WavDecoder.decodeWavFile(nativeFile);
+        final nativePcm = nativeWavResult.pcmSamples;
+        _nativeVisualWaveform = WavDecoder.extractVisualWaveform(nativePcm, noOfSamples: 128);
+
+        // 3. Compare using algorithm-independent request interface & Recommended (v1) preprocessing
+        final request = PronunciationComparisonRequest(
+          vocabularyId: currentItem.folderName,
+          referenceAudioPath: currentItem.referenceAudioPath,
+          referenceAudioFile: nativeFile,
+          learnerAudioFile: learnerFile,
+          referencePcmSamples: nativePcm,
+          learnerPcmSamples: learnerPcm,
+          metadata: PronunciationAudioMetadata(
+            sampleRate: 16000,
+            numChannels: 1,
+            runId: currentItem.runId,
+            configHash: '3140166e41dc4be9',
+          ),
         );
 
-        final resultScore = PronunciationService.compareWaveforms(
-          nativeWaveform,
-          userWaveform,
-          strictness: PronunciationStrictness.normal,
-          algorithm: lockedAlgo,
-        );
+        final comparer = PronunciationService();
+        final result = await comparer.compare(request);
 
         if (mounted) {
           setState(() {
             _isComparing = false;
             _hasResult = true;
-            _score = resultScore;
+            _scorePercentage = result.scorePercentage;
           });
-          // ... Rest of haptic/audio logic
 
-          if (_score > 0.7) {
+          // NOTE: XP awards are explicitly disabled for unvalidated candidate model scores
+          if (_scorePercentage >= 60.0) {
             HapticService.success();
             try {
-               await _nativePlayer.play(ap.AssetSource('audio/success.MP3'));
-            } catch (e) {
-               debugPrint('Error playing success sound: $e');
-            }
+              await _nativePlayer.play(ap.AssetSource('audio/success.MP3'));
+            } catch (_) {}
           } else {
             HapticService.selection();
             try {
-               await _nativePlayer.play(ap.AssetSource('audio/error.MP3'));
-            } catch (e) {
-               debugPrint('Error playing error sound: $e');
-            }
+              await _nativePlayer.play(ap.AssetSource('audio/error.MP3'));
+            } catch (_) {}
           }
         }
       } catch (e) {
-        debugPrint('Comparison error: $e');
+        debugPrint('Pronunciation evaluation error: $e');
         if (mounted) {
           setState(() => _isComparing = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Audio processing error: ${e.toString().split(':').last.trim()}'),
+              backgroundColor: AppColors.semanticRed,
+            ),
+          );
         }
       }
     }
@@ -346,11 +274,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = ref.watch(localizationProvider);
-
-    // Fetch data based on source
-    final AsyncValue dataAsync = _source == PracticeSource.words
-        ? ref.watch(allWordsProvider)
-        : ref.watch(allVoiceSubmissionsProvider);
+    final datasetAsync = ref.watch(supabaseDatasetEntriesProvider);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -381,56 +305,35 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         ],
       ),
       body: BrandBackground(
-        child: dataAsync.when(
-          data: (items) {
-            // Process and filter items
-            if (_gameItems.isEmpty) {
-              if (_source == PracticeSource.words) {
-                final words = items as List<DictionaryEntry>;
-                _gameItems = words
-                    .where((w) => w.audioUrl != null && w.audioUrl!.isNotEmpty)
-                    .map((w) => ComparisonItem(
-                      id: w.id,
-                      title: w.indigenousWord,
-                      subtitle: w.translation,
-                      audioUrl: w.audioUrl!,
-                      language: w.language,
-                    ))
-                    .toList();
-              } else {
-                final phrases = items as List<VoiceSubmission>;
-                _gameItems = phrases
-                    .where((p) => p.audioUrl.isNotEmpty)
-                    .map((p) => ComparisonItem(
-                      id: p.id,
-                      title: p.title,
-                      subtitle: p.transcript,
-                      audioUrl: p.audioUrl,
-                      language: p.dialect,
-                    ))
-                    .toList();
-              }
-              if (_isShuffled) _gameItems.shuffle();
+        child: datasetAsync.when(
+          data: (entries) {
+            if (_items.isEmpty && entries.isNotEmpty) {
+              _items = List.from(entries);
+              if (_isShuffled) _items.shuffle();
             }
 
-            if (_gameItems.isEmpty) {
+            if (_items.isEmpty) {
               return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildSourceSelector(isDark, l10n),
-                    const SizedBox(height: 40),
-                    Text(
-                      'No ${_source.name} available yet.',
-                      style: TextStyle(color: isDark ? Colors.white60 : AppColors.creamText3),
-                    ),
-                  ],
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.folder_off_rounded, size: 64, color: Colors.white38),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No preprocessed Mansaka dataset entries found in Supabase Storage.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: isDark ? Colors.white60 : AppColors.creamText3),
+                      ),
+                    ],
+                  ),
                 ),
               );
             }
 
-            if (_currentIndex >= _gameItems.length) _currentIndex = 0;
-            final currentItem = _gameItems[_currentIndex];
+            if (_currentIndex >= _items.length) _currentIndex = 0;
+            final currentItem = _items[_currentIndex];
 
             return Center(
               child: Padding(
@@ -438,12 +341,12 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildSourceSelector(isDark, l10n),
-                    const SizedBox(height: 24),
+                    _buildDatasetBadge(currentItem),
+                    const SizedBox(height: 16),
                     _buildNativeSpeakerCard(isDark, currentItem, l10n),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
                     _buildUserRecordingCard(isDark, l10n),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
                     if (_hasResult) _buildResultCard(isDark, l10n).animate().scale().fadeIn(),
                   ],
                 ),
@@ -451,73 +354,48 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
             );
           },
           loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
-          error: (e, _) => Center(child: Text('Error loading content', style: TextStyle(color: Colors.white38))),
+          error: (e, _) => Center(
+            child: Text('Error discovering dataset: $e', style: const TextStyle(color: Colors.white54)),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildSourceSelector(bool isDark, AppLocalization l10n) {
+  Widget _buildDatasetBadge(SupabaseDatasetEntry item) {
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.gold500.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.gold500.withValues(alpha: 0.5)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _sourceButton(PracticeSource.words, l10n.translate('words_caps'), Icons.menu_book_rounded),
-          _sourceButton(PracticeSource.phrases, l10n.translate('phrases_caps'), Icons.map_rounded),
+          const Icon(Icons.verified_rounded, size: 14, color: AppColors.gold500),
+          const SizedBox(width: 6),
+          Text(
+            'REF: ${item.runId} • 16kHz WAV',
+            style: AppTypography.mono.copyWith(color: AppColors.gold500, fontSize: 10, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );
   }
 
-  Widget _sourceButton(PracticeSource source, String label, IconData icon) {
-    final isSelected = _source == source;
-    return GestureDetector(
-      onTap: () => _switchSource(source),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.gold500 : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: isSelected ? Colors.black : Colors.white54,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: AppTypography.label.copyWith(
-                color: isSelected ? Colors.black : Colors.white54,
-                fontWeight: FontWeight.w900,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNativeSpeakerCard(bool isDark, ComparisonItem item, AppLocalization l10n) {
+  Widget _buildNativeSpeakerCard(bool isDark, SupabaseDatasetEntry item, AppLocalization l10n) {
     return Column(
       children: [
         BrandCard(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(20),
           child: Column(
             children: [
               Row(
                 children: [
                   const CircleAvatar(
                     backgroundColor: AppColors.gold500,
-                    child: Icon(Icons.person, color: Colors.black),
+                    child: Icon(Icons.record_voice_over_rounded, color: Colors.black),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -525,7 +403,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          l10n.translate('native_speaker', params: {'lang': item.language}),
+                          l10n.translate('native_speaker', params: {'lang': 'Mansaka'}),
                           style: AppTypography.label.copyWith(color: AppColors.gold500),
                         ),
                         Text(
@@ -542,13 +420,17 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
                     ),
                   ),
                   _isLoadingAudio
-                    ? const SizedBox(width: 40, height: 40, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.gold500))
-                    : IconButton(
-                        onPressed: () => _playNativeAudio(item.audioUrl),
-                        icon: const Icon(Icons.play_circle_fill_rounded, color: AppColors.gold500, size: 40),
-                      ),
+                      ? const SizedBox(width: 40, height: 40, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.gold500))
+                      : IconButton(
+                          onPressed: () => _playNativeAudio(item.referenceAudioUrl),
+                          icon: const Icon(Icons.play_circle_fill_rounded, color: AppColors.gold500, size: 40),
+                        ),
                 ],
               ),
+              if (_nativeVisualWaveform.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _buildSimpleWaveformCanvas(_nativeVisualWaveform, AppColors.gold500),
+              ],
             ],
           ),
         ),
@@ -566,15 +448,15 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
             Text(
               l10n.translate('item_progress', params: {
                 'current': '${_currentIndex + 1}',
-                'total': '${_gameItems.length}',
+                'total': '${_items.length}',
               }),
               style: AppTypography.mono.copyWith(color: Colors.white24, fontSize: 10),
             ),
             IconButton(
-              onPressed: _currentIndex < _gameItems.length - 1 ? _nextItem : null,
+              onPressed: _currentIndex < _items.length - 1 ? _nextItem : null,
               icon: Icon(
                 Icons.arrow_forward_ios_rounded,
-                color: _currentIndex < _gameItems.length - 1 ? AppColors.gold500 : Colors.white10,
+                color: _currentIndex < _items.length - 1 ? AppColors.gold500 : Colors.white10,
               ),
             ),
           ],
@@ -586,19 +468,20 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   Widget _buildUserRecordingCard(bool isDark, AppLocalization l10n) {
     return BrandCard(
       theme: BrandCardTheme.vibrant,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       child: Column(
         children: [
           if (_isRecording)
-             AudioWaveforms(
-              size: const Size(double.infinity, 60),
-              recorderController: _recorderController,
-              enableGesture: true,
-              waveStyle: const WaveStyle(
-                waveColor: Colors.white,
-                showMiddleLine: false,
-                extendWaveform: true,
-              ),
+            Column(
+              children: [
+                const SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                ),
+                const SizedBox(height: 12),
+                Text('Recording 16kHz PCM WAV...', style: AppTypography.body.copyWith(color: Colors.white)),
+              ],
             )
           else if (_isComparing)
             Column(
@@ -608,10 +491,23 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
                 Text(l10n.translate('comparing_tones'), style: const TextStyle(color: Colors.white70)),
               ],
             )
-          else
+          else if (_userVisualWaveform.isNotEmpty) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Your Attempt (16kHz Mono)', style: AppTypography.label.copyWith(color: Colors.white70)),
+                IconButton(
+                  onPressed: _playUserAudio,
+                  icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _buildSimpleWaveformCanvas(_userVisualWaveform, Colors.white),
+          ] else
             const Icon(Icons.mic_none_rounded, size: 48, color: Colors.white24),
-          
-          const SizedBox(height: 24),
+
+          const SizedBox(height: 16),
           BrandButton(
             text: _isRecording ? l10n.translate('stop_and_compare') : l10n.translate('start_recording'),
             onTap: _isComparing ? null : _toggleRecording,
@@ -623,53 +519,113 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     );
   }
 
+  Widget _buildSimpleWaveformCanvas(List<double> waveform, Color color) {
+    return SizedBox(
+      height: 36,
+      width: double.infinity,
+      child: CustomPaint(
+        painter: WaveformPainter(waveform: waveform, color: color),
+      ),
+    );
+  }
+
   Widget _buildResultCard(bool isDark, AppLocalization l10n) {
-    final percentage = (_score * 100).toInt();
-    
-    // Determine color and feedback based on MFCC similarity
+    final percentage = _scorePercentage.toInt();
+
     Color scoreColor = AppColors.gold500;
     String feedback = l10n.translate('feedback_good_effort');
-    
-    if (_score >= 0.8) {
+
+    if (_scorePercentage >= 80.0) {
       scoreColor = Colors.greenAccent;
       feedback = l10n.translate('feedback_excellent');
-    } else if (_score < 0.6) {
+    } else if (_scorePercentage < 60.0) {
       scoreColor = Colors.orangeAccent;
       feedback = l10n.translate('feedback_needs_work');
     }
 
     return BrandCard(
       theme: BrandCardTheme.gold,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          Text(
-            l10n.translate('acoustic_match'),
-            style: AppTypography.label.copyWith(color: Colors.black54, fontWeight: FontWeight.w900),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                l10n.translate('acoustic_match'),
+                style: AppTypography.label.copyWith(color: Colors.black54, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black12,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text('Candidate Model', style: TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.bold)),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Text(
             '$percentage%',
-            style: AppTypography.displayBold.copyWith(color: scoreColor, fontSize: 48),
+            style: AppTypography.displayBold.copyWith(color: scoreColor, fontSize: 44),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             feedback,
             textAlign: TextAlign.center,
             style: AppTypography.body.copyWith(color: Colors.black87),
           ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(l10n.translate('reward'), style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.bold)),
-              const SizedBox(width: 8),
-              const Icon(Icons.flash_on, color: Colors.black, size: 16),
-              Text(' +15 XP', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-            ],
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'Candidate Model Score • XP awards disabled pending algorithm validation',
+              textAlign: TextAlign.center,
+              style: AppTypography.mono.copyWith(color: Colors.black87, fontSize: 10, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
     );
+  }
+}
+
+class WaveformPainter extends CustomPainter {
+  final List<double> waveform;
+  final Color color;
+
+  WaveformPainter({required this.waveform, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (waveform.isEmpty) return;
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round;
+
+    final barWidth = size.width / waveform.length;
+    final centerY = size.height / 2;
+
+    for (int i = 0; i < waveform.length; i++) {
+      final x = i * barWidth;
+      final h = (waveform[i] * size.height).clamp(2.0, size.height);
+      canvas.drawLine(
+        Offset(x, centerY - h / 2),
+        Offset(x, centerY + h / 2),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant WaveformPainter oldDelegate) {
+    return oldDelegate.waveform != waveform || oldDelegate.color != color;
   }
 }

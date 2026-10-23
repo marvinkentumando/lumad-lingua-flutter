@@ -1,0 +1,297 @@
+import 'dart:io';
+import 'dart:math' as math;
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
+
+class WavDecodeResult {
+  final List<double> pcmSamples; // Normalized -1.0 to 1.0 mono PCM at 16,000 Hz
+  final int sampleRate;
+  final int channels;
+  final double durationSeconds;
+
+  WavDecodeResult({
+    required this.pcmSamples,
+    required this.sampleRate,
+    required this.channels,
+    required this.durationSeconds,
+  });
+}
+
+class WavDecoder {
+  static const int targetSampleRate = 16000;
+  static const double targetRmsLinear = 0.10; // -20 dBFS
+  static const double peakCeilingLinear = 0.8912509; // -1 dBFS
+  static const double maxGainLinear = 31.6227766; // 30 dB
+
+  /// Reads a 16-bit PCM WAV file and decodes it to 16kHz mono `List<double>` samples.
+  static Future<WavDecodeResult> decodeWavFile(File file) async {
+    final bytes = await file.readAsBytes();
+    return decodeWavBytes(bytes);
+  }
+
+  /// Decodes raw 16-bit PCM WAV bytes into 16kHz mono `List<double>` samples.
+  static WavDecodeResult decodeWavBytes(Uint8List bytes) {
+    if (bytes.length < 44) {
+      throw Exception('Invalid WAV: file header is too short (${bytes.length} bytes)');
+    }
+
+    // Validate RIFF header
+    final riffHeader = String.fromCharCodes(bytes.sublist(0, 4));
+    if (riffHeader != 'RIFF') {
+      throw Exception('Invalid WAV: missing RIFF header signature');
+    }
+
+    final waveHeader = String.fromCharCodes(bytes.sublist(8, 12));
+    if (waveHeader != 'WAVE') {
+      throw Exception('Invalid WAV: missing WAVE format signature');
+    }
+
+    // Locate 'fmt ' and 'data' chunks
+    int offset = 12;
+    int channels = 1;
+    int sampleRate = targetSampleRate;
+    int bitsPerSample = 16;
+    int dataOffset = -1;
+    int dataSize = 0;
+
+    while (offset < bytes.length - 8) {
+      final chunkId = String.fromCharCodes(bytes.sublist(offset, offset + 4));
+      final chunkSize = ByteData.sublistView(bytes, offset + 4, offset + 8).getUint32(0, Endian.little);
+
+      if (chunkId == 'fmt ') {
+        final formatCode = ByteData.sublistView(bytes, offset + 8, offset + 10).getUint16(0, Endian.little);
+        if (formatCode != 1 && formatCode != 3) {
+          // 1 = PCM, 3 = IEEE Float
+          throw Exception('Unsupported WAV audio format code: $formatCode (expected PCM)');
+        }
+        channels = ByteData.sublistView(bytes, offset + 10, offset + 12).getUint16(0, Endian.little);
+        sampleRate = ByteData.sublistView(bytes, offset + 12, offset + 16).getUint32(0, Endian.little);
+        bitsPerSample = ByteData.sublistView(bytes, offset + 22, offset + 24).getUint16(0, Endian.little);
+      } else if (chunkId == 'data') {
+        dataOffset = offset + 8;
+        dataSize = chunkSize;
+        break;
+      }
+      offset += 8 + chunkSize;
+    }
+
+    if (dataOffset == -1 || dataOffset + dataSize > bytes.length) {
+      // Fallback data offset if chunk structure parsing overshoots
+      dataOffset = 44;
+      dataSize = bytes.length - 44;
+    }
+
+    final ByteData bd = ByteData.sublistView(bytes, dataOffset, dataOffset + dataSize);
+    List<double> rawMonoSamples = [];
+
+    if (bitsPerSample == 16) {
+      final totalSamples = dataSize ~/ 2;
+      final numFrames = totalSamples ~/ channels;
+
+      for (int i = 0; i < numFrames; i++) {
+        double frameSum = 0.0;
+        for (int ch = 0; ch < channels; ch++) {
+          final sampleIndex = (i * channels + ch) * 2;
+          if (sampleIndex + 2 <= bd.lengthInBytes) {
+            final sampleInt16 = bd.getInt16(sampleIndex, Endian.little);
+            frameSum += sampleInt16 / 32768.0;
+          }
+        }
+        rawMonoSamples.add(frameSum / channels);
+      }
+    } else if (bitsPerSample == 8) {
+      final totalSamples = dataSize;
+      final numFrames = totalSamples ~/ channels;
+
+      for (int i = 0; i < numFrames; i++) {
+        double frameSum = 0.0;
+        for (int ch = 0; ch < channels; ch++) {
+          final sampleIndex = i * channels + ch;
+          if (sampleIndex < bd.lengthInBytes) {
+            final sampleUint8 = bd.getUint8(sampleIndex);
+            frameSum += (sampleUint8 - 128) / 128.0;
+          }
+        }
+        rawMonoSamples.add(frameSum / channels);
+      }
+    } else {
+      throw Exception('Unsupported bits per sample: $bitsPerSample');
+    }
+
+    // Resample to 16,000 Hz if necessary
+    List<double> resampledSamples = rawMonoSamples;
+    if (sampleRate != targetSampleRate && rawMonoSamples.isNotEmpty) {
+      resampledSamples = _resampleLinear(rawMonoSamples, sampleRate, targetSampleRate);
+    }
+
+    final durationSeconds = resampledSamples.length / targetSampleRate;
+
+    return WavDecodeResult(
+      pcmSamples: resampledSamples,
+      sampleRate: targetSampleRate,
+      channels: 1,
+      durationSeconds: durationSeconds,
+    );
+  }
+
+  /// Linear interpolation resampling with anti-aliasing low-pass smoothing when downsampling
+  static List<double> _resampleLinear(List<double> input, int oldRate, int newRate) {
+    if (input.isEmpty || oldRate == newRate) return input;
+    final ratio = oldRate / newRate;
+
+    List<double> source = input;
+    // Apply low-pass anti-aliasing filter when downsampling
+    if (ratio > 1.0 && input.length > 3) {
+      final filtered = List<double>.filled(input.length, 0.0);
+      filtered[0] = input[0];
+      filtered[input.length - 1] = input[input.length - 1];
+      for (int i = 1; i < input.length - 1; i++) {
+        filtered[i] = 0.25 * input[i - 1] + 0.5 * input[i] + 0.25 * input[i + 1];
+      }
+      source = filtered;
+    }
+
+    final newLength = (source.length / ratio).floor();
+    List<double> output = List.filled(newLength, 0.0);
+
+    for (int i = 0; i < newLength; i++) {
+      final double srcPos = i * ratio;
+      final int index0 = srcPos.floor();
+      final int index1 = math.min(index0 + 1, source.length - 1);
+      final double frac = srcPos - index0;
+      output[i] = source[index0] * (1.0 - frac) + source[index1] * frac;
+    }
+    return output;
+  }
+
+  /// Extracts downsampled visual waveform points (128/256 values) strictly for UI rendering
+  static List<double> extractVisualWaveform(List<double> pcmSamples, {int noOfSamples = 128}) {
+    if (pcmSamples.isEmpty) return List.filled(noOfSamples, 0.0);
+
+    final blockSize = pcmSamples.length ~/ noOfSamples;
+    if (blockSize < 1) {
+      return List.generate(noOfSamples, (i) => i < pcmSamples.length ? pcmSamples[i].abs() : 0.0);
+    }
+
+    List<double> displayWaveform = [];
+    for (int i = 0; i < noOfSamples; i++) {
+      double maxAbs = 0.0;
+      final start = i * blockSize;
+      final end = math.min(start + blockSize, pcmSamples.length);
+      for (int j = start; j < end; j++) {
+        final val = pcmSamples[j].abs();
+        if (val > maxAbs) maxAbs = val;
+      }
+      displayWaveform.add(maxAbs.clamp(0.0, 1.0));
+    }
+    return displayWaveform;
+  }
+
+  /// Applies the exact `Recommended (v1)` waveform preprocessing pipeline:
+  /// - Validation (min duration 100ms, min sample rate 8000Hz, warning > 15s)
+  /// - DC offset removal
+  /// - Speech-core silence trimming (core -20dB, extension depth -40dB, zero-crossing, safety padding 100ms)
+  /// - RMS normalization targeting -20 dBFS with peak ceiling -1 dBFS and max gain 30 dB clamp
+  static List<double> preprocessPcmRecommendedV1(List<double> samples, {int sampleRate = targetSampleRate}) {
+    if (samples.isEmpty) return [];
+
+    // 1. Validation
+    if (sampleRate < 8000) {
+      throw Exception('Input sample rate $sampleRate Hz is below minimum requirement of 8000 Hz');
+    }
+    final durationSec = samples.length / sampleRate;
+    if (durationSec < 0.10) {
+      throw Exception('Audio duration (${durationSec.toStringAsFixed(2)}s) is below minimum speech duration requirement of 100 ms');
+    }
+    if (durationSec > 15.0) {
+      debugPrint('WavDecoder Warning: Audio recording duration (${durationSec.toStringAsFixed(1)}s) exceeds recommended maximum of 15 seconds.');
+    }
+
+    // 2. DC Offset Removal (Mean Subtraction)
+    final mean = samples.reduce((a, b) => a + b) / samples.length;
+    List<double> processed = samples.map((s) => s - mean).toList();
+
+    // 3. Leading & Trailing Silence Trimming
+    double maxAbs = 0.0;
+    for (var s in processed) {
+      if (s.abs() > maxAbs) maxAbs = s.abs();
+    }
+
+    if (maxAbs < 0.001) {
+      // Audio is virtually silent
+      return processed;
+    }
+
+    final speechCoreThreshold = maxAbs * 0.10; // -20 dB below peak
+    final safetyPadSamples = (sampleRate * 0.10).round(); // 100 ms safety padding
+
+    int coreStart = -1;
+    for (int i = 0; i < processed.length; i++) {
+      if (processed[i].abs() >= speechCoreThreshold) {
+        coreStart = i;
+        break;
+      }
+    }
+
+    int coreEnd = -1;
+    for (int i = processed.length - 1; i >= 0; i--) {
+      if (processed[i].abs() >= speechCoreThreshold) {
+        coreEnd = i;
+        break;
+      }
+    }
+
+    if (coreStart != -1 && coreEnd != -1 && coreEnd > coreStart) {
+      int start = math.max(0, coreStart - safetyPadSamples);
+      int end = math.min(processed.length - 1, coreEnd + safetyPadSamples);
+
+      // Zero-crossing adjustment (search up to 150ms = 2400 samples)
+      final zeroCrossLimit = (sampleRate * 0.15).round();
+      for (int i = start; i > math.max(0, start - zeroCrossLimit); i--) {
+        if (i > 0 && ((processed[i] >= 0 && processed[i - 1] < 0) || (processed[i] <= 0 && processed[i - 1] > 0))) {
+          start = i;
+          break;
+        }
+      }
+
+      for (int i = end; i < math.min(processed.length - 1, end + zeroCrossLimit); i++) {
+        if (i < processed.length - 1 && ((processed[i] >= 0 && processed[i + 1] < 0) || (processed[i] <= 0 && processed[i + 1] > 0))) {
+          end = i;
+          break;
+        }
+      }
+
+      if (end - start + 1 >= (sampleRate * 0.10).floor()) {
+        processed = processed.sublist(start, end + 1);
+      }
+    }
+
+    // 4. RMS Amplitude Normalization
+    double sumSquares = 0.0;
+    for (var s in processed) {
+      sumSquares += s * s;
+    }
+    final rms = math.sqrt(sumSquares / processed.length);
+
+    if (rms > 0) {
+      double scale = targetRmsLinear / rms;
+      // Clamp gain to maximum 30 dB (scale factor 31.6227)
+      scale = math.min(scale, maxGainLinear);
+
+      processed = processed.map((s) => s * scale).toList();
+
+      // Enforce Peak Ceiling (-1 dBFS = 0.89125 linear)
+      double currentPeak = 0.0;
+      for (var s in processed) {
+        if (s.abs() > currentPeak) currentPeak = s.abs();
+      }
+
+      if (currentPeak > peakCeilingLinear) {
+        final peakScale = peakCeilingLinear / currentPeak;
+        processed = processed.map((s) => s * peakScale).toList();
+      }
+    }
+
+    return processed;
+  }
+}
