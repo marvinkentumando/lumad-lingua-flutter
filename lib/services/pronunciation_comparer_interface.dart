@@ -4,8 +4,8 @@ import 'dart:io';
 class PronunciationComparisonRequest {
   final String vocabularyId;
   final String referenceAudioPath;
-  final File referenceAudioFile;
-  final File learnerAudioFile;
+  final File? referenceAudioFile;
+  final File? learnerAudioFile;
   final List<double> referencePcmSamples;
   final List<double> learnerPcmSamples;
   final PronunciationAudioMetadata metadata;
@@ -13,8 +13,8 @@ class PronunciationComparisonRequest {
   PronunciationComparisonRequest({
     required this.vocabularyId,
     required this.referenceAudioPath,
-    required this.referenceAudioFile,
-    required this.learnerAudioFile,
+    this.referenceAudioFile,
+    this.learnerAudioFile,
     required this.referencePcmSamples,
     required this.learnerPcmSamples,
     required this.metadata,

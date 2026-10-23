@@ -12,7 +12,6 @@ import '../services/auth_service.dart';
 import '../providers/learning_provider.dart';
 import '../providers/student_provider.dart';
 import '../providers/role_provider.dart';
-import '../providers/theme_provider.dart';
 import '../services/firebase_service.dart';
 import '../config/role_nav_config.dart';
 import '../services/cultural_theme_service.dart';
@@ -237,8 +236,6 @@ class MainLayout extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                _buildThemeToggle(context, ref),
-                const SizedBox(width: 8),
                 GestureDetector(
                   onTap: () {
                     HapticService.selection();
@@ -329,62 +326,7 @@ class MainLayout extends ConsumerWidget {
     );
   }
 
-  Widget _buildThemeToggle(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return GestureDetector(
-      onTap: () {
-        HapticService.selection();
-        ref.read(themeProvider.notifier).toggleTheme();
-      },
-      child: Tooltip(
-        message: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-          decoration: BoxDecoration(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.08)
-                : Colors.black.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.15)
-                  : Colors.black.withValues(alpha: 0.1),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: !isDark ? AppColors.gold500 : Colors.transparent,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.wb_sunny_rounded,
-                  size: 14,
-                  color: !isDark ? Colors.black : (isDark ? Colors.white38 : Colors.black38),
-                ),
-              ),
-              const SizedBox(width: 2),
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.gold500 : Colors.transparent,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.dark_mode_rounded,
-                  size: 14,
-                  color: isDark ? Colors.black : (isDark ? Colors.white38 : Colors.black38),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildStreakStat(BuildContext context, WidgetRef ref) {
     final student = ref.watch(studentProvider);

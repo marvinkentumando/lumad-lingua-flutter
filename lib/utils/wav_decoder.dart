@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 
 class WavDecodeResult {
@@ -26,6 +27,68 @@ class WavDecoder {
   static Future<WavDecodeResult> decodeWavFile(File file) async {
     final bytes = await file.readAsBytes();
     return decodeWavBytes(bytes);
+  }
+
+  /// Ensures audio bytes have a valid RIFF/WAVE header. Prepends a valid header if missing.
+  static Uint8List ensureWavBytes(Uint8List bytes, {int sampleRate = targetSampleRate, int channels = 1}) {
+    if (bytes.length >= 12) {
+      final sig = String.fromCharCodes(bytes.sublist(0, 4));
+      final wave = String.fromCharCodes(bytes.sublist(8, 12));
+      if (sig == 'RIFF' && wave == 'WAVE') {
+        return bytes;
+      }
+    }
+    return createWavHeader(bytes, sampleRate: sampleRate, numChannels: channels, bitsPerSample: 16);
+  }
+
+  /// Creates a valid 44-byte RIFF/WAVE header for raw 16-bit PCM bytes at target sample rate.
+  static Uint8List createWavHeader(
+    Uint8List pcmBytes, {
+    int sampleRate = targetSampleRate,
+    int numChannels = 1,
+    int bitsPerSample = 16,
+  }) {
+    final byteRate = sampleRate * numChannels * (bitsPerSample ~/ 8);
+    final blockAlign = numChannels * (bitsPerSample ~/ 8);
+    final dataSize = pcmBytes.length;
+    final chunkSize = 36 + dataSize;
+
+    final header = ByteData(44);
+
+    // 'RIFF'
+    header.setUint8(0, 0x52);
+    header.setUint8(1, 0x49);
+    header.setUint8(2, 0x46);
+    header.setUint8(3, 0x46);
+    header.setUint32(4, chunkSize, Endian.little);
+    // 'WAVE'
+    header.setUint8(8, 0x57);
+    header.setUint8(9, 0x41);
+    header.setUint8(10, 0x56);
+    header.setUint8(11, 0x45);
+    // 'fmt '
+    header.setUint8(12, 0x66);
+    header.setUint8(13, 0x6D);
+    header.setUint8(14, 0x74);
+    header.setUint8(15, 0x20);
+    header.setUint32(16, 16, Endian.little);
+    header.setUint16(20, 1, Endian.little);
+    header.setUint16(22, numChannels, Endian.little);
+    header.setUint32(24, sampleRate, Endian.little);
+    header.setUint32(28, byteRate, Endian.little);
+    header.setUint16(32, blockAlign, Endian.little);
+    header.setUint16(34, bitsPerSample, Endian.little);
+    // 'data'
+    header.setUint8(36, 0x64);
+    header.setUint8(37, 0x61);
+    header.setUint8(38, 0x74);
+    header.setUint8(39, 0x61);
+    header.setUint32(40, dataSize, Endian.little);
+
+    final builder = BytesBuilder();
+    builder.add(header.buffer.asUint8List());
+    builder.add(pcmBytes);
+    return builder.toBytes();
   }
 
   /// Decodes raw 16-bit PCM WAV bytes into 16kHz mono `List<double>` samples.

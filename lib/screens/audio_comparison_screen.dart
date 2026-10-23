@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -110,11 +111,18 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   }
 
   Future<void> _playUserAudio() async {
-    if (_recordedFilePath == null || !File(_recordedFilePath!).existsSync()) return;
+    if (_recordedFilePath == null || _recordedFilePath!.isEmpty) return;
     try {
       await _nativePlayer.stop();
       await _userPlayer.stop();
-      await _userPlayer.play(ap.DeviceFileSource(_recordedFilePath!));
+
+      if (kIsWeb) {
+        await _userPlayer.play(ap.UrlSource(_recordedFilePath!));
+      } else {
+        if (!File(_recordedFilePath!).existsSync()) return;
+        await _userPlayer.play(ap.DeviceFileSource(_recordedFilePath!));
+      }
+
       setState(() {
         _state = AudioComparisonState.playing;
       });
@@ -230,9 +238,6 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     }
 
     try {
-      final directory = await getTemporaryDirectory();
-      final recordPath = '${directory.path}/user_pronunciation_16k.wav';
-
       RecordConfig config = const RecordConfig(
         encoder: AudioEncoder.wav,
         sampleRate: 16000,
@@ -250,6 +255,12 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           sampleRate: 16000,
           numChannels: 1,
         );
+      }
+
+      String recordPath = '';
+      if (!kIsWeb) {
+        final directory = await getTemporaryDirectory();
+        recordPath = '${directory.path}/user_pronunciation_16k.wav';
       }
 
       await _audioRecorder.start(config, path: recordPath);
@@ -277,7 +288,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
 
       if (mounted) {
         setState(() {
-          _recordedFilePath = recordPath;
+          _recordedFilePath = kIsWeb ? null : recordPath;
           _state = AudioComparisonState.recording;
           _errorMessage = null;
         });
@@ -312,18 +323,53 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       final path = await _audioRecorder.stop();
       final targetPath = path ?? _recordedFilePath;
 
-      if (targetPath == null || !File(targetPath).existsSync()) {
+      if (targetPath == null || targetPath.isEmpty) {
         if (mounted) {
           setState(() {
             _state = AudioComparisonState.error;
-            _errorMessage = 'Recording output file is missing.';
+            _errorMessage = 'Recording output is missing.';
           });
         }
         return;
       }
 
-      final learnerFile = File(targetPath);
-      if (await learnerFile.length() < 100) {
+      Uint8List bytes;
+      if (kIsWeb) {
+        if (!targetPath.startsWith('blob:') && !targetPath.startsWith('http')) {
+          if (mounted) {
+            setState(() {
+              _state = AudioComparisonState.error;
+              _errorMessage = 'Recording failed to generate a valid browser audio URL.';
+            });
+          }
+          return;
+        }
+        final response = await http.get(Uri.parse(targetPath));
+        if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
+          if (mounted) {
+            setState(() {
+              _state = AudioComparisonState.error;
+              _errorMessage = 'Failed to retrieve recorded audio in browser.';
+            });
+          }
+          return;
+        }
+        bytes = response.bodyBytes;
+      } else {
+        final learnerFile = File(targetPath);
+        if (!learnerFile.existsSync() || await learnerFile.length() < 100) {
+          if (mounted) {
+            setState(() {
+              _state = AudioComparisonState.error;
+              _errorMessage = 'Recording is empty. Please speak clearly and try again.';
+            });
+          }
+          return;
+        }
+        bytes = await learnerFile.readAsBytes();
+      }
+
+      if (bytes.length < 100) {
         if (mounted) {
           setState(() {
             _state = AudioComparisonState.error;
@@ -333,7 +379,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         return;
       }
 
-      final learnerWavResult = await WavDecoder.decodeWavFile(learnerFile);
+      final validWavBytes = WavDecoder.ensureWavBytes(bytes);
+      final learnerWavResult = WavDecoder.decodeWavBytes(validWavBytes);
       final learnerPcm = learnerWavResult.pcmSamples;
 
       if (learnerPcm.length < 1600) { // < 0.1s
@@ -379,7 +426,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   }
 
   Future<void> _submitForComparison() async {
-    if (_items.isEmpty || _recordedFilePath == null) return;
+    if (_items.isEmpty || _recordedFilePath == null || _recordedFilePath!.isEmpty) return;
     if (_state != AudioComparisonState.recorded && _state != AudioComparisonState.playing) return;
 
     final currentItem = _items[_currentIndex];
@@ -394,39 +441,68 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     });
 
     try {
-      final learnerFile = File(_recordedFilePath!);
-      if (!await learnerFile.exists()) {
-        throw Exception('Learner audio recording file not found.');
+      // 1. Decode learner audio bytes
+      Uint8List learnerBytes;
+      File? learnerFile;
+
+      if (kIsWeb) {
+        final response = await http.get(Uri.parse(_recordedFilePath!));
+        if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
+          throw Exception('Failed to load recorded audio in browser.');
+        }
+        learnerBytes = response.bodyBytes;
+      } else {
+        learnerFile = File(_recordedFilePath!);
+        if (!await learnerFile.exists()) {
+          throw Exception('Learner audio recording file not found.');
+        }
+        learnerBytes = await learnerFile.readAsBytes();
       }
 
-      // 1. Decode learner 16-bit PCM WAV into 16kHz mono List<double>
-      final learnerWavResult = await WavDecoder.decodeWavFile(learnerFile);
+      final validLearnerWav = WavDecoder.ensureWavBytes(learnerBytes);
+      final learnerWavResult = WavDecoder.decodeWavBytes(validLearnerWav);
       final learnerPcm = learnerWavResult.pcmSamples;
 
-      // 2. Load & decode native reference WAV
-      final directory = await getTemporaryDirectory();
-      final sanitizedFolder = currentItem.folderName.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
-      final nativeFile = File('${directory.path}/ref_$sanitizedFolder.wav');
+      // 2. Load & decode native reference audio
+      Uint8List nativeBytes;
+      File? nativeFile;
 
-      bool needsDownload = true;
-      if (await nativeFile.exists()) {
-        if (await nativeFile.length() > 500) {
-          needsDownload = false;
-        } else {
-          await nativeFile.delete();
-        }
-      }
+      final resolvedNativeUrl = ref.read(supabaseStorageServiceProvider).getAudioUrl(currentItem.referenceAudioUrl);
 
-      if (needsDownload) {
-        final response = await http.get(Uri.parse(currentItem.referenceAudioUrl)).timeout(const Duration(seconds: 15));
-        if (response.statusCode == 200) {
-          await nativeFile.writeAsBytes(response.bodyBytes);
+      if (kIsWeb) {
+        final response = await http.get(Uri.parse(resolvedNativeUrl)).timeout(const Duration(seconds: 15));
+        if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
+          nativeBytes = response.bodyBytes;
         } else {
           throw Exception('Failed to download reference WAV (HTTP ${response.statusCode})');
         }
+      } else {
+        final directory = await getTemporaryDirectory();
+        final sanitizedFolder = currentItem.folderName.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
+        nativeFile = File('${directory.path}/ref_$sanitizedFolder.wav');
+
+        bool needsDownload = true;
+        if (await nativeFile.exists()) {
+          if (await nativeFile.length() > 500) {
+            needsDownload = false;
+          } else {
+            await nativeFile.delete();
+          }
+        }
+
+        if (needsDownload) {
+          final response = await http.get(Uri.parse(resolvedNativeUrl)).timeout(const Duration(seconds: 15));
+          if (response.statusCode == 200) {
+            await nativeFile.writeAsBytes(response.bodyBytes);
+          } else {
+            throw Exception('Failed to download reference WAV (HTTP ${response.statusCode})');
+          }
+        }
+        nativeBytes = await nativeFile.readAsBytes();
       }
 
-      final nativeWavResult = await WavDecoder.decodeWavFile(nativeFile);
+      final validNativeWav = WavDecoder.ensureWavBytes(nativeBytes);
+      final nativeWavResult = WavDecoder.decodeWavBytes(validNativeWav);
       final nativePcm = nativeWavResult.pcmSamples;
       _nativeVisualWaveform = WavDecoder.extractVisualWaveform(nativePcm, noOfSamples: 128);
 
