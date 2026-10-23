@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,6 +22,16 @@ import '../utils/wav_decoder.dart';
 import '../utils/app_localization.dart';
 import '../services/pronunciation_comparer_interface.dart';
 
+enum AudioComparisonState {
+  idle,       // Ready to start recording
+  recording,  // Microhpone is actively capturing audio
+  recorded,   // Recording complete, preview & review available
+  playing,    // Playing back learner's recorded attempt
+  comparing,  // Executing candidate pronunciation comparison
+  result,     // Comparison complete, candidate score presented
+  error,      // Recoverable error message
+}
+
 class AudioComparisonScreen extends ConsumerStatefulWidget {
   const AudioComparisonScreen({super.key});
 
@@ -29,23 +40,46 @@ class AudioComparisonScreen extends ConsumerStatefulWidget {
 }
 
 class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
-  bool _isRecording = false;
-  bool _hasResult = false;
+  AudioComparisonState _state = AudioComparisonState.idle;
   double _scorePercentage = 0.0;
   int _currentIndex = 0;
   bool _isShuffled = false;
   List<SupabaseDatasetEntry> _items = [];
-  bool _isComparing = false;
-  bool _isLoadingAudio = false;
+  bool _isLoadingNativeAudio = false;
+
+  String? _recordedFilePath;
+  double _recordedDurationSeconds = 0.0;
+  int _recordingDurationSeconds = 0;
+  Timer? _recordingTimer;
+  StreamSubscription<Amplitude>? _amplitudeSubscription;
+  final List<double> _liveAmplitudeBars = List.filled(16, 0.1);
+
   List<double> _userVisualWaveform = [];
   List<double> _nativeVisualWaveform = [];
+  String? _errorMessage;
 
   final AudioRecorder _audioRecorder = AudioRecorder();
   final ap.AudioPlayer _nativePlayer = ap.AudioPlayer();
   final ap.AudioPlayer _userPlayer = ap.AudioPlayer();
+  StreamSubscription? _userPlayerCompleteSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _userPlayerCompleteSubscription = _userPlayer.onPlayerComplete.listen((_) {
+      if (mounted && _state == AudioComparisonState.playing) {
+        setState(() {
+          _state = AudioComparisonState.recorded;
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
+    _recordingTimer?.cancel();
+    _amplitudeSubscription?.cancel();
+    _userPlayerCompleteSubscription?.cancel();
     _audioRecorder.dispose();
     _nativePlayer.dispose();
     _userPlayer.dispose();
@@ -54,8 +88,9 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
 
   Future<void> _playNativeAudio(String url) async {
     if (url.isEmpty) return;
-    setState(() => _isLoadingAudio = true);
+    setState(() => _isLoadingNativeAudio = true);
     try {
+      await _userPlayer.stop();
       final resolvedUrl = ref.read(supabaseStorageServiceProvider).getAudioUrl(url);
       await _nativePlayer.stop();
       await _nativePlayer.play(ap.UrlSource(resolvedUrl));
@@ -70,32 +105,48 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _isLoadingAudio = false);
+      if (mounted) setState(() => _isLoadingNativeAudio = false);
     }
   }
 
   Future<void> _playUserAudio() async {
+    if (_recordedFilePath == null || !File(_recordedFilePath!).existsSync()) return;
     try {
-      final directory = await getTemporaryDirectory();
-      final path = '${directory.path}/user_pronunciation_16k.wav';
-      final file = File(path);
-      if (await file.exists()) {
-        await _userPlayer.stop();
-        await _userPlayer.play(ap.DeviceFileSource(path));
-      }
+      await _nativePlayer.stop();
+      await _userPlayer.stop();
+      await _userPlayer.play(ap.DeviceFileSource(_recordedFilePath!));
+      setState(() {
+        _state = AudioComparisonState.playing;
+      });
     } catch (e) {
       debugPrint('Error playing learner attempt audio: $e');
     }
   }
 
+  Future<void> _stopUserAudio() async {
+    try {
+      await _userPlayer.stop();
+      if (mounted && _state == AudioComparisonState.playing) {
+        setState(() {
+          _state = AudioComparisonState.recorded;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error stopping learner audio playback: $e');
+    }
+  }
+
   void _nextItem() {
     if (_currentIndex < _items.length - 1) {
+      _stopAllAudioAndRecording();
       setState(() {
         _currentIndex++;
-        _hasResult = false;
+        _state = AudioComparisonState.idle;
         _scorePercentage = 0.0;
+        _recordedFilePath = null;
         _userVisualWaveform = [];
         _nativeVisualWaveform = [];
+        _errorMessage = null;
       });
       HapticService.light();
     }
@@ -103,12 +154,15 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
 
   void _previousItem() {
     if (_currentIndex > 0) {
+      _stopAllAudioAndRecording();
       setState(() {
         _currentIndex--;
-        _hasResult = false;
+        _state = AudioComparisonState.idle;
         _scorePercentage = 0.0;
+        _recordedFilePath = null;
         _userVisualWaveform = [];
         _nativeVisualWaveform = [];
+        _errorMessage = null;
       });
       HapticService.light();
     }
@@ -116,156 +170,310 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
 
   void _toggleShuffle() {
     if (_items.isEmpty) return;
+    _stopAllAudioAndRecording();
     setState(() {
       _isShuffled = !_isShuffled;
       _items.shuffle();
       _currentIndex = 0;
-      _hasResult = false;
+      _state = AudioComparisonState.idle;
       _scorePercentage = 0.0;
+      _recordedFilePath = null;
+      _userVisualWaveform = [];
+      _nativeVisualWaveform = [];
+      _errorMessage = null;
     });
     HapticService.medium();
   }
 
-  void _toggleRecording() async {
-    if (_items.isEmpty) return;
-    final currentItem = _items[_currentIndex];
+  Future<void> _stopAllAudioAndRecording() async {
+    _recordingTimer?.cancel();
+    _amplitudeSubscription?.cancel();
+    try {
+      if (await _audioRecorder.isRecording()) {
+        await _audioRecorder.stop();
+      }
+    } catch (_) {}
+    try {
+      await _nativePlayer.stop();
+      await _userPlayer.stop();
+    } catch (_) {}
+  }
+
+  Future<void> _startRecording() async {
+    if (_state == AudioComparisonState.recording || _state == AudioComparisonState.comparing) return;
 
     HapticService.selection();
-    if (!_isRecording) {
-      // Check microphone permission
-      if (!await _audioRecorder.hasPermission()) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Microphone permission is required for audio recording.'),
-              backgroundColor: AppColors.semanticRed,
-            ),
-          );
-        }
-        return;
-      }
+    await _stopAllAudioAndRecording();
 
+    // Check microphone permission
+    bool hasPermission = false;
+    try {
+      hasPermission = await _audioRecorder.hasPermission();
+    } catch (e) {
+      debugPrint('Permission check error: $e');
+    }
+
+    if (!hasPermission) {
+      if (mounted) {
+        setState(() {
+          _state = AudioComparisonState.error;
+          _errorMessage = 'Microphone permission is required to record audio.';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Microphone permission is required to record audio.'),
+            backgroundColor: AppColors.semanticRed,
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
       final directory = await getTemporaryDirectory();
       final recordPath = '${directory.path}/user_pronunciation_16k.wav';
 
-      // Record direct 16kHz mono 16-bit PCM WAV
-      const config = RecordConfig(
+      RecordConfig config = const RecordConfig(
         encoder: AudioEncoder.wav,
         sampleRate: 16000,
         numChannels: 1,
       );
 
+      bool isWavSupported = true;
+      try {
+        isWavSupported = await _audioRecorder.isEncoderSupported(AudioEncoder.wav);
+      } catch (_) {}
+
+      if (!isWavSupported) {
+        config = const RecordConfig(
+          encoder: AudioEncoder.pcm16bits,
+          sampleRate: 16000,
+          numChannels: 1,
+        );
+      }
+
       await _audioRecorder.start(config, path: recordPath);
-      setState(() {
-        _isRecording = true;
-        _hasResult = false;
+
+      _recordingDurationSeconds = 0;
+      _recordingTimer?.cancel();
+      _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (mounted && _state == AudioComparisonState.recording) {
+          setState(() {
+            _recordingDurationSeconds++;
+          });
+        }
       });
-    } else {
+
+      _amplitudeSubscription?.cancel();
+      _amplitudeSubscription = _audioRecorder.onAmplitudeChanged(const Duration(milliseconds: 100)).listen((amp) {
+        if (mounted && _state == AudioComparisonState.recording) {
+          setState(() {
+            final norm = ((amp.current + 60) / 60).clamp(0.08, 1.0);
+            _liveAmplitudeBars.removeAt(0);
+            _liveAmplitudeBars.add(norm);
+          });
+        }
+      });
+
+      if (mounted) {
+        setState(() {
+          _recordedFilePath = recordPath;
+          _state = AudioComparisonState.recording;
+          _errorMessage = null;
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to start recording: $e');
+      _recordingTimer?.cancel();
+      _amplitudeSubscription?.cancel();
+      if (mounted) {
+        setState(() {
+          _state = AudioComparisonState.error;
+          _errorMessage = 'Could not start microphone capture: ${e.toString().split(':').last.trim()}';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_errorMessage!),
+            backgroundColor: AppColors.semanticRed,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _stopRecording() async {
+    if (_state != AudioComparisonState.recording) return;
+
+    HapticService.selection();
+    _recordingTimer?.cancel();
+    _amplitudeSubscription?.cancel();
+
+    try {
       final path = await _audioRecorder.stop();
-      if (path == null) {
-        setState(() => _isRecording = false);
+      final targetPath = path ?? _recordedFilePath;
+
+      if (targetPath == null || !File(targetPath).existsSync()) {
+        if (mounted) {
+          setState(() {
+            _state = AudioComparisonState.error;
+            _errorMessage = 'Recording output file is missing.';
+          });
+        }
         return;
       }
 
-      setState(() {
-        _isRecording = false;
-        _isComparing = true;
-      });
-
-      try {
-        final learnerFile = File(path);
-        if (!await learnerFile.exists()) {
-          throw Exception('Learner audio recording file not found.');
-        }
-
-        // 1. Decode learner 16-bit PCM WAV into 16kHz mono List<double>
-        final learnerWavResult = await WavDecoder.decodeWavFile(learnerFile);
-        final learnerPcm = learnerWavResult.pcmSamples;
-
-        if (learnerPcm.length < 1600) {
-          throw Exception('Recording is too short (minimum 0.1s required). Please speak clearly.');
-        }
-
-        // Downsample PCM for UI display waveform only
-        _userVisualWaveform = WavDecoder.extractVisualWaveform(learnerPcm, noOfSamples: 128);
-
-        // 2. Load & decode native reference WAV
-        final directory = await getTemporaryDirectory();
-        final sanitizedFolder = currentItem.folderName.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
-        final nativeFile = File('${directory.path}/ref_$sanitizedFolder.wav');
-
-        bool needsDownload = true;
-        if (await nativeFile.exists()) {
-          if (await nativeFile.length() > 500) {
-            needsDownload = false;
-          } else {
-            await nativeFile.delete();
-          }
-        }
-
-        if (needsDownload) {
-          final response = await http.get(Uri.parse(currentItem.referenceAudioUrl)).timeout(const Duration(seconds: 15));
-          if (response.statusCode == 200) {
-            await nativeFile.writeAsBytes(response.bodyBytes);
-          } else {
-            throw Exception('Failed to download reference WAV (HTTP ${response.statusCode})');
-          }
-        }
-
-        final nativeWavResult = await WavDecoder.decodeWavFile(nativeFile);
-        final nativePcm = nativeWavResult.pcmSamples;
-        _nativeVisualWaveform = WavDecoder.extractVisualWaveform(nativePcm, noOfSamples: 128);
-
-        // 3. Compare using algorithm-independent request interface & Recommended (v1) preprocessing
-        final request = PronunciationComparisonRequest(
-          vocabularyId: currentItem.folderName,
-          referenceAudioPath: currentItem.referenceAudioPath,
-          referenceAudioFile: nativeFile,
-          learnerAudioFile: learnerFile,
-          referencePcmSamples: nativePcm,
-          learnerPcmSamples: learnerPcm,
-          metadata: PronunciationAudioMetadata(
-            sampleRate: 16000,
-            numChannels: 1,
-            runId: currentItem.runId,
-            configHash: '3140166e41dc4be9',
-          ),
-        );
-
-        final comparer = PronunciationService();
-        final result = await comparer.compare(request);
-
+      final learnerFile = File(targetPath);
+      if (await learnerFile.length() < 100) {
         if (mounted) {
           setState(() {
-            _isComparing = false;
-            _hasResult = true;
-            _scorePercentage = result.scorePercentage;
+            _state = AudioComparisonState.error;
+            _errorMessage = 'Recording is empty. Please speak clearly and try again.';
           });
+        }
+        return;
+      }
 
-          // NOTE: XP awards are explicitly disabled for unvalidated candidate model scores
-          if (_scorePercentage >= 60.0) {
-            HapticService.success();
-            try {
-              await _nativePlayer.play(ap.AssetSource('audio/success.MP3'));
-            } catch (_) {}
-          } else {
-            HapticService.selection();
-            try {
-              await _nativePlayer.play(ap.AssetSource('audio/error.MP3'));
-            } catch (_) {}
-          }
-        }
-      } catch (e) {
-        debugPrint('Pronunciation evaluation error: $e');
+      final learnerWavResult = await WavDecoder.decodeWavFile(learnerFile);
+      final learnerPcm = learnerWavResult.pcmSamples;
+
+      if (learnerPcm.length < 1600) { // < 0.1s
         if (mounted) {
-          setState(() => _isComparing = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Audio processing error: ${e.toString().split(':').last.trim()}'),
-              backgroundColor: AppColors.semanticRed,
-            ),
-          );
+          setState(() {
+            _state = AudioComparisonState.error;
+            _errorMessage = 'Recording is too short (minimum 0.1s required). Please record again.';
+          });
         }
+        return;
+      }
+
+      _recordedDurationSeconds = learnerWavResult.durationSeconds;
+      _userVisualWaveform = WavDecoder.extractVisualWaveform(learnerPcm, noOfSamples: 128);
+
+      if (mounted) {
+        setState(() {
+          _recordedFilePath = targetPath;
+          _state = AudioComparisonState.recorded;
+          _errorMessage = null;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error finalizing recording: $e');
+      if (mounted) {
+        setState(() {
+          _state = AudioComparisonState.error;
+          _errorMessage = 'Error parsing recorded audio: ${e.toString().split(':').last.trim()}';
+        });
+      }
+    }
+  }
+
+  Future<void> _recordAgain() async {
+    await _userPlayer.stop();
+    setState(() {
+      _state = AudioComparisonState.idle;
+      _userVisualWaveform = [];
+      _scorePercentage = 0.0;
+      _errorMessage = null;
+    });
+    await _startRecording();
+  }
+
+  Future<void> _submitForComparison() async {
+    if (_items.isEmpty || _recordedFilePath == null) return;
+    if (_state != AudioComparisonState.recorded && _state != AudioComparisonState.playing) return;
+
+    final currentItem = _items[_currentIndex];
+    HapticService.selection();
+
+    await _userPlayer.stop();
+    await _nativePlayer.stop();
+
+    setState(() {
+      _state = AudioComparisonState.comparing;
+      _errorMessage = null;
+    });
+
+    try {
+      final learnerFile = File(_recordedFilePath!);
+      if (!await learnerFile.exists()) {
+        throw Exception('Learner audio recording file not found.');
+      }
+
+      // 1. Decode learner 16-bit PCM WAV into 16kHz mono List<double>
+      final learnerWavResult = await WavDecoder.decodeWavFile(learnerFile);
+      final learnerPcm = learnerWavResult.pcmSamples;
+
+      // 2. Load & decode native reference WAV
+      final directory = await getTemporaryDirectory();
+      final sanitizedFolder = currentItem.folderName.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
+      final nativeFile = File('${directory.path}/ref_$sanitizedFolder.wav');
+
+      bool needsDownload = true;
+      if (await nativeFile.exists()) {
+        if (await nativeFile.length() > 500) {
+          needsDownload = false;
+        } else {
+          await nativeFile.delete();
+        }
+      }
+
+      if (needsDownload) {
+        final response = await http.get(Uri.parse(currentItem.referenceAudioUrl)).timeout(const Duration(seconds: 15));
+        if (response.statusCode == 200) {
+          await nativeFile.writeAsBytes(response.bodyBytes);
+        } else {
+          throw Exception('Failed to download reference WAV (HTTP ${response.statusCode})');
+        }
+      }
+
+      final nativeWavResult = await WavDecoder.decodeWavFile(nativeFile);
+      final nativePcm = nativeWavResult.pcmSamples;
+      _nativeVisualWaveform = WavDecoder.extractVisualWaveform(nativePcm, noOfSamples: 128);
+
+      // 3. Compare using algorithm-independent request interface & Recommended (v1) preprocessing
+      final request = PronunciationComparisonRequest(
+        vocabularyId: currentItem.folderName,
+        referenceAudioPath: currentItem.referenceAudioPath,
+        referenceAudioFile: nativeFile,
+        learnerAudioFile: learnerFile,
+        referencePcmSamples: nativePcm,
+        learnerPcmSamples: learnerPcm,
+        metadata: PronunciationAudioMetadata(
+          sampleRate: 16000,
+          numChannels: 1,
+          runId: currentItem.runId,
+          configHash: '3140166e41dc4be9',
+        ),
+      );
+
+      final comparer = PronunciationService();
+      final result = await comparer.compare(request);
+
+      if (mounted) {
+        setState(() {
+          _scorePercentage = result.scorePercentage;
+          _state = AudioComparisonState.result;
+        });
+
+        if (_scorePercentage >= 60.0) {
+          HapticService.success();
+          try {
+            await _nativePlayer.play(ap.AssetSource('audio/success.MP3'));
+          } catch (_) {}
+        } else {
+          HapticService.selection();
+          try {
+            await _nativePlayer.play(ap.AssetSource('audio/error.MP3'));
+          } catch (_) {}
+        }
+      }
+    } catch (e) {
+      debugPrint('Pronunciation evaluation error: $e');
+      if (mounted) {
+        setState(() {
+          _state = AudioComparisonState.error;
+          _errorMessage = 'Audio comparison failed: ${e.toString().split(':').last.trim()}';
+        });
       }
     }
   }
@@ -344,10 +552,11 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
                     _buildDatasetBadge(currentItem),
                     const SizedBox(height: 16),
                     _buildNativeSpeakerCard(isDark, currentItem, l10n),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                     _buildUserRecordingCard(isDark, l10n),
-                    const SizedBox(height: 24),
-                    if (_hasResult) _buildResultCard(isDark, l10n).animate().scale().fadeIn(),
+                    const SizedBox(height: 20),
+                    if (_state == AudioComparisonState.result)
+                      _buildResultCard(isDark, l10n).animate().scale().fadeIn(),
                   ],
                 ),
               ),
@@ -419,7 +628,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
                       ],
                     ),
                   ),
-                  _isLoadingAudio
+                  _isLoadingNativeAudio
                       ? const SizedBox(width: 40, height: 40, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.gold500))
                       : IconButton(
                           onPressed: () => _playNativeAudio(item.referenceAudioUrl),
@@ -434,7 +643,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -471,51 +680,172 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          if (_isRecording)
-            Column(
-              children: [
-                const SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
-                ),
-                const SizedBox(height: 12),
-                Text('Recording 16kHz PCM WAV...', style: AppTypography.body.copyWith(color: Colors.white)),
-              ],
-            )
-          else if (_isComparing)
+          if (_state == AudioComparisonState.recording) ...[
+            _buildActiveRecordingIndicator(),
+          ] else if (_state == AudioComparisonState.comparing) ...[
             Column(
               children: [
                 const CircularProgressIndicator(color: Colors.white),
                 const SizedBox(height: 16),
                 Text(l10n.translate('comparing_tones'), style: const TextStyle(color: Colors.white70)),
               ],
-            )
-          else if (_userVisualWaveform.isNotEmpty) ...[
+            ),
+          ] else if (_state == AudioComparisonState.recorded || _state == AudioComparisonState.playing || _state == AudioComparisonState.result) ...[
+            _buildPlaybackPreviewArea(),
+          ] else ...[
+            if (_errorMessage != null) ...[
+              Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
+                style: AppTypography.body.copyWith(color: Colors.redAccent, fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+            ] else
+              const Icon(Icons.mic_none_rounded, size: 44, color: Colors.white24),
+          ],
+
+          const SizedBox(height: 16),
+          _buildCardActionButtons(l10n),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActiveRecordingIndicator() {
+    final min = (_recordingDurationSeconds ~/ 60).toString().padLeft(2, '0');
+    final sec = (_recordingDurationSeconds % 60).toString().padLeft(2, '0');
+
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: const BoxDecoration(
+                color: Colors.redAccent,
+                shape: BoxShape.circle,
+              ),
+            ).animate(onPlay: (controller) => controller.repeat(reverse: true)).scale(
+                  begin: const Offset(0.8, 0.8),
+                  end: const Offset(1.3, 1.3),
+                  duration: 800.ms,
+                ),
+            const SizedBox(width: 8),
+            Text(
+              'RECORDING...',
+              style: AppTypography.label.copyWith(color: Colors.redAccent, fontWeight: FontWeight.w900, letterSpacing: 1.5),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              '$min:$sec',
+              style: AppTypography.mono.copyWith(color: AppColors.gold500, fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 32,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(_liveAmplitudeBars.length, (index) {
+              final val = _liveAmplitudeBars[index];
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 100),
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                width: 4,
+                height: (val * 32).clamp(4.0, 32.0),
+                decoration: BoxDecoration(
+                  color: AppColors.gold500,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              );
+            }),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPlaybackPreviewArea() {
+    final isPlaying = _state == AudioComparisonState.playing;
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Your Attempt (16kHz Mono)', style: AppTypography.label.copyWith(color: Colors.white70)),
-                IconButton(
-                  onPressed: _playUserAudio,
-                  icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
+                Icon(
+                  isPlaying ? Icons.volume_up_rounded : Icons.audiotrack_rounded,
+                  color: AppColors.gold500,
+                  size: 18,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Your Attempt (${_recordedDurationSeconds.toStringAsFixed(1)}s)',
+                  style: AppTypography.label.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            _buildSimpleWaveformCanvas(_userVisualWaveform, Colors.white),
-          ] else
-            const Icon(Icons.mic_none_rounded, size: 48, color: Colors.white24),
+            Row(
+              children: [
+                IconButton(
+                  onPressed: isPlaying ? _stopUserAudio : _playUserAudio,
+                  icon: Icon(
+                    isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded,
+                    color: AppColors.gold500,
+                    size: 32,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        if (_userVisualWaveform.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _buildSimpleWaveformCanvas(_userVisualWaveform, Colors.white),
+        ],
+      ],
+    );
+  }
 
-          const SizedBox(height: 16),
+  Widget _buildCardActionButtons(AppLocalization l10n) {
+    if (_state == AudioComparisonState.recording) {
+      return BrandButton(
+        text: 'STOP RECORDING',
+        onTap: _stopRecording,
+        type: BrandButtonType.primary,
+        icon: Icons.stop_rounded,
+      );
+    }
+
+    if (_state == AudioComparisonState.recorded || _state == AudioComparisonState.playing || _state == AudioComparisonState.result) {
+      return Column(
+        children: [
           BrandButton(
-            text: _isRecording ? l10n.translate('stop_and_compare') : l10n.translate('start_recording'),
-            onTap: _isComparing ? null : _toggleRecording,
-            type: _isRecording ? BrandButtonType.primary : BrandButtonType.secondary,
-            icon: _isRecording ? Icons.stop_rounded : Icons.mic_rounded,
+            text: 'COMPARE PRONUNCIATION',
+            onTap: _state == AudioComparisonState.comparing ? null : _submitForComparison,
+            type: BrandButtonType.primary,
+            icon: Icons.analytics_rounded,
+          ),
+          const SizedBox(height: 8),
+          BrandButton(
+            text: 'RECORD AGAIN',
+            onTap: _recordAgain,
+            type: BrandButtonType.secondary,
+            icon: Icons.refresh_rounded,
           ),
         ],
-      ),
+      );
+    }
+
+    return BrandButton(
+      text: l10n.translate('start_recording'),
+      onTap: _startRecording,
+      type: BrandButtonType.secondary,
+      icon: Icons.mic_rounded,
     );
   }
 

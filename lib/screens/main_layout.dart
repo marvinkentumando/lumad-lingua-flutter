@@ -12,6 +12,7 @@ import '../services/auth_service.dart';
 import '../providers/learning_provider.dart';
 import '../providers/student_provider.dart';
 import '../providers/role_provider.dart';
+import '../providers/theme_provider.dart';
 import '../services/firebase_service.dart';
 import '../config/role_nav_config.dart';
 import '../services/cultural_theme_service.dart';
@@ -57,7 +58,7 @@ class MainLayout extends ConsumerWidget {
           : AppBar(
               backgroundColor: Colors.transparent,
               elevation: 0,
-              titleSpacing: 20,
+              titleSpacing: 16,
               automaticallyImplyLeading: false,
               title: _buildTopBar(
                 context,
@@ -193,129 +194,195 @@ class MainLayout extends ConsumerWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        Row(
-          children: [
-            if (role == UserRole.learner) ...[
-              _buildStreakStat(context, ref),
-              const SizedBox(width: 8),
-            ],
-            GestureDetector(
-              onTap: () {
-                HapticService.selection();
-                if (role == UserRole.learner) {
-                  context.push('/mastery-dashboard');
-                } else {
-                  context.push('/profile');
-                }
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: culturalTheme.accentColor,
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: Row(
-                  children: [
-                    Icon(icon, size: 16, color: Colors.black),
-                    const SizedBox(width: 4),
-                    Text(
-                      label,
-                      style: AppTypography.mono.copyWith(
-                        color: Colors.black,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 14,
-                      ),
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (role == UserRole.learner) ...[
+                  _buildStreakStat(context, ref),
+                  const SizedBox(width: 8),
+                ],
+                GestureDetector(
+                  onTap: () {
+                    HapticService.selection();
+                    if (role == UserRole.learner) {
+                      context.push('/mastery-dashboard');
+                    } else {
+                      context.push('/profile');
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: culturalTheme.accentColor,
+                      borderRadius: BorderRadius.circular(25),
                     ),
-                  ],
+                    child: Row(
+                      children: [
+                        Icon(icon, size: 16, color: Colors.black),
+                        const SizedBox(width: 4),
+                        Text(
+                          label,
+                          style: AppTypography.mono.copyWith(
+                            color: Colors.black,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            GestureDetector(
-              onTap: () {
-                HapticService.selection();
-                _showSystemGuide(context, l10n);
-              },
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : Colors.black.withValues(alpha: 0.05),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.help_outline_rounded,
-                  color: isDark ? Colors.white70 : AppColors.forest900,
-                  size: 22,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            GestureDetector(
-              onTap: () {
-                HapticService.selection();
-                context.push('/notifications');
-              },
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : Colors.black.withValues(alpha: 0.05),
-                  shape: BoxShape.circle,
-                ),
-                child: Stack(
-                  children: [
-                    Icon(
-                      Icons.notifications_none_rounded,
+                const SizedBox(width: 8),
+                _buildThemeToggle(context, ref),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    HapticService.selection();
+                    _showSystemGuide(context, l10n);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : Colors.black.withValues(alpha: 0.05),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.help_outline_rounded,
                       color: isDark ? Colors.white70 : AppColors.forest900,
                       size: 22,
                     ),
-                    if (unreadCount > 0)
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: AppColors.semanticRed,
-                            shape: BoxShape.circle,
-                          ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    HapticService.selection();
+                    context.push('/notifications');
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : Colors.black.withValues(alpha: 0.05),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Stack(
+                      children: [
+                        Icon(
+                          Icons.notifications_none_rounded,
+                          color: isDark ? Colors.white70 : AppColors.forest900,
+                          size: 22,
                         ),
-                      ),
-                  ],
+                        if (unreadCount > 0)
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: AppColors.semanticRed,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    HapticService.selection();
+                    context.push('/profile');
+                  },
+                  child: authState.when(
+                    data: (user) => ProfileAvatar(
+                      radius: 18,
+                      photoUrl: profile?['photoURL'] ?? (user as dynamic)?.photoURL,
+                      iconSize: 20,
+                      backgroundColor: culturalTheme.accentColor,
+                    ),
+                    loading: () => const CircleAvatar(
+                      radius: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    error: (_, __) => ProfileAvatar(
+                      radius: 18,
+                      iconSize: 20,
+                      backgroundColor: culturalTheme.accentColor,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            GestureDetector(
-              onTap: () {
-                HapticService.selection();
-                context.push('/profile');
-              },
-              child: authState.when(
-                data: (user) => ProfileAvatar(
-                  radius: 18,
-                  photoUrl: profile?['photoURL'] ?? (user as dynamic)?.photoURL,
-                  iconSize: 20,
-                  backgroundColor: culturalTheme.accentColor,
-                ),
-                loading: () => const CircleAvatar(
-                  radius: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                error: (_, __) => ProfileAvatar(
-                  radius: 18,
-                  iconSize: 20,
-                  backgroundColor: culturalTheme.accentColor,
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildThemeToggle(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: () {
+        HapticService.selection();
+        ref.read(themeProvider.notifier).toggleTheme();
+      },
+      child: Tooltip(
+        message: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: 0.1),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: !isDark ? AppColors.gold500 : Colors.transparent,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.wb_sunny_rounded,
+                  size: 14,
+                  color: !isDark ? Colors.black : (isDark ? Colors.white38 : Colors.black38),
+                ),
+              ),
+              const SizedBox(width: 2),
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.gold500 : Colors.transparent,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.dark_mode_rounded,
+                  size: 14,
+                  color: isDark ? Colors.black : (isDark ? Colors.white38 : Colors.black38),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
