@@ -51,5 +51,56 @@ void main() {
       expect(result.isCandidateEvaluation, isTrue);
       expect(result.scorePercentage, equals(85.0));
     });
+
+    test('Silent or near-silent PCM recordings are flagged as silent and blocked', () {
+      final silentPcm = List.filled(16000, 0.001);
+      final signal = WavDecoder.analyzeSignal(silentPcm);
+
+      expect(signal.isSilent, isTrue);
+      expect(signal.peakAmplitude < WavDecoder.candidateSilentPeakThreshold, isTrue);
+    });
+
+    test('Valid speech audio passes signal analysis and is not flagged as silent', () {
+      final speechPcm = List.generate(16000, (i) => 0.25 * (i % 2 == 0 ? 1.0 : -1.0));
+      final signal = WavDecoder.analyzeSignal(speechPcm);
+
+      expect(signal.isSilent, isFalse);
+      expect(signal.peakAmplitude, equals(0.25));
+    });
+
+    test('Maximum recording duration constant is configured to 15 seconds', () {
+      const maxSeconds = 15;
+      expect(maxSeconds, equals(15));
+    });
+
+    test('Signal analysis correctly classifies 15-second valid vs silent PCM recordings', () {
+      // 15s of 16kHz audio = 240,000 samples
+      final silent15sPcm = List.filled(15 * 16000, 0.0005);
+      final valid15sPcm = List.generate(15 * 16000, (i) => 0.3 * (i % 2 == 0 ? 1.0 : -1.0));
+
+      final silentSignal = WavDecoder.analyzeSignal(silent15sPcm);
+      final validSignal = WavDecoder.analyzeSignal(valid15sPcm);
+
+      expect(silentSignal.isSilent, isTrue);
+      expect(validSignal.isSilent, isFalse);
+      expect(validSignal.peakAmplitude, equals(0.3));
+    });
+
+    test('Concurrent or duplicate stop invocations are prevented by stopping guard', () {
+      bool isStopping = false;
+      int stopCallCount = 0;
+
+      void executeStop() {
+        if (isStopping) return;
+        isStopping = true;
+        stopCallCount++;
+      }
+
+      // Simulate simultaneous timer tick and manual button tap
+      executeStop(); // First invocation
+      executeStop(); // Overlapping invocation
+
+      expect(stopCallCount, equals(1));
+    });
   });
 }

@@ -41,6 +41,8 @@ class AudioComparisonScreen extends ConsumerStatefulWidget {
 }
 
 class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
+  static const int maxRecordingDurationSeconds = 15;
+
   AudioComparisonState _state = AudioComparisonState.idle;
   double _scorePercentage = 0.0;
   int _currentIndex = 0;
@@ -58,6 +60,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   List<double> _userVisualWaveform = [];
   List<double> _nativeVisualWaveform = [];
   String? _errorMessage;
+  bool _isQuietWarning = false;
+  bool _isStoppingRecording = false;
 
   final AudioRecorder _audioRecorder = AudioRecorder();
   final ap.AudioPlayer _nativePlayer = ap.AudioPlayer();
@@ -155,6 +159,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         _userVisualWaveform = [];
         _nativeVisualWaveform = [];
         _errorMessage = null;
+        _isQuietWarning = false;
       });
       HapticService.light();
     }
@@ -171,6 +176,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         _userVisualWaveform = [];
         _nativeVisualWaveform = [];
         _errorMessage = null;
+        _isQuietWarning = false;
       });
       HapticService.light();
     }
@@ -189,6 +195,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       _userVisualWaveform = [];
       _nativeVisualWaveform = [];
       _errorMessage = null;
+      _isQuietWarning = false;
     });
     HapticService.medium();
   }
@@ -266,12 +273,16 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       await _audioRecorder.start(config, path: recordPath);
 
       _recordingDurationSeconds = 0;
+      _isStoppingRecording = false;
       _recordingTimer?.cancel();
       _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
         if (mounted && _state == AudioComparisonState.recording) {
           setState(() {
             _recordingDurationSeconds++;
           });
+          if (_recordingDurationSeconds >= maxRecordingDurationSeconds) {
+            _stopRecording(isAutoStop: true);
+          }
         }
       });
 
@@ -291,6 +302,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           _recordedFilePath = kIsWeb ? null : recordPath;
           _state = AudioComparisonState.recording;
           _errorMessage = null;
+          _isQuietWarning = false;
         });
       }
     } catch (e) {
@@ -301,6 +313,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         setState(() {
           _state = AudioComparisonState.error;
           _errorMessage = 'Could not start microphone capture: ${e.toString().split(':').last.trim()}';
+          _isQuietWarning = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -312,8 +325,9 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     }
   }
 
-  Future<void> _stopRecording() async {
-    if (_state != AudioComparisonState.recording) return;
+  Future<void> _stopRecording({bool isAutoStop = false}) async {
+    if (_state != AudioComparisonState.recording || _isStoppingRecording) return;
+    _isStoppingRecording = true;
 
     HapticService.selection();
     _recordingTimer?.cancel();
@@ -328,6 +342,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           setState(() {
             _state = AudioComparisonState.error;
             _errorMessage = 'Recording output is missing.';
+            _isQuietWarning = false;
           });
         }
         return;
@@ -340,6 +355,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
             setState(() {
               _state = AudioComparisonState.error;
               _errorMessage = 'Recording failed to generate a valid browser audio URL.';
+              _isQuietWarning = false;
             });
           }
           return;
@@ -350,6 +366,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
             setState(() {
               _state = AudioComparisonState.error;
               _errorMessage = 'Failed to retrieve recorded audio in browser.';
+              _isQuietWarning = false;
             });
           }
           return;
@@ -362,6 +379,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
             setState(() {
               _state = AudioComparisonState.error;
               _errorMessage = 'Recording is empty. Please speak clearly and try again.';
+              _isQuietWarning = false;
             });
           }
           return;
@@ -374,6 +392,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           setState(() {
             _state = AudioComparisonState.error;
             _errorMessage = 'Recording is empty. Please speak clearly and try again.';
+            _isQuietWarning = false;
           });
         }
         return;
@@ -388,6 +407,20 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           setState(() {
             _state = AudioComparisonState.error;
             _errorMessage = 'Recording is too short (minimum 0.1s required). Please record again.';
+            _isQuietWarning = false;
+          });
+        }
+        return;
+      }
+
+      // Check signal for silence/near-silence
+      final signal = WavDecoder.analyzeSignal(learnerPcm);
+      if (signal.isEmptyOrInvalid || signal.isSilent) {
+        if (mounted) {
+          setState(() {
+            _state = AudioComparisonState.error;
+            _errorMessage = "We couldn't hear your voice. Check your microphone and try recording again.";
+            _isQuietWarning = false;
           });
         }
         return;
@@ -401,7 +434,18 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           _recordedFilePath = targetPath;
           _state = AudioComparisonState.recorded;
           _errorMessage = null;
+          _isQuietWarning = signal.isQuiet;
         });
+
+        if (isAutoStop) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Maximum recording time reached (15s). You can listen to your recording or try again.'),
+              backgroundColor: AppColors.gold500,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
       }
     } catch (e) {
       debugPrint('Error finalizing recording: $e');
@@ -409,8 +453,11 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         setState(() {
           _state = AudioComparisonState.error;
           _errorMessage = 'Error parsing recorded audio: ${e.toString().split(':').last.trim()}';
+          _isQuietWarning = false;
         });
       }
+    } finally {
+      _isStoppingRecording = false;
     }
   }
 
@@ -421,6 +468,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       _userVisualWaveform = [];
       _scorePercentage = 0.0;
       _errorMessage = null;
+      _isQuietWarning = false;
+      _isStoppingRecording = false;
     });
     await _startRecording();
   }
@@ -462,6 +511,18 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       final validLearnerWav = WavDecoder.ensureWavBytes(learnerBytes);
       final learnerWavResult = WavDecoder.decodeWavBytes(validLearnerWav);
       final learnerPcm = learnerWavResult.pcmSamples;
+
+      final signal = WavDecoder.analyzeSignal(learnerPcm);
+      if (signal.isEmptyOrInvalid || signal.isSilent) {
+        if (mounted) {
+          setState(() {
+            _state = AudioComparisonState.error;
+            _errorMessage = "We couldn't hear your voice. Check your microphone and try recording again.";
+            _isQuietWarning = false;
+          });
+        }
+        return;
+      }
 
       // 2. Load & decode native reference audio
       Uint8List nativeBytes;
@@ -883,6 +944,29 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           const SizedBox(height: 8),
           _buildSimpleWaveformCanvas(_userVisualWaveform, Colors.white),
         ],
+        if (_isQuietWarning) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.semanticWarning.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.semanticWarning.withValues(alpha: 0.4)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.volume_down_rounded, size: 16, color: AppColors.semanticWarning),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Quiet recording detected. Speak closer to the microphone for best accuracy.',
+                    style: AppTypography.caption.copyWith(color: Colors.white70, fontSize: 11),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -914,6 +998,15 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
             icon: Icons.refresh_rounded,
           ),
         ],
+      );
+    }
+
+    if (_state == AudioComparisonState.error) {
+      return BrandButton(
+        text: 'RECORD AGAIN',
+        onTap: _recordAgain,
+        type: BrandButtonType.primary,
+        icon: Icons.refresh_rounded,
       );
     }
 

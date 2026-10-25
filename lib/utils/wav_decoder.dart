@@ -17,11 +17,79 @@ class WavDecodeResult {
   });
 }
 
+class SignalAnalysisResult {
+  final bool isEmptyOrInvalid;
+  final double peakAmplitude;
+  final double rms;
+  final bool isSilent;
+  final bool isQuiet;
+
+  SignalAnalysisResult({
+    required this.isEmptyOrInvalid,
+    required this.peakAmplitude,
+    required this.rms,
+    required this.isSilent,
+    required this.isQuiet,
+  });
+}
+
 class WavDecoder {
   static const int targetSampleRate = 16000;
   static const double targetRmsLinear = 0.10; // -20 dBFS
   static const double peakCeilingLinear = 0.8912509; // -1 dBFS
   static const double maxGainLinear = 31.6227766; // 30 dB
+
+  /// Candidate silent peak threshold (-40 dBFS linear = 0.010)
+  static const double candidateSilentPeakThreshold = 0.010;
+
+  /// Candidate silent RMS threshold (-54 dBFS linear = 0.002)
+  static const double candidateSilentRmsThreshold = 0.002;
+
+  /// Candidate quiet peak threshold (-26 dBFS linear = 0.050)
+  static const double candidateQuietPeakThreshold = 0.050;
+
+  /// Analyzes raw 16kHz mono PCM samples to evaluate peak amplitude, RMS, and signal validity.
+  static SignalAnalysisResult analyzeSignal(List<double> samples) {
+    if (samples.isEmpty) {
+      return SignalAnalysisResult(
+        isEmptyOrInvalid: true,
+        peakAmplitude: 0.0,
+        rms: 0.0,
+        isSilent: true,
+        isQuiet: false,
+      );
+    }
+
+    double maxAbs = 0.0;
+    double sumSquares = 0.0;
+    for (var s in samples) {
+      if (!s.isFinite) {
+        return SignalAnalysisResult(
+          isEmptyOrInvalid: true,
+          peakAmplitude: 0.0,
+          rms: 0.0,
+          isSilent: true,
+          isQuiet: false,
+        );
+      }
+      final absVal = s.abs();
+      if (absVal > maxAbs) maxAbs = absVal;
+      sumSquares += absVal * absVal;
+    }
+
+    final rms = math.sqrt(sumSquares / samples.length);
+
+    final isSilent = maxAbs < candidateSilentPeakThreshold && rms < candidateSilentRmsThreshold;
+    final isQuiet = !isSilent && maxAbs < candidateQuietPeakThreshold;
+
+    return SignalAnalysisResult(
+      isEmptyOrInvalid: false,
+      peakAmplitude: maxAbs,
+      rms: rms,
+      isSilent: isSilent,
+      isQuiet: isQuiet,
+    );
+  }
 
   /// Reads a 16-bit PCM WAV file and decodes it to 16kHz mono `List<double>` samples.
   static Future<WavDecodeResult> decodeWavFile(File file) async {

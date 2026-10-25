@@ -115,5 +115,41 @@ void main() {
       expect(result.sampleRate, equals(16000));
       expect(result.pcmSamples.length, equals(1600));
     });
+
+    test('WavDecoder.analyzeSignal identifies empty or non-finite PCM as empty/invalid', () {
+      final emptyResult = WavDecoder.analyzeSignal([]);
+      expect(emptyResult.isEmptyOrInvalid, isTrue);
+      expect(emptyResult.isSilent, isTrue);
+
+      final nonFiniteResult = WavDecoder.analyzeSignal([0.1, double.nan, 0.2]);
+      expect(nonFiniteResult.isEmptyOrInvalid, isTrue);
+      expect(nonFiniteResult.isSilent, isTrue);
+    });
+
+    test('WavDecoder.analyzeSignal identifies all-zero and near-silent PCM as silent', () {
+      final zeroResult = WavDecoder.analyzeSignal(List.filled(1600, 0.0));
+      expect(zeroResult.isEmptyOrInvalid, isFalse);
+      expect(zeroResult.isSilent, isTrue);
+      expect(zeroResult.peakAmplitude, equals(0.0));
+
+      // Near silent samples (< 0.01 peak and < 0.002 RMS)
+      final nearSilentPcm = List.generate(1600, (i) => 0.002 * (i % 2 == 0 ? 1 : -1));
+      final nearSilentResult = WavDecoder.analyzeSignal(nearSilentPcm);
+      expect(nearSilentResult.isSilent, isTrue);
+    });
+
+    test('WavDecoder.analyzeSignal identifies quiet vs ordinary audio correctly', () {
+      // Quiet speech (peak 0.03, above 0.01 silent threshold but below 0.05 quiet threshold)
+      final quietPcm = List.generate(1600, (i) => 0.03 * math.sin(i * 0.1));
+      final quietResult = WavDecoder.analyzeSignal(quietPcm);
+      expect(quietResult.isSilent, isFalse);
+      expect(quietResult.isQuiet, isTrue);
+
+      // Ordinary speech (peak 0.3)
+      final normalPcm = List.generate(1600, (i) => 0.3 * math.sin(i * 0.1));
+      final normalResult = WavDecoder.analyzeSignal(normalPcm);
+      expect(normalResult.isSilent, isFalse);
+      expect(normalResult.isQuiet, isFalse);
+    });
   });
 }
