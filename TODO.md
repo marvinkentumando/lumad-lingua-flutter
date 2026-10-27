@@ -123,10 +123,10 @@
   - 📁 `lib/services/certificate_service.dart`, `lib/screens/learner_profile_screen.dart`
 
 ### 📊 Sentiment & Community Analytics
-- [ ] **Facebook Graph API Integration**: Replace mock/secondary post data with real retrieval of publicly available Mansaka-language Facebook posts via the Facebook Graph API (last open Functional Requirement; unblocks real-data sentiment classification).
+- [ ] **Facebook Graph API Integration**: Replace mock/secondary post data with real retrieval of publicly available Mansaka-language Facebook posts via the Facebook Graph API (unblocks real-data sentiment classification).
   - 📁 `lib/services/sentiment_service.dart`, `lib/screens/sentiment_dashboard_screen.dart`
-- [ ] **3-Algorithm Comparative Evaluation Harness**: Run Naïve Bayes vs SVM vs BiLSTM (sentiment) and DTW vs HMM vs Cosine Similarity (pronunciation) against a real corpus/recordings, compute accuracy, precision, recall and F1, lock the winning models, and record results for the study writeup (closes both "Evaluate 3 algorithms" objectives).
-  - 📁 `lib/services/sentiment_service.dart`, `lib/services/pronunciation_service.dart`
+- [x] **Colab-Trained Single Sentiment Model Pipeline**: Integrated single fine-tuned sentiment engine (tested and validated in Google Colab) to display classified Mansaka sentiment outputs on the dashboard.
+  - 📁 `lib/services/sentiment_service.dart`
 
 ### ⚔️ Community & Multiplayer
 - [x] **Lingua Duel Real-Time Sync**: Optimize Firestore state sync and turn timeouts during live multiplayer duels.

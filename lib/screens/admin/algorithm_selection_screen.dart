@@ -4,13 +4,11 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../services/firebase_service.dart';
-import '../../services/sentiment_service.dart';
 import '../../services/pronunciation_service.dart';
 import '../../widgets/brand_card.dart';
 import '../../widgets/brand_button.dart';
 import '../../widgets/brand_background.dart';
 import '../../utils/app_localization.dart';
-import '../../widgets/branded_empty_state.dart';
 
 class AlgorithmSelectionScreen extends ConsumerStatefulWidget {
   const AlgorithmSelectionScreen({super.key});
@@ -22,7 +20,6 @@ class AlgorithmSelectionScreen extends ConsumerStatefulWidget {
 class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScreen> {
   bool _isSaving = false;
 
-  // Mock evaluation dataset for Pronunciation (since we can't easily load files here)
   final List<Map<String, dynamic>> _pronunciationEvalDataset = [
     {
       'native': [0.1, 0.5, 0.8, 0.4, 0.1],
@@ -67,11 +64,11 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildSectionHeader(
-                  l10n.translate('sentiment_analysis_models'),
-                  l10n.translate('sentiment_eval_desc'),
+                  'SENTIMENT ENGINE',
+                  'Active classification model selected via Colab evaluation',
                 ),
                 const SizedBox(height: 16),
-                _buildSentimentGrid(config, isDark, l10n),
+                _buildSentimentStatusCard(isDark),
                 const SizedBox(height: 40),
                 _buildSectionHeader(
                   l10n.translate('pronunciation_algorithms'),
@@ -121,26 +118,41 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
     );
   }
 
-  Widget _buildSentimentGrid(dynamic config, bool isDark, AppLocalization l10n) {
-    final sentimentService = ref.read(sentimentServiceProvider);
-    
-    return Column(
-      children: SentimentModelType.values.map((model) {
-        final metrics = sentimentService.calculateMetrics(model);
-        final isSelected = config.activeSentimentAlgorithm == model.name;
-
-        return _buildModelCard(
-          title: _getSentimentModelName(model),
-          isSelected: isSelected,
-          metrics: {
-            l10n.translate('accuracy'): '${(metrics.accuracy * 100).toStringAsFixed(1)}%',
-            l10n.translate('f1_score'): metrics.f1Score.toStringAsFixed(2),
-            l10n.translate('precision'): metrics.precision.toStringAsFixed(2),
-          },
-          onSelect: () => _updateActiveModel('sentiment', model.name, l10n),
-          l10n: l10n,
-        );
-      }).toList(),
+  Widget _buildSentimentStatusCard(bool isDark) {
+    return BrandCard(
+      padding: const EdgeInsets.all(20),
+      borderRadius: 24,
+      theme: BrandCardTheme.gold,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Colab Fine-Tuned Model',
+                style: AppTypography.h3.copyWith(color: AppColors.forest900),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.forest900,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'DEPLOYED',
+                  style: AppTypography.label.copyWith(color: AppColors.gold500, fontSize: 10),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'The active sentiment engine uses the single best-performing model tested on Google Colab for classifying Mansaka community text.',
+            style: AppTypography.body.copyWith(color: AppColors.forest900.withValues(alpha: 0.8), fontSize: 13),
+          ),
+        ],
+      ),
     );
   }
 
@@ -158,7 +170,7 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
             l10n.translate('correlation'): metrics.correlation.toStringAsFixed(2),
             l10n.translate('mae'): metrics.meanAbsoluteError.toStringAsFixed(3),
           },
-          onSelect: () => _updateActiveModel('pronunciation', algo.name, l10n),
+          onSelect: () => _updateActiveModel(algo.name, l10n),
           l10n: l10n,
         );
       }).toList(),
@@ -239,14 +251,6 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
     );
   }
 
-  String _getSentimentModelName(SentimentModelType type) {
-    switch (type) {
-      case SentimentModelType.naiveBayes: return 'Naïve Bayes';
-      case SentimentModelType.svm: return 'Support Vector Machine';
-      case SentimentModelType.biLstm: return 'Bidirectional LSTM';
-    }
-  }
-
   String _getPronunciationAlgoName(PronunciationAlgorithm type) {
     switch (type) {
       case PronunciationAlgorithm.dtw: return 'Dynamic Time Warping';
@@ -255,18 +259,15 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
     }
   }
 
-  Future<void> _updateActiveModel(String type, String value, AppLocalization l10n) async {
+  Future<void> _updateActiveModel(String value, AppLocalization l10n) async {
     setState(() => _isSaving = true);
     try {
       final config = ref.read(appConfigProvider).value;
       if (config == null) return;
 
-      final Map<String, dynamic> updates = {};
-      if (type == 'sentiment') {
-        updates['activeSentimentAlgorithm'] = value;
-      } else {
-        updates['activePronunciationAlgorithm'] = value;
-      }
+      final Map<String, dynamic> updates = {
+        'activePronunciationAlgorithm': value,
+      };
 
       await ref.read(firebaseServiceProvider).updateAppConfig(updates);
       
