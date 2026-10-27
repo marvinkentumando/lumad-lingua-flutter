@@ -53,12 +53,16 @@ class MCQView extends StatelessWidget {
                   width: isSelected ? 2.5 : 1.5,
                 ),
               ),
-              child: Text(
-                optionText.isEmpty ? 'Option ${index + 1}' : optionText,
-                style: AppTypography.bodyLarge.copyWith(
-                  color: isSelected
-                      ? AppColors.semanticBlue
-                      : (isDark ? Colors.white : AppColors.forest900),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  optionText.isEmpty ? 'Option ${index + 1}' : optionText,
+                  style: AppTypography.bodyLarge.copyWith(
+                    color: isSelected
+                        ? AppColors.semanticBlue
+                        : (isDark ? Colors.white : AppColors.forest900),
+                  ),
                 ),
               ),
             ),

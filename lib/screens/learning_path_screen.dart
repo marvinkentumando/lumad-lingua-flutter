@@ -370,7 +370,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
       right: 0,
       child: ClipRect(
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
             padding: EdgeInsets.only(top: topPadding + 10, bottom: 20),
             decoration: BoxDecoration(

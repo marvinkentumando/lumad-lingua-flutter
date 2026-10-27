@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
 import '../theme/app_typography.dart';
 
 class BrandTextField extends StatefulWidget {
@@ -106,7 +107,7 @@ class _BrandTextFieldState extends State<BrandTextField> {
             color: _isFocused
                 ? AppColors.creamBg
                 : AppColors.creamBg.withValues(alpha: 0.8),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppRadius.button),
             border: Border.all(
               color: hasError
                   ? AppColors.semanticRed

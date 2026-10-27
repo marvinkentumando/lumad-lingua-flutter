@@ -434,9 +434,48 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
       delegate: SliverChildBuilderDelegate(
         (context, index) => Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          child: const AppShimmerSkeleton(height: 70, borderRadius: 20),
+          child: Container(
+            height: 70,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: AppColors.forest700.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppColors.forest600.withValues(alpha: 0.2),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                const AppShimmerSkeleton(
+                  width: 42,
+                  height: 42,
+                  borderRadius: 12,
+                ),
+                const SizedBox(width: 12),
+                const AppShimmerSkeleton(
+                  width: 42,
+                  height: 42,
+                  isCircle: true,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      AppShimmerSkeleton(width: 110, height: 16, borderRadius: 6),
+                      SizedBox(height: 6),
+                      AppShimmerSkeleton(width: 70, height: 12, borderRadius: 4),
+                    ],
+                  ),
+                ),
+                const AppShimmerSkeleton(width: 50, height: 18, borderRadius: 8),
+              ],
+            ),
+          ),
         ),
-        childCount: 5,
+        childCount: 6,
       ),
     );
   }

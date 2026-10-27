@@ -104,13 +104,16 @@ class _SpeakingPracticeViewState extends State<SpeakingPracticeView> {
             borderRadius: 24,
             child: Column(
               children: [
-                Text(
-                  widget.word.isEmpty ? 'Word' : widget.word,
-                  style: AppTypography.h1ExtraBold.copyWith(
-                    color: AppColors.gold500,
-                    fontSize: 42,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    widget.word.isEmpty ? 'Word' : widget.word,
+                    style: AppTypography.h1ExtraBold.copyWith(
+                      color: AppColors.gold500,
+                      fontSize: 42,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
                 ),
                 if (widget.phonetic.isNotEmpty) ...[
                   const SizedBox(height: 6),

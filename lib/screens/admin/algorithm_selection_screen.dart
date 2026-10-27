@@ -184,14 +184,14 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
               Text(
                 title,
                 style: AppTypography.h3.copyWith(
-                  color: isSelected ? Colors.black : Colors.white,
+                  color: isSelected ? AppColors.forest900 : Colors.white,
                 ),
               ),
               if (isSelected)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.black,
+                    color: AppColors.forest900,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -217,14 +217,14 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
                   Text(
                     entry.key.toUpperCase(),
                     style: AppTypography.label.copyWith(
-                      color: isSelected ? Colors.black45 : Colors.white24,
+                      color: isSelected ? AppColors.forest700 : Colors.white38,
                       fontSize: 8,
                     ),
                   ),
                   Text(
                     entry.value,
                     style: AppTypography.mono.copyWith(
-                      color: isSelected ? Colors.black : Colors.white,
+                      color: isSelected ? AppColors.forest900 : Colors.white,
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),

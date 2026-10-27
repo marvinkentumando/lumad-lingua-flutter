@@ -92,12 +92,16 @@ class ScenarioView extends ConsumerWidget {
                   width: isSelected ? 2.5 : 1.5,
                 ),
               ),
-              child: Text(
-                options[index].isEmpty ? l10n.translate('option_index', params: {'index': '${index + 1}'}) : options[index],
-                style: AppTypography.bodyLarge.copyWith(
-                  color: isSelected
-                      ? AppColors.semanticBlue
-                      : (isDark ? Colors.white : AppColors.forest900),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  options[index].isEmpty ? l10n.translate('option_index', params: {'index': '${index + 1}'}) : options[index],
+                  style: AppTypography.bodyLarge.copyWith(
+                    color: isSelected
+                        ? AppColors.semanticBlue
+                        : (isDark ? Colors.white : AppColors.forest900),
+                  ),
                 ),
               ),
             ),

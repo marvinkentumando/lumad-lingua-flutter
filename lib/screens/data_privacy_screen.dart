@@ -169,9 +169,12 @@ class DataPrivacyScreen extends ConsumerWidget {
     final user = ref.watch(authServiceProvider).currentUser;
     final bool isPassword = user != null && user.providerData.any((info) => info.providerId == 'password');
     final providerName = _getProviderName(user);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : AppColors.forest900;
+    final subTextColor = isDark ? Colors.white70 : AppColors.forest700;
 
     return BrandCard(
-      theme: BrandCardTheme.gold,
+      theme: isDark ? BrandCardTheme.vibrant : BrandCardTheme.gold,
       padding: const EdgeInsets.all(24),
       borderRadius: 24,
       child: Column(
@@ -181,10 +184,13 @@ class DataPrivacyScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.1),
+                  color: isDark ? AppColors.gold500.withValues(alpha: 0.15) : AppColors.forest900.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.verified_user_rounded, color: Colors.black),
+                child: Icon(
+                  Icons.verified_user_rounded,
+                  color: isDark ? AppColors.gold500 : AppColors.forest900,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -194,7 +200,7 @@ class DataPrivacyScreen extends ConsumerWidget {
                     Text(
                       l10n.translate('account_protected'),
                       style: AppTypography.h3.copyWith(
-                        color: Colors.black,
+                        color: textColor,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -203,7 +209,7 @@ class DataPrivacyScreen extends ConsumerWidget {
                           ? l10n.translate('data_encryption_desc')
                           : 'Signed in via $providerName. Password & security settings are managed through $providerName.',
                       style: AppTypography.body.copyWith(
-                        color: Colors.black54,
+                        color: subTextColor,
                         fontSize: 12,
                       ),
                     ),
@@ -223,21 +229,25 @@ class DataPrivacyScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.08),
+                color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.forest900.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: Colors.black.withValues(alpha: 0.12),
+                  color: isDark ? Colors.white10 : AppColors.forest900.withValues(alpha: 0.12),
                 ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.lock_person_rounded, size: 20, color: Colors.black87),
+                  Icon(
+                    Icons.lock_person_rounded,
+                    size: 20,
+                    color: isDark ? AppColors.gold500 : AppColors.forest900,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'Password Managed by $providerName',
                       style: AppTypography.label.copyWith(
-                        color: Colors.black,
+                        color: textColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                       ),
@@ -310,10 +320,10 @@ class DataPrivacyScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.forest900.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.1),
+          color: isDark ? Colors.white10 : AppColors.forest900.withValues(alpha: 0.1),
         ),
       ),
       child: Row(
@@ -332,7 +342,7 @@ class DataPrivacyScreen extends ConsumerWidget {
                 Text(
                   sub,
                   style: AppTypography.body.copyWith(
-                    color: isDark ? Colors.white60 : AppColors.creamText3,
+                    color: isDark ? Colors.white60 : AppColors.forest700,
                     fontSize: 11,
                   ),
                 ),

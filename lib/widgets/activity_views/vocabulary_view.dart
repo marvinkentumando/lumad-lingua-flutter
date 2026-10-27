@@ -148,15 +148,18 @@ class VocabularyView extends ConsumerWidget {
                             ),
                             const SizedBox(height: 12),
                           ],
-                          Text(
-                            nativeWord.isEmpty ? 'Native Word' : nativeWord,
-                            style: AppTypography.h1ExtraBold.copyWith(
-                              color: AppColors.gold500,
-                              fontSize: imageUrl != null && imageUrl!.isNotEmpty
-                                  ? 28
-                                  : 40,
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              nativeWord.isEmpty ? 'Native Word' : nativeWord,
+                              style: AppTypography.h1ExtraBold.copyWith(
+                                color: AppColors.gold500,
+                                fontSize: imageUrl != null && imageUrl!.isNotEmpty
+                                    ? 28
+                                    : 40,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                            textAlign: TextAlign.center,
                           ),
                           if (audioUrl != null && audioUrl!.isNotEmpty) ...[
                             const SizedBox(height: 24),

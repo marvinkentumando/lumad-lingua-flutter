@@ -10,6 +10,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../widgets/brand_background.dart';
 import '../utils/app_localization.dart';
 
+import '../widgets/app_shimmer_skeleton.dart';
+
 class CommunityFeedScreen extends ConsumerWidget {
   const CommunityFeedScreen({super.key});
 
@@ -55,9 +57,7 @@ class CommunityFeedScreen extends ConsumerWidget {
                       },
                     );
                   },
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(color: AppColors.gold500),
-                  ),
+                  loading: () => _buildCommunityFeedSkeleton(),
                   error: (err, _) => Center(
                     child: Text(
                       'Error: $err',
@@ -68,6 +68,75 @@ class CommunityFeedScreen extends ConsumerWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCommunityFeedSkeleton() {
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      itemCount: 5,
+      separatorBuilder: (_, __) => const SizedBox(height: 16),
+      itemBuilder: (context, index) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.forest800.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: AppColors.forest700.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const AppShimmerSkeleton(
+              width: 44,
+              height: 44,
+              isCircle: true,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  AppShimmerSkeleton(
+                    width: 130,
+                    height: 16,
+                    borderRadius: 6,
+                  ),
+                  SizedBox(height: 8),
+                  AppShimmerSkeleton(
+                    height: 14,
+                    borderRadius: 6,
+                  ),
+                  SizedBox(height: 6),
+                  AppShimmerSkeleton(
+                    width: 180,
+                    height: 12,
+                    borderRadius: 6,
+                  ),
+                  SizedBox(height: 16),
+                  Row(
+                    children: [
+                      AppShimmerSkeleton(
+                        width: 60,
+                        height: 28,
+                        borderRadius: 12,
+                      ),
+                      SizedBox(width: 12),
+                      AppShimmerSkeleton(
+                        width: 32,
+                        height: 28,
+                        borderRadius: 12,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

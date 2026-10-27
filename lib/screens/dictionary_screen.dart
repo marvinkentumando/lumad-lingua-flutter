@@ -614,9 +614,13 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard> with
               ],
             ),
             const SizedBox(height: 8),
-            Text(
-              widget.entry.indigenousWord,
-              style: AppTypography.h1ExtraBold.copyWith(color: Theme.of(context).colorScheme.primary, fontSize: 28),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                widget.entry.indigenousWord,
+                style: AppTypography.h1ExtraBold.copyWith(color: Theme.of(context).colorScheme.primary, fontSize: 28),
+              ),
             ),
             if (widget.entry.usageContext.isNotEmpty && !widget.isExpanded) ...[
               const SizedBox(height: 8),

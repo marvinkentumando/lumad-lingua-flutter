@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
+import 'app_radius.dart';
 import 'app_typography.dart';
 
 class AppTheme {
@@ -31,25 +32,25 @@ class AppTheme {
         titleTextStyle: AppTypography.h3.copyWith(color: AppColors.forest900),
         iconTheme: const IconThemeData(color: AppColors.forest700, size: 24),
       ),
-      bottomSheetTheme: const BottomSheetThemeData(
+      bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: AppColors.creamBg,
         modalBackgroundColor: AppColors.creamBg,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.modal)),
         ),
       ),
-      cardTheme: const CardThemeData(
+      cardTheme: CardThemeData(
         color: AppColors.gold50,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(24)),
-          side: BorderSide(color: AppColors.gold200, width: 1),
+          borderRadius: BorderRadius.all(Radius.circular(AppRadius.card)),
+          side: const BorderSide(color: AppColors.gold200, width: 1),
         ),
       ),
-      dialogTheme: const DialogThemeData(
+      dialogTheme: DialogThemeData(
         backgroundColor: AppColors.creamBg,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(24)),
+          borderRadius: BorderRadius.all(Radius.circular(AppRadius.modal)),
         ),
       ),
       iconTheme: const IconThemeData(color: AppColors.gold700),
@@ -92,24 +93,24 @@ class AppTheme {
         titleTextStyle: AppTypography.h3.copyWith(color: AppColors.gold500),
         iconTheme: const IconThemeData(color: AppColors.gold500, size: 24),
       ),
-      bottomSheetTheme: const BottomSheetThemeData(
+      bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: AppColors.forest900,
         modalBackgroundColor: AppColors.forest900,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.modal)),
         ),
       ),
-      cardTheme: const CardThemeData(
+      cardTheme: CardThemeData(
         color: AppColors.forestDarkCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(24)),
+          borderRadius: BorderRadius.all(Radius.circular(AppRadius.card)),
         ),
       ),
-      dialogTheme: const DialogThemeData(
+      dialogTheme: DialogThemeData(
         backgroundColor: AppColors.forest900,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(24)),
+          borderRadius: BorderRadius.all(Radius.circular(AppRadius.modal)),
         ),
       ),
       iconTheme: const IconThemeData(color: AppColors.gold500),

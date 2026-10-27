@@ -366,11 +366,17 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      word.indigenousWord,
-                      style: AppTypography.h3.copyWith(
-                        color: isDark ? Colors.white : AppColors.forest900,
-                        fontSize: 18,
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          word.indigenousWord,
+                          style: AppTypography.h3.copyWith(
+                            color: isDark ? Colors.white : AppColors.forest900,
+                            fontSize: 18,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),

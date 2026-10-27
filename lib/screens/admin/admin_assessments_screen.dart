@@ -76,6 +76,10 @@ class AdminAssessmentsScreen extends ConsumerWidget {
   }
 
   Widget _buildAssessmentCard(AssessmentResult assessment, bool isDark, int index, AppLocalization l10n) {
+    const cardTextColor = AppColors.forest900;
+    final cardSubColor = AppColors.forest700.withValues(alpha: 0.8);
+    final cardLabelColor = AppColors.forest900.withValues(alpha: 0.5);
+
     return BrandCard(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
@@ -89,7 +93,7 @@ class AdminAssessmentsScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.1),
+                  color: AppColors.forest900.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -103,19 +107,19 @@ class AdminAssessmentsScreen extends ConsumerWidget {
               ),
               Text(
                 DateFormat('MMM dd, yyyy').format(assessment.timestamp),
-                style: AppTypography.label.copyWith(color: Colors.black26, fontSize: 8),
+                style: AppTypography.label.copyWith(color: cardLabelColor, fontSize: 9),
               ),
             ],
           ),
           const SizedBox(height: 16),
           Text(
             '${l10n.translate('user_id')}: ${assessment.userId}',
-            style: AppTypography.mono.copyWith(fontSize: 10, color: Colors.black45),
+            style: AppTypography.mono.copyWith(fontSize: 10, color: cardSubColor),
           ),
           if (assessment.lessonTitle != null || assessment.lessonId != null)
             Text(
               '${l10n.translate('lesson')}: ${assessment.lessonTitle ?? assessment.lessonId}',
-              style: AppTypography.body.copyWith(fontSize: 12, fontWeight: FontWeight.bold),
+              style: AppTypography.body.copyWith(fontSize: 12, fontWeight: FontWeight.bold, color: cardTextColor),
             ),
           if (assessment.ratingScore != null) ...[
             const SizedBox(height: 4),
@@ -137,6 +141,7 @@ class AdminAssessmentsScreen extends ConsumerWidget {
                   style: AppTypography.mono.copyWith(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
+                    color: cardTextColor,
                   ),
                 ),
               ],
@@ -148,7 +153,7 @@ class AdminAssessmentsScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: AppColors.forest900.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -156,12 +161,13 @@ class AdminAssessmentsScreen extends ConsumerWidget {
                 style: AppTypography.body.copyWith(
                   fontSize: 12,
                   fontStyle: FontStyle.italic,
+                  color: cardTextColor,
                 ),
               ),
             ),
           ],
           const SizedBox(height: 16),
-          const Divider(color: Colors.black12),
+          Divider(color: AppColors.forest900.withValues(alpha: 0.12)),
           const SizedBox(height: 8),
           ...assessment.answers.entries.map((entry) => Padding(
                 padding: const EdgeInsets.only(bottom: 8.0),
@@ -170,11 +176,11 @@ class AdminAssessmentsScreen extends ConsumerWidget {
                   children: [
                     Text(
                       entry.key.replaceAll('_', ' ').toUpperCase(),
-                      style: AppTypography.label.copyWith(color: Colors.black38, fontSize: 8),
+                      style: AppTypography.label.copyWith(color: cardLabelColor, fontSize: 8),
                     ),
                     Text(
                       entry.value.toString(),
-                      style: AppTypography.body.copyWith(color: Colors.black87, fontSize: 13),
+                      style: AppTypography.body.copyWith(color: cardTextColor, fontSize: 13),
                     ),
                   ],
                 ),

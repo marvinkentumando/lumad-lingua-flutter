@@ -112,15 +112,18 @@ class _MatchingViewState extends State<MatchingView> {
                 ),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(
-                native.isEmpty ? 'Native' : native,
-                style: TextStyle(
-                  color: isDark ? Colors.white : AppColors.forest900,
-                  fontWeight: widget.selectedNative == native || isNativeMatched
-                      ? FontWeight.bold
-                      : FontWeight.normal,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  native.isEmpty ? 'Native' : native,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : AppColors.forest900,
+                    fontWeight: widget.selectedNative == native || isNativeMatched
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
               ),
             ),
           );
@@ -144,13 +147,16 @@ class _MatchingViewState extends State<MatchingView> {
                       ),
                     ],
                   ),
-                  child: Text(
-                    native,
-                    style: const TextStyle(
-                      color: AppColors.forest900,
-                      fontWeight: FontWeight.bold,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      native,
+                      style: const TextStyle(
+                        color: AppColors.forest900,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
                   ),
                 ),
               ),
@@ -225,19 +231,22 @@ class _MatchingViewState extends State<MatchingView> {
                                 ]
                               : null,
                         ),
-                        child: Text(
-                          meaning.isEmpty ? 'Meaning' : meaning,
-                          style: TextStyle(
-                            color: isDark
-                                ? Colors.white70
-                                : AppColors.forest900.withValues(alpha: 0.7),
-                            fontWeight: isMeaningMatched ||
-                                    widget.selectedMeaning == meaning ||
-                                    isHovered
-                                ? FontWeight.bold
-                                : FontWeight.normal,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            meaning.isEmpty ? 'Meaning' : meaning,
+                            style: TextStyle(
+                              color: isDark
+                                  ? Colors.white70
+                                  : AppColors.forest900.withValues(alpha: 0.7),
+                              fontWeight: isMeaningMatched ||
+                                      widget.selectedMeaning == meaning ||
+                                      isHovered
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
                         ),
                       ),
                     );

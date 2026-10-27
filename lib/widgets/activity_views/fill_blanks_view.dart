@@ -320,10 +320,13 @@ class _FillBlanksViewState extends State<FillBlanksView>
                           : Colors.black.withValues(alpha: 0.1),
                     ),
                   ),
-                  child: Text(
-                    opt,
-                    style: AppTypography.body.copyWith(
-                      color: isDark ? Colors.white : AppColors.forest900,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      opt,
+                      style: AppTypography.body.copyWith(
+                        color: isDark ? Colors.white : AppColors.forest900,
+                      ),
                     ),
                   ),
                 ),

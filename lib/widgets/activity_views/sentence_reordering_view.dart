@@ -97,9 +97,12 @@ class SentenceReorderingView extends StatelessWidget {
                         final chipWidget = Material(
                           color: Colors.transparent,
                           child: Chip(
-                            label: Text(
-                              entry.value,
-                              style: const TextStyle(color: Colors.white),
+                            label: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                entry.value,
+                                style: const TextStyle(color: Colors.white),
+                              ),
                             ),
                             backgroundColor: AppColors.semanticBlue,
                             elevation: 2,
@@ -176,11 +179,14 @@ class SentenceReorderingView extends StatelessWidget {
                 runSpacing: 8,
                 children: availableParts.asMap().entries.map((entry) {
                   final chipWidget = Chip(
-                    label: Text(
-                      entry.value,
-                      style: TextStyle(
-                        color: isDark ? Colors.white : AppColors.forest900,
-                        fontWeight: FontWeight.w600,
+                    label: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        entry.value,
+                        style: TextStyle(
+                          color: isDark ? Colors.white : AppColors.forest900,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     backgroundColor: isDark

@@ -822,7 +822,7 @@ class _SentimentDashboardScreenState
                 const SizedBox(height: 28),
                 const AppShimmerSkeleton(width: 140, height: 14, borderRadius: 4),
                 const SizedBox(height: 12),
-                const AppShimmerSkeleton(height: 50, borderRadius: 20),
+                const AppShimmerSkeleton(height: 200, borderRadius: 24),
                 const SizedBox(height: 28),
                 const AppShimmerSkeleton(width: 200, height: 14, borderRadius: 4),
                 const SizedBox(height: 16),
@@ -834,11 +834,72 @@ class _SentimentDashboardScreenState
           padding: const EdgeInsets.symmetric(horizontal: 20),
           sliver: SliverList(
             delegate: SliverChildBuilderDelegate(
-              (context, index) => const Padding(
-                padding: EdgeInsets.only(bottom: 16.0),
-                child: AppShimmerSkeleton(height: 160, borderRadius: 24),
+              (context, index) => Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.forest800.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: AppColors.forest700.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: const [
+                        AppShimmerSkeleton(
+                          width: 24,
+                          height: 24,
+                          isCircle: true,
+                        ),
+                        SizedBox(width: 10),
+                        AppShimmerSkeleton(
+                          width: 120,
+                          height: 14,
+                          borderRadius: 4,
+                        ),
+                        Spacer(),
+                        AppShimmerSkeleton(
+                          width: 60,
+                          height: 22,
+                          borderRadius: 12,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    const AppShimmerSkeleton(
+                      height: 16,
+                      borderRadius: 6,
+                    ),
+                    const SizedBox(height: 8),
+                    const AppShimmerSkeleton(
+                      width: 240,
+                      height: 14,
+                      borderRadius: 6,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: const [
+                        AppShimmerSkeleton(
+                          width: 80,
+                          height: 20,
+                          borderRadius: 10,
+                        ),
+                        SizedBox(width: 8),
+                        AppShimmerSkeleton(
+                          width: 60,
+                          height: 20,
+                          borderRadius: 10,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              childCount: 2,
+              childCount: 3,
             ),
           ),
         ),

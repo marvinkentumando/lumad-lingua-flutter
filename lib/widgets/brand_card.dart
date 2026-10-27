@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
 import 'tactile_wrapper.dart';
 
 enum BrandCardTheme { cream, vibrant, gold }
@@ -21,7 +22,7 @@ class BrandCard extends StatelessWidget {
     this.theme = BrandCardTheme.cream,
     this.padding = const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
     this.margin,
-    this.borderRadius = 32,
+    this.borderRadius = AppRadius.card,
     this.withAnimation = false,
     this.delayMs = 0,
     this.onTap,

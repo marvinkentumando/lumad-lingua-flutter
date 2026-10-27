@@ -372,14 +372,17 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
               ),
             ),
             const SizedBox(height: 28),
-            Text(
-              entry.indigenousWord,
-              style: AppTypography.display.copyWith(
-                color: isDark ? Colors.white : AppColors.forest900,
-                fontSize: 52,
-                height: 1.1,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                entry.indigenousWord,
+                style: AppTypography.display.copyWith(
+                  color: isDark ? Colors.white : AppColors.forest900,
+                  fontSize: 52,
+                  height: 1.1,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
             Text(

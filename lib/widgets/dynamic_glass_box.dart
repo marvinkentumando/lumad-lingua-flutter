@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:sensors_plus/sensors_plus.dart';
+import '../theme/app_radius.dart';
 
 class DynamicGlassBox extends StatefulWidget {
   final Widget child;
@@ -10,15 +11,17 @@ class DynamicGlassBox extends StatefulWidget {
   final double borderRadius;
   final Color? color;
   final Border? border;
+  final bool enableBlur;
 
   const DynamicGlassBox({
     super.key,
     required this.child,
-    this.blur = 15,
+    this.blur = 10,
     this.opacity = 0.05,
-    this.borderRadius = 24,
+    this.borderRadius = AppRadius.card,
     this.color,
     this.border,
+    this.enableBlur = true,
   });
 
   @override
@@ -54,39 +57,51 @@ class _DynamicGlassBoxState extends State<DynamicGlassBox> {
 
   @override
   Widget build(BuildContext context) {
+    // Low-power performance optimization: Clamp backdrop blur sigma to 10.0 max for 60fps scrolling
+    final effectiveBlur = (widget.blur > 10.0 ? 10.0 : widget.blur).clamp(0.0, 10.0);
+    final shouldApplyBlur = widget.enableBlur && effectiveBlur > 0;
+
+    final glassContent = Container(
+      decoration: BoxDecoration(
+        color:
+            widget.color ??
+            Colors.white.withValues(
+              alpha: shouldApplyBlur ? widget.opacity : (widget.opacity * 2).clamp(0.08, 0.2),
+            ),
+        borderRadius: BorderRadius.circular(widget.borderRadius),
+        border:
+            widget.border ??
+            Border.all(
+              color: Colors.white.withValues(
+                alpha: 0.1,
+              ),
+              width: 1.5,
+            ),
+        gradient: LinearGradient(
+          begin: Alignment(_tiltX - 0.5, _tiltY - 0.5),
+          end: Alignment(_tiltX + 0.5, _tiltY + 0.5),
+          colors: [
+            Colors.white.withValues(alpha: 0.08),
+            Colors.white.withValues(alpha: 0.0),
+          ],
+        ),
+      ),
+      child: widget.child,
+    );
+
+    if (!shouldApplyBlur) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(widget.borderRadius),
+        child: glassContent,
+      );
+    }
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(widget.borderRadius),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: widget.blur, sigmaY: widget.blur),
-        child: Container(
-          decoration: BoxDecoration(
-            color:
-                widget.color ??
-                Colors.white.withValues(alpha: widget.opacity),
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-            border:
-                widget.border ??
-                Border.all(
-                  color: Colors.white.withValues(alpha: 0.1,
-                  ),
-                  width: 1.5,
-                ),
-            gradient: LinearGradient(
-              begin: Alignment(_tiltX - 0.5, _tiltY - 0.5),
-              end: Alignment(_tiltX + 0.5, _tiltY + 0.5),
-              colors: [
-                Colors.white.withValues(alpha: 0.08),
-                Colors.white.withValues(alpha: 0.0),
-              ],
-            ),
-          ),
-          child: widget.child,
-        ),
+        filter: ImageFilter.blur(sigmaX: effectiveBlur, sigmaY: effectiveBlur),
+        child: glassContent,
       ),
     );
   }
 }
-
-
-
-

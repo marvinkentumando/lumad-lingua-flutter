@@ -6,6 +6,7 @@ import '../services/firebase_service.dart';
 import '../services/haptic_service.dart';
 import '../models/admin_models.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/brand_background.dart';
@@ -671,50 +672,53 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: isDark ? AppColors.forest700 : AppColors.creamBg,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppRadius.modal),
             side: isDark ? BorderSide.none : const BorderSide(color: AppColors.gold500, width: 2),
           ),
           title: Text(
             'Invite New Staff',
             style: AppTypography.h3.copyWith(color: isDark ? AppColors.gold500 : AppColors.gold700),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              BrandTextField(
-                controller: emailCtrl,
-                labelText: 'Email Address',
-                prefixIcon: Icons.email_outlined,
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: selectedRole,
-                dropdownColor: isDark ? AppColors.forest800 : AppColors.creamBg,
-                decoration: InputDecoration(
-                  labelText: 'Role',
-                  labelStyle: TextStyle(color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5)),
-                  filled: true,
-                  fillColor: isDark ? AppColors.forest800 : Colors.black.withValues(alpha: 0.05),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
+          content: SingleChildScrollView(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                BrandTextField(
+                  controller: emailCtrl,
+                  labelText: 'Email Address',
+                  prefixIcon: Icons.email_outlined,
+                  keyboardType: TextInputType.emailAddress,
                 ),
-                style: TextStyle(color: isDark ? Colors.white : AppColors.forest900),
-                items: ['educator', 'admin']
-                    .map(
-                      (r) => DropdownMenuItem(
-                        value: r,
-                        child: Text(r[0].toUpperCase() + r.substring(1)),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => setDialogState(() {
-                  selectedRole = v!;
-                }),
-              ),
-            ],
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedRole,
+                  dropdownColor: isDark ? AppColors.forest800 : AppColors.creamBg,
+                  decoration: InputDecoration(
+                    labelText: 'Role',
+                    labelStyle: TextStyle(color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5)),
+                    filled: true,
+                    fillColor: isDark ? AppColors.forest800 : Colors.black.withValues(alpha: 0.05),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.chip),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  style: TextStyle(color: isDark ? Colors.white : AppColors.forest900),
+                  items: ['educator', 'admin']
+                      .map(
+                        (r) => DropdownMenuItem(
+                          value: r,
+                          child: Text(r[0].toUpperCase() + r.substring(1)),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) => setDialogState(() {
+                    selectedRole = v!;
+                  }),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(

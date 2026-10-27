@@ -100,13 +100,17 @@ class WotdWidget extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        entry.indigenousWord,
-                        style: GoogleFonts.outfit(
-                          fontSize: 36,
-                          fontWeight: FontWeight.w900,
-                          color: isDark ? Colors.white : AppColors.forest900,
-                          letterSpacing: -1,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          entry.indigenousWord,
+                          style: GoogleFonts.outfit(
+                            fontSize: 36,
+                            fontWeight: FontWeight.w900,
+                            color: isDark ? Colors.white : AppColors.forest900,
+                            letterSpacing: -1,
+                          ),
                         ),
                       ).animate().fadeIn().slideX(begin: -0.1),
                       if (entry.phonetic != null)

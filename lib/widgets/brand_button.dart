@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
 import '../theme/app_typography.dart';
 import '../services/haptic_service.dart';
 
@@ -87,7 +88,7 @@ class _BrandButtonState extends State<BrandButton> {
             : (isDark ? AppColors.gold700 : AppColors.forest700);
         verticalPadding = 14;
         horizontalPadding = 28;
-        borderRadius = 15;
+        borderRadius = AppRadius.button;
         textStyle = AppTypography.bodyLarge.copyWith(
           fontWeight: FontWeight.w800,
           color: textColor,
@@ -112,7 +113,7 @@ class _BrandButtonState extends State<BrandButton> {
         );
         verticalPadding = 14;
         horizontalPadding = 28;
-        borderRadius = 15;
+        borderRadius = AppRadius.button;
         textStyle = AppTypography.bodyLarge.copyWith(
           fontWeight: FontWeight.w800,
           color: textColor,
@@ -147,7 +148,7 @@ class _BrandButtonState extends State<BrandButton> {
         shadowColor = Colors.transparent;
         verticalPadding = 8;
         horizontalPadding = 16;
-        borderRadius = 11;
+        borderRadius = AppRadius.chip;
         textStyle = AppTypography.body.copyWith(
           fontWeight: FontWeight.w800,
           color: textColor,
