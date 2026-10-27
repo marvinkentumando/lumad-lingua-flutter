@@ -28,10 +28,12 @@ class EducatorFeedbackScreen extends ConsumerWidget {
       body: AmbientTopoBackground(
         child: feedbackAsync.when(
           data: (feedbackList) {
-            if (feedbackAsync.value!.isEmpty) {
-              return const BrandedEmptyState(
+            if (feedbackList.isEmpty) {
+              return BrandedEmptyState.empty(
                 title: 'No Feedback Yet',
-                message: 'Messages from your students will appear here.',
+                message: 'Messages and suggestions from your students will appear here.',
+                advice: 'Encourage students to send thoughts during or after completed lessons.',
+                imagePath: 'assets/images/lumad_character (5).png',
                 icon: Icons.forum_outlined,
               );
             }
@@ -48,8 +50,10 @@ class EducatorFeedbackScreen extends ConsumerWidget {
           loading: () => const Center(
             child: CircularProgressIndicator(color: AppColors.gold500),
           ),
-          error: (err, stack) => Center(
-            child: Text('Error loading feedback: $err'),
+          error: (err, stack) => BrandedEmptyState.error(
+            error: err.toString(),
+            advice: 'Unable to load feedback submissions. Check connection.',
+            onRetry: () => ref.invalidate(studentFeedbackProvider),
           ),
         ),
       ),

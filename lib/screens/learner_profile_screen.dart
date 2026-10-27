@@ -25,6 +25,7 @@ import 'package:lumad_lingua/services/haptic_service.dart';
 import '../providers/theme_provider.dart';
 import '../providers/user_preferences_provider.dart';
 import '../utils/app_localization.dart';
+import '../widgets/branded_empty_state.dart';
 
 class LearnerProfileScreen extends ConsumerWidget {
   const LearnerProfileScreen({super.key});
@@ -42,7 +43,11 @@ class LearnerProfileScreen extends ConsumerWidget {
       body: BrandBackground(
         child: authState.when(
           loading: () => _buildProfileTribalLoadingBones(),
-          error: (e, _) => Center(child: Text('Error: $e')),
+          error: (e, _) => BrandedEmptyState.error(
+            error: e.toString(),
+            advice: 'Unable to sync learner credentials. Tap retry to reconnect.',
+            onRetry: () => ref.invalidate(authStateProvider),
+          ),
           data: (user) {
             return SafeArea(
               child: SingleChildScrollView(

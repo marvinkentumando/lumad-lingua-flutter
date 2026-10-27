@@ -819,7 +819,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ],
         ),
         TextButton(
-          onPressed: () => context.push('/leaderboard'),
+          onPressed: () => context.go('/leaderboard'),
           child: Text(
             l10n.translate('view_all'),
             style: AppTypography.label.copyWith(

@@ -57,6 +57,7 @@ void main() {
     test('StudentState streak display with shields', () {
       final now = DateTime.now();
       final yesterday = now.subtract(const Duration(days: 1));
+      final twoDaysAgo = now.subtract(const Duration(days: 2));
       final threeDaysAgo = now.subtract(const Duration(days: 3));
 
       final activeYesterday = StudentState(
@@ -77,7 +78,7 @@ void main() {
         hearts: 5,
         streakShields: 1,
         lessonProgress: {},
-        lastActive: threeDaysAgo,
+        lastActive: twoDaysAgo,
       );
       // Streak preserved visually by shield
       expect(inactiveWithShield.displayedStreak, equals(5));

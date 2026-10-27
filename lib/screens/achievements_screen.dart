@@ -100,8 +100,12 @@ class AchievementsScreen extends ConsumerWidget {
                 ),
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, _) => Center(child: Text("Error: $err")),
+            loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
+            error: (err, _) => BrandedEmptyState.error(
+              error: err.toString(),
+              advice: 'Complete lessons and daily challenges to unlock ancestral badges.',
+              onRetry: () => ref.invalidate(userArtifactsProvider),
+            ),
           ),
         ),
       ),

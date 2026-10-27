@@ -28,9 +28,11 @@ class EducatorBroadcastHistoryScreen extends ConsumerWidget {
         child: broadcastsAsync.when(
           data: (broadcasts) {
             if (broadcasts.isEmpty) {
-              return const BrandedEmptyState(
+              return BrandedEmptyState.empty(
                 title: 'No Broadcasts Found',
                 message: 'You haven\'t sent any village announcements yet.',
+                advice: 'Use the educator dashboard to send announcements to all enrolled students.',
+                imagePath: 'assets/images/lumad_character (4).png',
                 icon: Icons.campaign_outlined,
               );
             }
@@ -47,8 +49,10 @@ class EducatorBroadcastHistoryScreen extends ConsumerWidget {
           loading: () => const Center(
             child: CircularProgressIndicator(color: AppColors.gold500),
           ),
-          error: (err, stack) => Center(
-            child: Text('Error loading history: $err'),
+          error: (err, stack) => BrandedEmptyState.error(
+            error: err.toString(),
+            advice: 'Unable to load broadcast log. Check network connection.',
+            onRetry: () => ref.invalidate(broadcastsProvider),
           ),
         ),
       ),

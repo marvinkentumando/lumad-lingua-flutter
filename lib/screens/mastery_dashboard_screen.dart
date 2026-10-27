@@ -56,7 +56,13 @@ class MasteryDashboardScreen extends ConsumerWidget {
       child: Row(
         children: [
           IconButton(
-            onPressed: () => context.pop(),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/learning');
+              }
+            },
             icon: Icon(
               Icons.arrow_back_ios_new_rounded,
               color: textColor,

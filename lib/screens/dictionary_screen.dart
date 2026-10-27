@@ -20,6 +20,7 @@ import '../providers/dictionary_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../utils/app_localization.dart';
 import '../widgets/phonetic_guide_widget.dart';
+import '../widgets/bouncy_pressable.dart';
 
 class DictionaryScreen extends ConsumerStatefulWidget {
   final String? initialQuery;
@@ -316,7 +317,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
   }) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: GestureDetector(
+      child: BouncyPressable(
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -518,7 +519,7 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard> with
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
+    return BouncyPressable(
       onTap: () {
         HapticService.selection();
         widget.onToggleExpanded();

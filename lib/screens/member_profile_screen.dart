@@ -57,10 +57,19 @@ class MemberProfileScreen extends ConsumerWidget {
           loading: () => const Center(
             child: CircularProgressIndicator(color: AppColors.gold500),
           ),
-          error: (e, _) => Center(child: Text('Error: $e')),
+          error: (e, _) => BrandedEmptyState.error(
+            error: e.toString(),
+            advice: 'Unable to retrieve member profile. Check connection and retry.',
+            onRetry: () => ref.invalidate(userProfileByIdProvider(widget.userId)),
+          ),
           data: (profile) {
             if (profile == null) {
-              return const Center(child: Text('Profile not found'));
+              return BrandedEmptyState.empty(
+                title: 'Profile Not Found',
+                message: 'No registered Lumad Lingua member exists with this identifier.',
+                advice: 'Verify the member link or user ID.',
+                imagePath: 'assets/images/lumad_character (4).png',
+              );
             }
 
             final roleString = profile['role']?.toString().toLowerCase();

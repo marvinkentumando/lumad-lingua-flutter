@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:confetti/confetti.dart';
 import 'package:lumad_lingua/theme/app_colors.dart';
 import 'package:lumad_lingua/theme/app_typography.dart';
 import 'package:lumad_lingua/widgets/brand_card.dart';
@@ -16,6 +17,7 @@ import 'package:lumad_lingua/providers/student_provider.dart';
 import 'package:lumad_lingua/services/firebase_service.dart';
 import 'package:lumad_lingua/services/auth_service.dart';
 import 'package:lumad_lingua/services/haptic_service.dart';
+import 'package:lumad_lingua/services/audio_service.dart';
 import 'package:lumad_lingua/widgets/brand_background.dart';
 import 'package:lumad_lingua/widgets/branded_empty_state.dart';
 import 'package:lumad_lingua/utils/app_localization.dart';
@@ -496,31 +498,20 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
     showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.7),
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: BrandCard(
-          theme: BrandCardTheme.cream,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('🏆', style: TextStyle(fontSize: 56)).animate(onPlay: (c) => c.repeat(reverse: true)).scaleXY(end: 1.1, duration: 600.ms),
-              const SizedBox(height: 16),
-              Text(l10n.translate('session_complete_msg'), style: AppTypography.display.copyWith(fontSize: 24)),
-              const SizedBox(height: 8),
-              Text("${l10n.translate('studied_all_cards').replaceAll('all cards.', 'all')} ${_deck!.length} cards.", style: AppTypography.body.copyWith(color: AppColors.creamText3)),
-              const SizedBox(height: 8),
-              Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), decoration: BoxDecoration(color: AppColors.gold100, borderRadius: BorderRadius.circular(12)), child: Text('+$bonusXp XP EARNED', style: AppTypography.mono.copyWith(color: AppColors.gold700, fontWeight: FontWeight.bold))),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(child: BrandButton(text: 'Again', type: BrandButtonType.secondary, onTap: () { Navigator.pop(context); setState(() { _currentIndex = 0; _isFlipped = false; _deck!.shuffle(Random()); }); _flipController.reset(); })),
-                  const SizedBox(width: 12),
-                  Expanded(child: BrandButton(text: 'Done', type: BrandButtonType.primary, onTap: () => Navigator.of(context)..pop()..pop())),
-                ],
-              ),
-            ],
-          ),
-        ),
+      builder: (context) => SrsCompletionRewardDialog(
+        cardCount: _deck!.length,
+        bonusXp: bonusXp.toInt(),
+        l10n: l10n,
+        onAgain: () {
+          Navigator.pop(context);
+          setState(() {
+            _currentIndex = 0;
+            _isFlipped = false;
+            _deck!.shuffle(Random());
+          });
+          _flipController.reset();
+        },
+        onDone: () => Navigator.of(context)..pop()..pop(),
       ),
     );
   }
@@ -535,6 +526,187 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
           emoji: widget.isReviewMode ? '🌿' : '💫',
           action: BrandButton(text: widget.isReviewMode ? '🏠  Back to Dashboard' : '📖  Go to Dictionary', type: BrandButtonType.primary, onTap: () => Navigator.pop(context)),
         ),
+      ),
+    );
+  }
+}
+
+class SrsCompletionRewardDialog extends ConsumerStatefulWidget {
+  final int cardCount;
+  final int bonusXp;
+  final AppLocalization l10n;
+  final VoidCallback onAgain;
+  final VoidCallback onDone;
+
+  const SrsCompletionRewardDialog({
+    super.key,
+    required this.cardCount,
+    required this.bonusXp,
+    required this.l10n,
+    required this.onAgain,
+    required this.onDone,
+  });
+
+  @override
+  ConsumerState<SrsCompletionRewardDialog> createState() =>
+      _SrsCompletionRewardDialogState();
+}
+
+class _SrsCompletionRewardDialogState
+    extends ConsumerState<SrsCompletionRewardDialog> {
+  late ConfettiController _confettiController;
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiController =
+        ConfettiController(duration: const Duration(seconds: 4));
+    _confettiController.play();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      HapticService.celebration();
+      ref.read(audioServiceProvider).playSFX('session_complete');
+    });
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.topCenter,
+        children: [
+          BrandCard(
+            theme: BrandCardTheme.cream,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('🏆', style: TextStyle(fontSize: 56))
+                    .animate(onPlay: (c) => c.repeat(reverse: true))
+                    .scaleXY(end: 1.1, duration: 600.ms),
+                const SizedBox(height: 16),
+                Text(
+                  widget.l10n.translate('session_complete_msg'),
+                  style: AppTypography.display.copyWith(fontSize: 24),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "${widget.l10n.translate('studied_all_cards').replaceAll('all cards.', 'all')} ${widget.cardCount} cards.",
+                  style: AppTypography.body.copyWith(color: AppColors.creamText3),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold100,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.gold500, width: 1.5),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.bolt_rounded,
+                          color: AppColors.gold700, size: 20),
+                      const SizedBox(width: 8),
+                      TweenAnimationBuilder<int>(
+                        tween: IntTween(begin: 0, end: widget.bonusXp),
+                        duration: const Duration(milliseconds: 1400),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, value, child) {
+                          return Text(
+                            '+$value XP EARNED',
+                            style: AppTypography.mono.copyWith(
+                              color: AppColors.gold700,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.forest900.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.psychology_rounded,
+                          color: AppColors.forest700, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        'SRS MASTERY PROGRESS SAVED!',
+                        style: AppTypography.label.copyWith(
+                          color: AppColors.forest700,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: BrandButton(
+                        text: 'Again',
+                        type: BrandButtonType.secondary,
+                        onTap: widget.onAgain,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: BrandButton(
+                        text: 'Done',
+                        type: BrandButtonType.primary,
+                        onTap: widget.onDone,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Confetti explosion on top
+          Positioned(
+            top: -20,
+            child: ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              shouldLoop: false,
+              maxBlastForce: 20,
+              minBlastForce: 5,
+              emissionFrequency: 0.05,
+              numberOfParticles: 25,
+              gravity: 0.1,
+              colors: const [
+                AppColors.gold500,
+                Colors.cyanAccent,
+                Colors.purpleAccent,
+                Colors.amber,
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

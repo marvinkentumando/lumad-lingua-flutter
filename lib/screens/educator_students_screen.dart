@@ -185,16 +185,26 @@ class _EducatorStudentsScreenState
         );
       },
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.gold500))),
-      error: (err, _) => Scaffold(body: Center(child: Text('Error: $err'))),
+      error: (err, _) => Scaffold(
+        body: BrandedEmptyState.error(
+          error: err.toString(),
+          advice: 'Verify network connection and ensure student records are synchronized.',
+          onRetry: () => ref.invalidate(educatorStudentsProvider),
+        ),
+      ),
     );
   }
 
   Widget _buildEmptyState() {
-    return BrandedEmptyState(
+    return BrandedEmptyState.empty(
       title: _searchQuery.isNotEmpty ? 'Member Not Found' : 'Quiet Village',
       message: _searchQuery.isNotEmpty
           ? 'Try adjusting your search or filter.'
           : 'No students have joined your village yet.',
+      advice: _searchQuery.isNotEmpty
+          ? 'Clear search filters to see all enrolled village learners.'
+          : 'Share your classroom access code so learners can join your roster.',
+      imagePath: 'assets/images/lumad_character (3).png',
       icon: _searchQuery.isNotEmpty ? Icons.person_search_rounded : Icons.people_outline_rounded,
     );
   }

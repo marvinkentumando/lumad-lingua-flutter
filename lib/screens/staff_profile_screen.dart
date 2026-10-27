@@ -23,6 +23,7 @@ import '../widgets/artifacts/artifact_inventory_section.dart';
 import '../providers/theme_provider.dart';
 import '../utils/app_localization.dart';
 import '../providers/user_preferences_provider.dart';
+import '../widgets/branded_empty_state.dart';
 
 class StaffProfileScreen extends ConsumerWidget {
   const StaffProfileScreen({super.key});
@@ -40,7 +41,11 @@ class StaffProfileScreen extends ConsumerWidget {
       body: BrandBackground(
         child: authState.when(
           loading: () => _buildProfileAppShimmerSkeleton(),
-          error: (e, _) => Center(child: Text('Error: $e')),
+          error: (e, _) => BrandedEmptyState.error(
+            error: e.toString(),
+            advice: 'Unable to sync staff credentials. Tap retry to reconnect.',
+            onRetry: () => ref.invalidate(authStateProvider),
+          ),
           data: (user) {
             return SafeArea(
               child: SingleChildScrollView(

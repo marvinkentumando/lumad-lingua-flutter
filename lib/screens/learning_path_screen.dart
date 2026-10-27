@@ -599,7 +599,13 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
         );
       },
       loading: () => SliverToBoxAdapter(child: _buildPathAppShimmerSkeleton()),
-      error: (err, _) => SliverToBoxAdapter(child: Center(child: Text('Error: $err'))),
+      error: (err, _) => SliverToBoxAdapter(
+        child: BrandedEmptyState.error(
+          error: err.toString(),
+          advice: 'Start a lesson or check your connection to reload the Mansaka learning path.',
+          onRetry: () => ref.invalidate(studentProvider),
+        ),
+      ),
     );
   }
 

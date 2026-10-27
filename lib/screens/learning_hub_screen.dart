@@ -188,7 +188,7 @@ class LearningHubScreen extends ConsumerWidget {
                           if (dueCount > 0) {
                             context.push('/flashcards?mode=review');
                           } else {
-                            context.push('/mastery-dashboard');
+                            context.go('/mastery-dashboard');
                           }
                         },
                         child: ref.watch(userProfileProvider).when(

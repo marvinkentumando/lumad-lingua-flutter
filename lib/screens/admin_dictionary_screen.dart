@@ -18,6 +18,7 @@ import '../widgets/pagination_bar.dart';
 import '../widgets/admin/import_dictionary_modal.dart';
 import '../widgets/admin/bulk_audio_import_modal.dart';
 import '../widgets/lesson_editors/editor_utils.dart';
+import '../widgets/branded_empty_state.dart';
 
 enum DictionarySortOption {
   alphabeticalAsc('A-Z (Indigenous)', Icons.sort_by_alpha_rounded),
@@ -292,7 +293,11 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
-              error: (e, _) => Center(child: Text('Error: $e')),
+              error: (e, _) => BrandedEmptyState.error(
+                error: e.toString(),
+                advice: 'Check your network connection or tap retry to reload dictionary entries.',
+                onRetry: () => ref.invalidate(dictionaryProvider),
+              ),
             ),
           ),
         ],

@@ -16,6 +16,7 @@ import '../services/firebase_service.dart';
 import '../services/haptic_service.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/brand_search_bar.dart';
+import '../widgets/bouncy_pressable.dart';
 import '../widgets/brand_background.dart' as bg;
 import '../utils/app_localization.dart';
 
@@ -228,8 +229,10 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                                     );
                                   },
                                   loading: () => Center(child: _buildPodiumAppShimmerSkeleton()),
-                                  error: (err, _) =>
-                                      Center(child: Text('Error: $err')),
+                                  error: (err, _) => BrandedEmptyState.error(
+                                    error: err.toString(),
+                                    advice: 'Failed to retrieve warrior standings. Check connection and retry.',
+                                  ),
                                 ),
                       ),
                     ],
@@ -301,7 +304,10 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                           },
                           loading: () => _buildRankingListAppShimmerSkeleton(),
                           error: (err, _) => SliverToBoxAdapter(
-                            child: Center(child: Text('Error: $err')),
+                            child: BrandedEmptyState.error(
+                              error: err.toString(),
+                              advice: 'Unable to load tribal rankings. Check your connection.',
+                            ),
                           ),
                         ),
               ),
@@ -725,7 +731,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     return BouncyPressable(
       onTap: () {
         if (isMe) {
-          context.push('/profile');
+          context.go('/profile');
         } else {
           context.push('/member/${e.uid}');
         }
@@ -1125,34 +1131,4 @@ class _SacredPillarPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class BouncyPressable extends StatefulWidget {
-  final Widget child;
-  final VoidCallback onTap;
-
-  const BouncyPressable({super.key, required this.child, required this.onTap});
-
-  @override
-  State<BouncyPressable> createState() => _BouncyPressableState();
-}
-
-class _BouncyPressableState extends State<BouncyPressable> {
-  bool _isPressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
-      onTapUp: (_) => setState(() => _isPressed = false),
-      onTapCancel: () => setState(() => _isPressed = false),
-      onTap: widget.onTap,
-      child: AnimatedScale(
-        scale: _isPressed ? 0.96 : 1.0,
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOutBack,
-        child: widget.child,
-      ),
-    );
-  }
 }

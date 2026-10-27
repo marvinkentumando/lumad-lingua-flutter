@@ -208,9 +208,9 @@ class MainLayout extends ConsumerWidget {
                   onTap: () {
                     HapticService.selection();
                     if (role == UserRole.learner) {
-                      context.push('/mastery-dashboard');
+                      context.go('/mastery-dashboard');
                     } else {
-                      context.push('/profile');
+                      context.go('/profile');
                     }
                   },
                   child: Container(
@@ -298,7 +298,7 @@ class MainLayout extends ConsumerWidget {
                 GestureDetector(
                   onTap: () {
                     HapticService.selection();
-                    context.push('/profile');
+                    context.go('/profile');
                   },
                   child: authState.when(
                     data: (user) => ProfileAvatar(

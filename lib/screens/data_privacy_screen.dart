@@ -17,6 +17,7 @@ import '../utils/password_validator.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../utils/app_localization.dart';
+import '../widgets/branded_empty_state.dart';
 
 class DataPrivacyScreen extends ConsumerWidget {
   const DataPrivacyScreen({super.key});
@@ -37,7 +38,11 @@ class DataPrivacyScreen extends ConsumerWidget {
                 child: profileAsync.when(
                   data: (profile) => _buildContent(context, ref, profile, l10n),
                   loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
-                  error: (err, _) => Center(child: Text('Error: $err', style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white : AppColors.forest900))),
+                  error: (err, _) => BrandedEmptyState.error(
+                    error: err.toString(),
+                    advice: 'Failed to retrieve account settings. Check your network connection.',
+                    onRetry: () => ref.invalidate(userProfileProvider),
+                  ),
                 ),
               ),
             ],

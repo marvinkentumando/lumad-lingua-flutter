@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../services/offline_service.dart';
+import '../services/haptic_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
 
@@ -336,6 +337,7 @@ class StudentNotifier extends Notifier<StudentState> {
     }
 
     if (shouldIncrementLocally) {
+      HapticService.streak();
       final newActivityMap = Map<String, bool>.from(state.activityMap);
       newActivityMap[dateKey] = true;
 
@@ -392,6 +394,7 @@ class StudentNotifier extends Notifier<StudentState> {
   }
 
   void repairStreak() {
+    HapticService.streak();
     final now = DateTime.now();
     final dateKey = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
     final prev = state.previousStreak > 0 ? state.previousStreak : state.dailyStreak;

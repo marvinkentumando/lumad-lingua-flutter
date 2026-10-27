@@ -8,6 +8,7 @@ import '../theme/app_typography.dart';
 import '../utils/app_localization.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_text_field.dart';
+import '../widgets/branded_empty_state.dart';
 
 class AdminGamificationScreen extends ConsumerStatefulWidget {
   const AdminGamificationScreen({super.key});
@@ -23,6 +24,11 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) {
+        HapticService.light();
+      }
+    });
   }
 
   @override
@@ -133,7 +139,10 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
         ],
       ),
       loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
-      error: (e, _) => Center(child: Text('Error: $e', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+      error: (e, _) => BrandedEmptyState.error(
+        error: e.toString(),
+        advice: 'Unable to load gamification settings. Tap retry to reconnect.',
+      ),
     );
   }
 
@@ -433,7 +442,10 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
         },
       ),
       loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
-      error: (e, _) => Center(child: Text('Error: $e', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+      error: (e, _) => BrandedEmptyState.error(
+        error: e.toString(),
+        advice: 'Unable to load shop items inventory. Tap retry to reconnect.',
+      ),
     );
   }
 

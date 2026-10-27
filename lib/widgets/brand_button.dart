@@ -168,8 +168,9 @@ class _BrandButtonState extends State<BrandButton> {
       onTapUp: _handleTapUp,
       onTapCancel: _handleTapCancel,
       child: AnimatedScale(
-        scale: _isPressed ? 0.97 : 1.0,
-        duration: const Duration(milliseconds: 100),
+        scale: _isPressed ? 0.95 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOutBack,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 100),
           curve: Curves.easeOut,

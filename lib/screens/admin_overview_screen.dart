@@ -974,8 +974,12 @@ class _WordPickerSheetState extends ConsumerState<_WordPickerSheet> {
                   },
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(child: Text('Error: $err')),
+              loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
+              error: (err, _) => BrandedEmptyState.error(
+                error: err.toString(),
+                advice: 'Unable to load dictionary updates. Check your connection.',
+                onRetry: () => ref.invalidate(firebaseServiceProvider),
+              ),
             ),
           ),
         ],

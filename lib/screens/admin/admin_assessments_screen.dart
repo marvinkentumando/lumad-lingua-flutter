@@ -31,9 +31,11 @@ class AdminAssessmentsScreen extends ConsumerWidget {
               Expanded(
                 child: assessmentsAsync.when(
                   data: (data) => data.isEmpty
-                      ? BrandedEmptyState(
+                      ? BrandedEmptyState.empty(
                           title: l10n.translate('no_assessments_title'),
                           message: l10n.translate('no_assessments_message'),
+                          advice: 'Completed pronunciation and dialect assessments will appear here.',
+                          imagePath: 'assets/images/lumad_character (1).png',
                           icon: Icons.assignment_turned_in_rounded,
                         )
                       : ListView.builder(
@@ -42,7 +44,11 @@ class AdminAssessmentsScreen extends ConsumerWidget {
                           itemBuilder: (context, index) => _buildAssessmentCard(data[index], isDark, index, l10n),
                         ),
                   loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
-                  error: (e, _) => Center(child: Text('Error: $e')),
+                  error: (e, _) => BrandedEmptyState.error(
+                    error: e.toString(),
+                    advice: 'Unable to load assessment records. Tap retry to reconnect.',
+                    onRetry: () => ref.invalidate(assessmentResultsProvider),
+                  ),
                 ),
               ),
             ],
