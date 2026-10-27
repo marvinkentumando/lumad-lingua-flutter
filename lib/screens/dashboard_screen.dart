@@ -105,7 +105,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           const SizedBox(width: 20),
                           Expanded(
                             flex: 4,
-                            child: _buildStreakSummaryCard(context, student, l10n),
+                            child: Column(
+                              children: [
+                                _buildStreakSummaryCard(context, student, l10n),
+                                const SizedBox(height: 16),
+                                const WotdWidget(),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -116,10 +122,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       if (currentRole == UserRole.learner) ...[
                         _buildStreakSummaryCard(context, student, l10n),
                         const SizedBox(height: 24),
+                        const WotdWidget(),
+                        const SizedBox(height: 24),
+                      ] else ...[
+                        const WotdWidget(),
+                        const SizedBox(height: 24),
                       ],
                     ],
-                    const WotdWidget(),
-                    const SizedBox(height: 24),
                     if (currentRole == UserRole.learner) ...[
                       _buildDailyQuests(context, questsAsync, ref, l10n),
                       const SizedBox(height: 24),

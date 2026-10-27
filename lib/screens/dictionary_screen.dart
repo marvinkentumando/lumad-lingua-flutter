@@ -71,6 +71,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
   Widget build(BuildContext context) {
     final filteredAsync = ref.watch(filteredDictionaryProvider);
     final filter = ref.watch(dictionaryFilterProvider);
+    final availablePos = ref.watch(availablePartOfSpeechProvider);
     final savedIds = ref.watch(savedWordsProvider);
     final user = ref.watch(authStateProvider).value;
     final srsAsync = user != null

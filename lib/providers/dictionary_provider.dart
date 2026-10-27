@@ -83,3 +83,32 @@ final filteredDictionaryProvider = Provider<AsyncValue<List<DictionaryEntry>>>((
     return sorted;
   });
 });
+
+final availablePartOfSpeechProvider = Provider<Set<PartOfSpeech>>((ref) {
+  final dictionaryAsync = ref.watch(dictionaryStreamProvider);
+  final filter = ref.watch(dictionaryFilterProvider);
+  final savedIds = ref.watch(savedWordsProvider);
+
+  return dictionaryAsync.maybeWhen(
+    data: (entries) {
+      var items = entries;
+
+      // 1. Filter by category (e.g. SAVED)
+      if (filter.category == 'SAVED') {
+        items = items.where((e) => savedIds.contains(e.id)).toList();
+      }
+
+      // 2. Filter by search query
+      if (filter.query.isNotEmpty) {
+        final q = filter.query.toLowerCase();
+        items = items.where((e) {
+          return e.indigenousWord.toLowerCase().contains(q) ||
+                 e.translation.toLowerCase().contains(q);
+        }).toList();
+      }
+
+      return items.map((e) => e.partOfSpeech).toSet();
+    },
+    orElse: () => <PartOfSpeech>{},
+  );
+});
