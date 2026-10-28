@@ -275,7 +275,7 @@ class _FillBlanksViewState extends State<FillBlanksView>
             );
           }).toList(),
         ),
-        const Spacer(),
+        const SizedBox(height: 32),
         Text(
           'TAP WORDS TO FILL BLANKS',
           style: AppTypography.label.copyWith(

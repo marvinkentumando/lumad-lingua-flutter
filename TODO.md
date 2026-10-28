@@ -59,6 +59,10 @@
   - Added explicit meatball action button (`...`) to list cards to trigger the management bottom sheet.
   - Displayed student count badge (`Icons.people_rounded`) alongside view count on list items.
   - Added metadata badge chips (`Language • Level • Unit N`) for quick lesson scope recognition.
+- [x] **Sentence Reordering Duplicate Word Index Conflict Fix**:
+  - Added unique `ValueKey` identifiers (`scrambled_${entry.key}_${entry.value}` and `available_${entry.key}_${entry.value}`) to all Draggable chips in `SentenceReorderingView` to prevent Flutter element reconciliation conflicts when sentences contain duplicate words (e.g. "madyaw na madyaw").
+  - Hardened `onWordTap` and `onScrambledWordTap` callbacks in `LessonSessionScreen` and `DailyChallengeSessionScreen` with index bounds and exact word checks before removal.
+  - Created widget test suite `test/widgets/sentence_reordering_view_test.dart`.
 
 ---
 
@@ -95,6 +99,8 @@
   - 📁 `lib/screens/lesson_session_screen.dart`, `lib/services/firebase_service.dart`
 - [x] **Lesson Audio Pre-Caching**: Pre-download all lesson module audio assets into Hive/Cache before starting a session.
   - 📁 `lib/services/audio_service.dart`, `lib/screens/learning_path_screen.dart`, `lib/providers/learning_provider.dart`
+- [x] **Sentence Reordering Duplicate Word Index Conflict Fix**: Added unique `ValueKey` identifiers (`scrambled_${entry.key}_${entry.value}` and `available_${entry.key}_${entry.value}`) to Draggable chips in `SentenceReorderingView` to prevent element reconciliation conflicts when sentences contain duplicate words (e.g., "madyaw na madyaw"). Hardened `onWordTap` and `onScrambledWordTap` callbacks in `LessonSessionScreen` and `DailyChallengeSessionScreen` with index bounds and exact word matching before removal.
+  - 📁 `lib/widgets/activity_views/sentence_reordering_view.dart`, `lib/screens/lesson_session_screen.dart`, `lib/screens/daily_challenge_session_screen.dart`, `test/widgets/sentence_reordering_view_test.dart`
 - [ ] **Adaptive Difficulty Scaling**: Dynamically adjust SRS intervals and task distractors based on learner error history and accuracy metrics.
   - 📁 `lib/services/srs_service.dart`, `lib/providers/learning_provider.dart`
 

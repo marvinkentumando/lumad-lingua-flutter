@@ -114,6 +114,7 @@ class SentenceReorderingView extends StatelessWidget {
                         }
 
                         return Draggable<Map<String, dynamic>>(
+                          key: ValueKey('scrambled_${entry.key}_${entry.value}'),
                           data: {
                             'word': entry.value,
                             'fromIndex': entry.key,
@@ -204,6 +205,7 @@ class SentenceReorderingView extends StatelessWidget {
                   }
 
                   return Draggable<Map<String, dynamic>>(
+                    key: ValueKey('available_${entry.key}_${entry.value}'),
                     data: {
                       'word': entry.value,
                       'fromIndex': entry.key,

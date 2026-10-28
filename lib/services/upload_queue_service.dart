@@ -219,9 +219,11 @@ class UploadQueueService extends Notifier<UploadQueueState> {
       case 'equipCustomization':
         final title = payload['title'] as String?;
         final emoji = payload['emoji'] as String?;
+        final frame = payload['frame'] as String?;
         final Map<String, dynamic> updates = {};
         if (title != null) updates['equippedTitle'] = title;
         if (emoji != null) updates['equippedBadge'] = emoji;
+        if (frame != null) updates['equippedFrame'] = frame;
         if (updates.isNotEmpty) {
           await firebaseService.db.collection('users').doc(uid).update(updates);
         }
@@ -271,9 +273,12 @@ class UploadQueueService extends Notifier<UploadQueueState> {
   }
 
   Future<void> resolveConflict(String lessonId, bool keepLocal) async {
-    final conflict = state.conflicts.firstWhere((c) => c.lessonId == lessonId);
+    final conflictIndex = state.conflicts.indexWhere((c) => c.lessonId == lessonId);
+    if (conflictIndex == -1) return;
 
-    if (keepLocal) {
+    final conflict = state.conflicts[conflictIndex];
+
+    if (keepLocal && conflict.localData.isNotEmpty) {
       await _syncProgress(conflict.localData);
     }
 
