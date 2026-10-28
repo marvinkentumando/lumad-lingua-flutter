@@ -71,6 +71,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
   Widget build(BuildContext context) {
     final filteredAsync = ref.watch(filteredDictionaryProvider);
     final filter = ref.watch(dictionaryFilterProvider);
+    final availablePos = ref.watch(availablePartOfSpeechProvider);
     final savedIds = ref.watch(savedWordsProvider);
     final user = ref.watch(authStateProvider).value;
     final srsAsync = user != null
@@ -113,11 +114,14 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                               l10n,
                               filter,
                             ),
-                            const SizedBox(height: 12),
-                            _buildPartOfSpeechFilterRow(
-                              Theme.of(context).brightness == Brightness.dark,
-                              filter,
-                            ),
+                            if (availablePos.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              _buildPartOfSpeechFilterRow(
+                                Theme.of(context).brightness == Brightness.dark,
+                                filter,
+                                availablePos,
+                              ),
+                            ],
                             const SizedBox(height: 12),
                           ],
                         ),
@@ -270,7 +274,23 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
     );
   }
 
-  Widget _buildPartOfSpeechFilterRow(bool isDark, DictionaryFilter filter) {
+  Widget _buildPartOfSpeechFilterRow(
+    bool isDark,
+    DictionaryFilter filter,
+    Set<PartOfSpeech> availablePos,
+  ) {
+    if (availablePos.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final visiblePos = PartOfSpeech.values.where(
+      (pos) => availablePos.contains(pos) || filter.partOfSpeech == pos,
+    ).toList();
+
+    if (visiblePos.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return SizedBox(
       height: 38,
       child: ListView(
@@ -288,7 +308,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
             },
             isDark: isDark,
           ),
-          ...PartOfSpeech.values.map((pos) {
+          ...visiblePos.map((pos) {
             final isSelected = filter.partOfSpeech == pos;
             return _buildFilterChip(
               label: pos.label,
@@ -340,7 +360,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
             label,
             style: AppTypography.label.copyWith(
               color: isSelected
-                  ? Theme.of(context).colorScheme.primary
+                  ? (isDark ? Colors.white : AppColors.forest900)
                   : Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 11,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
