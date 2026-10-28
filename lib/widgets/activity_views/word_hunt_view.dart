@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
@@ -38,7 +39,7 @@ class _WordHuntViewState extends State<WordHuntView> {
   @override
   void didUpdateWidget(WordHuntView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.wordsToFind != widget.wordsToFind) {
+    if (!listEquals(oldWidget.wordsToFind, widget.wordsToFind)) {
       setState(() {
         _gridSize = _calculateGridSize();
         _generateGrid();
@@ -54,10 +55,10 @@ class _WordHuntViewState extends State<WordHuntView> {
         maxLen = normalized.length;
       }
     }
-    // Dynamic grid size: adapt between 7 and 10 based on words
+    // Dynamic grid size: adapt up to 14 for long indigenous words
     int size = maxLen + 1;
     if (size < 7) size = 7;
-    if (size > 10) size = 10;
+    if (size > 14) size = 14;
     return size;
   }
 
@@ -72,7 +73,7 @@ class _WordHuntViewState extends State<WordHuntView> {
       final normalized = word.toUpperCase().replaceAll(' ', '');
       bool placed = false;
       int attempts = 0;
-      while (!placed && attempts < 120) {
+      while (!placed && attempts < 200) {
         attempts++;
         int row = random.nextInt(_gridSize);
         int col = random.nextInt(_gridSize);
@@ -155,8 +156,8 @@ class _WordHuntViewState extends State<WordHuntView> {
   }
 
   void _updateSelection(Offset localPosition, double cellSize) {
-    int col = (localPosition.dx / cellSize).floor().clamp(0, _gridSize - 1);
-    int row = (localPosition.dy / cellSize).floor().clamp(0, _gridSize - 1);
+    int col = ((localPosition.dx - 4) / cellSize).floor().clamp(0, _gridSize - 1);
+    int row = ((localPosition.dy - 4) / cellSize).floor().clamp(0, _gridSize - 1);
 
     final start = _selection.isNotEmpty ? _selection.first : Offset(col.toDouble(), row.toDouble());
     int dr = (row - start.dy).toInt();
@@ -240,7 +241,7 @@ class _WordHuntViewState extends State<WordHuntView> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final double maxGridWidth = min(constraints.maxWidth, 380.0);
-              final double cellSize = (maxGridWidth / _gridSize).clamp(28.0, 48.0);
+              final double cellSize = (maxGridWidth / _gridSize).clamp(24.0, 48.0);
               final double gridDimension = cellSize * _gridSize;
 
               return GestureDetector(
