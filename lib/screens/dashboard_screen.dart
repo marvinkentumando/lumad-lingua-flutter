@@ -95,25 +95,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     _buildConflictBanner(ref, l10n),
                     const SizedBox(height: 16),
                     if (isDesktop && currentRole == UserRole.learner) ...[
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            flex: 6,
-                            child: _buildHeroBanner(context, displayName, student, l10n),
-                          ),
-                          const SizedBox(width: 20),
-                          Expanded(
-                            flex: 4,
-                            child: Column(
-                              children: [
-                                _buildStreakSummaryCard(context, student, l10n),
-                                const SizedBox(height: 16),
-                                const WotdWidget(),
-                              ],
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              flex: 6,
+                              child: _buildHeroBanner(context, displayName, student, l10n),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 20),
+                            Expanded(
+                              flex: 4,
+                              child: Column(
+                                children: [
+                                  _buildStreakSummaryCard(context, student, l10n),
+                                  const SizedBox(height: 16),
+                                  const WotdWidget(),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 24),
                     ] else ...[
@@ -254,51 +256,48 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     AppLocalization l10n,
   ) {
     final greeting = _getGreeting(l10n);
-    return SizedBox(
-      height: 280,
-      child: BrandCard(
-        theme: BrandCardTheme.gold,
-        padding: EdgeInsets.zero,
-        borderRadius: 32,
-        child: Row(
-          children: [
-            // Text Content
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 28, top: 32, bottom: 32),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$greeting,\n$displayName!',
-                      textAlign: TextAlign.left,
-                      style: AppTypography.displayBold.copyWith(
-                        color: AppColors.forest900,
-                        fontSize: 32,
-                        height: 1.1,
-                      ),
+    return BrandCard(
+      theme: BrandCardTheme.gold,
+      padding: EdgeInsets.zero,
+      borderRadius: 32,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Text Content
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 28, top: 32, bottom: 32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$greeting,\n$displayName!',
+                    textAlign: TextAlign.left,
+                    style: AppTypography.displayBold.copyWith(
+                      color: AppColors.forest900,
+                      fontSize: 32,
+                      height: 1.1,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-            // Character Image / Waves GIF
-            Expanded(
-              flex: 3,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.horizontal(right: Radius.circular(32)),
-                child: Image.asset(
-                  'assets/images/lumad_waves.gif',
-                  height: 280,
-                  fit: BoxFit.cover,
-                  alignment: Alignment.center,
-                ),
+          ),
+          // Character Image / Waves GIF
+          Expanded(
+            flex: 3,
+            child: ClipRRect(
+              borderRadius: const BorderRadius.horizontal(right: Radius.circular(32)),
+              child: Image.asset(
+                'assets/images/lumad_waves.gif',
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
