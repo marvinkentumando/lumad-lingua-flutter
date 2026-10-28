@@ -60,7 +60,7 @@ class MemberProfileScreen extends ConsumerWidget {
           error: (e, _) => BrandedEmptyState.error(
             error: e.toString(),
             advice: 'Unable to retrieve member profile. Check connection and retry.',
-            onRetry: () => ref.invalidate(userProfileByIdProvider(widget.userId)),
+            onRetry: () => ref.invalidate(otherUserProfileProvider(userId)),
           ),
           data: (profile) {
             if (profile == null) {

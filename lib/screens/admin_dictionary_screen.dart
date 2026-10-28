@@ -296,7 +296,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
               error: (e, _) => BrandedEmptyState.error(
                 error: e.toString(),
                 advice: 'Check your network connection or tap retry to reload dictionary entries.',
-                onRetry: () => ref.invalidate(dictionaryProvider),
+                onRetry: () => ref.invalidate(dictionaryStreamProvider),
               ),
             ),
           ),

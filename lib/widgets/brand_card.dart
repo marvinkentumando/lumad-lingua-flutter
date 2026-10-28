@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
-import 'tactile_wrapper.dart';
 import 'bouncy_pressable.dart';
 
 enum BrandCardTheme { cream, vibrant, gold }

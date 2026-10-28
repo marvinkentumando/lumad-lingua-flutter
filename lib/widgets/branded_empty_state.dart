@@ -122,7 +122,7 @@ class BrandedEmptyState extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // 1. Animated Lumad Character Illustration / Badge
               _buildIllustrationHeader(context, secondaryBg, primaryAccent, effectiveImagePath),
@@ -181,7 +181,7 @@ class BrandedEmptyState extends StatelessWidget {
               Text(
                 message,
                 style: AppTypography.body.copyWith(
-                  color: isDark ? Colors.white70 : Colors.black80,
+                  color: isDark ? Colors.white70 : Colors.black87,
                   fontSize: 14,
                   height: 1.4,
                 ),
@@ -216,7 +216,7 @@ class BrandedEmptyState extends StatelessWidget {
                         child: Text(
                           advice!,
                           style: AppTypography.caption.copyWith(
-                            color: isDark ? Colors.white60 : Colors.black60,
+                            color: isDark ? Colors.white60 : Colors.black54,
                             fontStyle: FontStyle.italic,
                             fontSize: 12,
                             height: 1.3,
