@@ -130,7 +130,9 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         resource.data.player1Id == request.auth.uid ||
         resource.data.player2Id == request.auth.uid ||
-        (resource.data.status == 'waiting' && request.resource.data.player2Id == request.auth.uid)
+        (resource.data.status == 'waiting'
+          && (!('player2Id' in resource.data) || resource.data.player2Id == null || resource.data.player2Id == '')
+          && request.resource.data.player2Id == request.auth.uid)
       );
       allow delete: if isSignedIn() && (
         resource.data.player1Id == request.auth.uid ||

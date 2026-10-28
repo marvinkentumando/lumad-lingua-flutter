@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -25,19 +26,23 @@ class SyncConflict {
 class UploadQueueState {
   final bool isSyncing;
   final List<SyncConflict> conflicts;
+  final int retryAttempt;
 
   UploadQueueState({
     this.isSyncing = false,
     this.conflicts = const [],
+    this.retryAttempt = 0,
   });
 
   UploadQueueState copyWith({
     bool? isSyncing,
     List<SyncConflict>? conflicts,
+    int? retryAttempt,
   }) {
     return UploadQueueState(
       isSyncing: isSyncing ?? this.isSyncing,
       conflicts: conflicts ?? this.conflicts,
+      retryAttempt: retryAttempt ?? this.retryAttempt,
     );
   }
 }
@@ -46,6 +51,11 @@ class UploadQueueService extends Notifier<UploadQueueState> {
   OfflineService get _offlineService => ref.read(offlineServiceProvider);
 
   StreamSubscription? _connectivitySubscription;
+  Timer? _retryTimer;
+  int _retryAttempt = 0;
+
+  static const int initialRetryDelaySeconds = 5;
+  static const int maxRetryDelaySeconds = 60;
 
   @override
   UploadQueueState build() {
@@ -53,12 +63,15 @@ class UploadQueueService extends Notifier<UploadQueueState> {
       List<ConnectivityResult> results,
     ) {
       if (results.isNotEmpty && !results.contains(ConnectivityResult.none)) {
+        _retryAttempt = 0;
+        _cancelRetryTimer();
         processQueue();
       }
     });
 
     ref.onDispose(() {
       _connectivitySubscription?.cancel();
+      _cancelRetryTimer();
     });
 
     // Start processing if online
@@ -67,25 +80,43 @@ class UploadQueueService extends Notifier<UploadQueueState> {
     return UploadQueueState();
   }
 
+  void _cancelRetryTimer() {
+    _retryTimer?.cancel();
+    _retryTimer = null;
+  }
+
   bool get isSyncing => state.isSyncing;
+  bool get isRetryScheduled => _retryTimer?.isActive ?? false;
+  int get retryAttempt => _retryAttempt;
 
   Future<void> processQueue() async {
     if (state.isSyncing) return;
+
+    _cancelRetryTimer();
 
     final drafts = await _offlineService.getDraftLessons();
     final progressItems = await _offlineService.getAllOfflineProgress();
     final pendingActions = await _offlineService.getPendingSyncActions();
 
-    if (drafts.isEmpty && progressItems.isEmpty && pendingActions.isEmpty) return;
+    if (drafts.isEmpty && progressItems.isEmpty && pendingActions.isEmpty) {
+      _retryAttempt = 0;
+      state = state.copyWith(retryAttempt: 0);
+      return;
+    }
 
     final connectivityResult = await Connectivity().checkConnectivity();
-    if (connectivityResult.contains(ConnectivityResult.none)) return;
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      _scheduleRetry();
+      return;
+    }
 
     state = state.copyWith(isSyncing: true);
 
     debugPrint(
-      'Starting Upload Queue processing: ${drafts.length} drafts, ${progressItems.length} progress items, ${pendingActions.length} pending actions',
+      'Starting Upload Queue processing: ${drafts.length} drafts, ${progressItems.length} progress items, ${pendingActions.length} pending actions (attempt #$_retryAttempt)',
     );
+
+    bool hasErrors = false;
 
     // Process Pending Student Actions
     for (var action in pendingActions) {
@@ -97,6 +128,7 @@ class UploadQueueService extends Notifier<UploadQueueState> {
         }
         debugPrint('Successfully synced pending action: ${action['type']}');
       } catch (e) {
+        hasErrors = true;
         debugPrint('Failed to sync pending action ${action['type']}: $e');
       }
     }
@@ -108,6 +140,7 @@ class UploadQueueService extends Notifier<UploadQueueState> {
         await _offlineService.removeDraftLesson(lesson.id);
         debugPrint('Successfully synced lesson: ${lesson.id}');
       } catch (e) {
+        hasErrors = true;
         debugPrint('Failed to sync lesson ${lesson.id}: $e');
       }
     }
@@ -160,14 +193,49 @@ class UploadQueueService extends Notifier<UploadQueueState> {
         await _syncProgress(progress);
         await _offlineService.removeOfflineProgress(lessonId);
       } catch (e) {
+        hasErrors = true;
         debugPrint('Failed to sync progress for $lessonId: $e');
       }
     }
 
-    state = state.copyWith(
-      isSyncing: false,
-      conflicts: [...state.conflicts, ...newConflicts],
-    );
+    // Check remaining items to determine if retry is needed
+    final remDrafts = await _offlineService.getDraftLessons();
+    final remProgress = await _offlineService.getAllOfflineProgress();
+    final remActions = await _offlineService.getPendingSyncActions();
+
+    final bool hasUnsyncedItems = remDrafts.isNotEmpty || remProgress.isNotEmpty || remActions.isNotEmpty;
+
+    if (!hasUnsyncedItems && !hasErrors) {
+      _retryAttempt = 0;
+      state = state.copyWith(
+        isSyncing: false,
+        conflicts: [...state.conflicts, ...newConflicts],
+        retryAttempt: 0,
+      );
+    } else {
+      state = state.copyWith(
+        isSyncing: false,
+        conflicts: [...state.conflicts, ...newConflicts],
+        retryAttempt: _retryAttempt + 1,
+      );
+      _scheduleRetry();
+    }
+  }
+
+  void _scheduleRetry() {
+    _cancelRetryTimer();
+
+    // Exponential backoff calculation: min(60s, 5s * 2^(retryAttempt))
+    final backoffExponent = math.min(_retryAttempt, 4);
+    final backoffFactor = math.pow(2, backoffExponent).toInt();
+    final delaySeconds = math.min(maxRetryDelaySeconds, initialRetryDelaySeconds * backoffFactor);
+
+    _retryAttempt++;
+    debugPrint('Scheduling offline sync retry attempt #$_retryAttempt in ${delaySeconds}s');
+
+    _retryTimer = Timer(Duration(seconds: delaySeconds), () {
+      processQueue();
+    });
   }
 
   Future<void> _syncPendingAction(Map<String, dynamic> action) async {

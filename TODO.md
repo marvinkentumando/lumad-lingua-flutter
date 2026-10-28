@@ -63,6 +63,14 @@
   - Added unique `ValueKey` identifiers (`scrambled_${entry.key}_${entry.value}` and `available_${entry.key}_${entry.value}`) to all Draggable chips in `SentenceReorderingView` to prevent Flutter element reconciliation conflicts when sentences contain duplicate words (e.g. "madyaw na madyaw").
   - Hardened `onWordTap` and `onScrambledWordTap` callbacks in `LessonSessionScreen` and `DailyChallengeSessionScreen` with index bounds and exact word checks before removal.
   - Created widget test suite `test/widgets/sentence_reordering_view_test.dart`.
+- [x] **Atomic Room Joining Race Condition Fix**:
+  - Implemented `DuelService.canClaimMatchData` to enforce that a waiting match can only be claimed if `status == 'waiting'`, `player1Id != userId`, and `player2Id` is empty/null.
+  - Updated Firestore security rules for `duel_matches/{matchId}` to reject room updates if `player2Id` is already set on the waiting room (`!('player2Id' in resource.data) || resource.data.player2Id == null || resource.data.player2Id == ''`).
+  - Added unit test suite in `test/duel_sync_logic_test.dart` verifying race condition claim prevention.
+- [x] **Offline Sync Exponential Backoff Retry Fix**:
+  - Enhanced `UploadQueueService` to automatically schedule exponential backoff retries (5s, 10s, 20s, 40s, up to 60s max delay) when offline sync operations encounter network dropouts or errors mid-sync.
+  - Added `retryAttempt` tracking to `UploadQueueState` and auto-resets attempt count upon successful sync or network reconnect events.
+  - Added unit test coverage in `test/services/offline_sync_test.dart`.
 
 ---
 
@@ -139,6 +147,8 @@
   - 📁 `lib/screens/lingua_duel_screen.dart`, `lib/services/duel_service.dart`
 - [x] **Deploy Duel Firestore Rules**: Shipped the `duel_matches` rules block to production (`firebase deploy --only firestore:rules --project lumadlingua`) — rules compiled and released successfully; live duels now work in production.
   - 📁 `firestore.rules`
+- [x] **Atomic Room Joining Race Condition Fix**: Prevent overwriting `player2Id` when two players attempt to join the same waiting room simultaneously; enforce `canClaimMatchData` check and security rules check that `player2Id` is unpopulated.
+  - 📁 `lib/services/duel_service.dart`, `firestore.rules`, `test/duel_sync_logic_test.dart`
 - [ ] **Duel Rematch & Persistent Duel Records**: Add a rematch action on the results screen and store per-user win/loss history (wins, losses, win streaks) in Firestore.
   - 📁 `lib/screens/lingua_duel_screen.dart`, `lib/services/duel_service.dart`
 - [ ] **Duel State Riverpod Refactor**: Move matchmaking/battle state out of the screen into a `DuelSessionNotifier` so live duels survive navigation and can re-attach to an in-progress match after an app restart.
@@ -157,7 +167,7 @@
 ---
 
 ## 🛠 Low Priority, Refactoring & Infrastructure
-- [x] **State Management Offline Sync Refactor**: Smooth state recovery and background queue retry when reconnecting online.
+- [x] **State Management Offline Sync Refactor**: Smooth state recovery and background queue retry with automatic exponential backoff when reconnecting online or facing mid-sync network drops.
   - 📁 `lib/services/offline_service.dart`, `lib/providers/student_provider.dart`, `lib/services/upload_queue_service.dart`, `lib/providers/learning_provider.dart`
 - [x] **Shimmer Skeleton Loading Optimization**: Optimize shimmer animations for low-end Android mobile devices.
   - 📁 `lib/widgets/app_shimmer_skeleton.dart`, `lib/screens/dictionary_screen.dart`, `lib/screens/learning_hub_screen.dart`
