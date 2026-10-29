@@ -7,6 +7,7 @@
   - Removed phonetic pronunciation text display from entry cards.
   - Implemented SRS mastery stars and saved words bookmarking system.
   - Implemented Hive offline caching for global dictionary searches and local fallbacks.
+  - Implemented smooth infinite scrolling / lazy loading (replacing page navigation) for optimal mobile vocabulary browsing UX.
 - [x] **Text-To-Speech (TTS) Engine**:
   - Implemented native TTS language check prioritizing Cebuano (`ceb-PH`) for phonetic similarity to Mansaka, falling back to Filipino (`fil-PH`).
 - [x] **Admin Dictionary Screen**:
