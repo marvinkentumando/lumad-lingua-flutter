@@ -24,7 +24,7 @@ void main() {
           sampleRate: 16000,
           numChannels: 1,
           runId: 'RUN-2026-0004',
-          configHash: '3140166e41dc4be9',
+          configHash: '3140166e41dc4be90fd4814f8ff45360dfee58612e52e9a8aa381c2a99808a21',
         ),
       );
 
@@ -34,7 +34,7 @@ void main() {
       expect(result.scorePercentage, lessThanOrEqualTo(100.0));
       expect(result.isCandidateEvaluation, isTrue);
       expect(result.rawMetrics['runId'], equals('RUN-2026-0004'));
-      expect(result.rawMetrics['configHash'], equals('3140166e41dc4be9'));
+      expect(result.rawMetrics['configHash'], equals('3140166e41dc4be90fd4814f8ff45360dfee58612e52e9a8aa381c2a99808a21'));
     });
 
     test('Identical 16kHz audio signals produce high comparison similarity', () {

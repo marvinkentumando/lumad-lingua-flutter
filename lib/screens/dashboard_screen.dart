@@ -72,88 +72,126 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final currentRole = ref.watch(roleProvider);
     final l10n = ref.watch(localizationProvider);
 
-    final profile = profileAsync.value;
-    final displayName = profile?['username'] ?? l10n.translate('tribe_member');
     final isDesktop = MediaQuery.of(context).size.width >= 800;
 
-    return Stack(
-      children: [
-        Scaffold(
-          backgroundColor: Colors.transparent,
-          body: BrandBackground(
-            child: SafeArea(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.symmetric(
-                  horizontal: isDesktop ? 32 : 20,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-                    _buildSyncIndicator(ref, l10n),
-                    _buildConflictBanner(ref, l10n),
-                    const SizedBox(height: 16),
-                    if (isDesktop && currentRole == UserRole.learner) ...[
-                      IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              flex: 6,
-                              child: _buildHeroBanner(context, displayName, student, l10n),
-                            ),
-                            const SizedBox(width: 20),
-                            Expanded(
-                              flex: 4,
-                              child: Column(
-                                children: [
-                                  _buildStreakSummaryCard(context, student, l10n),
-                                  const SizedBox(height: 16),
-                                  const WotdWidget(),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                    ] else ...[
-                      _buildHeroBanner(context, displayName, student, l10n),
-                      const SizedBox(height: 24),
-                      if (currentRole == UserRole.learner) ...[
-                        _buildStreakSummaryCard(context, student, l10n),
-                        const SizedBox(height: 24),
-                        const WotdWidget(),
-                        const SizedBox(height: 24),
-                      ] else ...[
-                        const WotdWidget(),
-                        const SizedBox(height: 24),
-                      ],
-                    ],
-                    if (currentRole == UserRole.learner) ...[
-                      _buildDailyQuests(context, questsAsync, ref, l10n),
-                      const SizedBox(height: 24),
-                      _buildCurrentLessonCard(context, l10n),
-                      const SizedBox(height: 24),
-                      _buildChallengeHub(context, l10n),
-                      const SizedBox(height: 24),
-                    ],
-                    _buildLeaderboardHeader(context, l10n),
-                    const SizedBox(height: 16),
-                    _buildClimbersList(context, ref, l10n),
-                    const SizedBox(height: 40),
-                  ],
-                ),
+    return profileAsync.when(
+      loading: () => Scaffold(
+        backgroundColor: Colors.transparent,
+        body: BrandBackground(
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                children: const [
+                  SizedBox(height: 20),
+                  AppShimmerSkeleton(height: 140, borderRadius: 32),
+                  SizedBox(height: 24),
+                  AppShimmerSkeleton(height: 100, borderRadius: 24),
+                  SizedBox(height: 24),
+                  AppShimmerSkeleton(height: 180, borderRadius: 24),
+                ],
               ),
             ),
           ),
         ),
-        if (_showBurst)
-          CrystalBurstAnimation(
-            onComplete: () => setState(() => _showBurst = false),
+      ),
+      error: (err, stack) => Scaffold(
+        backgroundColor: Colors.transparent,
+        body: BrandBackground(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Text(
+                'Error loading dashboard: $err',
+                style: AppTypography.body.copyWith(color: Colors.white),
+                textAlign: TextAlign.center,
+              ),
+            ),
           ),
-      ],
+        ),
+      ),
+      data: (profile) {
+        final displayName = profile?['username'] ?? l10n.translate('tribe_member');
+        return Stack(
+          children: [
+            Scaffold(
+              backgroundColor: Colors.transparent,
+              body: BrandBackground(
+                child: SafeArea(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isDesktop ? 32 : 20,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 16),
+                        _buildSyncIndicator(ref, l10n),
+                        _buildConflictBanner(ref, l10n),
+                        const SizedBox(height: 16),
+                        if (isDesktop && currentRole == UserRole.learner) ...[
+                          IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  flex: 6,
+                                  child: _buildHeroBanner(context, displayName, student, l10n),
+                                ),
+                                const SizedBox(width: 20),
+                                Expanded(
+                                  flex: 4,
+                                  child: Column(
+                                    children: [
+                                      _buildStreakSummaryCard(context, student, l10n),
+                                      const SizedBox(height: 16),
+                                      const WotdWidget(),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ] else ...[
+                          _buildHeroBanner(context, displayName, student, l10n),
+                          const SizedBox(height: 24),
+                          if (currentRole == UserRole.learner) ...[
+                            _buildStreakSummaryCard(context, student, l10n),
+                            const SizedBox(height: 24),
+                            const WotdWidget(),
+                            const SizedBox(height: 24),
+                          ] else ...[
+                            const WotdWidget(),
+                            const SizedBox(height: 24),
+                          ],
+                        ],
+                        if (currentRole == UserRole.learner) ...[
+                          _buildDailyQuests(context, questsAsync, ref, l10n),
+                          const SizedBox(height: 24),
+                          _buildCurrentLessonCard(context, l10n),
+                          const SizedBox(height: 24),
+                          _buildChallengeHub(context, l10n),
+                          const SizedBox(height: 24),
+                        ],
+                        _buildLeaderboardHeader(context, l10n),
+                        const SizedBox(height: 16),
+                        _buildClimbersList(context, ref, l10n),
+                        const SizedBox(height: 40),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            if (_showBurst)
+              CrystalBurstAnimation(
+                onComplete: () => setState(() => _showBurst = false),
+              ),
+          ],
+        );
+      },
     );
   }
 

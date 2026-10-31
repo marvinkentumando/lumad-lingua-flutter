@@ -46,6 +46,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   AudioComparisonState _state = AudioComparisonState.idle;
   double _scorePercentage = 0.0;
   int _currentIndex = 0;
+  int _selectedTakeIndex = 0;
   bool _isShuffled = false;
   List<SupabaseDatasetEntry> _items = [];
   bool _isLoadingNativeAudio = false;
@@ -91,12 +92,14 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     super.dispose();
   }
 
-  Future<void> _playNativeAudio(String url) async {
-    if (url.isEmpty) return;
+  Future<void> _playNativeAudio(SupabaseDatasetEntry item) async {
+    if (item.takes.isEmpty) return;
+    final take = item.takes[_selectedTakeIndex.clamp(0, item.takes.length - 1)];
+    if (take.audioUrl.isEmpty) return;
     setState(() => _isLoadingNativeAudio = true);
     try {
       await _userPlayer.stop();
-      final resolvedUrl = ref.read(supabaseStorageServiceProvider).getAudioUrl(url);
+      final resolvedUrl = ref.read(supabaseStorageServiceProvider).getAudioUrl(take.audioUrl);
       await _nativePlayer.stop();
       await _nativePlayer.play(ap.UrlSource(resolvedUrl));
     } catch (e) {
@@ -153,6 +156,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       _stopAllAudioAndRecording();
       setState(() {
         _currentIndex++;
+        _selectedTakeIndex = 0;
         _state = AudioComparisonState.idle;
         _scorePercentage = 0.0;
         _recordedFilePath = null;
@@ -170,6 +174,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       _stopAllAudioAndRecording();
       setState(() {
         _currentIndex--;
+        _selectedTakeIndex = 0;
         _state = AudioComparisonState.idle;
         _scorePercentage = 0.0;
         _recordedFilePath = null;
@@ -189,6 +194,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       _isShuffled = !_isShuffled;
       _items.shuffle();
       _currentIndex = 0;
+      _selectedTakeIndex = 0;
       _state = AudioComparisonState.idle;
       _scorePercentage = 0.0;
       _recordedFilePath = null;
@@ -479,6 +485,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     if (_state != AudioComparisonState.recorded && _state != AudioComparisonState.playing) return;
 
     final currentItem = _items[_currentIndex];
+    final take = currentItem.takes[_selectedTakeIndex.clamp(0, currentItem.takes.length - 1)];
+
     HapticService.selection();
 
     await _userPlayer.stop();
@@ -524,11 +532,11 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         return;
       }
 
-      // 2. Load & decode native reference audio
+      // 2. Load & decode native reference audio for the selected take
       Uint8List nativeBytes;
       File? nativeFile;
 
-      final resolvedNativeUrl = ref.read(supabaseStorageServiceProvider).getAudioUrl(currentItem.referenceAudioUrl);
+      final resolvedNativeUrl = ref.read(supabaseStorageServiceProvider).getAudioUrl(take.audioUrl);
 
       if (kIsWeb) {
         final response = await http.get(Uri.parse(resolvedNativeUrl)).timeout(const Duration(seconds: 15));
@@ -539,7 +547,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         }
       } else {
         final directory = await getTemporaryDirectory();
-        final sanitizedFolder = currentItem.folderName.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
+        final sanitizedFolder = '${currentItem.folderName}_take${take.takeNumber}'.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
         nativeFile = File('${directory.path}/ref_$sanitizedFolder.wav');
 
         bool needsDownload = true;
@@ -570,7 +578,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       // 3. Compare using algorithm-independent request interface & Recommended (v1) preprocessing
       final request = PronunciationComparisonRequest(
         vocabularyId: currentItem.folderName,
-        referenceAudioPath: currentItem.referenceAudioPath,
+        referenceAudioPath: take.audioPath,
         referenceAudioFile: nativeFile,
         learnerAudioFile: learnerFile,
         referencePcmSamples: nativePcm,
@@ -578,8 +586,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         metadata: PronunciationAudioMetadata(
           sampleRate: 16000,
           numChannels: 1,
-          runId: currentItem.runId,
-          configHash: '3140166e41dc4be9',
+          runId: take.runId,
+          configHash: '3140166e41dc4be90fd4814f8ff45360dfee58612e52e9a8aa381c2a99808a21',
         ),
       );
 
@@ -709,6 +717,10 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   }
 
   Widget _buildDatasetBadge(SupabaseDatasetEntry item) {
+    final take = item.takes.isNotEmpty ? item.takes[_selectedTakeIndex.clamp(0, item.takes.length - 1)] : null;
+    final runId = take?.runId ?? item.runId;
+    final takeNum = take?.takeNumber ?? 1;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
@@ -722,7 +734,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           const Icon(Icons.verified_rounded, size: 14, color: AppColors.gold500),
           const SizedBox(width: 6),
           Text(
-            'REF: ${item.runId} • 16kHz WAV',
+            'REF: $runId • Take $takeNum • 16kHz WAV',
             style: AppTypography.mono.copyWith(color: AppColors.gold500, fontSize: 10, fontWeight: FontWeight.bold),
           ),
         ],
@@ -768,11 +780,42 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
                   _isLoadingNativeAudio
                       ? const SizedBox(width: 40, height: 40, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.gold500))
                       : IconButton(
-                          onPressed: () => _playNativeAudio(item.referenceAudioUrl),
+                          onPressed: () => _playNativeAudio(item),
                           icon: const Icon(Icons.play_circle_fill_rounded, color: AppColors.gold500, size: 40),
                         ),
                 ],
               ),
+              if (item.takes.length > 1) ...[
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(item.takes.length, (i) {
+                    final isSelected = i == _selectedTakeIndex;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: ChoiceChip(
+                        label: Text('Take ${item.takes[i].takeNumber}'),
+                        selected: isSelected,
+                        selectedColor: AppColors.gold500,
+                        backgroundColor: Colors.white24,
+                        labelStyle: TextStyle(
+                          color: isSelected ? Colors.black : Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() {
+                              _selectedTakeIndex = i;
+                            });
+                            HapticService.selection();
+                          }
+                        },
+                      ),
+                    );
+                  }),
+                ),
+              ],
               if (_nativeVisualWaveform.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 _buildSimpleWaveformCanvas(_nativeVisualWaveform, AppColors.gold500),

@@ -1,36 +1,55 @@
 import 'dart:math';
 
 /// A service to extract Mel-Frequency Cepstral Coefficients (MFCC) from audio samples.
-/// This implementation provides a pure Dart way to analyze audio spectral features.
+/// This implementation provides a pure Dart way to analyze audio spectral features
+/// using the approved recommended_v1 configuration:
+/// - Sample rate: 16,000 Hz
+/// - Frame length: 25 ms (400 samples)
+/// - Frame hop: 10 ms (160 samples)
+/// - Mel filterbanks: 23
+/// - MFCC coefficients: 13 static
+/// - Frequency range: 20 Hz to 8,000 Hz (Nyquist)
+/// - Pre-emphasis: 0.97
+/// - Window function: Hamming
+/// - Delta features: Delta (width 2) + Delta-Delta (width 2)
+/// - Feature normalization: CMVN (Cepstral Mean and Variance Normalization)
+/// Total output feature dimension per frame: 39 (13 static + 13 delta + 13 delta-delta).
 class MFCCService {
   static const int sampleRate = 16000;
-  static const int frameSize = 512;
-  static const int frameStride = 256;
-  static const int numFilters = 26;
-  static const int numCepstral = 13;
+  static const int frameSize = 400; // 25 ms at 16,000 Hz
+  static const int frameStride = 160; // 10 ms at 16,000 Hz
+  static const int numFilters = 23; // 23 Mel filters
+  static const int numCepstral = 13; // 13 MFCC coefficients
+  static const double fMinHz = 20.0; // 20 Hz minimum frequency
+  static const double preEmphasisAlpha = 0.97;
+  static const int deltaWidth = 2; // Delta width = 2
 
-  /// Extracts MFCC features from a list of audio samples.
+  /// Extracts MFCC features (static + delta + delta-delta with CMVN) from audio samples.
   /// Expects normalized PCM samples (-1.0 to 1.0).
+  /// Returns a matrix of shape [T x 39] where T is the number of frames.
   static List<List<double>> extractMFCC(List<double> samples) {
     if (samples.isEmpty) return [];
 
-    // 1. Pre-emphasis
-    final preEmphasized = _preEmphasis(samples);
+    // Sanitize input samples (replace non-finite values with 0.0)
+    final sanitized = samples.map((s) => s.isFinite ? s : 0.0).toList();
 
-    // 2. Framing
+    // 1. Pre-emphasis (alpha = 0.97)
+    final preEmphasized = _preEmphasis(sanitized, preEmphasisAlpha);
+
+    // 2. Framing (frameSize = 400, frameStride = 160)
     final frames = _createFrames(preEmphasized);
+    if (frames.isEmpty) return [];
 
-    List<List<double>> mfccFeatures = [];
+    List<List<double>> staticMFCCs = [];
 
     for (var frame in frames) {
       // 3. Windowing (Hamming)
       final windowedFrame = _applyHammingWindow(frame);
 
-      // 4. Power Spectrum (simplified FFT-like approach for prototype if full FFT is not available)
-      // In a real implementation, we'd use a real-to-complex FFT here.
+      // 4. Power Spectrum (FFT / DFT)
       final powerSpectrum = _calculatePowerSpectrum(windowedFrame);
 
-      // 5. Filter Banks
+      // 5. Filter Banks (23 Mel filters, 20 Hz to 8000 Hz)
       final filterBanks = _applyMelFilterBanks(powerSpectrum);
 
       // 6. Log Filter Banks
@@ -39,14 +58,36 @@ class MFCCService {
       // 7. DCT (Discrete Cosine Transform)
       final cepstralCoefficients = _applyDCT(logFilterBanks);
 
-      // Take only the first numCepstral coefficients (usually 13)
-      mfccFeatures.add(cepstralCoefficients.take(numCepstral).toList());
+      // Take only the first numCepstral coefficients (13)
+      staticMFCCs.add(cepstralCoefficients.take(numCepstral).toList());
     }
 
-    return mfccFeatures;
+    if (staticMFCCs.isEmpty) return [];
+
+    // 8. Compute Delta features (delta width = 2)
+    final delta1 = _computeDeltas(staticMFCCs, deltaWidth);
+
+    // 9. Compute Delta-Delta (Acceleration) features (delta width = 2)
+    final delta2 = _computeDeltas(delta1, deltaWidth);
+
+    // 10. Concatenate static (13), delta (13), and delta-delta (13) -> 39 features/frame
+    List<List<double>> combinedFeatures = [];
+    for (int t = 0; t < staticMFCCs.length; t++) {
+      combinedFeatures.add([
+        ...staticMFCCs[t],
+        ...delta1[t],
+        ...delta2[t],
+      ]);
+    }
+
+    // 11. Apply CMVN (Cepstral Mean and Variance Normalization)
+    final normalizedFeatures = _applyCMVN(combinedFeatures);
+
+    return normalizedFeatures;
   }
 
-  static List<double> _preEmphasis(List<double> samples, [double alpha = 0.97]) {
+  static List<double> _preEmphasis(List<double> samples, double alpha) {
+    if (samples.isEmpty) return [];
     List<double> result = List.filled(samples.length, 0.0);
     result[0] = samples[0];
     for (int i = 1; i < samples.length; i++) {
@@ -64,24 +105,22 @@ class MFCCService {
   }
 
   static List<double> _applyHammingWindow(List<double> frame) {
-    return List.generate(frame.length, (i) {
-      double multiplier = 0.54 - 0.46 * cos(2 * pi * i / (frame.length - 1));
+    final length = frame.length;
+    if (length <= 1) return List.from(frame);
+    return List.generate(length, (i) {
+      double multiplier = 0.54 - 0.46 * cos(2 * pi * i / (length - 1));
       return frame[i] * multiplier;
     });
   }
 
-  /// Simplified Power Spectrum calculation using a basic DFT
-  /// Note: For production, a fast FFT implementation is required.
   static List<double> _calculatePowerSpectrum(List<double> frame) {
     int n = frame.length;
     int spectrumSize = n ~/ 2 + 1;
     List<double> powerSpectrum = List.filled(spectrumSize, 0.0);
 
-    // Naive DFT (Slow, but functional for demonstration)
-    // Real-world: use an FFT library
     for (int k = 0; k < spectrumSize; k++) {
-      double real = 0;
-      double imag = 0;
+      double real = 0.0;
+      double imag = 0.0;
       for (int t = 0; t < n; t++) {
         double angle = 2 * pi * k * t / n;
         real += frame[t] * cos(angle);
@@ -93,11 +132,9 @@ class MFCCService {
   }
 
   static List<double> _applyMelFilterBanks(List<double> powerSpectrum) {
-    // This is a simplified Mel filter bank application
-    // In a real implementation, we would pre-calculate the Mel filters.
-    double lowMel = _hzToMel(300);
+    double lowMel = _hzToMel(fMinHz);
     double highMel = _hzToMel(sampleRate / 2);
-    
+
     List<double> melPoints = List.generate(numFilters + 2, (i) {
       return _melToHz(lowMel + i * (highMel - lowMel) / (numFilters + 1));
     });
@@ -131,6 +168,76 @@ class MFCCService {
       result[i] = sum;
     }
     return result;
+  }
+
+  /// Computes delta coefficients for feature matrix with specified width (default = 2).
+  static List<List<double>> _computeDeltas(List<List<double>> features, int width) {
+    if (features.isEmpty) return [];
+
+    final numFrames = features.length;
+    final numFeatures = features[0].length;
+    final deltas = List.generate(
+      numFrames,
+      (_) => List<double>.filled(numFeatures, 0.0),
+    );
+
+    double denominator = 0.0;
+    for (int n = 1; n <= width; n++) {
+      denominator += n * n;
+    }
+    denominator *= 2.0;
+
+    for (int t = 0; t < numFrames; t++) {
+      for (int d = 0; d < numFeatures; d++) {
+        double sum = 0.0;
+        for (int n = 1; n <= width; n++) {
+          final posIndex = (t + n).clamp(0, numFrames - 1);
+          final negIndex = (t - n).clamp(0, numFrames - 1);
+          sum += n * (features[posIndex][d] - features[negIndex][d]);
+        }
+        final val = sum / denominator;
+        deltas[t][d] = val.isFinite ? val : 0.0;
+      }
+    }
+
+    return deltas;
+  }
+
+  /// Applies Cepstral Mean and Variance Normalization (CMVN) across frames.
+  static List<List<double>> _applyCMVN(List<List<double>> featureMatrix) {
+    if (featureMatrix.isEmpty) return [];
+
+    final numFrames = featureMatrix.length;
+    final numFeatures = featureMatrix[0].length;
+    final normalized = List.generate(
+      numFrames,
+      (_) => List<double>.filled(numFeatures, 0.0),
+    );
+
+    const double epsilon = 1e-10;
+
+    for (int d = 0; d < numFeatures; d++) {
+      double sum = 0.0;
+      for (int t = 0; t < numFrames; t++) {
+        sum += featureMatrix[t][d];
+      }
+      final mean = sum / numFrames;
+
+      double sumSqDiff = 0.0;
+      for (int t = 0; t < numFrames; t++) {
+        final diff = featureMatrix[t][d] - mean;
+        sumSqDiff += diff * diff;
+      }
+      final variance = sumSqDiff / numFrames;
+      final stdDev = sqrt(variance + epsilon);
+
+      for (int t = 0; t < numFrames; t++) {
+        final val = (featureMatrix[t][d] - mean) / stdDev;
+        normalized[t][d] = val.isFinite ? val : 0.0;
+      }
+    }
+
+    return normalized;
   }
 
   /// Calculates DTW distance between two MFCC feature sets.

@@ -26,13 +26,13 @@ class PronunciationAudioMetadata {
   final int sampleRate; // e.g. 16000
   final int numChannels; // e.g. 1 (mono)
   final String runId; // e.g. "RUN-2026-0004"
-  final String configHash; // e.g. "3140166e41dc4be9"
+  final String configHash; // e.g. "3140166e41dc4be90fd4814f8ff45360dfee58612e52e9a8aa381c2a99808a21"
 
   PronunciationAudioMetadata({
     this.sampleRate = 16000,
     this.numChannels = 1,
     this.runId = 'RUN-2026-0004',
-    this.configHash = '3140166e41dc4be9',
+    this.configHash = '3140166e41dc4be90fd4814f8ff45360dfee58612e52e9a8aa381c2a99808a21',
   });
 }
 
