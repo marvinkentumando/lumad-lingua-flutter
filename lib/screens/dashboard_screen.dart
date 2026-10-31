@@ -112,11 +112,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ),
       data: (profile) {
         final displayName = profile?['username'] ?? l10n.translate('tribe_member');
-        return Stack(
-          children: [
-            Scaffold(
-              backgroundColor: Colors.transparent,
-              body: BrandBackground(
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Stack(
+            children: [
+              BrandBackground(
                 child: SafeArea(
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
@@ -182,12 +182,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                 ),
               ),
-            ),
-            if (_showBurst)
-              CrystalBurstAnimation(
-                onComplete: () => setState(() => _showBurst = false),
-              ),
-          ],
+              if (_showBurst)
+                Positioned.fill(
+                  child: CrystalBurstAnimation(
+                    onComplete: () => setState(() => _showBurst = false),
+                  ),
+                ),
+            ],
+          ),
         );
       },
     );
