@@ -233,11 +233,6 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                     ],
                   );
                 },
-                          isDark: Theme.of(context).brightness == Brightness.dark,
-                        ),
-                    ],
-                  );
-                },
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (err, stack) => Center(
                   child: Text(

@@ -11,8 +11,8 @@ class RoleNotifier extends Notifier<UserRole> {
     final isSimulating = ref.watch(isSimulatingProvider);
     if (isSimulating) return UserRole.learner;
 
-    final claimRole = ref.watch(userRoleClaimProvider).value?.toLowerCase();
-    final profileRole = ref.watch(userProfileProvider).value?['role']?.toString().toLowerCase();
+    final claimRole = ref.watch(userRoleClaimProvider).valueOrNull?.toLowerCase();
+    final profileRole = ref.watch(userProfileProvider).valueOrNull?['role']?.toString().toLowerCase();
 
     final roleString = (claimRole != null && claimRole.isNotEmpty) ? claimRole : profileRole;
 

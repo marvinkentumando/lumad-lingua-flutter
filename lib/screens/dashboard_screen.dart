@@ -131,27 +131,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         _buildConflictBanner(ref, l10n),
                         const SizedBox(height: 16),
                         if (isDesktop && currentRole == UserRole.learner) ...[
-                          IntrinsicHeight(
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Expanded(
-                                  flex: 6,
-                                  child: _buildHeroBanner(context, displayName, student, l10n),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                flex: 6,
+                                child: _buildHeroBanner(context, displayName, student, l10n),
+                              ),
+                              const SizedBox(width: 20),
+                              Expanded(
+                                flex: 4,
+                                child: Column(
+                                  children: [
+                                    _buildStreakSummaryCard(context, student, l10n),
+                                    const SizedBox(height: 16),
+                                    const WotdWidget(),
+                                  ],
                                 ),
-                                const SizedBox(width: 20),
-                                Expanded(
-                                  flex: 4,
-                                  child: Column(
-                                    children: [
-                                      _buildStreakSummaryCard(context, student, l10n),
-                                      const SizedBox(height: 16),
-                                      const WotdWidget(),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 24),
                         ] else ...[

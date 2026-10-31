@@ -6,6 +6,10 @@ import '../services/haptic_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
 
+int _calendarDaysBetween(DateTime a, DateTime b) {
+  return DateTime(a.year, a.month, a.day).difference(DateTime(b.year, b.month, b.day)).inDays;
+}
+
 class StudentState {
   final int mistCrystals;
   final int xp;
@@ -126,7 +130,7 @@ class StudentNotifier extends Notifier<StudentState> {
 
     Map<String, dynamic> progress = {};
     if (user != null) {
-      progress = ref.watch(userProgressStreamProvider(user.uid)).value ?? {};
+      progress = ref.watch(userProgressStreamProvider(user.uid)).valueOrNull ?? {};
     }
 
     if (profile != null && profile.isNotEmpty) {
