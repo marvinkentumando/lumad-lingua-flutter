@@ -123,10 +123,18 @@ class StudentState {
 }
 
 class StudentNotifier extends Notifier<StudentState> {
+  int _buildVersion = 0;
+  bool _disposed = false;
+
   @override
   StudentState build() {
-    final profile = ref.watch(userProfileProvider).value;
-    final user = ref.watch(authStateProvider).value;
+    _disposed = false;
+    ref.onDispose(() => _disposed = true);
+
+    final currentVersion = ++_buildVersion;
+    final offlineService = ref.read(offlineServiceProvider);
+    final profile = ref.watch(userProfileProvider).valueOrNull;
+    final user = ref.watch(authStateProvider).valueOrNull;
 
     Map<String, dynamic> progress = {};
     if (user != null) {
@@ -177,37 +185,46 @@ class StudentNotifier extends Notifier<StudentState> {
         equippedFrame: profile['equippedFrame'] as String?,
       );
 
-      Future.microtask(() => _persistLocalState());
+      Future.microtask(() {
+        if (!_disposed && currentVersion == _buildVersion) {
+          _persistLocalStateWithService(offlineService, newState);
+        }
+      });
       return newState;
     }
 
-    // Offline fallback: load cached student profile from Hive
-    Future.microtask(() async {
-      final cached = await ref.read(offlineServiceProvider).getCachedStudentProfile();
-      if (cached != null && state.xp == 0 && state.mistCrystals == 0) {
-        DateTime? cachedActive;
-        if (cached['lastActive'] is String) {
-          cachedActive = DateTime.tryParse(cached['lastActive']);
+    // Offline fallback: load cached student profile from Hive when profile is not available
+    if (user == null) {
+      Future.microtask(() async {
+        final cached = await offlineService.getCachedStudentProfile();
+        // Guard against disposal or stale callback if provider rebuilt
+        if (_disposed || currentVersion != _buildVersion) return;
+
+        if (cached != null && state.xp == 0 && state.mistCrystals == 0) {
+          DateTime? cachedActive;
+          if (cached['lastActive'] is String) {
+            cachedActive = DateTime.tryParse(cached['lastActive']);
+          }
+          DateTime? cachedBrokenAt;
+          if (cached['streakBrokenAt'] is String) {
+            cachedBrokenAt = DateTime.tryParse(cached['streakBrokenAt']);
+          }
+          state = StudentState(
+            mistCrystals: cached['mistCrystals'] ?? 0,
+            xp: cached['xp'] ?? 0,
+            dailyStreak: cached['streak'] ?? 0,
+            previousStreak: cached['previousStreak'] ?? 0,
+            streakBrokenAt: cachedBrokenAt,
+            hearts: cached['hearts'] ?? 5,
+            streakShields: cached['streakShields'] ?? 0,
+            lessonProgress: progress,
+            lastActive: cachedActive,
+            activityMap: Map<String, bool>.from(cached['activityMap'] ?? {}),
+            claimedMilestones: List<int>.from(cached['claimedMilestones'] ?? []),
+          );
         }
-        DateTime? cachedBrokenAt;
-        if (cached['streakBrokenAt'] is String) {
-          cachedBrokenAt = DateTime.tryParse(cached['streakBrokenAt']);
-        }
-        state = StudentState(
-          mistCrystals: cached['mistCrystals'] ?? 0,
-          xp: cached['xp'] ?? 0,
-          dailyStreak: cached['streak'] ?? 0,
-          previousStreak: cached['previousStreak'] ?? 0,
-          streakBrokenAt: cachedBrokenAt,
-          hearts: cached['hearts'] ?? 5,
-          streakShields: cached['streakShields'] ?? 0,
-          lessonProgress: progress,
-          lastActive: cachedActive,
-          activityMap: Map<String, bool>.from(cached['activityMap'] ?? {}),
-          claimedMilestones: List<int>.from(cached['claimedMilestones'] ?? []),
-        );
-      }
-    });
+      });
+    }
 
     return StudentState(
       mistCrystals: 0,
@@ -225,19 +242,23 @@ class StudentNotifier extends Notifier<StudentState> {
   }
 
   void _persistLocalState() {
+    _persistLocalStateWithService(ref.read(offlineServiceProvider), state);
+  }
+
+  void _persistLocalStateWithService(OfflineService offlineService, StudentState stateToPersist) {
     try {
-      ref.read(offlineServiceProvider).saveCachedStudentProfile({
-        'mistCrystals': state.mistCrystals,
-        'xp': state.xp,
-        'streak': state.dailyStreak,
-        'previousStreak': state.previousStreak,
-        'streakBrokenAt': state.streakBrokenAt?.toIso8601String(),
-        'hearts': state.hearts,
-        'streakShields': state.streakShields,
-        'lastActive': state.lastActive?.toIso8601String(),
-        'claimedMilestones': state.claimedMilestones,
-        'activityMap': state.activityMap,
-        'equippedTitle': state.equippedTitle,
+      offlineService.saveCachedStudentProfile({
+        'mistCrystals': stateToPersist.mistCrystals,
+        'xp': stateToPersist.xp,
+        'streak': stateToPersist.dailyStreak,
+        'previousStreak': stateToPersist.previousStreak,
+        'streakBrokenAt': stateToPersist.streakBrokenAt?.toIso8601String(),
+        'hearts': stateToPersist.hearts,
+        'streakShields': stateToPersist.streakShields,
+        'lastActive': stateToPersist.lastActive?.toIso8601String(),
+        'claimedMilestones': stateToPersist.claimedMilestones,
+        'activityMap': stateToPersist.activityMap,
+        'equippedTitle': stateToPersist.equippedTitle,
         'equippedBadge': state.equippedBadge,
         'equippedFrame': state.equippedFrame,
       });

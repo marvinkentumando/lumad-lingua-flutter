@@ -116,68 +116,70 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           backgroundColor: Colors.transparent,
           body: Stack(
             children: [
-              BrandBackground(
-                child: SafeArea(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isDesktop ? 32 : 20,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 16),
-                        _buildSyncIndicator(ref, l10n),
-                        _buildConflictBanner(ref, l10n),
-                        const SizedBox(height: 16),
-                        if (isDesktop && currentRole == UserRole.learner) ...[
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                flex: 6,
-                                child: _buildHeroBanner(context, displayName, student, l10n),
-                              ),
-                              const SizedBox(width: 20),
-                              Expanded(
-                                flex: 4,
-                                child: Column(
-                                  children: [
-                                    _buildStreakSummaryCard(context, student, l10n),
-                                    const SizedBox(height: 16),
-                                    const WotdWidget(),
-                                  ],
+              Positioned.fill(
+                child: BrandBackground(
+                  child: SafeArea(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isDesktop ? 32 : 20,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 16),
+                          _buildSyncIndicator(ref, l10n),
+                          _buildConflictBanner(ref, l10n),
+                          const SizedBox(height: 16),
+                          if (isDesktop && currentRole == UserRole.learner) ...[
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  flex: 6,
+                                  child: _buildHeroBanner(context, displayName, student, l10n),
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                        ] else ...[
-                          _buildHeroBanner(context, displayName, student, l10n),
-                          const SizedBox(height: 24),
-                          if (currentRole == UserRole.learner) ...[
-                            _buildStreakSummaryCard(context, student, l10n),
-                            const SizedBox(height: 24),
-                            const WotdWidget(),
+                                const SizedBox(width: 20),
+                                Expanded(
+                                  flex: 4,
+                                  child: Column(
+                                    children: [
+                                      _buildStreakSummaryCard(context, student, l10n),
+                                      const SizedBox(height: 16),
+                                      const WotdWidget(),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                             const SizedBox(height: 24),
                           ] else ...[
-                            const WotdWidget(),
+                            _buildHeroBanner(context, displayName, student, l10n),
+                            const SizedBox(height: 24),
+                            if (currentRole == UserRole.learner) ...[
+                              _buildStreakSummaryCard(context, student, l10n),
+                              const SizedBox(height: 24),
+                              const WotdWidget(),
+                              const SizedBox(height: 24),
+                            ] else ...[
+                              const WotdWidget(),
+                              const SizedBox(height: 24),
+                            ],
+                          ],
+                          if (currentRole == UserRole.learner) ...[
+                            _buildDailyQuests(context, questsAsync, ref, l10n),
+                            const SizedBox(height: 24),
+                            _buildCurrentLessonCard(context, l10n),
+                            const SizedBox(height: 24),
+                            _buildChallengeHub(context, l10n),
                             const SizedBox(height: 24),
                           ],
+                          _buildLeaderboardHeader(context, l10n),
+                          const SizedBox(height: 16),
+                          _buildClimbersList(context, ref, l10n),
+                          const SizedBox(height: 40),
                         ],
-                        if (currentRole == UserRole.learner) ...[
-                          _buildDailyQuests(context, questsAsync, ref, l10n),
-                          const SizedBox(height: 24),
-                          _buildCurrentLessonCard(context, l10n),
-                          const SizedBox(height: 24),
-                          _buildChallengeHub(context, l10n),
-                          const SizedBox(height: 24),
-                        ],
-                        _buildLeaderboardHeader(context, l10n),
-                        const SizedBox(height: 16),
-                        _buildClimbersList(context, ref, l10n),
-                        const SizedBox(height: 40),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -299,7 +301,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       padding: EdgeInsets.zero,
       borderRadius: 32,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Text Content
           Expanded(
