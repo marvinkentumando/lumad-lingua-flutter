@@ -14,7 +14,6 @@ import '../services/haptic_service.dart';
 import '../providers/saved_words_provider.dart';
 import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 import '../widgets/brand_search_bar.dart';
-import '../widgets/pagination_bar.dart';
 import '../providers/search_history_provider.dart';
 import '../providers/dictionary_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -34,13 +33,14 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
   Timer? _debounce;
   String? _expandedWordId;
   late final TextEditingController _searchController;
-  int _currentPage = 1;
-  int _pageSize = 12;
+  late final ScrollController _scrollController;
+  int _visibleCount = 20;
 
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController(text: widget.initialQuery ?? '');
+    _scrollController = ScrollController()..addListener(_onScroll);
     if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(dictionaryFilterProvider.notifier).update(
@@ -50,8 +50,22 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
     }
   }
 
+  void _onScroll() {
+    if (_scrollController.hasClients &&
+        _scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 300) {
+      final items = ref.read(filteredDictionaryProvider).value ?? [];
+      if (_visibleCount < items.length) {
+        setState(() {
+          _visibleCount = (_visibleCount + 20).clamp(0, items.length);
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _searchController.dispose();
     _debounce?.cancel();
     super.dispose();
@@ -61,7 +75,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
       if (mounted) {
-        setState(() => _currentPage = 1);
+        setState(() => _visibleCount = 20);
         ref.read(dictionaryFilterProvider.notifier).update((s) => s.copyWith(query: query));
       }
     });
@@ -69,6 +83,12 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<DictionaryFilter>(dictionaryFilterProvider, (previous, next) {
+      if (previous != next) {
+        setState(() => _visibleCount = 20);
+      }
+    });
+
     final filteredAsync = ref.watch(filteredDictionaryProvider);
     final filter = ref.watch(dictionaryFilterProvider);
     final availablePos = ref.watch(availablePartOfSpeechProvider);
@@ -92,13 +112,9 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                 data: (srsList) {
                   final srsMap = {for (var s in srsList) s.wordId: s};
 
-                  final totalPages = (items.length / _pageSize).ceil().clamp(1, 9999);
-                  if (_currentPage > totalPages) {
-                    _currentPage = totalPages;
-                  }
-
-                  final startIndex = ((_currentPage - 1) * _pageSize).clamp(0, items.length);
-                  final pagedItems = items.skip(startIndex).take(_pageSize).toList();
+                  final displayCount = _visibleCount.clamp(0, items.length);
+                  final displayedItems = items.take(displayCount).toList();
+                  final hasMore = displayCount < items.length;
 
                   return Column(
                     children: [
@@ -136,6 +152,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                               )
                             : isDesktop
                                 ? GridView.builder(
+                                    controller: _scrollController,
                                     physics: const BouncingScrollPhysics(),
                                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -144,9 +161,24 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                                       mainAxisSpacing: 16,
                                       mainAxisExtent: _expandedWordId != null ? null : 200,
                                     ),
-                                    itemCount: pagedItems.length,
+                                    itemCount: displayedItems.length + (hasMore ? 1 : 0),
                                     itemBuilder: (context, i) {
-                                      final entry = pagedItems[i];
+                                      if (i == displayedItems.length) {
+                                        return const Padding(
+                                          padding: EdgeInsets.symmetric(vertical: 24),
+                                          child: Center(
+                                            child: SizedBox(
+                                              width: 24,
+                                              height: 24,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2.5,
+                                                color: AppColors.gold500,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                      final entry = displayedItems[i];
                                       final srs = srsMap[entry.id];
                                       return _DictionaryEntryCard(
                                         entry: entry,
@@ -162,11 +194,27 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                                     },
                                   )
                                 : ListView.builder(
+                                    controller: _scrollController,
                                     physics: const BouncingScrollPhysics(),
                                     padding: const EdgeInsets.symmetric(horizontal: 20),
-                                    itemCount: pagedItems.length,
+                                    itemCount: displayedItems.length + (hasMore ? 1 : 0),
                                     itemBuilder: (context, i) {
-                                      final entry = pagedItems[i];
+                                      if (i == displayedItems.length) {
+                                        return const Padding(
+                                          padding: EdgeInsets.symmetric(vertical: 24),
+                                          child: Center(
+                                            child: SizedBox(
+                                              width: 24,
+                                              height: 24,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2.5,
+                                                color: AppColors.gold500,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                      final entry = displayedItems[i];
                                       final srs = srsMap[entry.id];
                                       return _DictionaryEntryCard(
                                         entry: entry,
@@ -182,18 +230,9 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                                     },
                                   ),
                       ),
-                      if (items.isNotEmpty)
-                        PaginationBar(
-                          currentPage: _currentPage,
-                          totalPages: totalPages,
-                          totalItems: items.length,
-                          pageSize: _pageSize,
-                          pageSizeOptions: const [12, 24, 48, 96],
-                          onPageChanged: (p) => setState(() => _currentPage = p),
-                          onPageSizeChanged: (s) => setState(() {
-                            _pageSize = s;
-                            _currentPage = 1;
-                          }),
+                    ],
+                  );
+                },
                           isDark: Theme.of(context).brightness == Brightness.dark,
                         ),
                     ],

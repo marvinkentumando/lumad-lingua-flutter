@@ -143,6 +143,44 @@ void main() {
     });
   });
 
+  group('Atomic room joining claim validation (Race condition prevention)', () {
+    test('allows joining an unclaimed waiting room', () {
+      final data = {
+        'status': 'waiting',
+        'player1Id': 'p1',
+        'player2Id': null,
+      };
+      expect(DuelService.canClaimMatchData(data, 'p2'), isTrue);
+    });
+
+    test('prevents host from joining their own waiting room', () {
+      final data = {
+        'status': 'waiting',
+        'player1Id': 'p1',
+        'player2Id': null,
+      };
+      expect(DuelService.canClaimMatchData(data, 'p1'), isFalse);
+    });
+
+    test('prevents joining when status is active', () {
+      final data = {
+        'status': 'active',
+        'player1Id': 'p1',
+        'player2Id': null,
+      };
+      expect(DuelService.canClaimMatchData(data, 'p2'), isFalse);
+    });
+
+    test('prevents overwriting player2 when another player already claimed player2', () {
+      final data = {
+        'status': 'waiting',
+        'player1Id': 'p1',
+        'player2Id': 'p2',
+      };
+      expect(DuelService.canClaimMatchData(data, 'p3'), isFalse);
+    });
+  });
+
   group('DuelHistoryItem model integrity & serialization', () {
     test('converts toMap and fromMap accurately', () {
       final historyItem = DuelHistoryItem(

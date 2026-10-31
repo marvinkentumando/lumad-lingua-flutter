@@ -1233,43 +1233,63 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         ),
         const SizedBox(height: 16),
         Text(
-          'Words to Find',
+          'Words to Find (Max 12 letters per word)',
           style: AppTypography.label.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
           ),
         ),
         const SizedBox(height: 8),
         ...List.generate(options.length, (i) {
+          final word = options[i].toString();
+          final charCount = word.replaceAll(' ', '').length;
+          final isTooLong = charCount > 12;
+
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: EditorUtils.buildDataTextField(
-                    label: 'Word ${i + 1}',
-                    initialValue: options[i],
-                    onChanged: (val) {
-                      options[i] = val;
-                      setState(() {
-                        _saveStatus = SaveStatus.idle;
-                        _isDirty = true;
-                      });
-                    },
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: EditorUtils.buildDataTextField(
+                        label: 'Word ${i + 1}',
+                        initialValue: options[i],
+                        maxLength: 12,
+                        hint: 'e.g. MADYAW (Max 12 letters)',
+                        onChanged: (val) {
+                          options[i] = val;
+                          setState(() {
+                            _saveStatus = SaveStatus.idle;
+                            _isDirty = true;
+                          });
+                        },
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.remove_circle_outline,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          options.removeAt(i);
+                          _saveStatus = SaveStatus.idle;
+                          _isDirty = true;
+                        });
+                      },
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: Icon(
-                    Icons.remove_circle_outline,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                if (isTooLong)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 2, left: 4),
+                    child: Text(
+                      '⚠️ Word exceeds grid capacity (max 12 letters)',
+                      style: TextStyle(color: AppColors.semanticRed, fontSize: 11),
+                    ),
                   ),
-                  onPressed: () {
-                    setState(() {
-                      options.removeAt(i);
-                      _saveStatus = SaveStatus.idle;
-                      _isDirty = true;
-                    });
-                  },
-                ),
               ],
             ),
           );

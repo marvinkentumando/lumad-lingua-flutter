@@ -99,11 +99,7 @@ class StudentState {
   int get displayedStreak {
     if (lastActive == null) return dailyStreak;
     final now = DateTime.now();
-    final difference = DateTime(now.year, now.month, now.day)
-        .difference(
-          DateTime(lastActive!.year, lastActive!.month, lastActive!.day),
-        )
-        .inDays;
+    final difference = _calendarDaysBetween(now, lastActive!);
 
     if (difference > 1) {
       final missedDays = difference - 1;

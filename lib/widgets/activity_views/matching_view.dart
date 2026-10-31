@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
@@ -41,6 +42,20 @@ class _MatchingViewState extends State<MatchingView> {
             .where((s) => s.isNotEmpty)
             .toList()
           ..shuffle();
+  }
+
+  @override
+  void didUpdateWidget(MatchingView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!listEquals(oldWidget.pairs, widget.pairs)) {
+      setState(() {
+        _shuffledMeanings = widget.pairs
+            .map((p) => p['meaning'] ?? '')
+            .where((s) => s.isNotEmpty)
+            .toList()
+          ..shuffle();
+      });
+    }
   }
 
   @override

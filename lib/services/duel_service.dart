@@ -123,6 +123,16 @@ class DuelService {
     return _createMatch(userId, userProfile, questions);
   }
 
+  /// Returns true if a waiting match document can be atomically claimed by [userId].
+  /// Requires status to be 'waiting', player1Id != userId, and player2Id to be null/empty.
+  static bool canClaimMatchData(Map<String, dynamic> data, String userId) {
+    if (data['status'] != DuelStatus.waiting.name) return false;
+    if (data['player1Id'] == userId) return false;
+    final player2Id = data['player2Id'] as String?;
+    if (player2Id != null && player2Id.isNotEmpty) return false;
+    return true;
+  }
+
   Future<bool> _tryClaimWaitingMatch(
     DocumentReference<Map<String, dynamic>> matchRef,
     String userId,
@@ -136,8 +146,7 @@ class DuelService {
         final data = snapshot.data()!;
         // Re-verify inside the transaction: this is what makes the claim
         // race-free between two joiners.
-        if (data['status'] != DuelStatus.waiting.name) return;
-        if (data['player1Id'] == userId) return;
+        if (!canClaimMatchData(data, userId)) return;
 
         transaction.update(matchRef, {
           'player2Id': userId,

@@ -150,11 +150,19 @@ void main() {
       final syncingState = initialState.copyWith(
         isSyncing: true,
         conflicts: [conflict],
+        retryAttempt: 2,
       );
 
       expect(syncingState.isSyncing, isTrue);
       expect(syncingState.conflicts.length, equals(1));
       expect(syncingState.conflicts.first.lessonId, equals('lesson_101'));
+      expect(syncingState.retryAttempt, equals(2));
+    });
+
+    test('UploadQueueState retry attempt tracking defaults to 0', () {
+      final state = UploadQueueState();
+      expect(state.retryAttempt, equals(0));
+      expect(state.copyWith(retryAttempt: 5).retryAttempt, equals(5));
     });
   });
 

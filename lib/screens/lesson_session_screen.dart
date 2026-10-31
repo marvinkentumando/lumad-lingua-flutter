@@ -1333,14 +1333,28 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           onWordTap: (index, word) {
             HapticService.light();
             setState(() {
-              _availableParts.removeAt(index);
+              if (index >= 0 && index < _availableParts.length && _availableParts[index] == word) {
+                _availableParts.removeAt(index);
+              } else {
+                final targetIndex = _availableParts.indexOf(word);
+                if (targetIndex != -1) {
+                  _availableParts.removeAt(targetIndex);
+                }
+              }
               _scrambledParts.add(word);
             });
           },
           onScrambledWordTap: (index, word) {
             HapticService.light();
             setState(() {
-              _scrambledParts.removeAt(index);
+              if (index >= 0 && index < _scrambledParts.length && _scrambledParts[index] == word) {
+                _scrambledParts.removeAt(index);
+              } else {
+                final targetIndex = _scrambledParts.indexOf(word);
+                if (targetIndex != -1) {
+                  _scrambledParts.removeAt(targetIndex);
+                }
+              }
               _availableParts.add(word);
             });
           },
