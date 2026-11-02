@@ -891,11 +891,17 @@ class FirebaseService {
   }
 
   Future<void> bulkDeleteWords(List<String> ids) async {
-    final batch = _db.batch();
-    for (var id in ids) {
-      batch.delete(_db.collection('words').doc(id));
+    if (ids.isEmpty) return;
+    const chunkSize = 400;
+    for (var i = 0; i < ids.length; i += chunkSize) {
+      final end = (i + chunkSize < ids.length) ? i + chunkSize : ids.length;
+      final chunk = ids.sublist(i, end);
+      final batch = _db.batch();
+      for (var id in chunk) {
+        batch.delete(_db.collection('words').doc(id));
+      }
+      await batch.commit();
     }
-    await batch.commit();
   }
 
   // Bookmark Operations

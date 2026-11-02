@@ -203,6 +203,11 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.delete_sweep_rounded, color: AppColors.semanticRed),
+            tooltip: 'Delete All Words',
+            onPressed: () => _confirmDeleteAll(wordsAsync.value ?? []),
+          ),
+          IconButton(
             icon: const Icon(Icons.audio_file_rounded, color: AppColors.gold500),
             tooltip: 'Bulk Audio Import',
             onPressed: () => _showBulkAudioModal(context, _sortWords(wordsAsync.value ?? [])),
@@ -485,6 +490,87 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticRed),
             child: const Text('DELETE'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteAll(List<DictionaryEntry> words) {
+    if (words.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No dictionary words available to delete.')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? AppColors.forest800
+            : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: const [
+            Icon(Icons.warning_amber_rounded, color: AppColors.semanticRed, size: 28),
+            SizedBox(width: 8),
+            Text('Delete All Words?'),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to permanently delete all ${words.length} dictionary entries?\n\nThis action CANNOT BE UNDONE.',
+          style: TextStyle(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white70
+                : Colors.black87,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              HapticService.delete();
+              Navigator.of(dialogContext).pop();
+
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
+              scaffoldMessenger.showSnackBar(
+                SnackBar(
+                  content: Text('Deleting ${words.length} dictionary entries...'),
+                  duration: const Duration(seconds: 10),
+                ),
+              );
+
+              try {
+                final ids = words.map((w) => w.id).toList();
+                await ref.read(firebaseServiceProvider).bulkDeleteWords(ids);
+                ref.invalidate(dictionaryStreamProvider);
+
+                scaffoldMessenger.hideCurrentSnackBar();
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Successfully deleted all ${words.length} words.'),
+                    backgroundColor: AppColors.semanticGreen,
+                  ),
+                );
+              } catch (e) {
+                scaffoldMessenger.hideCurrentSnackBar();
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to delete entries: $e'),
+                    backgroundColor: AppColors.semanticRed,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.semanticRed,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('DELETE ALL (${words.length})'),
           ),
         ],
       ),
