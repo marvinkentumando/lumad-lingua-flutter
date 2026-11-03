@@ -19,6 +19,9 @@ import '../services/pronunciation_service.dart';
 import '../services/supabase_storage_service.dart';
 import '../services/supabase_dataset_service.dart';
 import '../models/supabase_dataset_entry.dart';
+import '../models/quest.dart';
+import '../providers/student_provider.dart';
+import '../providers/quest_provider.dart';
 import '../utils/wav_decoder.dart';
 import '../utils/app_localization.dart';
 
@@ -647,6 +650,12 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         if (_scorePercentage >= 60.0) {
           HapticService.success();
           try {
+            ref.read(studentProvider.notifier).addXp(15);
+            ref.read(questActionProvider.notifier).updateProgress(QuestType.pronunciation, 1);
+          } catch (e) {
+            debugPrint('Error awarding pronunciation XP: $e');
+          }
+          try {
             await _nativePlayer.play(ap.AssetSource('audio/success.MP3'));
           } catch (_) {}
         } else {
@@ -1171,14 +1180,15 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   Widget _buildResultCard(bool isDark, AppLocalization l10n) {
     final percentage = _scorePercentage.toInt();
 
-    Color scoreColor = AppColors.gold500;
+    // High contrast dark font colors for excellent legibility over gold card background
+    Color scoreColor = const Color(0xFF4E342E);
     String feedback = l10n.translate('feedback_good_effort');
 
     if (_scorePercentage >= 80.0) {
-      scoreColor = Colors.greenAccent;
+      scoreColor = const Color(0xFF1B5E20);
       feedback = l10n.translate('feedback_excellent');
     } else if (_scorePercentage < 60.0) {
-      scoreColor = Colors.orangeAccent;
+      scoreColor = const Color(0xFFBF360C);
       feedback = l10n.translate('feedback_needs_work');
     }
 
@@ -1187,48 +1197,59 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                l10n.translate('acoustic_match'),
-                style: AppTypography.label.copyWith(color: Colors.black54, fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.black12,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text('Candidate Model', style: TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.bold)),
-              ),
-            ],
+          Text(
+            l10n.translate('acoustic_match'),
+            style: AppTypography.label.copyWith(
+              color: Colors.black87,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.5,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             '$percentage%',
-            style: AppTypography.displayBold.copyWith(color: scoreColor, fontSize: 44),
+            style: AppTypography.displayBold.copyWith(
+              color: scoreColor,
+              fontSize: 52,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             feedback,
             textAlign: TextAlign.center,
-            style: AppTypography.body.copyWith(color: Colors.black87),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              'Candidate Model Score • XP awards disabled pending algorithm validation',
-              textAlign: TextAlign.center,
-              style: AppTypography.mono.copyWith(color: Colors.black87, fontSize: 10, fontWeight: FontWeight.bold),
+            style: AppTypography.body.copyWith(
+              color: Colors.black87,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
             ),
           ),
+          if (_scorePercentage >= 60.0) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1B5E20).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF1B5E20).withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.auto_awesome_rounded, size: 16, color: Color(0xFF1B5E20)),
+                  const SizedBox(width: 8),
+                  Text(
+                    '+15 XP Awarded!',
+                    style: AppTypography.label.copyWith(
+                      color: const Color(0xFF1B5E20),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

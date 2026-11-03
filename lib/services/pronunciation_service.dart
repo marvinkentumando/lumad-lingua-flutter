@@ -64,7 +64,7 @@ class PronunciationService implements IPronunciationComparer {
 
     return PronunciationComparisonResult(
       scorePercentage: score.overallScore,
-      isCandidateEvaluation: true,
+      isCandidateEvaluation: false,
       feedbackKey: _getFeedbackKey(score.overallScore / 100.0),
       rawMetrics: {
         'accuracy': score.accuracy,

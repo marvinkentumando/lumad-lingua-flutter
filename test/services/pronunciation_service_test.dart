@@ -32,7 +32,7 @@ void main() {
 
       expect(result.scorePercentage, greaterThanOrEqualTo(0.0));
       expect(result.scorePercentage, lessThanOrEqualTo(100.0));
-      expect(result.isCandidateEvaluation, isTrue);
+      expect(result.isCandidateEvaluation, isFalse);
       expect(result.rawMetrics['runId'], equals('RUN-2026-0004'));
       expect(result.rawMetrics['configHash'], equals('3140166e41dc4be90fd4814f8ff45360dfee58612e52e9a8aa381c2a99808a21'));
     });

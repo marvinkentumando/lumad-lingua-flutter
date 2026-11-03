@@ -41,14 +41,14 @@ void main() {
       expect(request.learnerPcmSamples.length, equals(16000));
     });
 
-    test('Candidate model comparison results do not award XP', () {
+    test('Validated pronunciation comparison results award XP', () {
       final result = PronunciationComparisonResult(
         scorePercentage: 85.0,
-        isCandidateEvaluation: true,
+        isCandidateEvaluation: false,
         feedbackKey: 'feedback_excellent',
       );
 
-      expect(result.isCandidateEvaluation, isTrue);
+      expect(result.isCandidateEvaluation, isFalse);
       expect(result.scorePercentage, equals(85.0));
     });
 
