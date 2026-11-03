@@ -21,7 +21,6 @@ import '../services/supabase_dataset_service.dart';
 import '../models/supabase_dataset_entry.dart';
 import '../utils/wav_decoder.dart';
 import '../utils/app_localization.dart';
-import '../services/pronunciation_comparer_interface.dart';
 
 enum AudioComparisonState {
   idle,       // Ready to start recording
@@ -46,7 +45,6 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   AudioComparisonState _state = AudioComparisonState.idle;
   double _scorePercentage = 0.0;
   int _currentIndex = 0;
-  int _selectedTakeIndex = 0;
   bool _isShuffled = false;
   List<SupabaseDatasetEntry> _items = [];
   bool _isLoadingNativeAudio = false;
@@ -94,7 +92,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
 
   Future<void> _playNativeAudio(SupabaseDatasetEntry item) async {
     if (item.takes.isEmpty) return;
-    final take = item.takes[_selectedTakeIndex.clamp(0, item.takes.length - 1)];
+    final take = item.primaryTake ?? item.takes.first;
     if (take.audioUrl.isEmpty) return;
     setState(() => _isLoadingNativeAudio = true);
     try {
@@ -115,6 +113,49 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     } finally {
       if (mounted) setState(() => _isLoadingNativeAudio = false);
     }
+  }
+
+  Future<List<double>> _fetchAndDecodeNativePcm(SupabaseDatasetEntry currentItem, ReferenceAudioTake take) async {
+    Uint8List nativeBytes;
+    File? nativeFile;
+
+    final resolvedNativeUrl = ref.read(supabaseStorageServiceProvider).getAudioUrl(take.audioUrl);
+
+    if (kIsWeb) {
+      final response = await http.get(Uri.parse(resolvedNativeUrl)).timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
+        nativeBytes = response.bodyBytes;
+      } else {
+        throw Exception('Failed to download reference WAV (HTTP ${response.statusCode})');
+      }
+    } else {
+      final directory = await getTemporaryDirectory();
+      final cacheFileName = buildReferenceCacheFileName(currentItem.folderName, take.runId, take.takeNumber);
+      nativeFile = File('${directory.path}/$cacheFileName');
+
+      bool needsDownload = true;
+      if (await nativeFile.exists()) {
+        if (await nativeFile.length() > 500) {
+          needsDownload = false;
+        } else {
+          await nativeFile.delete();
+        }
+      }
+
+      if (needsDownload) {
+        final response = await http.get(Uri.parse(resolvedNativeUrl)).timeout(const Duration(seconds: 15));
+        if (response.statusCode == 200) {
+          await nativeFile.writeAsBytes(response.bodyBytes);
+        } else {
+          throw Exception('Failed to download reference WAV (HTTP ${response.statusCode})');
+        }
+      }
+      nativeBytes = await nativeFile.readAsBytes();
+    }
+
+    final validNativeWav = WavDecoder.ensureWavBytes(nativeBytes);
+    final nativeWavResult = WavDecoder.decodeWavBytes(validNativeWav);
+    return nativeWavResult.pcmSamples;
   }
 
   Future<void> _playUserAudio() async {
@@ -485,7 +526,17 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     if (_state != AudioComparisonState.recorded && _state != AudioComparisonState.playing) return;
 
     final currentItem = _items[_currentIndex];
-    final take = currentItem.takes[_selectedTakeIndex.clamp(0, currentItem.takes.length - 1)];
+    if (!currentItem.isAvailable || !currentItem.isCompatible) {
+      if (mounted) {
+        setState(() {
+          _state = AudioComparisonState.error;
+          _errorMessage = 'Selected reference run is unverified or incompatible. Please select a verified compatible run.';
+        });
+      }
+      return;
+    }
+
+    final take1 = currentItem.primaryTake ?? currentItem.takes.firstWhere((t) => t.takeNumber == 1, orElse: () => currentItem.takes.first);
 
     HapticService.selection();
 
@@ -532,71 +583,41 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         return;
       }
 
-      // 2. Load & decode native reference audio for the selected take
-      Uint8List nativeBytes;
-      File? nativeFile;
+      // 2. Fetch & decode Take 1 PCM
+      final nativePcm1 = await _fetchAndDecodeNativePcm(currentItem, take1);
+      _nativeVisualWaveform = WavDecoder.extractVisualWaveform(nativePcm1, noOfSamples: 128);
 
-      final resolvedNativeUrl = ref.read(supabaseStorageServiceProvider).getAudioUrl(take.audioUrl);
-
-      if (kIsWeb) {
-        final response = await http.get(Uri.parse(resolvedNativeUrl)).timeout(const Duration(seconds: 15));
-        if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
-          nativeBytes = response.bodyBytes;
-        } else {
-          throw Exception('Failed to download reference WAV (HTTP ${response.statusCode})');
-        }
-      } else {
-        final directory = await getTemporaryDirectory();
-        final sanitizedFolder = '${currentItem.folderName}_take${take.takeNumber}'.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
-        nativeFile = File('${directory.path}/ref_$sanitizedFolder.wav');
-
-        bool needsDownload = true;
-        if (await nativeFile.exists()) {
-          if (await nativeFile.length() > 500) {
-            needsDownload = false;
-          } else {
-            await nativeFile.delete();
-          }
-        }
-
-        if (needsDownload) {
-          final response = await http.get(Uri.parse(resolvedNativeUrl)).timeout(const Duration(seconds: 15));
-          if (response.statusCode == 200) {
-            await nativeFile.writeAsBytes(response.bodyBytes);
-          } else {
-            throw Exception('Failed to download reference WAV (HTTP ${response.statusCode})');
-          }
-        }
-        nativeBytes = await nativeFile.readAsBytes();
-      }
-
-      final validNativeWav = WavDecoder.ensureWavBytes(nativeBytes);
-      final nativeWavResult = WavDecoder.decodeWavBytes(validNativeWav);
-      final nativePcm = nativeWavResult.pcmSamples;
-      _nativeVisualWaveform = WavDecoder.extractVisualWaveform(nativePcm, noOfSamples: 128);
-
-      // 3. Compare using algorithm-independent request interface & Recommended (v1) preprocessing
-      final request = PronunciationComparisonRequest(
-        vocabularyId: currentItem.folderName,
-        referenceAudioPath: take.audioPath,
-        referenceAudioFile: nativeFile,
-        learnerAudioFile: learnerFile,
-        referencePcmSamples: nativePcm,
-        learnerPcmSamples: learnerPcm,
-        metadata: PronunciationAudioMetadata(
-          sampleRate: 16000,
-          numChannels: 1,
-          runId: take.runId,
-          configHash: '3140166e41dc4be90fd4814f8ff45360dfee58612e52e9a8aa381c2a99808a21',
-        ),
+      // Compare against Take 1
+      final score1 = PronunciationService.analyzePronunciation(
+        nativePcm1,
+        learnerPcm,
+        strictness: PronunciationStrictness.normal,
+        algorithm: PronunciationAlgorithm.dtw,
       );
 
-      final comparer = PronunciationService();
-      final result = await comparer.compare(request);
+      double finalScore = score1.overallScore;
+
+      // Check if Take 2 exists for extra comparison accuracy
+      final take2 = currentItem.takes.where((t) => t.takeNumber == 2).firstOrNull;
+      if (take2 != null) {
+        try {
+          final nativePcm2 = await _fetchAndDecodeNativePcm(currentItem, take2);
+          final score2 = PronunciationService.analyzePronunciation(
+            nativePcm2,
+            learnerPcm,
+            strictness: PronunciationStrictness.normal,
+            algorithm: PronunciationAlgorithm.dtw,
+          );
+          // Average the comparison results between Take 1 and Take 2
+          finalScore = (score1.overallScore + score2.overallScore) / 2.0;
+        } catch (e2) {
+          debugPrint('Take 2 comparison skipped due to error: $e2');
+        }
+      }
 
       if (mounted) {
         setState(() {
-          _scorePercentage = result.scorePercentage;
+          _scorePercentage = finalScore;
           _state = AudioComparisonState.result;
         });
 
@@ -717,9 +738,9 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   }
 
   Widget _buildDatasetBadge(SupabaseDatasetEntry item) {
-    final take = item.takes.isNotEmpty ? item.takes[_selectedTakeIndex.clamp(0, item.takes.length - 1)] : null;
-    final runId = take?.runId ?? item.runId;
-    final takeNum = take?.takeNumber ?? 1;
+    final hasTake2 = item.takes.any((t) => t.takeNumber == 2);
+    final runId = item.runId;
+    final takeInfo = hasTake2 ? 'Take 1 (Default) + Take 2 (Averaged)' : 'Take 1';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -734,7 +755,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           const Icon(Icons.verified_rounded, size: 14, color: AppColors.gold500),
           const SizedBox(width: 6),
           Text(
-            'REF: $runId • Take $takeNum • 16kHz WAV',
+            'REF: $runId • $takeInfo • 16kHz WAV',
             style: AppTypography.mono.copyWith(color: AppColors.gold500, fontSize: 10, fontWeight: FontWeight.bold),
           ),
         ],
@@ -785,37 +806,6 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
                         ),
                 ],
               ),
-              if (item.takes.length > 1) ...[
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(item.takes.length, (i) {
-                    final isSelected = i == _selectedTakeIndex;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: ChoiceChip(
-                        label: Text('Take ${item.takes[i].takeNumber}'),
-                        selected: isSelected,
-                        selectedColor: AppColors.gold500,
-                        backgroundColor: Colors.white24,
-                        labelStyle: TextStyle(
-                          color: isSelected ? Colors.black : Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11,
-                        ),
-                        onSelected: (selected) {
-                          if (selected) {
-                            setState(() {
-                              _selectedTakeIndex = i;
-                            });
-                            HapticService.selection();
-                          }
-                        },
-                      ),
-                    );
-                  }),
-                ),
-              ],
               if (_nativeVisualWaveform.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 _buildSimpleWaveformCanvas(_nativeVisualWaveform, AppColors.gold500),
