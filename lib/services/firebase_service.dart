@@ -9,6 +9,7 @@ import '../models/lesson.dart';
 import '../models/lesson_task.dart';
 import '../models/admin_models.dart';
 import 'auth_service.dart';
+import 'offline_service.dart';
 import 'package:lumad_lingua/models/gallery_models.dart';
 import 'package:lumad_lingua/models/artifact.dart';
 import '../models/srs_models.dart';
@@ -712,6 +713,7 @@ class FirebaseService {
 
   Future<void> deleteWord(String id) async {
     await _db.collection('words').doc(id).delete();
+    await OfflineService().removeDictionaryEntry(id);
   }
 
   Future<void> bulkAddWords(List<DictionaryEntry> entries) async {
@@ -902,6 +904,7 @@ class FirebaseService {
       }
       await batch.commit();
     }
+    await OfflineService().removeDictionaryEntries(ids);
   }
 
   // Bookmark Operations
@@ -4433,24 +4436,19 @@ final dictionaryStreamProvider =
     StreamProvider<List<DictionaryEntry>>((ref) async* {
       final offlineService = ref.watch(offlineServiceProvider);
 
-      // Yield cached dictionary entries first for immediate offline load
       final cached = await offlineService.getCachedDictionary();
       if (cached.isNotEmpty) {
         yield cached;
       }
 
-      // Stream live validated words from Firestore & save to Hive
       try {
         await for (final entries in ref
             .watch(firebaseServiceProvider)
             .getValidatedDictionaryWords()) {
-          if (entries.isNotEmpty) {
-            await offlineService.saveDictionaryEntries(entries);
-          }
+          await offlineService.syncDictionaryForQuery(entries);
           yield entries;
         }
       } catch (e) {
-        // Fallback to Hive cache on network/Firestore error
         final fallback = await offlineService.getCachedDictionary();
         yield fallback;
       }
@@ -4469,7 +4467,6 @@ final globalDictionaryStreamProvider =
     StreamProvider.family<List<DictionaryEntry>, ValidatorQuery>((ref, query) async* {
       final offlineService = ref.watch(offlineServiceProvider);
 
-      // Yield cached dictionary search results first for immediate offline load
       final cached = await offlineService.searchCachedDictionary(
         limit: query.limit,
         search: query.search,
@@ -4479,7 +4476,6 @@ final globalDictionaryStreamProvider =
         yield cached;
       }
 
-      // Stream live global dictionary search results from Firestore & save to Hive
       try {
         await for (final entries in ref
             .watch(firebaseServiceProvider)
@@ -4488,13 +4484,14 @@ final globalDictionaryStreamProvider =
               search: query.search,
               dialect: query.dialect,
             )) {
-          if (entries.isNotEmpty) {
-            await offlineService.saveDictionaryEntries(entries);
-          }
+          await offlineService.syncDictionaryForQuery(
+            entries,
+            search: query.search,
+            dialect: query.dialect,
+          );
           yield entries;
         }
       } catch (e) {
-        // Fallback to Hive cache on network/Firestore error
         final fallback = await offlineService.searchCachedDictionary(
           limit: query.limit,
           search: query.search,

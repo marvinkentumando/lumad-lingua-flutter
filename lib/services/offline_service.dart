@@ -95,6 +95,61 @@ class OfflineService {
     await box.putAll(entryMap);
   }
 
+  Future<void> removeDictionaryEntry(String id) async {
+    final box = await _getBox<DictionaryEntry>(dictionaryBoxName);
+    await box.delete(id);
+  }
+
+  Future<void> removeDictionaryEntries(List<String> ids) async {
+    final box = await _getBox<DictionaryEntry>(dictionaryBoxName);
+    await box.deleteAll(ids);
+  }
+
+  Future<void> clearDictionaryCache() async {
+    final box = await _getBox<DictionaryEntry>(dictionaryBoxName);
+    await box.clear();
+  }
+
+  Future<void> syncDictionaryForQuery(
+    List<DictionaryEntry> liveEntries, {
+    String? search,
+    String? dialect,
+  }) async {
+    final box = await _getBox<DictionaryEntry>(dictionaryBoxName);
+
+    if ((search == null || search.isEmpty) && (dialect == null || dialect == 'All' || dialect.isEmpty)) {
+      await box.clear();
+      final Map<String, DictionaryEntry> entryMap = {
+        for (var e in liveEntries) e.id: e,
+      };
+      await box.putAll(entryMap);
+      return;
+    }
+
+    final liveIds = liveEntries.map((e) => e.id).toSet();
+    final keysToRemove = <String>[];
+
+    for (var key in box.keys) {
+      final entry = box.get(key);
+      if (entry != null) {
+        bool matchesDialect = dialect == null || dialect == 'All' || dialect.isEmpty || entry.language.toLowerCase() == dialect.toLowerCase();
+        bool matchesSearch = search == null || search.isEmpty || entry.indigenousWord.toLowerCase().contains(search.toLowerCase()) || entry.translation.toLowerCase().contains(search.toLowerCase());
+        if (matchesDialect && matchesSearch && !liveIds.contains(entry.id)) {
+          keysToRemove.add(entry.id);
+        }
+      }
+    }
+
+    if (keysToRemove.isNotEmpty) {
+      await box.deleteAll(keysToRemove);
+    }
+
+    final Map<String, DictionaryEntry> entryMap = {
+      for (var e in liveEntries) e.id: e,
+    };
+    await box.putAll(entryMap);
+  }
+
   Future<List<DictionaryEntry>> getCachedDictionary() async {
     final box = await _getBox<DictionaryEntry>(dictionaryBoxName);
     return box.values.toList();

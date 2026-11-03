@@ -484,6 +484,8 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
               final term = word.indigenousWord;
               context.pop();
               await ref.read(firebaseServiceProvider).deleteWord(word.id);
+              ref.invalidate(globalDictionaryStreamProvider);
+              ref.invalidate(dictionaryStreamProvider);
               scaffoldMessenger.showSnackBar(
                 SnackBar(content: Text('"$term" deleted.')),
               );
@@ -547,6 +549,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
               try {
                 final ids = words.map((w) => w.id).toList();
                 await ref.read(firebaseServiceProvider).bulkDeleteWords(ids);
+                ref.invalidate(globalDictionaryStreamProvider);
                 ref.invalidate(dictionaryStreamProvider);
 
                 scaffoldMessenger.hideCurrentSnackBar();
