@@ -56,7 +56,6 @@ By combining sentiment analysis algorithms, gamified interactive learning, audio
 * **Immersive UI/UX**: Custom canvas painters, edge-to-edge layout, responsive text scaling, dark/light theme toggle, and smooth physics-based animations (`flutter_animate`, `rive`, `lottie`).
 
 ---
-
 ## 🛠️ Tech Stack & Dependencies
 
 | Category | Technology / Package |
