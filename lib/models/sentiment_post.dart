@@ -73,6 +73,135 @@ class SentimentPost {
     return '${(diff.inDays / 7).floor()}w ago';
   }
 
+  /// Redacts personal names from input text for privacy protection.
+  static String redactPersonalNames(String text) {
+    if (text.isEmpty) return text;
+    String result = text;
+
+    // Known personal names in community posts dataset & mentions
+    final knownNames = [
+      'Carla Bantasan Cemine',
+      'Carla Bantasan',
+      'Mario Manaytay Yesan Bantasan',
+      'Mario Manaytay',
+      'Yesan Bantasan',
+      'Danilo Jamorie A. Manlinab',
+      'Danilo Jamorie Manlinab',
+      'Danilo Manlinab',
+      'Jupiter Comania',
+      'Cesar Clarion Colina Sr.',
+      'Cesar Clarion Colina',
+      'Cesar Colina',
+      'Tata Albarico',
+      'Maricar Zamora Mabanglo',
+      'Maricar Zamora',
+      'CEPRIANO MAGLINAB',
+      'Cepriano Maglinab',
+      'Grace Marundan Ilio',
+      'Grace Marundan',
+      'Larry Bunyogan Sr.',
+      'Larry Bunyogan',
+      'Bhe-bhe Masunggari Escarlan',
+      'Bhe-bhe Escarlan',
+      'Bhe-bhe Masunggari',
+      'Wiser Jade',
+      'Saturnino Hidlay',
+      'Ruben Capantoc Comania Jr.',
+      'Ruben Comania Jr.',
+      'Ruben Comania',
+      'Julimar Mante',
+      'Lito Bangkiling',
+      'Liniel Calibadan',
+      'liniel calibadan',
+      'Noelita (nday) camana maglimolo',
+      'Noelita Camana Maglimolo',
+      'Noelita Camana',
+      'Noelita Maglimolo',
+      'Feliciana sa dalagapa',
+      'Feliciana Liganso',
+      'Feliciana',
+      'Pablo Ampilan',
+      'Alopio',
+      'Londong Casa Manumbilang',
+      'Tiumoh Yu Dakaw',
+      'Su Re',
+      'Nerio Camana',
+      'Kikido EgDaasan',
+      'Mang Edo Cabiza',
+      'Edo Cabiza',
+      'jems maniquez',
+      'Jems Maniquez',
+      'Romeo Tadian',
+    ];
+
+    for (final name in knownNames) {
+      final pattern = RegExp(RegExp.escape(name), caseSensitive: false);
+      result = result.replaceAll(pattern, '[Redacted Name]');
+    }
+
+    // Pattern: Honorific / Title + Name
+    final honorificPattern = RegExp(
+      r"\b(Sir|Ma'am|Mr|Mrs|Ms|Dr|Hon|IPMR|Capt|Mayor|Cong|Mtkdg|Mktdg|Gbbyn|Gibubayan|Chairman)\.?\s+([A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+|\s+[A-Z]\.){1,4}(?:\s+(?:Sr|Jr|III|II|IV)\.?)?)",
+      caseSensitive: false,
+    );
+    result = result.replaceAllMapped(honorificPattern, (match) {
+      final honorific = match.group(1);
+      return '$honorific [Redacted Name]';
+    });
+
+    // Pattern: Mention prefixes "c <Name>", "si <Name>", "kay <Name>", "kang <Name>"
+    final cSiMentionPattern = RegExp(
+      r'\b(c|si|kay|kang)\s+([A-Za-z\-]+(?:\s+[A-Za-z\-]+){1,3})\b',
+      caseSensitive: false,
+    );
+    result = result.replaceAllMapped(cSiMentionPattern, (match) {
+      final prefix = match.group(1);
+      final nameCandidate = match.group(2)!;
+      final lower = nameCandidate.toLowerCase();
+      if (lower == 'ina' ||
+          lower == 'ama' ||
+          lower == 'bapa' ||
+          lower == 'magbabaya' ||
+          lower == 'dios' ||
+          lower == 'god' ||
+          lower.startsWith('mga') ||
+          lower == 'tribu') {
+        return match.group(0)!;
+      }
+      return '$prefix [Redacted Name]';
+    });
+
+    // Clean up duplicate or contiguous [Redacted Name] tokens
+    result = result.replaceAll(RegExp(r'(\[Redacted Name\]\s*)+'), '[Redacted Name]');
+
+    return result;
+  }
+
+  /// Returns a copy of originalText with personal names redacted.
+  String get redactedOriginalText => redactPersonalNames(originalText);
+
+  /// Returns a copy of filipinoTranslation with personal names redacted.
+  String get redactedFilipinoTranslation => redactPersonalNames(filipinoTranslation);
+
+  /// Returns a copy of englishTranslation with personal names redacted.
+  String get redactedEnglishTranslation => redactPersonalNames(englishTranslation);
+
+  /// Returns keywords with personal names redacted or filtered out.
+  List<String> get redactedKeywords {
+    final nameKeywords = {
+      'carla', 'bantasan', 'cemine', 'liniel', 'calibadan', 'noelita', 'camana', 'maglimolo',
+      'feliciana', 'pablo', 'ambahan', 'alopio', 'danilo', 'manlinab', 'jupiter',
+      'comania', 'cesar', 'colina', 'maricar', 'mabanglo', 'cepriano', 'grace',
+      'larry', 'bunyogan', 'escarlan', 'ruben', 'julimar', 'mante', 'bangkiling',
+      'nerio', 'kikido', 'egdaasan', 'edo', 'cabiza', 'jems', 'maniquez', 'tadian',
+      'mario', 'manaytay', 'yesan',
+    };
+    return keywords.where((k) {
+      final cleaned = k.toLowerCase().replaceAll(RegExp(r'\W'), '');
+      return !nameKeywords.contains(cleaned);
+    }).toList();
+  }
+
   static String _normalizeCategory(dynamic input) {
     if (input is String) {
       final lower = input.toLowerCase().trim();

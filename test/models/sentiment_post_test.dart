@@ -1,6 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumad_lingua/models/sentiment_post.dart';
 
@@ -61,12 +61,8 @@ void main() {
     });
 
     test('parses full sentiment_posts.json file without errors', () async {
-      final file = TestWidgetsFlutterBinding.ensureInitialized();
-      final String jsonString = await file.defaultBinaryMessenger
-          .handlePlatformMessage('flutter/assets', null, (data) {}) ?? '';
-      
-      // Direct JSON parsing test
-      final jsonFile = await SystemChannels.assets.loadString('assets/data/sentiment_posts.json');
+      final file = File('assets/data/sentiment_posts.json');
+      final jsonFile = await file.readAsString();
       final List<dynamic> rawList = jsonDecode(jsonFile);
 
       expect(rawList, isNotEmpty);
@@ -76,6 +72,22 @@ void main() {
 
       expect(posts.length, equals(rawList.length));
       expect(posts.first.originalText, isNotEmpty);
+    });
+
+    test('redacts personal names correctly for privacy', () {
+      final post = SentimentPost(
+        id: 'p100',
+        originalText: 'saramat sang founder sir, Carla Bantasan Cemine',
+        filipinoTranslation: 'Salamat kay Carla Bantasan Cemine',
+        englishTranslation: 'Thank you to Carla Bantasan Cemine',
+        sentimentCategory: 'positive',
+        keywords: ['saramat', 'Carla', 'Bantasan'],
+      );
+
+      expect(post.redactedOriginalText, contains('[Redacted Name]'));
+      expect(post.redactedOriginalText, isNot(contains('Carla')));
+      expect(post.redactedEnglishTranslation, contains('[Redacted Name]'));
+      expect(post.redactedKeywords, equals(['saramat']));
     });
   });
 }
