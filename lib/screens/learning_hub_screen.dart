@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
+import '../widgets/learning_next_action_card.dart';
 import '../widgets/brand_button.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../providers/student_provider.dart';
@@ -55,6 +56,8 @@ class LearningHubScreen extends ConsumerWidget {
                         ),
                       ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1),
                       const SizedBox(height: 32),
+                      const LearningNextActionCard(),
+                      const SizedBox(height: 24),
                       // Stats Row
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
