@@ -727,7 +727,44 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           },
           loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
           error: (e, _) => Center(
-            child: Text('Error discovering dataset: $e', style: const TextStyle(color: Colors.white54)),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.wifi_off_rounded,
+                    size: 64,
+                    color: AppColors.gold500,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Unable to Connect to Reference Storage',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.h3.copyWith(color: Colors.white),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Could not reach Supabase dataset storage. Please check your internet connection and try again.',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.body.copyWith(
+                      color: isDark ? Colors.white60 : AppColors.creamText3,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  BrandButton(
+                    text: 'RETRY CONNECTION',
+                    onTap: () {
+                      HapticService.light();
+                      ref.invalidate(supabaseDatasetEntriesProvider);
+                    },
+                    type: BrandButtonType.primary,
+                    icon: Icons.refresh_rounded,
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
