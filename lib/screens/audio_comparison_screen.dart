@@ -50,6 +50,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   bool _isLoadingNativeAudio = false;
 
   String? _recordedFilePath;
+  String? _preprocessedFilePath;
+  bool _isPreprocessedAudioSelected = false;
   double _recordedDurationSeconds = 0.0;
   int _recordingDurationSeconds = 0;
   Timer? _recordingTimer;
@@ -164,11 +166,29 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       await _nativePlayer.stop();
       await _userPlayer.stop();
 
+      String targetPath = _recordedFilePath!;
+
+      if (_isPreprocessedAudioSelected) {
+        if (_preprocessedFilePath == null || !File(_preprocessedFilePath!).existsSync()) {
+          final rawBytes = await File(_recordedFilePath!).readAsBytes();
+          final validWav = WavDecoder.ensureWavBytes(rawBytes);
+          final rawWavResult = WavDecoder.decodeWavBytes(validWav);
+          final preprocessedPcm = WavDecoder.preprocessPcmRecommendedV1(rawWavResult.pcmSamples);
+
+          final preprocessedWavBytes = WavDecoder.encodePcmToWavBytes(preprocessedPcm, sampleRate: 16000);
+          final directory = await getTemporaryDirectory();
+          final preprocessedFile = File('${directory.path}/user_preprocessed_16k.wav');
+          await preprocessedFile.writeAsBytes(preprocessedWavBytes);
+          _preprocessedFilePath = preprocessedFile.path;
+        }
+        targetPath = _preprocessedFilePath!;
+      }
+
       if (kIsWeb) {
-        await _userPlayer.play(ap.UrlSource(_recordedFilePath!));
+        await _userPlayer.play(ap.UrlSource(targetPath));
       } else {
-        if (!File(_recordedFilePath!).existsSync()) return;
-        await _userPlayer.play(ap.DeviceFileSource(_recordedFilePath!));
+        if (!File(targetPath).existsSync()) return;
+        await _userPlayer.play(ap.DeviceFileSource(targetPath));
       }
 
       setState(() {
@@ -293,6 +313,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         encoder: AudioEncoder.wav,
         sampleRate: 16000,
         numChannels: 1,
+        autoGain: true,
+        echoCancel: true,
       );
 
       bool isWavSupported = true;
@@ -305,6 +327,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           encoder: AudioEncoder.pcm16bits,
           sampleRate: 16000,
           numChannels: 1,
+          autoGain: true,
+          echoCancel: true,
         );
       }
 
@@ -476,6 +500,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       if (mounted) {
         setState(() {
           _recordedFilePath = targetPath;
+          _preprocessedFilePath = null;
+          _isPreprocessedAudioSelected = false;
           _state = AudioComparisonState.recorded;
           _errorMessage = null;
           _isQuietWarning = signal.isQuiet;
@@ -514,6 +540,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       _errorMessage = null;
       _isQuietWarning = false;
       _isStoppingRecording = false;
+      _isPreprocessedAudioSelected = false;
+      _preprocessedFilePath = null;
     });
     await _startRecording();
   }
@@ -1007,6 +1035,53 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ChoiceChip(
+              label: const Text('Raw Voice (Default)'),
+              selected: !_isPreprocessedAudioSelected,
+              selectedColor: AppColors.gold500,
+              backgroundColor: Colors.white12,
+              labelStyle: TextStyle(
+                color: !_isPreprocessedAudioSelected ? Colors.black : Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 10,
+              ),
+              onSelected: (selected) {
+                if (selected) {
+                  _stopUserAudio();
+                  setState(() {
+                    _isPreprocessedAudioSelected = false;
+                  });
+                  HapticService.selection();
+                }
+              },
+            ),
+            const SizedBox(width: 8),
+            ChoiceChip(
+              label: const Text('Preprocessed Voice'),
+              selected: _isPreprocessedAudioSelected,
+              selectedColor: AppColors.gold500,
+              backgroundColor: Colors.white12,
+              labelStyle: TextStyle(
+                color: _isPreprocessedAudioSelected ? Colors.black : Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 10,
+              ),
+              onSelected: (selected) {
+                if (selected) {
+                  _stopUserAudio();
+                  setState(() {
+                    _isPreprocessedAudioSelected = true;
+                  });
+                  HapticService.selection();
+                }
+              },
             ),
           ],
         ),

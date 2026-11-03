@@ -264,6 +264,56 @@ class WavDecoder {
     );
   }
 
+  /// Encodes 16kHz mono float PCM samples into 16-bit PCM WAV bytes
+  static Uint8List encodePcmToWavBytes(List<double> pcmSamples, {int sampleRate = targetSampleRate}) {
+    final numSamples = pcmSamples.length;
+    final dataSize = numSamples * 2;
+    final fileSize = 36 + dataSize;
+
+    final ByteData bd = ByteData(44 + dataSize);
+    
+    // RIFF header
+    bd.setUint8(0, 0x52); // 'R'
+    bd.setUint8(1, 0x49); // 'I'
+    bd.setUint8(2, 0x46); // 'F'
+    bd.setUint8(3, 0x46); // 'F'
+    bd.setUint32(4, fileSize, Endian.little);
+    bd.setUint8(8, 0x57);  // 'W'
+    bd.setUint8(9, 0x41);  // 'A'
+    bd.setUint8(10, 0x56); // 'V'
+    bd.setUint8(11, 0x45); // 'E'
+
+    // fmt subchunk
+    bd.setUint8(12, 0x66); // 'f'
+    bd.setUint8(13, 0x6D); // 'm'
+    bd.setUint8(14, 0x74); // 't'
+    bd.setUint8(15, 0x20); // ' '
+    bd.setUint32(16, 16, Endian.little);
+    bd.setUint16(20, 1, Endian.little);
+    bd.setUint16(22, 1, Endian.little);
+    bd.setUint32(24, sampleRate, Endian.little);
+    bd.setUint32(28, sampleRate * 2, Endian.little);
+    bd.setUint16(32, 2, Endian.little);
+    bd.setUint16(34, 16, Endian.little);
+
+    // data subchunk
+    bd.setUint8(36, 0x64); // 'd'
+    bd.setUint8(37, 0x61); // 'a'
+    bd.setUint8(38, 0x74); // 't'
+    bd.setUint8(39, 0x61); // 'a'
+    bd.setUint32(40, dataSize, Endian.little);
+
+    int offset = 44;
+    for (int i = 0; i < numSamples; i++) {
+      final sample = pcmSamples[i].clamp(-1.0, 1.0);
+      final int intSample = (sample * 32767.0).round();
+      bd.setInt16(offset, intSample, Endian.little);
+      offset += 2;
+    }
+
+    return bd.buffer.asUint8List();
+  }
+
   /// Linear interpolation resampling with anti-aliasing low-pass smoothing when downsampling
   static List<double> _resampleLinear(List<double> input, int oldRate, int newRate) {
     if (input.isEmpty || oldRate == newRate) return input;
@@ -317,8 +367,49 @@ class WavDecoder {
     return displayWaveform;
   }
 
+  /// Applies adaptive noise reduction (noise gating / spectral noise suppression)
+  /// to remove stationary background noise before waveform preprocessing.
+  static List<double> applyNoiseReduction(List<double> samples, {int sampleRate = targetSampleRate, double noiseMarginDb = 6.0}) {
+    if (samples.length < 320) return samples;
+
+    // Estimate background noise floor power from initial silent frames (first 100ms)
+    final initialSamples = math.min(1600, samples.length ~/ 10);
+    double noiseFloorPower = 0.0;
+    for (int i = 0; i < initialSamples; i++) {
+      noiseFloorPower += samples[i] * samples[i];
+    }
+    noiseFloorPower /= initialSamples;
+    final noiseFloorRms = math.sqrt(noiseFloorPower);
+    final noiseThreshold = noiseFloorRms * math.pow(10.0, noiseMarginDb / 20.0);
+
+    if (noiseThreshold < 0.0001) return samples;
+
+    final List<double> cleaned = List<double>.filled(samples.length, 0.0);
+    const windowSize = 160; // 10ms frame
+    for (int i = 0; i < samples.length; i += windowSize) {
+      final end = math.min(i + windowSize, samples.length);
+      double framePower = 0.0;
+      for (int j = i; j < end; j++) {
+        framePower += samples[j] * samples[j];
+      }
+      final frameRms = math.sqrt(framePower / (end - i));
+
+      double gain = 1.0;
+      if (frameRms < noiseThreshold) {
+        gain = (frameRms / noiseThreshold).clamp(0.0, 1.0);
+        gain = gain * gain;
+      }
+
+      for (int j = i; j < end; j++) {
+        cleaned[j] = samples[j] * gain;
+      }
+    }
+    return cleaned;
+  }
+
   /// Applies the exact `Recommended (v1)` waveform preprocessing pipeline:
   /// - Validation (min duration 100ms, min sample rate 8000Hz, warning > 15s)
+  /// - Noise cancellation / noise floor reduction
   /// - DC offset removal
   /// - Speech-core silence trimming (core -20dB, extension depth -40dB, zero-crossing, safety padding 100ms)
   /// - RMS normalization targeting -20 dBFS with peak ceiling -1 dBFS and max gain 30 dB clamp
@@ -337,9 +428,12 @@ class WavDecoder {
       debugPrint('WavDecoder Warning: Audio recording duration (${durationSec.toStringAsFixed(1)}s) exceeds recommended maximum of 15 seconds.');
     }
 
+    // 1.5 Adaptive Noise Cancellation / Suppression
+    final noiseReduced = applyNoiseReduction(samples, sampleRate: sampleRate);
+
     // 2. DC Offset Removal (Mean Subtraction)
-    final mean = samples.reduce((a, b) => a + b) / samples.length;
-    List<double> processed = samples.map((s) => s - mean).toList();
+    final mean = noiseReduced.reduce((a, b) => a + b) / noiseReduced.length;
+    List<double> processed = noiseReduced.map((s) => s - mean).toList();
 
     // 3. Leading & Trailing Silence Trimming
     double maxAbs = 0.0;
