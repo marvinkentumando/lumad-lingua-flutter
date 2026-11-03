@@ -613,10 +613,15 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       }
 
       if (mounted) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final l10n = ref.read(localizationProvider);
+
         setState(() {
           _scorePercentage = finalScore;
           _state = AudioComparisonState.result;
         });
+
+        _showResultPopupModal(context, isDark, l10n);
 
         if (_scorePercentage >= 60.0) {
           HapticService.success();
@@ -1156,6 +1161,76 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showResultPopupModal(BuildContext context, bool isDark, AppLocalization l10n) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalContext) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.forest800 : AppColors.creamBg,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            border: Border.all(
+              color: AppColors.gold500.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Pronunciation Assessment',
+                    style: AppTypography.h3.copyWith(
+                      color: isDark ? Colors.white : AppColors.forest900,
+                      fontSize: 18,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close_rounded, color: isDark ? Colors.white70 : Colors.black54),
+                    onPressed: () => Navigator.of(modalContext).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildResultCard(isDark, l10n),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: BrandButton(
+                      text: 'RECORD AGAIN',
+                      onTap: () {
+                        Navigator.of(modalContext).pop();
+                        _recordAgain();
+                      },
+                      type: BrandButtonType.secondary,
+                      icon: Icons.refresh_rounded,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: BrandButton(
+                      text: 'DONE',
+                      onTap: () {
+                        Navigator.of(modalContext).pop();
+                      },
+                      type: BrandButtonType.primary,
+                      icon: Icons.check_circle_rounded,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
