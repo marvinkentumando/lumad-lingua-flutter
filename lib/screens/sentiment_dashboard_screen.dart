@@ -136,6 +136,7 @@ class _SentimentDashboardScreenState
                                   final result = await FilePicker.pickFiles(
                                     type: FileType.custom,
                                     allowedExtensions: ['json'],
+                                    withData: true,
                                   );
                                   if (result != null && result.files.single.bytes != null) {
                                     final str = utf8.decode(result.files.single.bytes!);
