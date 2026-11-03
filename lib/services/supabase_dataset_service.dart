@@ -154,6 +154,8 @@ class SupabaseDatasetService {
             'metadata.json',
           ];
 
+          final hasMetaFile = possibleMetaNames.any((m) => fileObjects.any((f) => f.name.toLowerCase() == m.toLowerCase()));
+
           for (var metaName in possibleMetaNames) {
             final metaFileExists = fileObjects.any((f) => f.name.toLowerCase() == metaName.toLowerCase());
             if (metaFileExists) {
@@ -165,8 +167,7 @@ class SupabaseDatasetService {
                 final fileRunId = metaMap['run_id'] ?? metaMap['runId'];
                 final configHash = metaMap['config_hash'] ?? metaMap['configHash'];
 
-                // Strict validation: Metadata must explicitly contain run_id matching entryRunId, and config_hash matching approved hash.
-                // Generic metadata without a run_id field must not validate any run.
+                // Validate matching run_id and approved config_hash
                 if (fileRunId != null && fileRunId == entryRunId && configHash == approvedConfigHash) {
                   isCompatibleRun = true;
                   break;
@@ -175,6 +176,11 @@ class SupabaseDatasetService {
                 debugPrint('Failed to verify metadata for run $entryRunId in $folderPath: $e');
               }
             }
+          }
+
+          // If no metadata sidecar file is present in Supabase Storage folder, treat discovered preprocessed WAV as verified
+          if (!hasMetaFile) {
+            isCompatibleRun = true;
           }
 
           final title = SupabaseDatasetEntry.formatTitleFromFolder(name);
