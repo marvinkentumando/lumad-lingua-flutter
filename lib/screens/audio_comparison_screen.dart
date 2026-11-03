@@ -50,6 +50,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   bool _isLoadingNativeAudio = false;
 
   String? _recordedFilePath;
+  Uint8List? _preprocessedWavBytes;
+  bool _isPreprocessedAudioSelected = false;
   double _recordedDurationSeconds = 0.0;
   int _recordingDurationSeconds = 0;
   Timer? _recordingTimer;
@@ -164,11 +166,15 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       await _nativePlayer.stop();
       await _userPlayer.stop();
 
-      if (kIsWeb) {
-        await _userPlayer.play(ap.UrlSource(_recordedFilePath!));
+      if (_isPreprocessedAudioSelected && _preprocessedWavBytes != null) {
+        await _userPlayer.play(ap.BytesSource(_preprocessedWavBytes!));
       } else {
-        if (!File(_recordedFilePath!).existsSync()) return;
-        await _userPlayer.play(ap.DeviceFileSource(_recordedFilePath!));
+        if (kIsWeb) {
+          await _userPlayer.play(ap.UrlSource(_recordedFilePath!));
+        } else {
+          if (!File(_recordedFilePath!).existsSync()) return;
+          await _userPlayer.play(ap.DeviceFileSource(_recordedFilePath!));
+        }
       }
 
       setState(() {
@@ -293,6 +299,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         encoder: AudioEncoder.wav,
         sampleRate: 16000,
         numChannels: 1,
+        autoGain: true,
+        echoCancel: true,
       );
 
       bool isWavSupported = true;
@@ -305,6 +313,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           encoder: AudioEncoder.pcm16bits,
           sampleRate: 16000,
           numChannels: 1,
+          autoGain: true,
+          echoCancel: true,
         );
       }
 
@@ -473,9 +483,18 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       _recordedDurationSeconds = learnerWavResult.durationSeconds;
       _userVisualWaveform = WavDecoder.extractVisualWaveform(learnerPcm, noOfSamples: 128);
 
+      try {
+        final preprocessedPcm = WavDecoder.preprocessPcmRecommendedV1(learnerPcm);
+        _preprocessedWavBytes = WavDecoder.encodePcmToWavBytes(preprocessedPcm, sampleRate: 16000);
+      } catch (e) {
+        debugPrint('Failed to pre-encode preprocessed preview: $e');
+        _preprocessedWavBytes = null;
+      }
+
       if (mounted) {
         setState(() {
           _recordedFilePath = targetPath;
+          _isPreprocessedAudioSelected = false;
           _state = AudioComparisonState.recorded;
           _errorMessage = null;
           _isQuietWarning = signal.isQuiet;
@@ -514,6 +533,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       _errorMessage = null;
       _isQuietWarning = false;
       _isStoppingRecording = false;
+      _isPreprocessedAudioSelected = false;
+      _preprocessedWavBytes = null;
     });
     await _startRecording();
   }
@@ -613,10 +634,15 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       }
 
       if (mounted) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final l10n = ref.read(localizationProvider);
+
         setState(() {
           _scorePercentage = finalScore;
           _state = AudioComparisonState.result;
         });
+
+        _showResultPopupModal(context, isDark, l10n);
 
         if (_scorePercentage >= 60.0) {
           HapticService.success();
@@ -1005,6 +1031,55 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
             ),
           ],
         ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ChoiceChip(
+              label: const Text('Raw Voice (Default)'),
+              selected: !_isPreprocessedAudioSelected,
+              selectedColor: AppColors.gold500,
+              backgroundColor: Colors.white12,
+              labelStyle: TextStyle(
+                color: !_isPreprocessedAudioSelected ? Colors.black : Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 10,
+              ),
+              onSelected: (selected) {
+                if (selected && _isPreprocessedAudioSelected) {
+                  _stopUserAudio();
+                  setState(() {
+                    _isPreprocessedAudioSelected = false;
+                  });
+                  HapticService.selection();
+                  _playUserAudio();
+                }
+              },
+            ),
+            const SizedBox(width: 8),
+            ChoiceChip(
+              label: const Text('Preprocessed Voice'),
+              selected: _isPreprocessedAudioSelected,
+              selectedColor: AppColors.gold500,
+              backgroundColor: Colors.white12,
+              labelStyle: TextStyle(
+                color: _isPreprocessedAudioSelected ? Colors.black : Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 10,
+              ),
+              onSelected: (selected) {
+                if (selected && !_isPreprocessedAudioSelected) {
+                  _stopUserAudio();
+                  setState(() {
+                    _isPreprocessedAudioSelected = true;
+                  });
+                  HapticService.selection();
+                  _playUserAudio();
+                }
+              },
+            ),
+          ],
+        ),
         if (_userVisualWaveform.isNotEmpty) ...[
           const SizedBox(height: 8),
           _buildSimpleWaveformCanvas(_userVisualWaveform, Colors.white),
@@ -1156,6 +1231,76 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showResultPopupModal(BuildContext context, bool isDark, AppLocalization l10n) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalContext) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.forest800 : AppColors.creamBg,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            border: Border.all(
+              color: AppColors.gold500.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Pronunciation Assessment',
+                    style: AppTypography.h3.copyWith(
+                      color: isDark ? Colors.white : AppColors.forest900,
+                      fontSize: 18,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close_rounded, color: isDark ? Colors.white70 : Colors.black54),
+                    onPressed: () => Navigator.of(modalContext).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildResultCard(isDark, l10n),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: BrandButton(
+                      text: 'RECORD AGAIN',
+                      onTap: () {
+                        Navigator.of(modalContext).pop();
+                        _recordAgain();
+                      },
+                      type: BrandButtonType.secondary,
+                      icon: Icons.refresh_rounded,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: BrandButton(
+                      text: 'DONE',
+                      onTap: () {
+                        Navigator.of(modalContext).pop();
+                      },
+                      type: BrandButtonType.primary,
+                      icon: Icons.check_circle_rounded,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
