@@ -50,7 +50,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   bool _isLoadingNativeAudio = false;
 
   String? _recordedFilePath;
-  String? _preprocessedFilePath;
+  Uint8List? _preprocessedWavBytes;
   bool _isPreprocessedAudioSelected = false;
   double _recordedDurationSeconds = 0.0;
   int _recordingDurationSeconds = 0;
@@ -166,29 +166,15 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       await _nativePlayer.stop();
       await _userPlayer.stop();
 
-      String targetPath = _recordedFilePath!;
-
-      if (_isPreprocessedAudioSelected) {
-        if (_preprocessedFilePath == null || !File(_preprocessedFilePath!).existsSync()) {
-          final rawBytes = await File(_recordedFilePath!).readAsBytes();
-          final validWav = WavDecoder.ensureWavBytes(rawBytes);
-          final rawWavResult = WavDecoder.decodeWavBytes(validWav);
-          final preprocessedPcm = WavDecoder.preprocessPcmRecommendedV1(rawWavResult.pcmSamples);
-
-          final preprocessedWavBytes = WavDecoder.encodePcmToWavBytes(preprocessedPcm, sampleRate: 16000);
-          final directory = await getTemporaryDirectory();
-          final preprocessedFile = File('${directory.path}/user_preprocessed_16k.wav');
-          await preprocessedFile.writeAsBytes(preprocessedWavBytes);
-          _preprocessedFilePath = preprocessedFile.path;
-        }
-        targetPath = _preprocessedFilePath!;
-      }
-
-      if (kIsWeb) {
-        await _userPlayer.play(ap.UrlSource(targetPath));
+      if (_isPreprocessedAudioSelected && _preprocessedWavBytes != null) {
+        await _userPlayer.play(ap.BytesSource(_preprocessedWavBytes!));
       } else {
-        if (!File(targetPath).existsSync()) return;
-        await _userPlayer.play(ap.DeviceFileSource(targetPath));
+        if (kIsWeb) {
+          await _userPlayer.play(ap.UrlSource(_recordedFilePath!));
+        } else {
+          if (!File(_recordedFilePath!).existsSync()) return;
+          await _userPlayer.play(ap.DeviceFileSource(_recordedFilePath!));
+        }
       }
 
       setState(() {
@@ -497,10 +483,17 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       _recordedDurationSeconds = learnerWavResult.durationSeconds;
       _userVisualWaveform = WavDecoder.extractVisualWaveform(learnerPcm, noOfSamples: 128);
 
+      try {
+        final preprocessedPcm = WavDecoder.preprocessPcmRecommendedV1(learnerPcm);
+        _preprocessedWavBytes = WavDecoder.encodePcmToWavBytes(preprocessedPcm, sampleRate: 16000);
+      } catch (e) {
+        debugPrint('Failed to pre-encode preprocessed preview: $e');
+        _preprocessedWavBytes = null;
+      }
+
       if (mounted) {
         setState(() {
           _recordedFilePath = targetPath;
-          _preprocessedFilePath = null;
           _isPreprocessedAudioSelected = false;
           _state = AudioComparisonState.recorded;
           _errorMessage = null;
@@ -541,7 +534,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       _isQuietWarning = false;
       _isStoppingRecording = false;
       _isPreprocessedAudioSelected = false;
-      _preprocessedFilePath = null;
+      _preprocessedWavBytes = null;
     });
     await _startRecording();
   }
@@ -1053,12 +1046,13 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
                 fontSize: 10,
               ),
               onSelected: (selected) {
-                if (selected) {
+                if (selected && _isPreprocessedAudioSelected) {
                   _stopUserAudio();
                   setState(() {
                     _isPreprocessedAudioSelected = false;
                   });
                   HapticService.selection();
+                  _playUserAudio();
                 }
               },
             ),
@@ -1074,12 +1068,13 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
                 fontSize: 10,
               ),
               onSelected: (selected) {
-                if (selected) {
+                if (selected && !_isPreprocessedAudioSelected) {
                   _stopUserAudio();
                   setState(() {
                     _isPreprocessedAudioSelected = true;
                   });
                   HapticService.selection();
+                  _playUserAudio();
                 }
               },
             ),
