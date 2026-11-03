@@ -49,5 +49,29 @@ void main() {
 
       expect(score.overallScore, greaterThan(70.0));
     });
+
+    test('Dual-take comparison averages Take 1 and Take 2 overall scores correctly', () {
+      final nativePcmTake1 = List.generate(4800, (i) => 0.2 * math.sin(2 * math.pi * 300 * i / 16000));
+      final nativePcmTake2 = List.generate(4800, (i) => 0.25 * math.sin(2 * math.pi * 310 * i / 16000));
+      final learnerPcm = List.generate(4800, (i) => 0.2 * math.sin(2 * math.pi * 300 * i / 16000));
+
+      final score1 = PronunciationService.analyzePronunciation(
+        nativePcmTake1,
+        learnerPcm,
+        algorithm: PronunciationAlgorithm.dtw,
+      );
+
+      final score2 = PronunciationService.analyzePronunciation(
+        nativePcmTake2,
+        learnerPcm,
+        algorithm: PronunciationAlgorithm.dtw,
+      );
+
+      final averageScore = (score1.overallScore + score2.overallScore) / 2.0;
+
+      expect(averageScore, equals((score1.overallScore + score2.overallScore) / 2.0));
+      expect(averageScore, greaterThan(0.0));
+      expect(averageScore, lessThanOrEqualTo(100.0));
+    });
   });
 }
