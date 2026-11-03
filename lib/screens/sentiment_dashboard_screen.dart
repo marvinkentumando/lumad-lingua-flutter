@@ -1004,7 +1004,6 @@ class _SentimentDashboardScreenState
           ),
         ],
       ),
-      ),
     );
   }
 
