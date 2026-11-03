@@ -286,7 +286,41 @@ class _SentimentDashboardScreenState
                 const SizedBox(height: 12),
                 _buildKeywordCloud(posts, isDark),
                 const SizedBox(height: 28),
-                _buildSectionHeader('Community Sentiment Entries', isDark),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildSectionHeader('Community Sentiment Entries', isDark),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.semanticGreen.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppColors.semanticGreen.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(
+                            Icons.verified_user_rounded,
+                            size: 13,
+                            color: AppColors.semanticGreen,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'Privacy Protected 🛡️',
+                            style: TextStyle(
+                              color: AppColors.semanticGreen,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 16),
                 if (!hasData) _buildNoDataState(isDark),
               ],
@@ -647,7 +681,9 @@ class _SentimentDashboardScreenState
       );
     }
 
-    final keywords = posts.expand((p) => p.keywords).toList();
+    final keywords = posts
+        .expand((p) => p.redactedKeywords)
+        .toList();
     final counts = <String, int>{};
     for (var k in keywords) {
       counts[k] = (counts[k] ?? 0) + 1;
@@ -702,6 +738,12 @@ class _SentimentDashboardScreenState
     final isSaved = _savedPostIds.contains(post.id);
     final isSparked = _sparkedPostIds.contains(post.id);
 
+    final displayText = post.redactedOriginalText;
+    final displayFilipino = post.redactedFilipinoTranslation;
+    final displayEnglish = post.redactedEnglishTranslation;
+    final displayKeywords = post.redactedKeywords;
+    final bool isNamesRedacted = post.originalText != post.redactedOriginalText;
+
     Color categoryColor;
     IconData categoryIcon;
 
@@ -721,213 +763,247 @@ class _SentimentDashboardScreenState
         break;
     }
 
-    return Theme(
-      data: Theme.of(context).copyWith(brightness: Brightness.dark),
-      child: BrandCard(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(20),
-        borderRadius: 24,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: categoryColor.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(categoryIcon, color: categoryColor, size: 14),
+    return BrandCard(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      borderRadius: 24,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: categoryColor.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
                     ),
+                    child: Icon(categoryIcon, color: categoryColor, size: 14),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    post.sentimentCategory.toUpperCase(),
+                    style: AppTypography.label.copyWith(
+                      color: categoryColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  if (isNamesRedacted) ...[
                     const SizedBox(width: 8),
-                    Text(
-                      post.sentimentCategory.toUpperCase(),
-                      style: AppTypography.label.copyWith(
-                        color: categoryColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10,
-                        letterSpacing: 1,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.semanticGreen.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppColors.semanticGreen.withValues(alpha: 0.3),
+                          width: 0.8,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.shield_rounded, size: 10, color: AppColors.semanticGreen),
+                          SizedBox(width: 3),
+                          Text(
+                            'REDACTED',
+                            style: TextStyle(
+                              color: AppColors.semanticGreen,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
+                ],
+              ),
+              Text(
+                post.relativeTime,
+                style: TextStyle(
+                  color: isDark
+                      ? Colors.white38
+                      : AppColors.forest900.withValues(alpha: 0.4),
+                  fontSize: 11,
                 ),
-                Text(
-                  post.relativeTime,
-                  style: TextStyle(
-                    color: isDark
-                        ? Colors.white38
-                        : AppColors.forest900.withValues(alpha: 0.4),
-                    fontSize: 11,
-                  ),
-                ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            displayText,
+            style: AppTypography.body.copyWith(
+              color: isDark ? Colors.white : AppColors.forest900,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              height: 1.4,
             ),
-            const SizedBox(height: 14),
+          ),
+          if (displayFilipino.isNotEmpty) ...[
+            const SizedBox(height: 8),
             Text(
-              post.originalText,
+              'Filipino: $displayFilipino',
               style: AppTypography.body.copyWith(
-                color: isDark ? Colors.white : AppColors.forest900,
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                height: 1.4,
+                color: isDark ? Colors.white70 : AppColors.forest700,
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
               ),
-            ),
-            if (post.filipinoTranslation.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Filipino: ${post.filipinoTranslation}',
-                style: AppTypography.body.copyWith(
-                  color: isDark ? Colors.white70 : AppColors.forest700,
-                  fontSize: 13,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ],
-            if (post.englishTranslation.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                'English: ${post.englishTranslation}',
-                style: AppTypography.body.copyWith(
-                  color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.6),
-                  fontSize: 12,
-                ),
-              ),
-            ],
-            if (post.keywords.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: post.keywords
-                    .map(
-                      (k) => InkWell(
-                        onTap: () => context.push('/dictionary?q=${Uri.encodeComponent(k)}'),
-                        child: Text(
-                          '#$k',
-                          style: TextStyle(
-                            color: AppColors.gold500.withValues(alpha: 0.8),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ],
-            const SizedBox(height: 16),
-            const Divider(color: Colors.white10, height: 1),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                // Learn this word / dictionary link
-                InkWell(
-                  onTap: () {
-                    final query = post.keywords.isNotEmpty
-                        ? post.keywords.first
-                        : (post.linkedDictionaryEntryIds.isNotEmpty
-                            ? post.linkedDictionaryEntryIds.first
-                            : '');
-                    if (query.isNotEmpty) {
-                      context.push('/dictionary?q=${Uri.encodeComponent(query)}');
-                    } else {
-                      context.push('/dictionary');
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(8),
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.menu_book_rounded,
-                          color: AppColors.gold500,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Learn this word',
-                          style: AppTypography.label.copyWith(
-                            color: AppColors.gold500,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                // Spark / Appreciate
-                IconButton(
-                  onPressed: () {
-                    setState(() {
-                      if (isSparked) {
-                        _sparkedPostIds.remove(post.id);
-                      } else {
-                        _sparkedPostIds.add(post.id);
-                      }
-                    });
-                  },
-                  icon: Icon(
-                    isSparked
-                        ? Icons.bolt_rounded
-                        : Icons.bolt_outlined,
-                    color: isSparked ? AppColors.gold500 : Colors.white38,
-                    size: 20,
-                  ),
-                  tooltip: 'Spark',
-                ),
-                // Save
-                IconButton(
-                  onPressed: () {
-                    setState(() {
-                      if (isSaved) {
-                        _savedPostIds.remove(post.id);
-                      } else {
-                        _savedPostIds.add(post.id);
-                      }
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          isSaved ? 'Post removed from saved' : 'Post saved to profile 🌿',
-                        ),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  icon: Icon(
-                    isSaved
-                        ? Icons.bookmark_rounded
-                        : Icons.bookmark_outline_rounded,
-                    color: isSaved ? AppColors.gold500 : Colors.white38,
-                    size: 20,
-                  ),
-                  tooltip: 'Save',
-                ),
-                // Share
-                IconButton(
-                  onPressed: () {
-                    final shareText =
-                        '${post.originalText}\n${post.englishTranslation.isNotEmpty ? "(${post.englishTranslation})" : ""}\n\nVia LUMAD Lingua';
-                    SharePlus.instance.share(ShareParams(text: shareText));
-                  },
-                  icon: const Icon(
-                    Icons.share_outlined,
-                    color: Colors.white38,
-                    size: 18,
-                  ),
-                  tooltip: 'Share',
-                ),
-              ],
             ),
           ],
-        ),
+          if (displayEnglish.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'English: $displayEnglish',
+              style: AppTypography.body.copyWith(
+                color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.6),
+                fontSize: 12,
+              ),
+            ),
+          ],
+          if (displayKeywords.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: displayKeywords
+                  .map(
+                    (k) => InkWell(
+                      onTap: () => context.push('/dictionary?q=${Uri.encodeComponent(k)}'),
+                      child: Text(
+                        '#$k',
+                        style: TextStyle(
+                          color: AppColors.gold500.withValues(alpha: 0.8),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          const SizedBox(height: 16),
+          Divider(
+            color: isDark ? Colors.white10 : AppColors.forest900.withValues(alpha: 0.1),
+            height: 1,
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              // Learn this word / dictionary link
+              InkWell(
+                onTap: () {
+                  final query = post.keywords.isNotEmpty
+                      ? post.keywords.first
+                      : (post.linkedDictionaryEntryIds.isNotEmpty
+                          ? post.linkedDictionaryEntryIds.first
+                          : '');
+                  if (query.isNotEmpty) {
+                    context.push('/dictionary?q=${Uri.encodeComponent(query)}');
+                  } else {
+                    context.push('/dictionary');
+                  }
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.menu_book_rounded,
+                        color: AppColors.gold500,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Learn this word',
+                        style: AppTypography.label.copyWith(
+                          color: AppColors.gold500,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const Spacer(),
+              // Spark / Appreciate
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    if (isSparked) {
+                      _sparkedPostIds.remove(post.id);
+                    } else {
+                      _sparkedPostIds.add(post.id);
+                    }
+                  });
+                },
+                icon: Icon(
+                  isSparked
+                      ? Icons.bolt_rounded
+                      : Icons.bolt_outlined,
+                  color: isSparked
+                      ? AppColors.gold500
+                      : (isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.4)),
+                  size: 20,
+                ),
+                tooltip: 'Spark',
+              ),
+              // Save
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    if (isSaved) {
+                      _savedPostIds.remove(post.id);
+                    } else {
+                      _savedPostIds.add(post.id);
+                    }
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        isSaved ? 'Post removed from saved' : 'Post saved to profile 🌿',
+                      ),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+                icon: Icon(
+                  isSaved
+                      ? Icons.bookmark_rounded
+                      : Icons.bookmark_outline_rounded,
+                  color: isSaved
+                      ? AppColors.gold500
+                      : (isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.4)),
+                  size: 20,
+                ),
+                tooltip: 'Save',
+              ),
+              // Share
+              IconButton(
+                onPressed: () {
+                  final shareText =
+                      '${post.originalText}\n${post.englishTranslation.isNotEmpty ? "(${post.englishTranslation})" : ""}\n\nVia LUMAD Lingua';
+                  SharePlus.instance.share(ShareParams(text: shareText));
+                },
+                icon: Icon(
+                  Icons.share_outlined,
+                  color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.4),
+                  size: 18,
+                ),
+                tooltip: 'Share',
+              ),
+            ],
+          ),
+        ],
+      ),
       ),
     );
   }

@@ -26,7 +26,6 @@ import '../models/broadcast.dart';
 import '../models/feedback.dart';
 import '../models/educator_models.dart';
 import '../models/assessment.dart';
-import 'offline_service.dart';
 
 import '../models/daily_challenge.dart';
 import '../models/warrior_friend.dart';
