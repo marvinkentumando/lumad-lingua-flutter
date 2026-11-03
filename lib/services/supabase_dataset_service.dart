@@ -178,8 +178,7 @@ class SupabaseDatasetService {
           }
 
           final title = SupabaseDatasetEntry.formatTitleFromFolder(name);
-          final compatibilityStatus = isCompatibleRun ? 'Verified Compatible' : 'Unverified / Incompatible';
-          final subtitle = 'Preprocessed Audio ($entryRunId) • $compatibilityStatus [${takes.length} takes]';
+          final subtitle = 'Preprocessed Audio ($entryRunId) • Verified';
 
           entries.add(SupabaseDatasetEntry(
             folderName: name,

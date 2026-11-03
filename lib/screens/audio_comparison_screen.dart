@@ -197,7 +197,6 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       _stopAllAudioAndRecording();
       setState(() {
         _currentIndex++;
-        _selectedTakeIndex = 0;
         _state = AudioComparisonState.idle;
         _scorePercentage = 0.0;
         _recordedFilePath = null;
@@ -215,7 +214,6 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       _stopAllAudioAndRecording();
       setState(() {
         _currentIndex--;
-        _selectedTakeIndex = 0;
         _state = AudioComparisonState.idle;
         _scorePercentage = 0.0;
         _recordedFilePath = null;
@@ -235,7 +233,6 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       _isShuffled = !_isShuffled;
       _items.shuffle();
       _currentIndex = 0;
-      _selectedTakeIndex = 0;
       _state = AudioComparisonState.idle;
       _scorePercentage = 0.0;
       _recordedFilePath = null;
@@ -738,9 +735,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   }
 
   Widget _buildDatasetBadge(SupabaseDatasetEntry item) {
-    final hasTake2 = item.takes.any((t) => t.takeNumber == 2);
     final runId = item.runId;
-    final takeInfo = hasTake2 ? 'Take 1 (Default) + Take 2 (Averaged)' : 'Take 1';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -755,7 +750,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           const Icon(Icons.verified_rounded, size: 14, color: AppColors.gold500),
           const SizedBox(width: 6),
           Text(
-            'REF: $runId • $takeInfo • 16kHz WAV',
+            'REF: $runId • 16kHz WAV',
             style: AppTypography.mono.copyWith(color: AppColors.gold500, fontSize: 10, fontWeight: FontWeight.bold),
           ),
         ],
