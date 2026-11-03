@@ -133,15 +133,16 @@ class _SentimentDashboardScreenState
                           onPressed: isImporting
                               ? null
                               : () async {
-                                  final result = await FilePicker.platform.pickFiles(
+                                  final result = await FilePicker.pickFiles(
                                     type: FileType.custom,
                                     allowedExtensions: ['json'],
+                                    withData: true,
                                   );
                                   if (result != null && result.files.single.bytes != null) {
                                     final str = utf8.decode(result.files.single.bytes!);
                                     textController.text = str;
                                   } else if (result != null && result.files.single.path != null) {
-                                    final file = await CrossFile(result.files.single.path!).readAsString();
+                                    final file = await XFile(result.files.single.path!).readAsString();
                                     textController.text = file;
                                   }
                                 },
