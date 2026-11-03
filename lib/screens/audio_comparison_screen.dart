@@ -470,13 +470,68 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         return;
       }
 
-      // Check signal for silence/near-silence
+      // Check signal for silence/near-silence and quality conditions
       final signal = WavDecoder.analyzeSignal(learnerPcm);
       if (signal.isEmptyOrInvalid || signal.isSilent) {
         if (mounted) {
           setState(() {
             _state = AudioComparisonState.error;
             _errorMessage = "We couldn't hear your voice. Check your microphone and try recording again.";
+            _isQuietWarning = false;
+          });
+        }
+        return;
+      }
+
+      if (signal.isClipped) {
+        if (mounted) {
+          setState(() {
+            _state = AudioComparisonState.error;
+            _errorMessage = "Your recording sounds distorted or too loud. Please move slightly further from the microphone and record again.";
+            _isQuietWarning = false;
+          });
+        }
+        return;
+      }
+
+      if (signal.isInterrupted) {
+        if (mounted) {
+          setState(() {
+            _state = AudioComparisonState.error;
+            _errorMessage = "Microphone connection was interrupted. Please check your audio input device and try again.";
+            _isQuietWarning = false;
+          });
+        }
+        return;
+      }
+
+      if (signal.isExcessivePause) {
+        if (mounted) {
+          setState(() {
+            _state = AudioComparisonState.error;
+            _errorMessage = "Long pause detected. Try pronouncing the complete phrase smoothly without stopping.";
+            _isQuietWarning = false;
+          });
+        }
+        return;
+      }
+
+      if (signal.isMultiSpeaker) {
+        if (mounted) {
+          setState(() {
+            _state = AudioComparisonState.error;
+            _errorMessage = "Multiple voices detected. Please make sure you are the only one speaking.";
+            _isQuietWarning = false;
+          });
+        }
+        return;
+      }
+
+      if (signal.isHighNoise) {
+        if (mounted) {
+          setState(() {
+            _state = AudioComparisonState.error;
+            _errorMessage = "High background noise detected. Please move to a quieter location for better accuracy.";
             _isQuietWarning = false;
           });
         }

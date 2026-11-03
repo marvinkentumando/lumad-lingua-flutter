@@ -23,6 +23,11 @@ class SignalAnalysisResult {
   final double rms;
   final bool isSilent;
   final bool isQuiet;
+  final bool isClipped;
+  final bool isHighNoise;
+  final bool isMultiSpeaker;
+  final bool isExcessivePause;
+  final bool isInterrupted;
 
   SignalAnalysisResult({
     required this.isEmptyOrInvalid,
@@ -30,6 +35,11 @@ class SignalAnalysisResult {
     required this.rms,
     required this.isSilent,
     required this.isQuiet,
+    this.isClipped = false,
+    this.isHighNoise = false,
+    this.isMultiSpeaker = false,
+    this.isExcessivePause = false,
+    this.isInterrupted = false,
   });
 }
 
@@ -62,6 +72,9 @@ class WavDecoder {
 
     double maxAbs = 0.0;
     double sumSquares = 0.0;
+    int clippedCount = 0;
+    int exactZeroCount = 0;
+
     for (var s in samples) {
       if (!s.isFinite) {
         return SignalAnalysisResult(
@@ -75,6 +88,9 @@ class WavDecoder {
       final absVal = s.abs();
       if (absVal > maxAbs) maxAbs = absVal;
       sumSquares += absVal * absVal;
+
+      if (absVal >= 0.995) clippedCount++;
+      if (absVal == 0.0) exactZeroCount++;
     }
 
     final rms = math.sqrt(sumSquares / samples.length);
@@ -82,12 +98,110 @@ class WavDecoder {
     final isSilent = maxAbs < candidateSilentPeakThreshold && rms < candidateSilentRmsThreshold;
     final isQuiet = !isSilent && maxAbs < candidateQuietPeakThreshold;
 
+    // 1. Audio Clipping & Distortion (>1% of samples at max ceiling)
+    final isClipped = (clippedCount / samples.length) >= 0.01;
+
+    // 2. High Background Noise / Low Signal-to-Noise Ratio (SNR < 6dB)
+    final initialSamples = math.min(1600, samples.length ~/ 10);
+    double noiseFloorPower = 0.0;
+    for (int i = 0; i < initialSamples; i++) {
+      noiseFloorPower += samples[i] * samples[i];
+    }
+    final noiseFloorRms = math.sqrt(noiseFloorPower / math.max(1, initialSamples));
+    final isHighNoise = !isSilent && noiseFloorRms > 0.035 && (rms / noiseFloorRms) < 2.0;
+
+    // 3. Excessive Internal Pauses / Hesitation (>1.5s silent gap between speech)
+    bool isExcessivePause = false;
+    const frameSize = 320; // 20ms frame
+    final numFrames = samples.length ~/ frameSize;
+    int firstActiveFrame = -1;
+    int lastActiveFrame = -1;
+
+    List<bool> frameActive = List.filled(numFrames, false);
+    for (int f = 0; f < numFrames; f++) {
+      double framePower = 0.0;
+      for (int i = f * frameSize; i < (f + 1) * frameSize; i++) {
+        framePower += samples[i] * samples[i];
+      }
+      final frameRms = math.sqrt(framePower / frameSize);
+      if (frameRms >= candidateSilentRmsThreshold * 2) {
+        frameActive[f] = true;
+        if (firstActiveFrame == -1) firstActiveFrame = f;
+        lastActiveFrame = f;
+      }
+    }
+
+    if (firstActiveFrame != -1 && lastActiveFrame > firstActiveFrame) {
+      int maxConsecutiveSilentFrames = 0;
+      int currentSilentCount = 0;
+      for (int f = firstActiveFrame; f <= lastActiveFrame; f++) {
+        if (!frameActive[f]) {
+          currentSilentCount++;
+          if (currentSilentCount > maxConsecutiveSilentFrames) {
+            maxConsecutiveSilentFrames = currentSilentCount;
+          }
+        } else {
+          currentSilentCount = 0;
+        }
+      }
+      // 75 frames of 20ms = 1.5 seconds
+      if (maxConsecutiveSilentFrames >= 75) {
+        isExcessivePause = true;
+      }
+    }
+
+    // 4. Multiple Speakers / Overlapping Voices
+    bool isMultiSpeaker = false;
+    if (firstActiveFrame != -1 && lastActiveFrame - firstActiveFrame >= 20) {
+      List<double> zcrList = [];
+      for (int f = firstActiveFrame; f <= lastActiveFrame; f++) {
+        if (frameActive[f]) {
+          int zcr = 0;
+          final start = f * frameSize;
+          for (int i = start; i < start + frameSize - 1; i++) {
+            if ((samples[i] >= 0 && samples[i + 1] < 0) || (samples[i] < 0 && samples[i + 1] >= 0)) {
+              zcr++;
+            }
+          }
+          zcrList.add(zcr / frameSize);
+        }
+      }
+      if (zcrList.length >= 10) {
+        final meanZcr = zcrList.reduce((a, b) => a + b) / zcrList.length;
+        double zcrVar = 0.0;
+        for (var z in zcrList) {
+          zcrVar += (z - meanZcr) * (z - meanZcr);
+        }
+        zcrVar /= zcrList.length;
+        if (zcrVar > 0.035 && maxAbs > 0.50) {
+          isMultiSpeaker = true;
+        }
+      }
+    }
+
+    // 5. Mid-Recording Hardware Interruption
+    bool isInterrupted = false;
+    if (lastActiveFrame != -1 && lastActiveFrame < numFrames - 10) {
+      int zeroTrailCount = 0;
+      for (int i = lastActiveFrame * frameSize; i < samples.length; i++) {
+        if (samples[i] == 0.0) zeroTrailCount++;
+      }
+      if (exactZeroCount > 3200 && zeroTrailCount > 3200) {
+        isInterrupted = true;
+      }
+    }
+
     return SignalAnalysisResult(
       isEmptyOrInvalid: false,
       peakAmplitude: maxAbs,
       rms: rms,
       isSilent: isSilent,
       isQuiet: isQuiet,
+      isClipped: isClipped,
+      isHighNoise: isHighNoise,
+      isMultiSpeaker: isMultiSpeaker,
+      isExcessivePause: isExcessivePause,
+      isInterrupted: isInterrupted,
     );
   }
 
