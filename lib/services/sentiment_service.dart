@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:lumad_lingua/models/sentiment_post.dart';
 
 class SentimentData {
@@ -27,6 +30,19 @@ class SentimentData {
 }
 
 class SentimentService {
+  static const String _customSentimentPrefsKey = 'custom_sentiment_posts_v1';
+
+  Future<void> saveCustomSentimentPosts(List<Map<String, dynamic>> rawJsonList) async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonStr = jsonEncode(rawJsonList);
+    await prefs.setString(_customSentimentPrefsKey, jsonStr);
+  }
+
+  Future<void> clearCustomSentimentPosts() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_customSentimentPrefsKey);
+  }
+
   /// Single Sentiment Analysis Engine (Trained/Validated model output)
   double analyzeSentiment(String text) {
     final words = _tokenize(text);
@@ -121,7 +137,70 @@ class SentimentService {
 
   /// Fetches human-validated community sentiment posts
   Future<List<SentimentPost>> getValidatedSentimentPosts() async {
-    return [];
+    // 1. Try fetching from Firestore collection 'sentiment_posts'
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('sentiment_posts')
+          .orderBy('publishedAt', descending: true)
+          .get()
+          .timeout(const Duration(seconds: 4));
+
+      if (snap.docs.isNotEmpty) {
+        return snap.docs
+            .map((doc) => SentimentPost.fromFirestore(doc.data(), doc.id))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('Firestore sentiment fetch note: $e');
+    }
+
+    // 2. Try loading custom imported JSON posts from local storage
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonStr = prefs.getString(_customSentimentPrefsKey);
+      if (jsonStr != null && jsonStr.isNotEmpty) {
+        final List<dynamic> jsonList = jsonDecode(jsonStr);
+        final posts = jsonList.asMap().entries.map((entry) {
+          final idx = entry.key;
+          final data = entry.value as Map<String, dynamic>;
+          return SentimentPost.fromFirestore(data, data['id'] ?? 'custom_$idx');
+        }).toList();
+        if (posts.isNotEmpty) return posts;
+      }
+    } catch (e) {
+      debugPrint('Custom sentiment posts read note: $e');
+    }
+
+    // 3. Try loading asset 'assets/data/sentiment_posts.json'
+    try {
+      final String jsonString =
+          await rootBundle.loadString('assets/data/sentiment_posts.json');
+      final List<dynamic> jsonList = jsonDecode(jsonString);
+      final posts = jsonList.asMap().entries.map((entry) {
+        final idx = entry.key;
+        final data = entry.value as Map<String, dynamic>;
+        return SentimentPost.fromFirestore(data, data['id'] ?? 'asset_$idx');
+      }).toList();
+      if (posts.isNotEmpty) return posts;
+    } catch (e) {
+      debugPrint('Asset sentiment load note: $e');
+    }
+
+    // 4. Fallback sample posts generated from recent sentiment
+    final recentData = await getRecentSentiment();
+    return recentData.asMap().entries.map((entry) {
+      final idx = entry.key;
+      final data = entry.value;
+      return SentimentPost(
+        id: 'post_sample_${idx + 1}',
+        originalText: data.postText,
+        sentimentCategory: data.category,
+        sentimentScore: data.sentimentScore,
+        publishedAt: data.timestamp,
+        sourceUrl: data.sourceUrl,
+        keywords: data.detectedKeywords,
+      );
+    }).toList();
   }
 
   List<String> _tokenize(String text) {

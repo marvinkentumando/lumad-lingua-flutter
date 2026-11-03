@@ -8,6 +8,9 @@
   - Implemented SRS mastery stars and saved words bookmarking system.
   - Implemented Hive offline caching for global dictionary searches and local fallbacks.
   - Implemented smooth infinite scrolling / lazy loading (replacing page navigation) for optimal mobile vocabulary browsing UX.
+- [x] **Community Sentiment Dashboard**:
+  - Connected `SentimentService` to load pre-analyzed sentiment posts from Firestore (`sentiment_posts`), local JSON asset (`assets/data/sentiment_posts.json`), or custom local storage.
+  - Added "Import JSON Dataset" modal on Sentiment Dashboard Screen supporting direct file picking (`.json`) or raw JSON text pasting.
 - [x] **Text-To-Speech (TTS) Engine**:
   - Implemented native TTS language check prioritizing Cebuano (`ceb-PH`) for phonetic similarity to Mansaka, falling back to Filipino (`fil-PH`).
 - [x] **Admin Dictionary Screen**:

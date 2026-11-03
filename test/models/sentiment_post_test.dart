@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumad_lingua/models/sentiment_post.dart';
 
@@ -56,6 +58,24 @@ void main() {
       expect(map['originalText'], equals('Salamat sa pagtudlo'));
       expect(map['sentimentCategory'], equals('positive'));
       expect(map['keywords'], equals(['Salamat']));
+    });
+
+    test('parses full sentiment_posts.json file without errors', () async {
+      final file = TestWidgetsFlutterBinding.ensureInitialized();
+      final String jsonString = await file.defaultBinaryMessenger
+          .handlePlatformMessage('flutter/assets', null, (data) {}) ?? '';
+      
+      // Direct JSON parsing test
+      final jsonFile = await SystemChannels.assets.loadString('assets/data/sentiment_posts.json');
+      final List<dynamic> rawList = jsonDecode(jsonFile);
+
+      expect(rawList, isNotEmpty);
+      final posts = rawList.asMap().entries.map((e) {
+        return SentimentPost.fromFirestore(e.value as Map<String, dynamic>, e.value['id']);
+      }).toList();
+
+      expect(posts.length, equals(rawList.length));
+      expect(posts.first.originalText, isNotEmpty);
     });
   });
 }

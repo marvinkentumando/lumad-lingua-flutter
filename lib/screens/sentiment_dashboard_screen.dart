@@ -1,13 +1,18 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:cross_file/cross_file.dart';
 import '../theme/app_typography.dart';
 import '../theme/app_colors.dart';
 import 'package:lumad_lingua/models/sentiment_post.dart';
 import 'package:lumad_lingua/services/sentiment_service.dart';
+import '../services/haptic_service.dart';
 import '../widgets/brand_card.dart';
+import '../widgets/brand_button.dart';
 import '../widgets/brand_background.dart';
 import '../widgets/app_shimmer_skeleton.dart';
 
@@ -29,6 +34,177 @@ class _SentimentDashboardScreenState
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _showImportJsonModal(BuildContext context) {
+    final textController = TextEditingController();
+    bool isImporting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalContext) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+
+          Future<void> processAndSaveJson(String jsonStr) async {
+            try {
+              final decoded = jsonDecode(jsonStr);
+              List<Map<String, dynamic>> rawList = [];
+              if (decoded is List) {
+                rawList = decoded.cast<Map<String, dynamic>>();
+              } else if (decoded is Map<String, dynamic> && decoded.containsKey('data')) {
+                rawList = (decoded['data'] as List).cast<Map<String, dynamic>>();
+              } else {
+                throw const FormatException('Expected a JSON array of sentiment objects.');
+              }
+
+              if (rawList.isEmpty) {
+                throw const FormatException('The JSON array contains no sentiment records.');
+              }
+
+              await ref.read(sentimentServiceProvider).saveCustomSentimentPosts(rawList);
+              ref.invalidate(communitySentimentPostsProvider);
+
+              if (mounted) {
+                HapticService.success();
+                Navigator.of(modalContext).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Successfully imported ${rawList.length} sentiment records! 🌿'),
+                    backgroundColor: AppColors.semanticGreen,
+                  ),
+                );
+              }
+            } catch (e) {
+              if (mounted) {
+                HapticService.error();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to parse JSON: $e'),
+                    backgroundColor: AppColors.semanticRed,
+                  ),
+                );
+              }
+            }
+          }
+
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.75,
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.forest800 : AppColors.creamBg,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Import Sentiment Dataset',
+                        style: AppTypography.h2.copyWith(
+                          color: isDark ? Colors.white : AppColors.forest900,
+                          fontSize: 18,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.of(modalContext).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Pick a .json file or paste your sentiment JSON array below.',
+                    style: TextStyle(
+                      color: isDark ? Colors.white60 : Colors.black54,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: isImporting
+                              ? null
+                              : () async {
+                                  final result = await FilePicker.platform.pickFiles(
+                                    type: FileType.custom,
+                                    allowedExtensions: ['json'],
+                                  );
+                                  if (result != null && result.files.single.bytes != null) {
+                                    final str = utf8.decode(result.files.single.bytes!);
+                                    textController.text = str;
+                                  } else if (result != null && result.files.single.path != null) {
+                                    final file = await CrossFile(result.files.single.path!).readAsString();
+                                    textController.text = file;
+                                  }
+                                },
+                          icon: const Icon(Icons.file_open_rounded, size: 18),
+                          label: const Text('Pick JSON File'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.gold500,
+                            side: const BorderSide(color: AppColors.gold500),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: TextField(
+                      controller: textController,
+                      maxLines: null,
+                      expands: true,
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: '[\n  {\n    "id": "post_1",\n    "originalText": "Madyaw...",\n    "sentimentCategory": "positive"\n  }\n]',
+                        filled: true,
+                        fillColor: isDark ? Colors.black26 : Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: BrandButton(
+                      text: isImporting ? 'IMPORTING...' : 'IMPORT DATASET',
+                      type: BrandButtonType.primary,
+                      onTap: isImporting
+                          ? null
+                          : () async {
+                              if (textController.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Please select or paste JSON data.')),
+                                );
+                                return;
+                              }
+                              setModalState(() => isImporting = true);
+                              await processAndSaveJson(textController.text.trim());
+                              if (mounted) setModalState(() => isImporting = false);
+                            },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -146,6 +322,14 @@ class _SentimentDashboardScreenState
         ),
         onPressed: () => context.pop(),
       ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.upload_file_rounded, color: AppColors.gold500),
+          tooltip: 'Import JSON Dataset',
+          onPressed: () => _showImportJsonModal(context),
+        ),
+        const SizedBox(width: 8),
+      ],
       expandedHeight: 110,
       pinned: true,
       flexibleSpace: FlexibleSpaceBar(
