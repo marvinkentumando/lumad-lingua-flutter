@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:audioplayers/audioplayers.dart' as ap;
 import 'package:http/http.dart' as http;
 import 'package:record/record.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -46,6 +47,14 @@ class AudioComparisonScreen extends ConsumerStatefulWidget {
 class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   static const int maxRecordingDurationSeconds = 15;
 
+  String _normalizeSpeechText(String text) => text
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^\p{L}\p{N}]+', unicode: true), ' ')
+      .trim()
+      .replaceAll(RegExp(r'\s+'), ' ');
+
+  bool _transcriptMatches(String expected, String recognized) => expected == recognized;
+
   AudioComparisonState _state = AudioComparisonState.idle;
   double _scorePercentage = 0.0;
   int _currentIndex = 0;
@@ -67,6 +76,9 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   String? _errorMessage;
   bool _isQuietWarning = false;
   bool _isStoppingRecording = false;
+  final stt.SpeechToText _speechRecognizer = stt.SpeechToText();
+  String _recognizedWords = '';
+  bool _speechRecognitionAvailable = false;
 
   final AudioRecorder _audioRecorder = AudioRecorder();
   final ap.AudioPlayer _nativePlayer = ap.AudioPlayer();
@@ -87,6 +99,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
 
   @override
   void dispose() {
+    _speechRecognizer.stop();
     _recordingTimer?.cancel();
     _amplitudeSubscription?.cancel();
     _userPlayerCompleteSubscription?.cancel();
@@ -299,6 +312,10 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     }
 
     try {
+      _recognizedWords = '';
+      _speechRecognitionAvailable = await _speechRecognizer.initialize(
+        onError: (error) => debugPrint('Speech recognition error: ${error.errorMsg}'),
+      );
       RecordConfig config = const RecordConfig(
         encoder: AudioEncoder.wav,
         sampleRate: 16000,
@@ -329,6 +346,11 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       }
 
       await _audioRecorder.start(config, path: recordPath);
+      if (_speechRecognitionAvailable) {
+        await _speechRecognizer.listen(
+          onResult: (result) => _recognizedWords = result.recognizedWords,
+        );
+      }
 
       _recordingDurationSeconds = 0;
       _isStoppingRecording = false;
@@ -392,6 +414,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     _amplitudeSubscription?.cancel();
 
     try {
+      if (_speechRecognitionAvailable) await _speechRecognizer.stop();
       final path = await _audioRecorder.stop();
       final targetPath = path ?? _recordedFilePath;
 
@@ -628,6 +651,27 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     });
 
     try {
+      final expected = _normalizeSpeechText(currentItem.expectedPhrase);
+      final recognized = _normalizeSpeechText(_recognizedWords);
+      if (!_speechRecognitionAvailable || recognized.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _state = AudioComparisonState.error;
+            _errorMessage = 'We could not verify the spoken word with speech recognition. Please check microphone and speech recognition permissions, then record again.';
+          });
+        }
+        return;
+      }
+      if (expected.isEmpty || !_transcriptMatches(expected, recognized)) {
+        if (mounted) {
+          setState(() {
+            _state = AudioComparisonState.error;
+            _errorMessage = 'The recording was recognized as “$_recognizedWords”, but the expected word is “${currentItem.expectedPhrase}”. Please say the displayed word and record again.';
+          });
+        }
+        return;
+      }
+
       // 1. Decode learner audio bytes
       Uint8List learnerBytes;
       File? learnerFile;

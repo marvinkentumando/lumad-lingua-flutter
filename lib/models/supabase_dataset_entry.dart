@@ -63,6 +63,10 @@ class SupabaseDatasetEntry {
   String get referenceFileName => primaryTake?.fileName ?? '';
   String get referenceAudioPath => primaryTake?.audioPath ?? '';
   String get referenceAudioUrl => primaryTake?.audioUrl ?? '';
+  String get expectedPhrase {
+    final parts = folderName.split('__');
+    return (parts.length > 1 ? parts.last : folderName).replaceAll('_', ' ').trim();
+  }
 
   /// Helper to convert raw folder name (e.g. "agtura__tura_ng_ugbos") into human-readable title ("Agtura - tura ng ugbos")
   static String formatTitleFromFolder(String folder) {
