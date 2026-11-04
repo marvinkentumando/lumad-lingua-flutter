@@ -802,8 +802,6 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildDatasetBadge(currentItem),
-                    const SizedBox(height: 16),
                     _buildNativeSpeakerCard(isDark, currentItem, l10n),
                     const SizedBox(height: 20),
                     _buildUserRecordingCard(isDark, l10n),
@@ -861,29 +859,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     );
   }
 
-  Widget _buildDatasetBadge(SupabaseDatasetEntry item) {
-    final runId = item.runId;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.gold500.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.gold500.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.verified_rounded, size: 14, color: AppColors.gold500),
-          const SizedBox(width: 6),
-          Text(
-            'REF: $runId • 16kHz WAV',
-            style: AppTypography.mono.copyWith(color: AppColors.gold500, fontSize: 10, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildNativeSpeakerCard(bool isDark, SupabaseDatasetEntry item, AppLocalization l10n) {
     return Column(

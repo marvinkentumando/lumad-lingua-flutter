@@ -184,7 +184,7 @@ class SupabaseDatasetService {
           }
 
           final title = SupabaseDatasetEntry.formatTitleFromFolder(name);
-          final subtitle = 'Preprocessed Audio ($entryRunId) • Verified';
+          final subtitle = '($entryRunId) • Verified';
 
           entries.add(SupabaseDatasetEntry(
             folderName: name,
