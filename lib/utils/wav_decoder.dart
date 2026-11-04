@@ -47,6 +47,7 @@ class SignalAnalysisResult {
 
 class WavDecoder {
   static const int targetSampleRate = 16000;
+  static const int minimumComparisonSamples = targetSampleRate * 35 ~/ 100;
   static const double targetRmsLinear = 0.10; // -20 dBFS
   static const double peakCeilingLinear = 0.8912509; // -1 dBFS
   static const double maxGainLinear = 31.6227766; // 30 dB
@@ -212,7 +213,44 @@ class WavDecoder {
       final activeSpeechSec = (activeSpeechFrames * frameSize) / targetSampleRate;
       final peakToNoiseRatio = noiseFloorRms > 0 ? (maxAbs / noiseFloorRms) : 10.0;
 
-      if (activeSpeechSec < 0.20 || peakToNoiseRatio < 2.5) {
+      // Stationary broadband noise can have high peaks and active energy in
+      // every frame. Treat a sustained, nearly constant, high-crossing signal
+      // as noise instead of speech (while keeping short fricatives viable).
+      int activeFrameCount = 0;
+      double activeFrameRmsSum = 0.0;
+      double activeFrameRmsSquaredSum = 0.0;
+      double activeZeroCrossings = 0.0;
+      int activeZeroCrossingFrames = 0;
+      for (int f = 0; f < numFrames; f++) {
+        if (!frameActive[f]) continue;
+        final start = f * frameSize;
+        double framePower = 0.0;
+        int crossings = 0;
+        for (int i = start; i < start + frameSize; i++) {
+          framePower += samples[i] * samples[i];
+          if (i < start + frameSize - 1 &&
+              ((samples[i] >= 0 && samples[i + 1] < 0) ||
+                  (samples[i] < 0 && samples[i + 1] >= 0))) {
+            crossings++;
+          }
+        }
+        final frameRms = math.sqrt(framePower / frameSize);
+        activeFrameCount++;
+        activeFrameRmsSum += frameRms;
+        activeFrameRmsSquaredSum += frameRms * frameRms;
+        activeZeroCrossings += crossings / frameSize;
+        activeZeroCrossingFrames++;
+      }
+      final meanActiveRms = activeFrameRmsSum / math.max(1, activeFrameCount);
+      final activeRmsVariance = math.max(
+        0.0,
+        activeFrameRmsSquaredSum / math.max(1, activeFrameCount) - meanActiveRms * meanActiveRms,
+      );
+      final activeRmsCv = meanActiveRms > 0 ? math.sqrt(activeRmsVariance) / meanActiveRms : 0.0;
+      final meanActiveZcr = activeZeroCrossings / math.max(1, activeZeroCrossingFrames);
+      final likelyStationaryNoise = activeSpeechSec > 0.3 && activeRmsCv < 0.12 && meanActiveZcr > 0.18;
+
+      if (activeSpeechSec < 0.20 || peakToNoiseRatio < 2.5 || likelyStationaryNoise) {
         hasNoSpeech = true;
       }
     }

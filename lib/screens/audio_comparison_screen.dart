@@ -9,7 +9,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:audioplayers/audioplayers.dart' as ap;
 import 'package:http/http.dart' as http;
 import 'package:record/record.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -47,14 +46,6 @@ class AudioComparisonScreen extends ConsumerStatefulWidget {
 class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   static const int maxRecordingDurationSeconds = 15;
 
-  String _normalizeSpeechText(String text) => text
-      .toLowerCase()
-      .replaceAll(RegExp(r'[^\p{L}\p{N}]+', unicode: true), ' ')
-      .trim()
-      .replaceAll(RegExp(r'\s+'), ' ');
-
-  bool _transcriptMatches(String expected, String recognized) => expected == recognized;
-
   AudioComparisonState _state = AudioComparisonState.idle;
   double _scorePercentage = 0.0;
   int _currentIndex = 0;
@@ -76,10 +67,6 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   String? _errorMessage;
   bool _isQuietWarning = false;
   bool _isStoppingRecording = false;
-  final stt.SpeechToText _speechRecognizer = stt.SpeechToText();
-  String _recognizedWords = '';
-  bool _speechRecognitionAvailable = false;
-
   final AudioRecorder _audioRecorder = AudioRecorder();
   final ap.AudioPlayer _nativePlayer = ap.AudioPlayer();
   final ap.AudioPlayer _userPlayer = ap.AudioPlayer();
@@ -99,7 +86,6 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
 
   @override
   void dispose() {
-    _speechRecognizer.stop();
     _recordingTimer?.cancel();
     _amplitudeSubscription?.cancel();
     _userPlayerCompleteSubscription?.cancel();
@@ -312,10 +298,6 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     }
 
     try {
-      _recognizedWords = '';
-      _speechRecognitionAvailable = await _speechRecognizer.initialize(
-        onError: (error) => debugPrint('Speech recognition error: ${error.errorMsg}'),
-      );
       RecordConfig config = const RecordConfig(
         encoder: AudioEncoder.wav,
         sampleRate: 16000,
@@ -346,11 +328,6 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       }
 
       await _audioRecorder.start(config, path: recordPath);
-      if (_speechRecognitionAvailable) {
-        await _speechRecognizer.listen(
-          onResult: (result) => _recognizedWords = result.recognizedWords,
-        );
-      }
 
       _recordingDurationSeconds = 0;
       _isStoppingRecording = false;
@@ -414,7 +391,6 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     _amplitudeSubscription?.cancel();
 
     try {
-      if (_speechRecognitionAvailable) await _speechRecognizer.stop();
       final path = await _audioRecorder.stop();
       final targetPath = path ?? _recordedFilePath;
 
@@ -483,7 +459,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       final learnerWavResult = WavDecoder.decodeWavBytes(validWavBytes);
       final learnerPcm = learnerWavResult.pcmSamples;
 
-      if (learnerPcm.length < 5600) { // < 0.35s: too little speech for reliable word comparison
+      if (learnerPcm.length < WavDecoder.minimumComparisonSamples) {
         if (mounted) {
           setState(() {
             _state = AudioComparisonState.error;
@@ -651,27 +627,6 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     });
 
     try {
-      final expected = _normalizeSpeechText(currentItem.expectedPhrase);
-      final recognized = _normalizeSpeechText(_recognizedWords);
-      if (!_speechRecognitionAvailable || recognized.isEmpty) {
-        if (mounted) {
-          setState(() {
-            _state = AudioComparisonState.error;
-            _errorMessage = 'We could not verify the spoken word with speech recognition. Please check microphone and speech recognition permissions, then record again.';
-          });
-        }
-        return;
-      }
-      if (expected.isEmpty || !_transcriptMatches(expected, recognized)) {
-        if (mounted) {
-          setState(() {
-            _state = AudioComparisonState.error;
-            _errorMessage = 'The recording was recognized as “$_recognizedWords”, but the expected word is “${currentItem.expectedPhrase}”. Please say the displayed word and record again.';
-          });
-        }
-        return;
-      }
-
       // 1. Decode learner audio bytes
       Uint8List learnerBytes;
       File? learnerFile;
@@ -694,6 +649,16 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       final learnerWavResult = WavDecoder.decodeWavBytes(validLearnerWav);
       final learnerPcm = learnerWavResult.pcmSamples;
 
+      if (learnerPcm.length < WavDecoder.minimumComparisonSamples) {
+        if (mounted) {
+          setState(() {
+            _state = AudioComparisonState.error;
+            _errorMessage = 'Recording is too short to compare reliably (minimum 0.35 seconds). Please say the full word or phrase and record again.';
+          });
+        }
+        return;
+      }
+
       final signal = WavDecoder.analyzeSignal(learnerPcm);
       if (signal.isEmptyOrInvalid || signal.isSilent || signal.isQuiet || signal.hasNoSpeech) {
         if (mounted) {
@@ -702,6 +667,26 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
             _errorMessage = signal.hasNoSpeech
                 ? "No speech detected. Please speak the phrase clearly into the microphone and record again."
                 : "We couldn't hear your voice clearly. Please speak closer to the microphone and record again.";
+            _isQuietWarning = false;
+          });
+        }
+        return;
+      }
+      if (signal.isClipped || signal.isInterrupted || signal.isExcessivePause ||
+          signal.isMultiSpeaker || signal.isHighNoise) {
+        if (mounted) {
+          final reason = signal.isClipped
+              ? 'Recording is distorted or too loud. Move farther from the microphone and record again.'
+              : signal.isInterrupted
+                  ? 'The microphone connection was interrupted. Check the audio input and record again.'
+                  : signal.isExcessivePause
+                      ? 'A long pause was detected. Say the complete phrase smoothly and record again.'
+                      : signal.isMultiSpeaker
+                          ? 'More than one voice was detected. Record again with only your voice.'
+                          : 'High background noise was detected. Move somewhere quieter and record again.';
+          setState(() {
+            _state = AudioComparisonState.error;
+            _errorMessage = reason;
             _isQuietWarning = false;
           });
         }
@@ -733,9 +718,9 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
             strictness: PronunciationStrictness.normal,
             algorithm: PronunciationAlgorithm.dtw,
           );
-          // Require the attempt to match both reference takes; averaging could
-          // let a strong match to one take hide a poor or unrelated match to the other.
-          finalScore = math.min(score1.overallScore, score2.overallScore);
+          // Average verified takes so natural variation between reference speakers
+          // does not make one take alone determine the learner's result.
+          finalScore = (score1.overallScore + score2.overallScore) / 2.0;
         } catch (e2) {
           debugPrint('Take 2 comparison skipped due to error: $e2');
         }
