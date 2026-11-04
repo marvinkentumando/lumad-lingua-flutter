@@ -223,14 +223,16 @@ class PronunciationService implements IPronunciationComparer {
     final distance = MFCCService.calculateMFCCDistance(s, t);
     if (distance == double.infinity) return 0.0;
 
-    // Smooth continuous exponential distance scaling anchored at d = 0:
-    // d = 0.0 -> 100% (Identical audio)
-    // d = 0.8 -> 80%  (Near-perfect match)
-    // d = 1.5 -> 65%  (Good match)
-    // d = 3.0 -> 42%  (Fair / Minor accent)
-    // d = 5.0 -> 24%  (Mispronounced / Different word)
-    final sensitivity = strictness.sensitivity;
-    return math.exp(-sensitivity * (distance / 3.5)).clamp(0.0, 1.0);
+    // Calibrated 39-D CMVN MFCC feature space distance mapping:
+    // Identical audio: d = 0.0 -> 100%
+    // Phone speaker playback / clear native speech: d ~ 8.0 to 10.0 -> 70% to 85%
+    // Moderate speech attempt: d ~ 11.0 to 13.5 -> 50% to 65%
+    // Mispronounced / wrong word: d >= 16.0 -> < 25%
+    final baseMin = 5.0;
+    final baseRange = 15.0 / strictness.sensitivity;
+
+    final normalizedScore = 1.0 - ((distance - baseMin) / baseRange);
+    return normalizedScore.clamp(0.0, 1.0);
   }
 
   static double _calculateHMMScore(
@@ -317,11 +319,11 @@ class PronunciationService implements IPronunciationComparer {
   }
 
   static String _generateFeedback(double score) {
-    if (score >= 0.85) return "Excellent! Your pronunciation is near-perfect.";
-    if (score >= 0.70) return "Great job! Very clear and accurate.";
-    if (score >= 0.50) return "Good attempt. Listen closely to the native accent and try again.";
-    if (score >= 0.30) return "Understandable, but needs more practice on rhythm.";
-    return "Needs improvement. Focus on the individual sounds of the word.";
+    if (score >= 0.80) return "Excellent! Your pronunciation is near-perfect.";
+    if (score >= 0.60) return "Great job! Very clear and accurate.";
+    if (score >= 0.45) return "Good effort! Try matching the native speaker's rhythm and vowels.";
+    if (score >= 0.25) return "Mispronunciation detected. Listen closely to the native speaker and record again.";
+    return "Different word or incorrect speech detected. Please listen to the native speaker and record again.";
   }
 
   static String _getFeedbackKey(double score) {
