@@ -222,7 +222,16 @@ class PronunciationService implements IPronunciationComparer {
   ) {
     final distance = MFCCService.calculateMFCCDistance(s, t);
     if (distance == double.infinity) return 0.0;
-    return math.exp(-strictness.sensitivity * (distance / 45.0)).clamp(0.0, 1.0);
+
+    // CMVN-normalized 39-D MFCC feature space distance calibration:
+    // Same word match: distance ~6.0 to 9.0 -> 80% to 100%
+    // Moderate match: distance ~10.0 to 13.0 -> 55% to 75%
+    // Different word match: distance >= 16.0 -> < 30%
+    final minDistance = 6.0;
+    final maxDistance = 20.0 / strictness.sensitivity;
+
+    final normalizedScore = 1.0 - ((distance - minDistance) / (maxDistance - minDistance));
+    return normalizedScore.clamp(0.0, 1.0);
   }
 
   static double _calculateHMMScore(
