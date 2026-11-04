@@ -28,6 +28,7 @@ class SignalAnalysisResult {
   final bool isMultiSpeaker;
   final bool isExcessivePause;
   final bool isInterrupted;
+  final bool hasNoSpeech;
 
   SignalAnalysisResult({
     required this.isEmptyOrInvalid,
@@ -40,6 +41,7 @@ class SignalAnalysisResult {
     this.isMultiSpeaker = false,
     this.isExcessivePause = false,
     this.isInterrupted = false,
+    this.hasNoSpeech = false,
   });
 }
 
@@ -191,6 +193,30 @@ class WavDecoder {
       }
     }
 
+    // 6. Speech Presence Verification (VAD: Speech vs Pure Background Noise / Hiss)
+    bool hasNoSpeech = false;
+    if (!isSilent) {
+      final speechThreshold = math.max(candidateSilentRmsThreshold * 2.5, noiseFloorRms * 2.2);
+      int activeSpeechFrames = 0;
+      for (int f = 0; f < numFrames; f++) {
+        double framePower = 0.0;
+        for (int i = f * frameSize; i < (f + 1) * frameSize; i++) {
+          framePower += samples[i] * samples[i];
+        }
+        final frameRms = math.sqrt(framePower / frameSize);
+        if (frameRms >= speechThreshold) {
+          activeSpeechFrames++;
+        }
+      }
+
+      final activeSpeechSec = (activeSpeechFrames * frameSize) / targetSampleRate;
+      final peakToNoiseRatio = noiseFloorRms > 0 ? (maxAbs / noiseFloorRms) : 10.0;
+
+      if (activeSpeechSec < 0.20 || peakToNoiseRatio < 2.5) {
+        hasNoSpeech = true;
+      }
+    }
+
     return SignalAnalysisResult(
       isEmptyOrInvalid: false,
       peakAmplitude: maxAbs,
@@ -202,6 +228,7 @@ class WavDecoder {
       isMultiSpeaker: isMultiSpeaker,
       isExcessivePause: isExcessivePause,
       isInterrupted: isInterrupted,
+      hasNoSpeech: hasNoSpeech,
     );
   }
 

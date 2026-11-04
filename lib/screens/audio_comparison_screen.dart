@@ -472,11 +472,13 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
 
       // Check signal for silence/near-silence and quality conditions
       final signal = WavDecoder.analyzeSignal(learnerPcm);
-      if (signal.isEmptyOrInvalid || signal.isSilent || signal.isQuiet) {
+      if (signal.isEmptyOrInvalid || signal.isSilent || signal.isQuiet || signal.hasNoSpeech) {
         if (mounted) {
           setState(() {
             _state = AudioComparisonState.error;
-            _errorMessage = "We couldn't hear your voice clearly. Please speak closer to the microphone and record again.";
+            _errorMessage = signal.hasNoSpeech
+                ? "No speech detected. Please speak the phrase clearly into the microphone and record again."
+                : "We couldn't hear your voice clearly. Please speak closer to the microphone and record again.";
             _isQuietWarning = false;
           });
         }
@@ -648,11 +650,13 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       final learnerPcm = learnerWavResult.pcmSamples;
 
       final signal = WavDecoder.analyzeSignal(learnerPcm);
-      if (signal.isEmptyOrInvalid || signal.isSilent || signal.isQuiet) {
+      if (signal.isEmptyOrInvalid || signal.isSilent || signal.isQuiet || signal.hasNoSpeech) {
         if (mounted) {
           setState(() {
             _state = AudioComparisonState.error;
-            _errorMessage = "We couldn't hear your voice clearly. Please speak closer to the microphone and record again.";
+            _errorMessage = signal.hasNoSpeech
+                ? "No speech detected. Please speak the phrase clearly into the microphone and record again."
+                : "We couldn't hear your voice clearly. Please speak closer to the microphone and record again.";
             _isQuietWarning = false;
           });
         }
