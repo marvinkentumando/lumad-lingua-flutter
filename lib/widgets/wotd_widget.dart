@@ -138,41 +138,37 @@ class WotdWidget extends ConsumerWidget {
                         size: 28,
                       ),
                     ).animate(target: isSaved ? 1 : 0).scale(duration: 200.ms),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () {
-                        if (entry.audioUrl != null &&
-                            entry.audioUrl!.isNotEmpty) {
+                    if (entry.audioUrl != null &&
+                        entry.audioUrl!.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () {
                           ref
                               .read(audioServiceProvider)
                               .playFromUrl(entry.audioUrl!);
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('No audio available')),
-                          );
-                        }
-                      },
-                      child: Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: isDark ? AppColors.gold500 : AppColors.terracotta,
-                          borderRadius: BorderRadius.circular(18),
-                          boxShadow: [
-                            BoxShadow(
-                              color: (isDark ? AppColors.gold500 : AppColors.terracotta).withValues(alpha: 0.2),
-                              blurRadius: 15,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
+                        },
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.gold500 : AppColors.terracotta,
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: [
+                              BoxShadow(
+                                color: (isDark ? AppColors.gold500 : AppColors.terracotta).withValues(alpha: 0.2),
+                                blurRadius: 15,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.volume_up_rounded,
+                            color: isDark ? Colors.black : Colors.white,
+                            size: 28,
+                          ),
                         ),
-                        child: Icon(
-                          Icons.volume_up_rounded,
-                          color: isDark ? Colors.black : Colors.white,
-                          size: 28,
-                        ),
-                      ),
-                    ).animate().scale(delay: 200.ms).shimmer(delay: 1.seconds),
+                      ).animate().scale(delay: 200.ms).shimmer(delay: 1.seconds),
+                    ],
                   ],
                 ),
               ],

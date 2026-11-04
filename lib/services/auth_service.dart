@@ -263,12 +263,11 @@ class AuthService {
             // Try to find educator by code
             final eduSnap = await firestore
                 .collection('users')
-                .where('role', isEqualTo: 'educator')
                 .where('villageCode', isEqualTo: villageCode.trim().toUpperCase())
                 .limit(1)
                 .get();
             
-            if (eduSnap.docs.isNotEmpty) {
+            if (eduSnap.docs.isNotEmpty && eduSnap.docs.first.data()['role'] == 'educator') {
               profileData['educatorId'] = eduSnap.docs.first.id;
             }
           }

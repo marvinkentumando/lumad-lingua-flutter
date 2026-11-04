@@ -1,11 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:cross_file/cross_file.dart';
 import '../theme/app_typography.dart';
 import '../theme/app_colors.dart';
 import 'package:lumad_lingua/models/sentiment_post.dart';
@@ -15,6 +15,9 @@ import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/brand_background.dart';
 import '../widgets/app_shimmer_skeleton.dart';
+import '../providers/role_provider.dart';
+import '../providers/student_provider.dart';
+import 'learner_sentiment_screen.dart';
 
 class SentimentDashboardScreen extends ConsumerStatefulWidget {
   const SentimentDashboardScreen({super.key});
@@ -36,7 +39,7 @@ class _SentimentDashboardScreenState
     super.dispose();
   }
 
-  void _showImportJsonModal(BuildContext context) {
+  void _showImportJsonModal() {
     final textController = TextEditingController();
     bool isImporting = false;
 
@@ -45,11 +48,10 @@ class _SentimentDashboardScreenState
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (modalContext) => StatefulBuilder(
-        builder: (context, setModalState) {
-          final isDark = Theme.of(context).brightness == Brightness.dark;
+        builder: (modalContext, setModalState) {
+          final isDark = Theme.of(modalContext).brightness == Brightness.dark;
 
-          Future<void> processAndSaveJson(String jsonStr) async {
-            try {
+            Future<int> processAndSaveJson(String jsonStr) async {
               final decoded = jsonDecode(jsonStr);
               List<Map<String, dynamic>> rawList = [];
               if (decoded is List) {
@@ -66,32 +68,11 @@ class _SentimentDashboardScreenState
 
               await ref.read(sentimentServiceProvider).saveCustomSentimentPosts(rawList);
               ref.invalidate(communitySentimentPostsProvider);
-
-              if (mounted) {
-                HapticService.success();
-                Navigator.of(modalContext).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Successfully imported ${rawList.length} sentiment records! 🌿'),
-                    backgroundColor: AppColors.semanticGreen,
-                  ),
-                );
-              }
-            } catch (e) {
-              if (mounted) {
-                HapticService.error();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Failed to parse JSON: $e'),
-                    backgroundColor: AppColors.semanticRed,
-                  ),
-                );
-              }
+              return rawList.length;
             }
-          }
 
           return Container(
-            height: MediaQuery.of(context).size.height * 0.75,
+            height: MediaQuery.of(modalContext).size.height * 0.75,
             decoration: BoxDecoration(
               color: isDark ? AppColors.forest800 : AppColors.creamBg,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
@@ -142,7 +123,7 @@ class _SentimentDashboardScreenState
                                     final str = utf8.decode(result.files.single.bytes!);
                                     textController.text = str;
                                   } else if (result != null && result.files.single.path != null) {
-                                    final file = await XFile(result.files.single.path!).readAsString();
+                                    final file = await File(result.files.single.path!).readAsString();
                                     textController.text = file;
                                   }
                                 },
@@ -188,14 +169,36 @@ class _SentimentDashboardScreenState
                           ? null
                           : () async {
                               if (textController.text.trim().isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                ScaffoldMessenger.of(modalContext).showSnackBar(
                                   const SnackBar(content: Text('Please select or paste JSON data.')),
                                 );
                                 return;
                               }
                               setModalState(() => isImporting = true);
-                              await processAndSaveJson(textController.text.trim());
-                              if (mounted) setModalState(() => isImporting = false);
+                              try {
+                                final count = await processAndSaveJson(textController.text.trim());
+                                if (!modalContext.mounted) return;
+                                HapticService.success();
+                                Navigator.of(modalContext).pop();
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Successfully imported $count sentiment records! 🌿'),
+                                    backgroundColor: AppColors.semanticGreen,
+                                  ),
+                                );
+                              } catch (e) {
+                                if (!context.mounted) return;
+                                HapticService.error();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Failed to parse JSON: $e'),
+                                    backgroundColor: AppColors.semanticRed,
+                                  ),
+                                );
+                              } finally {
+                                if (modalContext.mounted) setModalState(() => isImporting = false);
+                              }
                             },
                     ),
                   ),
@@ -210,6 +213,19 @@ class _SentimentDashboardScreenState
 
   @override
   Widget build(BuildContext context) {
+    final currentRole = ref.watch(roleProvider);
+    final userProfile = ref.watch(userProfileProvider).value;
+    final userRoleStr = userProfile?['role']?.toString().toLowerCase();
+
+    final isLearner = currentRole == UserRole.learner &&
+        userRoleStr != 'admin' &&
+        userRoleStr != 'educator' &&
+        userRoleStr != 'staff';
+
+    if (isLearner) {
+      return const LearnerSentimentScreen();
+    }
+
     final postsAsync = ref.watch(communitySentimentPostsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -361,7 +377,7 @@ class _SentimentDashboardScreenState
         IconButton(
           icon: const Icon(Icons.upload_file_rounded, color: AppColors.gold500),
           tooltip: 'Import JSON Dataset',
-          onPressed: () => _showImportJsonModal(context),
+          onPressed: _showImportJsonModal,
         ),
         const SizedBox(width: 8),
       ],

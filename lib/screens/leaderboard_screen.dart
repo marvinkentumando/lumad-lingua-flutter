@@ -99,15 +99,31 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
   List<LeaderboardEntry> _mapToEntries(
     List<Map<String, dynamic>> data,
     bool isXP,
+    String timeFilter,
   ) {
+    final now = DateTime.now();
+    final monday = now.subtract(Duration(days: now.weekday - 1));
+    final startOfWeek = DateTime(monday.year, monday.month, monday.day);
+
     return data.asMap().entries.map((e) {
       final index = e.key;
       final val = e.value;
+
+      int entryXp = (val['xp'] as num?)?.toInt() ?? 0;
+      if (timeFilter == 'week') {
+        final reset = (val['lastWeeklyReset'] as Timestamp?)?.toDate();
+        if (reset != null && reset.isBefore(startOfWeek)) {
+          entryXp = 0;
+        } else {
+          entryXp = (val['weeklyXp'] as num?)?.toInt() ?? 0;
+        }
+      }
+
       return LeaderboardEntry(
         uid: val['uid'],
         rank: index + 1,
         name: val['username'] ?? 'Anonymous',
-        xp: isXP ? (val['xp'] ?? 0) : (val['wordCount'] ?? 0),
+        xp: entryXp,
         avatar: val['photoURL'] ?? val['avatarUrl'], // In case we have real URLs
         rankChange: 0,
       );
@@ -119,13 +135,13 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     final user = ref.watch(authStateProvider).value;
     final l10n = ref.watch(localizationProvider);
 
-    final leaderboardData = ref.watch(topLearnersProvider).value;
+    final leaderboardData = ref.watch(topLearnersFamilyProvider(_timeFilter)).value;
 
     LeaderboardEntry? myEntry;
     LeaderboardEntry? nextEntry;
 
     if (leaderboardData != null && user != null) {
-      final allEntries = _mapToEntries(leaderboardData, true);
+      final allEntries = _mapToEntries(leaderboardData, true, _timeFilter);
       final foundMe = allEntries.where((e) => e.uid == user.uid).firstOrNull;
       if (foundMe != null) {
         myEntry = foundMe;
@@ -208,11 +224,12 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                       // The Podium
                       Padding(
                         padding: const EdgeInsets.only(top: 180),
-                        child: ref.watch(topLearnersProvider).when(
+                        child: ref.watch(topLearnersFamilyProvider(_timeFilter)).when(
                                   data: (data) {
                                     final entries = _mapToEntries(
                                       data,
                                       true,
+                                      _timeFilter,
                                     );
 
                                     // Trigger celebration if rank improved
@@ -225,7 +242,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                                     }
                                     return _buildPodium(
                                       entries.take(3).toList(),
-                                      'XP',
+                                      _timeFilter == 'week' ? 'Weekly XP' : 'XP',
                                     );
                                   },
                                   loading: () => Center(child: _buildPodiumAppShimmerSkeleton()),
@@ -256,10 +273,10 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                   horizontal: 16,
                   vertical: 8,
                 ),
-                sliver: ref.watch(topLearnersProvider).when(
+                sliver: ref.watch(topLearnersFamilyProvider(_timeFilter)).when(
                           data: (data) {
                             final entries = _applyFilter(
-                              _mapToEntries(data, true),
+                              _mapToEntries(data, true, _timeFilter),
                             );
 
                             if (entries.isEmpty && _searchQuery.isNotEmpty) {
@@ -287,7 +304,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                                 final entry = displayEntries[index];
                                 return _buildRankRow(
                                       entry,
-                                      'XP',
+                                      _timeFilter == 'week' ? 'Weekly XP' : 'XP',
                                       entry.uid == user?.uid,
                                       l10n,
                                     )
@@ -324,7 +341,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               right: 0,
               child: _buildMyRankCard(
                 user.displayName,
-                ref.watch(userProfileProvider).value?['xp'],
+                myEntry?.xp ?? ref.watch(userProfileProvider).value?['xp'],
                 user.uid,
                 true,
                 user.photoURL,
@@ -975,7 +992,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
             ),
           ),
           BrandBadge(
-                text: '${xp ?? 0} ${isXP ? 'XP' : 'words'}',
+                text: '${xp ?? 0} ${_timeFilter == 'week' ? 'Weekly XP' : (isXP ? 'XP' : 'words')}',
                 style: BrandBadgeStyle.gold,
               )
               .animate(onPlay: (c) => c.repeat(reverse: true))

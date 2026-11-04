@@ -83,12 +83,11 @@ class FirebaseService {
   Future<Map<String, dynamic>> joinVillage(String userId, String code) async {
     final educatorSnap = await _db
         .collection('users')
-        .where('role', isEqualTo: 'educator')
         .where('villageCode', isEqualTo: code.trim().toUpperCase())
         .limit(1)
         .get();
 
-    if (educatorSnap.docs.isEmpty) {
+    if (educatorSnap.docs.isEmpty || educatorSnap.docs.first.data()['role'] != 'educator') {
       throw Exception("Village code not found. Please check with your educator.");
     }
 
@@ -236,28 +235,31 @@ class FirebaseService {
     String? search,
     String? dialect,
   }) {
-    Query query = _db.collection('words');
-
-    if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
-      query = query.where('dialect', isEqualTo: dialect);
-    }
-
-    if (search != null && search.isNotEmpty) {
-      final queryTerm = search.toLowerCase();
-      query = query
-          .where('term_lowercase', isGreaterThanOrEqualTo: queryTerm)
-          .where('term_lowercase', isLessThanOrEqualTo: '$queryTerm\uf8ff');
-    }
-
-    return query.limit(limit).snapshots().map((snapshot) {
-      return snapshot.docs
+    return _db.collection('words').snapshots().map((snapshot) {
+      var docs = snapshot.docs
           .map(
             (doc) => DictionaryEntry.fromFirestore(
-              doc.data() as Map<String, dynamic>,
+              doc.data(),
               doc.id,
             ),
           )
           .toList();
+
+      if (dialect != null && dialect != 'All' && dialect.isNotEmpty) {
+        docs = docs
+            .where((d) => d.language == dialect)
+            .toList();
+      }
+
+      if (search != null && search.isNotEmpty) {
+        final queryTerm = search.toLowerCase();
+        docs = docs.where((d) {
+          return d.indigenousWord.toLowerCase().contains(queryTerm) ||
+              d.translation.toLowerCase().contains(queryTerm);
+        }).toList();
+      }
+
+      return docs.take(limit).toList();
     });
   }
 
@@ -1197,7 +1199,27 @@ class FirebaseService {
   // Gamification Operations
   Future<void> addXp(String userId, int xpToAdd) async {
     final docRef = _db.collection('users').doc(userId);
-    await docRef.update({'xp': FieldValue.increment(xpToAdd)});
+    final doc = await docRef.get();
+    if (doc.exists) {
+      final data = doc.data() ?? {};
+      final lastReset = (data['lastWeeklyReset'] as Timestamp?)?.toDate();
+      final now = DateTime.now();
+      final monday = now.subtract(Duration(days: now.weekday - 1));
+      final startOfWeek = DateTime(monday.year, monday.month, monday.day);
+
+      if (lastReset == null || lastReset.isBefore(startOfWeek)) {
+        await docRef.update({
+          'xp': FieldValue.increment(xpToAdd),
+          'weeklyXp': xpToAdd,
+          'lastWeeklyReset': FieldValue.serverTimestamp(),
+        });
+        return;
+      }
+    }
+    await docRef.update({
+      'xp': FieldValue.increment(xpToAdd),
+      'weeklyXp': FieldValue.increment(xpToAdd),
+    });
   }
 
   // SRS Operations
@@ -1271,17 +1293,15 @@ class FirebaseService {
   }
 
   Future<List<LessonTask>> getRandomTasks(int count, {String? language}) async {
-    Query query = _db.collection('lessons').where('status', isEqualTo: 'PUBLISHED');
-    if (language != null) {
-      query = query.where('language', isEqualTo: language);
-    }
-
-    final lessonsSnap = await query.get();
+    final lessonsSnap = await _db.collection('lessons').get();
     if (lessonsSnap.docs.isEmpty) return [];
 
     final allTasks = <LessonTask>[];
     for (var doc in lessonsSnap.docs) {
-      final lesson = Lesson.fromFirestore(doc.data() as Map<String, dynamic>, doc.id);
+      final data = doc.data();
+      if (data['status'] != 'PUBLISHED') continue;
+      if (language != null && language != 'All' && data['language'] != language) continue;
+      final lesson = Lesson.fromFirestore(data, doc.id);
       allTasks.addAll(lesson.tasks);
     }
 
@@ -1649,14 +1669,15 @@ class FirebaseService {
     return _db
         .collection('contributor_requests')
         .where('userId', isEqualTo: userId)
-        .where('status', isEqualTo: 'pending')
-        .limit(1)
         .snapshots()
         .map((snapshot) {
-          if (snapshot.docs.isEmpty) return null;
+          final pendingDocs = snapshot.docs
+              .where((doc) => doc.data()['status'] == 'pending')
+              .toList();
+          if (pendingDocs.isEmpty) return null;
           return ContributorRequest.fromFirestore(
-            snapshot.docs.first.data(),
-            snapshot.docs.first.id,
+            pendingDocs.first.data(),
+            pendingDocs.first.id,
           );
         });
   }
@@ -1859,27 +1880,72 @@ class FirebaseService {
   }
 
   // Leaderboard Operations
-  Stream<List<Map<String, dynamic>>> getLeaderboardLearners() {
+  Stream<List<Map<String, dynamic>>> getLeaderboardLearners({String timeFilter = 'all'}) {
+    final now = DateTime.now();
+    final monday = now.subtract(Duration(days: now.weekday - 1));
+    final startOfWeek = DateTime(monday.year, monday.month, monday.day);
+
     return _db
         .collection('users')
-        .where('role', isEqualTo: 'learner')
-        .orderBy('xp', descending: true)
-        .limit(20)
         .snapshots()
-        .map((snap) =>
-            snap.docs.map((doc) => {'uid': doc.id, ...doc.data()}).toList());
+        .map((snap) {
+      final list = snap.docs
+          .map((doc) => {'uid': doc.id, ...doc.data()})
+          .where((user) => user['role'] == null || user['role'] == 'learner')
+          .toList();
+
+      list.sort((a, b) {
+        if (timeFilter == 'week') {
+          int getWeeklyXp(Map<String, dynamic> u) {
+            final reset = (u['lastWeeklyReset'] as Timestamp?)?.toDate();
+            if (reset != null) {
+              if (reset.isBefore(startOfWeek)) return 0;
+              return (u['weeklyXp'] as num?)?.toInt() ?? 0;
+            }
+            return (u['weeklyXp'] as num?)?.toInt() ?? 0;
+          }
+
+          final aWeekly = getWeeklyXp(a);
+          final bWeekly = getWeeklyXp(b);
+
+          if (aWeekly == bWeekly) {
+            final aXp = (a['xp'] as num?)?.toInt() ?? 0;
+            final bXp = (b['xp'] as num?)?.toInt() ?? 0;
+            return bXp.compareTo(aXp);
+          }
+          return bWeekly.compareTo(aWeekly);
+        }
+
+        final aXp = (a['xp'] as num?)?.toInt() ?? 0;
+        final bXp = (b['xp'] as num?)?.toInt() ?? 0;
+        return bXp.compareTo(aXp);
+      });
+
+      return list.take(20).toList();
+    });
   }
 
   Stream<List<Map<String, dynamic>>> getVillageLeaderboard(String educatorId) {
+    if (educatorId.isEmpty) return Stream.value([]);
     return _db
         .collection('users')
-        .where('educatorId', isEqualTo: educatorId)
-        .where('role', isEqualTo: 'learner')
-        .orderBy('xp', descending: true)
-        .limit(20)
         .snapshots()
-        .map((snap) =>
-            snap.docs.map((doc) => {'uid': doc.id, ...doc.data()}).toList());
+        .map((snap) {
+      final list = snap.docs
+          .map((doc) => {'uid': doc.id, ...doc.data()})
+          .where((user) =>
+              user['educatorId'] == educatorId &&
+              (user['role'] == null || user['role'] == 'learner'))
+          .toList();
+
+      list.sort((a, b) {
+        final aXp = (a['xp'] as num?)?.toInt() ?? 0;
+        final bXp = (b['xp'] as num?)?.toInt() ?? 0;
+        return bXp.compareTo(aXp);
+      });
+
+      return list.take(20).toList();
+    });
   }
 
   Stream<List<Map<String, dynamic>>> getLeaderboardContributors() {
@@ -1887,12 +1953,21 @@ class FirebaseService {
     // Using wordCount > 0 ensures we only see active contributors
     return _db
         .collection('users')
-        .where('wordCount', isGreaterThan: 0)
-        .orderBy('wordCount', descending: true)
-        .limit(20)
         .snapshots()
-        .map((snap) =>
-            snap.docs.map((doc) => {'uid': doc.id, ...doc.data()}).toList());
+        .map((snap) {
+      final list = snap.docs
+          .map((doc) => {'uid': doc.id, ...doc.data()})
+          .where((user) => ((user['wordCount'] as num?)?.toInt() ?? 0) > 0)
+          .toList();
+
+      list.sort((a, b) {
+        final aCount = (a['wordCount'] as num?)?.toInt() ?? 0;
+        final bCount = (b['wordCount'] as num?)?.toInt() ?? 0;
+        return bCount.compareTo(aCount);
+      });
+
+      return list.take(20).toList();
+    });
   }
 
   // Learning Hub Operations
@@ -2201,18 +2276,18 @@ class FirebaseService {
     int unitNumber, {
     String? excludeLessonId,
   }) async {
-    final query = _db
-        .collection('lessons')
-        .where('language', isEqualTo: language)
-        .where('unitNumber', isEqualTo: unitNumber);
+    final snapshot = await _db.collection('lessons').get();
 
-    final snapshot = await query.get();
+    final matchingDocs = snapshot.docs.where((doc) {
+      final data = doc.data();
+      return data['language'] == language && data['unitNumber'] == unitNumber;
+    }).toList();
 
     if (excludeLessonId != null) {
-      return snapshot.docs.where((doc) => doc.id != excludeLessonId).isEmpty;
+      return matchingDocs.where((doc) => doc.id != excludeLessonId).isEmpty;
     }
 
-    return snapshot.docs.isEmpty;
+    return matchingDocs.isEmpty;
   }
 
   Future<void> deleteLesson(String id) async {
@@ -2328,16 +2403,17 @@ class FirebaseService {
     required int startUnit,
     int offset = 1,
   }) async {
-    final query = _db
-        .collection('lessons')
-        .where('language', isEqualTo: language)
-        .where('unitNumber', isGreaterThanOrEqualTo: startUnit);
-
-    final snapshot = await query.get();
+    final snapshot = await _db.collection('lessons').get();
 
     final batch = _db.batch();
     for (var doc in snapshot.docs) {
-      batch.update(doc.reference, {'unitNumber': FieldValue.increment(offset)});
+      final data = doc.data();
+      if (data['language'] == language) {
+        final currentUnit = (data['unitNumber'] as num?)?.toInt() ?? 0;
+        if (currentUnit >= startUnit) {
+          batch.update(doc.reference, {'unitNumber': FieldValue.increment(offset)});
+        }
+      }
     }
     await batch.commit();
   }
@@ -2363,10 +2439,13 @@ class FirebaseService {
       final usersSnap = await _db
           .collection('users')
           .where('educatorId', isEqualTo: educatorId)
-          .where('role', isEqualTo: 'learner')
           .get();
 
-      final List<String> studentIds = usersSnap.docs.map((doc) => doc.id).toList();
+      final learnerDocs = usersSnap.docs
+          .where((doc) => doc.data()['role'] == null || doc.data()['role'] == 'learner')
+          .toList();
+
+      final List<String> studentIds = learnerDocs.map((doc) => doc.id).toList();
 
       if (studentIds.isEmpty) {
         return {
@@ -2399,7 +2478,7 @@ class FirebaseService {
       final Map<String, int> taskMistakesCount = {};
       final Map<String, String> taskToLesson = {};
 
-      for (var userDoc in usersSnap.docs) {
+      for (var userDoc in learnerDocs) {
         final userData = userDoc.data();
         totalXP += (userData['xp'] as num?)?.toInt() ?? 0;
 
@@ -4687,8 +4766,13 @@ final allUsersProvider = StreamProvider<List<AdminUser>>((ref) {
   return ref.watch(firebaseServiceProvider).getAllUsers();
 });
 
+final topLearnersFamilyProvider =
+    StreamProvider.family<List<Map<String, dynamic>>, String>((ref, timeFilter) {
+  return ref.watch(firebaseServiceProvider).getLeaderboardLearners(timeFilter: timeFilter);
+});
+
 final topLearnersProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
-  return ref.watch(firebaseServiceProvider).getLeaderboardLearners();
+  return ref.watch(firebaseServiceProvider).getLeaderboardLearners(timeFilter: 'all');
 });
 
 final topContributorsProvider = StreamProvider<List<Map<String, dynamic>>>((
@@ -4764,13 +4848,14 @@ final villageTopLearnersProvider =
 
 final educatorLearnersProvider =
     StreamProvider.family<List<AdminUser>, String>((ref, educatorId) {
+  if (educatorId.isEmpty) return Stream.value([]);
   return ref.watch(firebaseServiceProvider).db
       .collection('users')
       .where('educatorId', isEqualTo: educatorId)
-      .where('role', isEqualTo: 'learner')
       .snapshots()
       .map((snap) => snap.docs
           .map((doc) => AdminUser.fromFirestore(doc.data(), doc.id))
+          .where((user) => user.role == 'learner')
           .toList());
 });
 

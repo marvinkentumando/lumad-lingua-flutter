@@ -295,6 +295,17 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
     bool isDanger = false,
     VoidCallback? onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final titleColor = isDanger
+        ? (isDark ? Colors.white : AppColors.semanticRed)
+        : AppColors.forest900;
+    final subColor = isDanger
+        ? (isDark ? Colors.white60 : AppColors.forest700)
+        : AppColors.forest700;
+    final chevronColor = isDanger
+        ? (isDark ? Colors.white24 : AppColors.forest700)
+        : AppColors.forest200;
+
     return BrandCard(
       onTap: onTap,
       theme: isDanger ? BrandCardTheme.vibrant : BrandCardTheme.cream,
@@ -315,21 +326,21 @@ class _OfflineWisdomScreenState extends ConsumerState<OfflineWisdomScreen> {
                 Text(
                   title,
                   style: AppTypography.h3.copyWith(
-                    color: isDanger ? Colors.white : AppColors.forest900,
+                    color: titleColor,
                     fontSize: 16,
                   ),
                 ),
                 Text(
                   sub,
                   style: AppTypography.body.copyWith(
-                    color: isDanger ? Colors.white60 : AppColors.forest700,
+                    color: subColor,
                     fontSize: 11,
                   ),
                 ),
               ],
             ),
           ),
-          Icon(Icons.chevron_right_rounded, color: isDanger ? Colors.white24 : AppColors.forest200),
+          Icon(Icons.chevron_right_rounded, color: chevronColor),
         ],
       ),
     );

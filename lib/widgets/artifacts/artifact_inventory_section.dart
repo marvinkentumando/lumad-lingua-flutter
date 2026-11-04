@@ -41,7 +41,7 @@ class ArtifactInventorySection extends ConsumerWidget {
                 Text(
                   'Recovered Artifacts',
                   style: AppTypography.h3.copyWith(
-                    color: isDark ? AppColors.gold500 : AppColors.forest500,
+                    color: isDark ? AppColors.gold500 : AppColors.forest900,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -49,7 +49,7 @@ class ArtifactInventorySection extends ConsumerWidget {
                   Text(
                     '${stats['earned']} of ${stats['total']} recovered',
                     style: AppTypography.body.copyWith(
-                      color: isDark ? Colors.white60 : AppColors.creamText2,
+                      color: isDark ? Colors.white60 : AppColors.forest800,
                       fontSize: 13,
                     ),
                   ),
@@ -64,14 +64,16 @@ class ArtifactInventorySection extends ConsumerWidget {
                 ),
                 decoration: BoxDecoration(
                   border: Border.all(
-                    color: AppColors.gold500.withValues(alpha: 0.3),
+                    color: isDark
+                        ? AppColors.gold500.withValues(alpha: 0.3)
+                        : AppColors.forest900.withValues(alpha: 0.3),
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   'VIEW ALL',
                   style: AppTypography.label.copyWith(
-                    color: AppColors.gold500,
+                    color: isDark ? AppColors.gold500 : AppColors.forest900,
                     fontWeight: FontWeight.w900,
                     fontSize: 10,
                     letterSpacing: 1.2,
@@ -135,8 +137,17 @@ class _ArtifactInventoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isEarned = artifact.isEarned;
     final tierColor = _getTierColor(artifact.tier);
+
+    final titleColor = isEarned
+        ? (isDark ? Colors.white : AppColors.forest900)
+        : (isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.6));
+
+    final tierTextColor = isEarned
+        ? (isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.75))
+        : (isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.4));
 
     return GestureDetector(
       onTap: () => context.push('/artifact-detail', extra: artifact),
@@ -157,11 +168,11 @@ class _ArtifactInventoryCard extends StatelessWidget {
                     shape: BoxShape.circle,
                     color: isEarned
                         ? tierColor.withValues(alpha: 0.1)
-                        : Colors.black26,
+                        : (isDark ? Colors.black26 : Colors.black12),
                     border: Border.all(
                       color: isEarned
                           ? tierColor.withValues(alpha: 0.5)
-                          : Colors.white10,
+                          : (isDark ? Colors.white10 : AppColors.forest900.withValues(alpha: 0.1)),
                       width: 2,
                     ),
                     boxShadow: isEarned
@@ -176,7 +187,7 @@ class _ArtifactInventoryCard extends StatelessWidget {
                   ),
                   alignment: Alignment.center,
                   child: Opacity(
-                    opacity: isEarned ? 1.0 : 0.3,
+                    opacity: isEarned ? 1.0 : 0.4,
                     child: artifact.imageUrl.isNotEmpty
                         ? GracefulImage(
                             imageUrl: artifact.imageUrl,
@@ -197,7 +208,7 @@ class _ArtifactInventoryCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTypography.label.copyWith(
-                    color: isEarned ? Colors.white : Colors.white60,
+                    color: titleColor,
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                   ),
@@ -209,9 +220,9 @@ class _ArtifactInventoryCard extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: artifact.progress,
                       minHeight: 4,
-                      backgroundColor: Colors.white10,
+                      backgroundColor: isDark ? Colors.white10 : AppColors.forest900.withValues(alpha: 0.1),
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        tierColor.withValues(alpha: 0.5),
+                        tierColor.withValues(alpha: 0.8),
                       ),
                     ),
                   ),
@@ -220,7 +231,7 @@ class _ArtifactInventoryCard extends StatelessWidget {
                     '${artifact.currentProgress}/${artifact.targetValue}',
                     style: AppTypography.label.copyWith(
                       fontSize: 8,
-                      color: Colors.white24,
+                      color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.5),
                     ),
                   ),
                 ] else
@@ -228,7 +239,7 @@ class _ArtifactInventoryCard extends StatelessWidget {
                     artifact.tier.name.toUpperCase(),
                     style: AppTypography.label.copyWith(
                       fontSize: 8,
-                      color: Colors.white70,
+                      color: tierTextColor,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1,
                     ),

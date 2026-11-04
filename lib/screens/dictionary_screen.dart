@@ -538,10 +538,6 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard> with
   void _togglePlay() {
     HapticService.light();
     if (widget.entry.audioUrl == null || widget.entry.audioUrl!.isEmpty) {
-      setState(() => _isPlaying = true);
-      ref.read(audioServiceProvider).speak(widget.entry.indigenousWord).then((_) {
-        if (mounted) setState(() => _isPlaying = false);
-      });
       return;
     }
 
@@ -572,6 +568,7 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard> with
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hasAudio = widget.entry.audioUrl != null && widget.entry.audioUrl!.isNotEmpty;
 
     return BouncyPressable(
       onTap: () {
@@ -653,19 +650,21 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard> with
                     ),
                   ),
                 ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: _togglePlay,
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: _isPlaying ? AppColors.gold500 : AppColors.terracotta,
-                      shape: BoxShape.circle,
+                if (hasAudio) ...[
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: _togglePlay,
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: _isPlaying ? AppColors.gold500 : AppColors.terracotta,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(_isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded, color: Colors.white, size: 30),
                     ),
-                    child: Icon(_isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded, color: Colors.white, size: 30),
                   ),
-                ),
+                ],
               ],
             ),
             const SizedBox(height: 8),
