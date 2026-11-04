@@ -53,6 +53,45 @@ class PronunciationModelMetrics {
 }
 
 class PronunciationService implements IPronunciationComparer {
+  /// Creates a pitch-shifted copy for exploratory robustness checks.
+  ///
+  /// This deliberately changes the number of samples (as ordinary playback-rate
+  /// pitch shifting does). It must not be used as the learner-facing reference
+  /// or to replace the canonical comparison score.
+  static List<double> pitchShiftReferenceForExploration(
+    List<double> samples, {
+    required double semitones,
+  }) {
+    if (samples.isEmpty || semitones == 0) return List<double>.from(samples);
+    final pitchRatio = math.pow(2.0, semitones / 12.0).toDouble();
+    final outputLength = math.max(1, (samples.length / pitchRatio).round());
+    return List<double>.generate(outputLength, (index) {
+      final sourcePosition = (index * pitchRatio).clamp(0.0, samples.length - 1.0);
+      final lower = sourcePosition.floor().clamp(0, samples.length - 1);
+      final upper = math.min(lower + 1, samples.length - 1);
+      final fraction = sourcePosition - sourcePosition.floor();
+      return samples[lower] * (1 - fraction) + samples[upper] * fraction;
+    }, growable: false);
+  }
+
+  /// Scores a learner recording against pitch-varied copies of a reference.
+  /// These metrics are diagnostic only and never feed the displayed score.
+  static Map<double, double> exploratoryPitchRobustnessScores(
+    List<double> referenceSamples,
+    List<double> learnerSamples, {
+    List<double> semitoneOffsets = const [-2.0, 2.0],
+  }) {
+    return {
+      for (final offset in semitoneOffsets)
+        offset: analyzePronunciation(
+          pitchShiftReferenceForExploration(referenceSamples, semitones: offset),
+          learnerSamples,
+          strictness: PronunciationStrictness.normal,
+          algorithm: PronunciationAlgorithm.dtw,
+        ).overallScore,
+    };
+  }
+
   @override
   Future<PronunciationComparisonResult> compare(PronunciationComparisonRequest request) async {
     final score = analyzePronunciation(

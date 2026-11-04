@@ -704,6 +704,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         strictness: PronunciationStrictness.normal,
         algorithm: PronunciationAlgorithm.dtw,
       );
+      _logExploratoryPitchRobustness('take 1', nativePcm1, learnerPcm);
 
       double finalScore = score1.overallScore;
 
@@ -718,6 +719,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
             strictness: PronunciationStrictness.normal,
             algorithm: PronunciationAlgorithm.dtw,
           );
+          _logExploratoryPitchRobustness('take 2', nativePcm2, learnerPcm);
           // Average verified takes so natural variation between reference speakers
           // does not make one take alone determine the learner's result.
           finalScore = (score1.overallScore + score2.overallScore) / 2.0;
@@ -763,6 +765,25 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
           _errorMessage = 'Audio comparison failed: ${e.toString().split(':').last.trim()}';
         });
       }
+    }
+  }
+
+  void _logExploratoryPitchRobustness(
+    String takeLabel,
+    List<double> referencePcm,
+    List<double> learnerPcm,
+  ) {
+    try {
+      final scores = PronunciationService.exploratoryPitchRobustnessScores(
+        referencePcm,
+        learnerPcm,
+      );
+      debugPrint(
+        'Exploratory pitch robustness ($takeLabel, diagnostic only): '
+        '${scores.entries.map((entry) => '${entry.key > 0 ? '+' : ''}${entry.key} st=${entry.value.toStringAsFixed(1)}%').join(', ')}',
+      );
+    } catch (error) {
+      debugPrint('Exploratory pitch robustness skipped for $takeLabel: $error');
     }
   }
 
