@@ -100,8 +100,13 @@ class PronunciationService implements IPronunciationComparer {
     }
 
     // 2. Feature Extraction (13 MFCC coefficients)
-    final nativeMFCC = MFCCService.extractMFCC(processedNative);
-    final userMFCC = MFCCService.extractMFCC(processedUser);
+    // Keep the reference and learner in the same feature space. Per-clip CMVN
+    // makes unrelated words with different spectra look artificially similar.
+    final rawNativeMFCC = MFCCService.extractMFCC(processedNative, normalize: false);
+    final rawUserMFCC = MFCCService.extractMFCC(processedUser, normalize: false);
+    final jointFeatures = MFCCService.normalizeTogether(rawNativeMFCC, rawUserMFCC);
+    final nativeMFCC = jointFeatures.take(rawNativeMFCC.length).toList();
+    final userMFCC = jointFeatures.skip(rawNativeMFCC.length).toList();
 
     double similarity;
 

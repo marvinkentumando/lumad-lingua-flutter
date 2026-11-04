@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -459,11 +460,11 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       final learnerWavResult = WavDecoder.decodeWavBytes(validWavBytes);
       final learnerPcm = learnerWavResult.pcmSamples;
 
-      if (learnerPcm.length < 1600) { // < 0.1s
+      if (learnerPcm.length < 5600) { // < 0.35s: too little speech for reliable word comparison
         if (mounted) {
           setState(() {
             _state = AudioComparisonState.error;
-            _errorMessage = 'Recording is too short (minimum 0.1s required). Please record again.';
+            _errorMessage = 'Recording is too short to compare reliably (minimum 0.35 seconds). Please say the full word and record again.';
             _isQuietWarning = false;
           });
         }
@@ -688,8 +689,9 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
             strictness: PronunciationStrictness.normal,
             algorithm: PronunciationAlgorithm.dtw,
           );
-          // Average the comparison results between Take 1 and Take 2
-          finalScore = (score1.overallScore + score2.overallScore) / 2.0;
+          // Require the attempt to match both reference takes; averaging could
+          // let a strong match to one take hide a poor or unrelated match to the other.
+          finalScore = math.min(score1.overallScore, score2.overallScore);
         } catch (e2) {
           debugPrint('Take 2 comparison skipped due to error: $e2');
         }

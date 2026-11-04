@@ -27,7 +27,7 @@ class MFCCService {
   /// Extracts MFCC features (static + delta + delta-delta with CMVN) from audio samples.
   /// Expects normalized PCM samples (-1.0 to 1.0).
   /// Returns a matrix of shape [T x 39] where T is the number of frames.
-  static List<List<double>> extractMFCC(List<double> samples) {
+  static List<List<double>> extractMFCC(List<double> samples, {bool normalize = true}) {
     if (samples.isEmpty) return [];
 
     // Sanitize input samples (replace non-finite values with 0.0)
@@ -81,9 +81,15 @@ class MFCCService {
     }
 
     // 11. Apply CMVN (Cepstral Mean and Variance Normalization)
-    final normalizedFeatures = _applyCMVN(combinedFeatures);
+    return normalize ? _applyCMVN(combinedFeatures) : combinedFeatures;
+  }
 
-    return normalizedFeatures;
+  /// Normalizes reference and learner features together so clip-specific
+  /// normalization cannot erase the acoustic differences between them.
+  static List<List<double>> normalizeTogether(List<List<double>> first, List<List<double>> second) {
+    if (first.isEmpty || second.isEmpty) return [];
+    final combined = _applyCMVN([...first, ...second]);
+    return combined;
   }
 
   static List<double> _preEmphasis(List<double> samples, double alpha) {
