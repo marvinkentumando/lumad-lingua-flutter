@@ -222,7 +222,7 @@ class PronunciationService implements IPronunciationComparer {
   ) {
     final distance = MFCCService.calculateMFCCDistance(s, t);
     if (distance == double.infinity) return 0.0;
-    return math.exp(-strictness.sensitivity * (distance / 15.0)).clamp(0.0, 1.0);
+    return math.exp(-strictness.sensitivity * (distance / 45.0)).clamp(0.0, 1.0);
   }
 
   static double _calculateHMMScore(
