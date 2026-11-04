@@ -57,6 +57,7 @@ import '../screens/admin/admin_assessments_screen.dart';
 import '../screens/daily_challenge_session_screen.dart';
 import '../screens/forgot_password_screen.dart';
 import '../screens/email_verification_screen.dart';
+import '../screens/mansaka_history_screen.dart';
 import '../models/artifact.dart';
 import '../models/daily_challenge.dart';
 
@@ -319,6 +320,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               final challenge = state.extra as DailyChallenge;
               return DailyChallengeSessionScreen(challenge: challenge);
             },
+          ),
+          GoRoute(
+            path: '/mansaka-history',
+            builder: (context, state) => const MansakaHistoryScreen(),
           ),
         ],
       ),

@@ -216,6 +216,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                                   children: [
                                     GracefulImage(
                                       imageUrl: artifact.imageUrl,
+                                      fallbackEmoji: artifact.emoji,
                                       width: double.infinity,
                                       borderRadius: 12,
                                     ),

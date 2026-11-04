@@ -1567,7 +1567,7 @@ class _StaffStatsRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Fetch stats based on role
     final studentCount = role == UserRole.educator
-        ? ref.watch(totalUsersCountProvider).value ?? 0
+        ? (ref.watch(educatorLearnersProvider(userId)).value?.length ?? 0)
         : 0;
 
     final impactAsync = ref.watch(userImpactMetricsProvider(userId));

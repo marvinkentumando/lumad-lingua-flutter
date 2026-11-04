@@ -171,7 +171,7 @@ class MainLayout extends ConsumerWidget {
       label = l10n.translate('researcher_staff');
       icon = Icons.admin_panel_settings_rounded;
     } else if (role == UserRole.educator) {
-      final count = ref.watch(totalUsersCountProvider).value ?? 0;
+      final count = ref.watch(educatorLearnersProvider(userId)).value?.length ?? 0;
       label = '$count ${l10n.translate('students')}';
       icon = Icons.people_rounded;
     } else if (role == UserRole.admin) {

@@ -43,7 +43,7 @@ class ArtifactDetailScreen extends ConsumerWidget {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Image with Gradient Overlay
+                  // Image or Emoji / Icon Header
                   artifact.imageUrl.isNotEmpty
                       ? Hero(
                           tag: 'artifact_${artifact.id}',
@@ -51,19 +51,17 @@ class ArtifactDetailScreen extends ConsumerWidget {
                               ? Image.network(
                                   artifact.imageUrl,
                                   fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      _buildEmojiHeader(isDark),
                                 )
-                              : Image.asset(artifact.imageUrl, fit: BoxFit.cover)),
+                              : Image.asset(
+                                  artifact.imageUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      _buildEmojiHeader(isDark),
+                                )),
                         )
-                      : Container(
-                          color: isDark ? AppColors.forest800 : AppColors.gold50,
-                          child: Center(
-                            child: Icon(
-                              _getIcon(artifact.type),
-                              size: 100,
-                              color: AppColors.gold500.withValues(alpha: 0.2),
-                            ),
-                          ),
-                        ),
+                      : _buildEmojiHeader(isDark),
                   DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -345,6 +343,39 @@ class ArtifactDetailScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmojiHeader(bool isDark) {
+    final emojiText = artifact.emoji.isNotEmpty ? artifact.emoji : '🏺';
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.forest800 : AppColors.gold50,
+      ),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.black.withValues(alpha: 0.2),
+            border: Border.all(
+              color: AppColors.gold500.withValues(alpha: 0.5),
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.gold500.withValues(alpha: 0.3),
+                blurRadius: 30,
+                spreadRadius: 5,
+              ),
+            ],
+          ),
+          child: Text(
+            emojiText,
+            style: const TextStyle(fontSize: 88),
+          ),
+        ),
       ),
     );
   }

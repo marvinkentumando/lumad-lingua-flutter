@@ -1929,13 +1929,13 @@ class FirebaseService {
     if (educatorId.isEmpty) return Stream.value([]);
     return _db
         .collection('users')
+        .where('educatorId', isEqualTo: educatorId)
         .snapshots()
         .map((snap) {
       final list = snap.docs
           .map((doc) => {'uid': doc.id, ...doc.data()})
           .where((user) =>
-              user['educatorId'] == educatorId &&
-              (user['role'] == null || user['role'] == 'learner'))
+              user['role'] == null || user['role'] == 'learner')
           .toList();
 
       list.sort((a, b) {

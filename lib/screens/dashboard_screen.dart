@@ -171,6 +171,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             const SizedBox(height: 24),
                             _buildCurrentLessonCard(context, l10n),
                             const SizedBox(height: 24),
+                            _buildMansakaHistoryCard(context, l10n),
+                            const SizedBox(height: 24),
                             _buildChallengeHub(context, l10n),
                             const SizedBox(height: 24),
                           ],
@@ -571,6 +573,145 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                     ),
                   ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMansakaHistoryCard(BuildContext context, AppLocalization l10n) {
+    return GestureDetector(
+      onTap: () {
+        HapticService.light();
+        context.push('/mansaka-history');
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1B3828), Color(0xFF0D2217)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(
+            color: AppColors.gold500.withValues(alpha: 0.4),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold500.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.gold500.withValues(alpha: 0.5)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.history_edu_rounded, color: AppColors.gold500, size: 14),
+                      SizedBox(width: 6),
+                      Text(
+                        'CULTURAL HERITAGE',
+                        style: TextStyle(
+                          color: AppColors.gold500,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold500.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: AppColors.gold500,
+                    size: 14,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'History of the Mansaka',
+                        style: AppTypography.h2.copyWith(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Discover the origins, Dagmay abaca weaving, Matikadong elders, and ancestral traditions of Davao de Oro.',
+                        style: AppTypography.body.copyWith(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.asset(
+                    'assets/images/dagmay.png',
+                    width: 72,
+                    height: 72,
+                    fit: BoxFit.cover,
+                    errorBuilder: (ctx, err, stack) => Container(
+                      width: 72,
+                      height: 72,
+                      color: AppColors.forest800,
+                      child: const Icon(Icons.auto_stories_rounded, color: AppColors.gold500, size: 32),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: const [
+                Text(
+                  'Explore full history & scholarly sources',
+                  style: TextStyle(
+                    color: AppColors.gold500,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(width: 6),
+                Icon(Icons.menu_book_rounded, color: AppColors.gold500, size: 14),
               ],
             ),
           ],
