@@ -220,6 +220,23 @@ class WavDecoder {
         return bytes;
       }
     }
+
+    // Detect WebM container signature (0x1A 0x45 0xDF 0xA3) from browser recordings
+    if (bytes.length >= 4 && bytes[0] == 0x1A && bytes[1] == 0x45 && bytes[2] == 0xDF && bytes[3] == 0xA3) {
+      // Locate Cluster header (0x1F 0x43 0xB6 0x75) to skip EBML text headers ("webm", "opus")
+      int clusterIndex = -1;
+      for (int i = 0; i < bytes.length - 4; i++) {
+        if (bytes[i] == 0x1F && bytes[i + 1] == 0x43 && bytes[i + 2] == 0xB6 && bytes[i + 3] == 0x75) {
+          clusterIndex = i + 12;
+          break;
+        }
+      }
+      final audioPayload = (clusterIndex != -1 && clusterIndex < bytes.length)
+          ? bytes.sublist(clusterIndex)
+          : Uint8List(0);
+      return createWavHeader(audioPayload, sampleRate: sampleRate, numChannels: channels, bitsPerSample: 16);
+    }
+
     return createWavHeader(bytes, sampleRate: sampleRate, numChannels: channels, bitsPerSample: 16);
   }
 
