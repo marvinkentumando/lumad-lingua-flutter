@@ -380,19 +380,6 @@ class ArtifactDetailScreen extends ConsumerWidget {
     );
   }
 
-  IconData _getIcon(String type) {
-    switch (type) {
-      case 'tool':
-        return Icons.construction;
-      case 'clothing':
-        return Icons.checkroom_rounded;
-      case 'instrument':
-        return Icons.music_note;
-      default:
-        return Icons.category;
-    }
-  }
-
   Color _getTierColor(ArtifactTier tier) {
     switch (tier) {
       case ArtifactTier.rare:

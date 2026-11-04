@@ -316,7 +316,11 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
           IconButton(
             onPressed: () {
               HapticService.light();
-              context.pop();
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/');
+              }
             },
             icon: Icon(
               Icons.arrow_back_ios_new_rounded,
@@ -332,13 +336,17 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                   children: const [
                     Icon(Icons.auto_awesome_rounded, color: AppColors.gold500, size: 12),
                     SizedBox(width: 4),
-                    Text(
-                      'CULTURAL HERITAGE ARCHIVE',
-                      style: TextStyle(
-                        color: AppColors.gold500,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.5,
+                    Expanded(
+                      child: Text(
+                        'CULTURAL HERITAGE ARCHIVE',
+                        style: TextStyle(
+                          color: AppColors.gold500,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.5,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
                     ),
                   ],
@@ -350,6 +358,8 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ],
             ),
@@ -417,6 +427,13 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
               setState(() {
                 _selectedCategory = cat;
               });
+              if (_scrollController.hasClients) {
+                _scrollController.animateTo(
+                  0,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                );
+              }
             },
           );
         },
@@ -802,22 +819,26 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                   children: [
                     Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.gold500.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            item['category']!,
-                            style: const TextStyle(
-                              color: AppColors.gold500,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.gold500.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              item['category']!,
+                              style: const TextStyle(
+                                color: AppColors.gold500,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                           ),
                         ),
-                        const Spacer(),
+                        const SizedBox(width: 8),
                         IconButton(
                           onPressed: () => _copyCitation(item['citation']!),
                           icon: const Icon(Icons.copy_rounded, color: AppColors.gold500, size: 14),
@@ -901,9 +922,10 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                   text: 'Ancestral Vault',
                   onTap: () {
                     HapticService.light();
-                    context.push('/vault-shop');
+                    context.push('/ancestral-vault-shop');
                   },
                   type: BrandButtonType.small,
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                 ),
               ),
               const SizedBox(width: 12),
@@ -915,6 +937,7 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                     context.push('/dictionary');
                   },
                   type: BrandButtonType.secondary,
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                 ),
               ),
             ],

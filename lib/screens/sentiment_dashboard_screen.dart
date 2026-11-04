@@ -10,6 +10,7 @@ import '../theme/app_typography.dart';
 import '../theme/app_colors.dart';
 import 'package:lumad_lingua/models/sentiment_post.dart';
 import 'package:lumad_lingua/services/sentiment_service.dart';
+import 'package:lumad_lingua/services/auth_service.dart';
 import '../services/haptic_service.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
@@ -177,10 +178,11 @@ class _SentimentDashboardScreenState
                               setModalState(() => isImporting = true);
                               try {
                                 final count = await processAndSaveJson(textController.text.trim());
-                                if (!modalContext.mounted) return;
+                                if (!mounted) return;
                                 HapticService.success();
-                                Navigator.of(modalContext).pop();
-                                if (!context.mounted) return;
+                                if (modalContext.mounted) {
+                                  Navigator.of(modalContext).pop();
+                                }
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text('Successfully imported $count sentiment records! 🌿'),
@@ -188,7 +190,7 @@ class _SentimentDashboardScreenState
                                   ),
                                 );
                               } catch (e) {
-                                if (!context.mounted) return;
+                                if (!mounted) return;
                                 HapticService.error();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(

@@ -11,7 +11,6 @@ import '../services/haptic_service.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_background.dart';
 import '../widgets/app_shimmer_skeleton.dart';
-import '../utils/app_localization.dart';
 
 class LearnerSentimentScreen extends ConsumerStatefulWidget {
   const LearnerSentimentScreen({super.key});
