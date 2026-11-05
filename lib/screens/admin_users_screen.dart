@@ -7,18 +7,17 @@ import '../services/auth_service.dart';
 import '../services/haptic_service.dart';
 import '../models/admin_models.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_radius.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/brand_background.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/profile_avatar.dart';
-import 'package:share_plus/share_plus.dart';
 import '../widgets/brand_search_bar.dart';
 import '../widgets/brand_text_field.dart';
 import '../widgets/branded_empty_state.dart';
 import '../providers/admin_users_provider.dart';
 import '../utils/app_localization.dart';
+import '../widgets/admin/admin_screen_header.dart';
 
 class AdminUsersScreen extends ConsumerStatefulWidget {
   const AdminUsersScreen({super.key});
@@ -107,39 +106,6 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                 style: AppTypography.label.copyWith(
                                   color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
                                   fontSize: 10,
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: _showInviteDialog,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        AppColors.gold500.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        Icons.person_add_rounded,
-                                        color: AppColors.gold500,
-                                        size: 14,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'INVITE',
-                                        style: AppTypography.label.copyWith(
-                                          color: AppColors.gold500,
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w900,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
                                 ),
                               ),
                             ],
@@ -248,56 +214,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   }
 
   Widget _buildHeader(BuildContext context, AppLocalization l10n) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.forest900.withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.8),
-        border: Border(
-          bottom: BorderSide(
-            color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.forest900.withValues(alpha: 0.05),
-            width: 1,
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.gold500.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.gold500.withValues(alpha: 0.2),
-              ),
-            ),
-            child: const Text('🛡️', style: TextStyle(fontSize: 20)),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'ADMIN CONSOLE',
-                  style: AppTypography.label.copyWith(
-                    color: AppColors.gold500,
-                    letterSpacing: 4,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Text(
-                  l10n.translate('user_management'),
-                  style: TextStyle(
-                    color: isDark ? Colors.white.withValues(alpha: 0.3) : AppColors.forest900.withValues(alpha: 0.3),
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return AdminScreenHeader(
+      title: l10n.translate('user_management'),
+      eyebrow: 'ADMINISTRATION CONSOLE',
     );
   }
 
@@ -662,141 +581,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     return '${diff.inDays}d ago';
   }
 
-  void _showInviteDialog() {
-    final emailCtrl = TextEditingController();
-    String selectedRole = 'educator';
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: isDark ? AppColors.forest700 : AppColors.creamBg,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.modal),
-            side: isDark ? BorderSide.none : const BorderSide(color: AppColors.gold500, width: 2),
-          ),
-          title: Text(
-            'Invite New Staff',
-            style: AppTypography.h3.copyWith(color: isDark ? AppColors.gold500 : AppColors.gold700),
-          ),
-          content: SingleChildScrollView(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                BrandTextField(
-                  controller: emailCtrl,
-                  labelText: 'Email Address',
-                  prefixIcon: Icons.email_outlined,
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: selectedRole,
-                  dropdownColor: isDark ? AppColors.forest800 : AppColors.creamBg,
-                  decoration: InputDecoration(
-                    labelText: 'Role',
-                    labelStyle: TextStyle(color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5)),
-                    filled: true,
-                    fillColor: isDark ? AppColors.forest800 : Colors.black.withValues(alpha: 0.05),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.chip),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                  style: TextStyle(color: isDark ? Colors.white : AppColors.forest900),
-                  items: ['educator', 'admin']
-                      .map(
-                        (r) => DropdownMenuItem(
-                          value: r,
-                          child: Text(r[0].toUpperCase() + r.substring(1)),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) => setDialogState(() {
-                    selectedRole = v!;
-                  }),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => context.pop(),
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5)),
-              ),
-            ),
-            BrandButton(
-              text: 'Send Invite',
-              type: BrandButtonType.primary,
-              onTap: () async {
-                final email = emailCtrl.text.trim();
-                if (email.isEmpty) return;
-
-                context.pop();
-                try {
-                  await ref.read(firebaseServiceProvider).createInvitation(
-                        email,
-                        selectedRole,
-                      );
-                  if (mounted) {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        backgroundColor: isDark ? AppColors.forest800 : AppColors.creamBg,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          side: isDark ? BorderSide.none : const BorderSide(color: AppColors.gold500, width: 2),
-                        ),
-                        title: Text('Invitation Sent! 🌿', style: TextStyle(color: isDark ? AppColors.gold500 : AppColors.gold700)),
-                        content: Text(
-                          'The invitation for $email is ready.\n\nSince automated emails are pending, please tell the user to:\n\n1. Go to the Sign Up screen.\n2. Use $email specifically.\n3. Their $selectedRole role will activate automatically.',
-                          style: TextStyle(color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7), fontSize: 13, height: 1.5),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => context.pop(),
-                            child: Text('LATER', style: TextStyle(color: isDark ? Colors.white60 : AppColors.gold500)),
-                          ),
-                          BrandButton(
-                            text: 'SHARE INVITE',
-                            icon: Icons.share_rounded,
-                            type: BrandButtonType.primary,
-                            onTap: () {
-                              final text = 'Maayong Adlaw!\n\nYou have been invited to join Lumad Lingua as a ${selectedRole.toUpperCase()}.\n\nPlease sign up in the Lumad Lingua application using your email: $email\n\nYour staff privileges will activate automatically upon registration.\n\nSee you in the highlands!';
-                              SharePlus.instance.share(
-                                ShareParams(
-                                  text: text,
-                                  subject: 'Lumad Lingua Staff Invitation',
-                                ),
-                              );
-                              context.pop();
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Failed to send invite: $e'),
-                        backgroundColor: AppColors.semanticRed,
-                      ),
-                    );
-                  }
-                }
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   PopupMenuItem<String> _buildPopupItem(
     String value,

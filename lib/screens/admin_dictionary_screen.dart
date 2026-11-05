@@ -19,6 +19,7 @@ import '../widgets/admin/import_dictionary_modal.dart';
 import '../widgets/admin/bulk_audio_import_modal.dart';
 import '../widgets/lesson_editors/editor_utils.dart';
 import '../widgets/branded_empty_state.dart';
+import '../widgets/admin/admin_screen_header.dart';
 
 enum DictionarySortOption {
   alphabeticalAsc('A-Z (Indigenous)', Icons.sort_by_alpha_rounded),
@@ -186,126 +187,115 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: isDark ? Colors.white : AppColors.forest900),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(
-          'DICTIONARY ARCHIVE',
-          style: AppTypography.label.copyWith(
-            color: AppColors.gold500,
-            letterSpacing: 2,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_sweep_rounded, color: AppColors.semanticRed),
-            tooltip: 'Delete All Words',
-            onPressed: () => _confirmDeleteAll(wordsAsync.value ?? []),
-          ),
-          IconButton(
-            icon: const Icon(Icons.audio_file_rounded, color: AppColors.gold500),
-            tooltip: 'Bulk Audio Import',
-            onPressed: () => _showBulkAudioModal(context, _sortWords(wordsAsync.value ?? [])),
-          ),
-          IconButton(
-            icon: const Icon(Icons.download_rounded, color: AppColors.gold500),
-            tooltip: 'Export CSV',
-            onPressed: () => _exportDictionary(_sortWords(wordsAsync.value ?? [])),
-          ),
-          IconButton(
-            icon: const Icon(Icons.upload_file_rounded, color: AppColors.gold500),
-            tooltip: 'Import CSV',
-            onPressed: () => _showImportModal(context),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              children: [
-                _buildSearchBar(),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(child: _buildDialectFilters(dialectsAsync, isDark)),
-                    const SizedBox(width: 8),
-                    _buildSortButton(isDark),
-                  ],
+      body: SafeArea(
+        child: Column(
+          children: [
+            AdminScreenHeader(
+              title: 'Dictionary Management',
+              eyebrow: 'CONTENT ARCHIVE',
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.delete_sweep_rounded, color: AppColors.semanticRed, size: 20),
+                  tooltip: 'Delete All Words',
+                  onPressed: () => _confirmDeleteAll(wordsAsync.value ?? []),
                 ),
-                const SizedBox(height: 12),
+                IconButton(
+                  icon: const Icon(Icons.audio_file_rounded, color: AppColors.gold500, size: 20),
+                  tooltip: 'Bulk Audio Import',
+                  onPressed: () => _showBulkAudioModal(context, _sortWords(wordsAsync.value ?? [])),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.download_rounded, color: AppColors.gold500, size: 20),
+                  tooltip: 'Export CSV',
+                  onPressed: () => _exportDictionary(_sortWords(wordsAsync.value ?? [])),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.upload_file_rounded, color: AppColors.gold500, size: 20),
+                  tooltip: 'Import CSV',
+                  onPressed: () => _showImportModal(context),
+                ),
               ],
             ),
-          ),
-          Expanded(
-            child: wordsAsync.when(
-              data: (words) {
-                final sortedWords = _sortWords(words);
-                if (sortedWords.isEmpty) return _buildEmptyState(isDark);
-
-                final totalPages = (sortedWords.length / _pageSize).ceil().clamp(1, 9999);
-                if (_currentPage > totalPages) {
-                  _currentPage = totalPages;
-                }
-
-                final startIndex = ((_currentPage - 1) * _pageSize).clamp(0, sortedWords.length);
-                final pagedWords = sortedWords.skip(startIndex).take(_pageSize).toList();
-
-                return Column(
-                  children: [
-                    Expanded(
-                      child: isDesktop
-                          ? GridView.builder(
-                              physics: const BouncingScrollPhysics(),
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: screenWidth >= 1200 ? 3 : 2,
-                                crossAxisSpacing: 16,
-                                mainAxisSpacing: 16,
-                                mainAxisExtent: 110,
-                              ),
-                              itemCount: pagedWords.length,
-                              itemBuilder: (context, index) => _buildWordCard(pagedWords[index], isDark, index),
-                            )
-                          : ListView.builder(
-                              physics: const BouncingScrollPhysics(),
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              itemCount: pagedWords.length,
-                              itemBuilder: (context, index) => _buildWordCard(pagedWords[index], isDark, index),
-                            ),
-                    ),
-                    PaginationBar(
-                      currentPage: _currentPage,
-                      totalPages: totalPages,
-                      totalItems: sortedWords.length,
-                      pageSize: _pageSize,
-                      pageSizeOptions: const [15, 30, 60, 100],
-                      onPageChanged: (p) => setState(() => _currentPage = p),
-                      onPageSizeChanged: (s) => setState(() {
-                        _pageSize = s;
-                        _currentPage = 1;
-                      }),
-                      isDark: isDark,
-                    ),
-                  ],
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
-              error: (e, _) => BrandedEmptyState.error(
-                error: e.toString(),
-                advice: 'Check your network connection or tap retry to reload dictionary entries.',
-                onRetry: () => ref.invalidate(dictionaryStreamProvider),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: [
+                  _buildSearchBar(),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(child: _buildDialectFilters(dialectsAsync, isDark)),
+                      const SizedBox(width: 8),
+                      _buildSortButton(isDark),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                ],
               ),
             ),
-          ),
-        ],
+            Expanded(
+              child: wordsAsync.when(
+                data: (words) {
+                  final sortedWords = _sortWords(words);
+                  if (sortedWords.isEmpty) return _buildEmptyState(isDark);
+
+                  final totalPages = (sortedWords.length / _pageSize).ceil().clamp(1, 9999);
+                  if (_currentPage > totalPages) {
+                    _currentPage = totalPages;
+                  }
+
+                  final startIndex = ((_currentPage - 1) * _pageSize).clamp(0, sortedWords.length);
+                  final pagedWords = sortedWords.skip(startIndex).take(_pageSize).toList();
+
+                  return Column(
+                    children: [
+                      Expanded(
+                        child: isDesktop
+                            ? GridView.builder(
+                                physics: const BouncingScrollPhysics(),
+                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: screenWidth >= 1200 ? 3 : 2,
+                                  crossAxisSpacing: 16,
+                                  mainAxisSpacing: 16,
+                                  mainAxisExtent: 110,
+                                ),
+                                itemCount: pagedWords.length,
+                                itemBuilder: (context, index) => _buildWordCard(pagedWords[index], isDark, index),
+                              )
+                            : ListView.builder(
+                                physics: const BouncingScrollPhysics(),
+                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                itemCount: pagedWords.length,
+                                itemBuilder: (context, index) => _buildWordCard(pagedWords[index], isDark, index),
+                              ),
+                      ),
+                      PaginationBar(
+                        currentPage: _currentPage,
+                        totalPages: totalPages,
+                        totalItems: sortedWords.length,
+                        pageSize: _pageSize,
+                        pageSizeOptions: const [15, 30, 60, 100],
+                        onPageChanged: (p) => setState(() => _currentPage = p),
+                        onPageSizeChanged: (s) => setState(() {
+                          _pageSize = s;
+                          _currentPage = 1;
+                        }),
+                        isDark: isDark,
+                      ),
+                    ],
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
+                error: (e, _) => BrandedEmptyState.error(
+                  error: e.toString(),
+                  advice: 'Check your network connection or tap retry to reload dictionary entries.',
+                  onRetry: () => ref.invalidate(dictionaryStreamProvider),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showEntryDialog(context, null),

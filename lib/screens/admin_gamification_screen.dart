@@ -9,6 +9,7 @@ import '../utils/app_localization.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_text_field.dart';
 import '../widgets/branded_empty_state.dart';
+import '../widgets/admin/admin_screen_header.dart';
 
 class AdminGamificationScreen extends ConsumerStatefulWidget {
   const AdminGamificationScreen({super.key});
@@ -44,31 +45,35 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        title: Text(
-          l10n.translate('gamification_economics'), 
-          style: AppTypography.h3.copyWith(color: AppColors.gold500),
-        ),
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: false,
-          indicatorColor: AppColors.gold500,
-          labelColor: AppColors.gold500,
-          unselectedLabelColor: isDark ? Colors.white60 : Theme.of(context).colorScheme.onSurfaceVariant,
-          tabs: [
-            Tab(text: l10n.translate('rewards_caps'), icon: const Icon(Icons.military_tech_rounded)),
-            Tab(text: l10n.translate('shop_caps'), icon: const Icon(Icons.shopping_bag_rounded)),
+      body: SafeArea(
+        child: Column(
+          children: [
+            AdminScreenHeader(
+              title: l10n.translate('gamification_economics'),
+              eyebrow: 'ECONOMY MANAGEMENT',
+            ),
+            TabBar(
+              controller: _tabController,
+              isScrollable: false,
+              indicatorColor: AppColors.gold500,
+              labelColor: AppColors.gold500,
+              unselectedLabelColor: isDark ? Colors.white60 : Theme.of(context).colorScheme.onSurfaceVariant,
+              tabs: [
+                Tab(text: l10n.translate('rewards_caps'), icon: const Icon(Icons.military_tech_rounded)),
+                Tab(text: l10n.translate('shop_caps'), icon: const Icon(Icons.shopping_bag_rounded)),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildRewardsTab(isDark, l10n),
+                  _buildShopTab(isDark, l10n),
+                ],
+              ),
+            ),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildRewardsTab(isDark, l10n),
-          _buildShopTab(isDark, l10n),
-        ],
       ),
     );
   }

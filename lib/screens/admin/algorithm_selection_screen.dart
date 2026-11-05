@@ -157,23 +157,20 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
   }
 
   Widget _buildPronunciationGrid(dynamic config, bool isDark, AppLocalization l10n) {
-    return Column(
-      children: PronunciationAlgorithm.values.map((algo) {
-        final metrics = PronunciationService.calculateMetrics(algo, _pronunciationEvalDataset);
-        final isSelected = config.activePronunciationAlgorithm == algo.name;
+    const algo = PronunciationAlgorithm.dtw;
+    final metrics = PronunciationService.calculateMetrics(algo, _pronunciationEvalDataset);
+    final isSelected = true;
 
-        return _buildModelCard(
-          title: _getPronunciationAlgoName(algo),
-          isSelected: isSelected,
-          metrics: {
-            l10n.translate('accuracy'): '${(metrics.accuracy * 100).toStringAsFixed(1)}%',
-            l10n.translate('correlation'): metrics.correlation.toStringAsFixed(2),
-            l10n.translate('mae'): metrics.meanAbsoluteError.toStringAsFixed(3),
-          },
-          onSelect: () => _updateActiveModel(algo.name, l10n),
-          l10n: l10n,
-        );
-      }).toList(),
+    return _buildModelCard(
+      title: _getPronunciationAlgoName(algo),
+      isSelected: isSelected,
+      metrics: {
+        l10n.translate('accuracy'): '${(metrics.accuracy * 100).toStringAsFixed(1)}%',
+        l10n.translate('correlation'): metrics.correlation.toStringAsFixed(2),
+        l10n.translate('mae'): metrics.meanAbsoluteError.toStringAsFixed(3),
+      },
+      onSelect: () => _updateActiveModel(algo.name, l10n),
+      l10n: l10n,
     );
   }
 

@@ -9,6 +9,8 @@ import '../widgets/brand_card.dart';
 import '../widgets/brand_background.dart';
 import '../widgets/brand_button.dart';
 import '../services/haptic_service.dart';
+import '../providers/student_provider.dart';
+import '../widgets/spirit_particle_overlay.dart';
 
 class MansakaHistoryScreen extends ConsumerStatefulWidget {
   const MansakaHistoryScreen({super.key});
@@ -36,6 +38,134 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _showHeritageQuizModal() {
+    HapticService.light();
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        int currentQuestion = 0;
+        int score = 0;
+
+        final questions = [
+          {
+            'question': 'What is the sacred hand-woven abaca textile of the Mansaka called?',
+            'options': ['Dagmay', 'Malong', 'Inabel', 'T\'nalak'],
+            'answer': 0,
+          },
+          {
+            'question': 'What is the council of respected elders and tribal leaders called in Mansaka custom?',
+            'options': ['Datu', 'Matikadong', 'Panglima', 'Sultan'],
+            'answer': 1,
+          },
+          {
+            'question': 'Where is the traditional ancestral domain of the Mansaka primarily centered?',
+            'options': ['Luzon highlands', 'Davao de Oro / Upriver tributaries', 'Sulu archipelago', 'Batanes islands'],
+            'answer': 1,
+          },
+        ];
+
+        return StatefulBuilder(
+          builder: (context, setStateQuiz) {
+            final q = questions[currentQuestion];
+            final options = q['options'] as List<String>;
+
+            return AlertDialog(
+              backgroundColor: isDark ? AppColors.forest900 : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+                side: const BorderSide(color: AppColors.gold500, width: 1.5),
+              ),
+              title: Row(
+                children: [
+                  const Icon(Icons.quiz_rounded, color: AppColors.gold500, size: 22),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Heritage Quiz (${currentQuestion + 1}/${questions.length})',
+                    style: AppTypography.h3.copyWith(
+                      color: isDark ? Colors.white : AppColors.forest900,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    q['question'] as String,
+                    style: AppTypography.body.copyWith(
+                      color: isDark ? Colors.white70 : Colors.black87,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ...List.generate(options.length, (optIdx) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            HapticService.selection();
+                            final correct = optIdx == q['answer'];
+                            if (correct) score++;
+                            if (currentQuestion < questions.length - 1) {
+                              setStateQuiz(() {
+                                currentQuestion++;
+                              });
+                            } else {
+                              Navigator.of(ctx).pop();
+                              _finishHeritageQuiz(score, questions.length);
+                            }
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: isDark ? Colors.white : AppColors.forest900,
+                            side: BorderSide(color: AppColors.gold500.withValues(alpha: 0.5)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            alignment: Alignment.centerLeft,
+                          ),
+                          child: Text(options[optIdx], style: const TextStyle(fontSize: 13)),
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _finishHeritageQuiz(int score, int total) {
+    final passed = score >= 2;
+    if (passed) {
+      ref.read(studentProvider.notifier).addXp(50);
+      ref.read(studentProvider.notifier).addMistCrystals(25);
+      HapticService.celebration();
+      showSpiritParticles(context, duration: const Duration(seconds: 3));
+    } else {
+      HapticService.error();
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          passed
+              ? 'Quiz passed ($score/$total)! Earned +50 XP & +25 Mist Crystals 💎🎉'
+              : 'Score: $score/$total. Review the history archive and try again!',
+        ),
+        backgroundColor: passed ? AppColors.semanticGreen : AppColors.gold500,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   void _toggleBookmark(String sectionTitle) {
@@ -494,6 +624,24 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
               color: Colors.white.withValues(alpha: 0.9),
               fontSize: 13,
               height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _showHeritageQuizModal,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.gold500,
+                foregroundColor: AppColors.forest900,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              icon: const Icon(Icons.quiz_rounded, size: 18),
+              label: const Text(
+                'Test Heritage Knowledge (+50 XP / +25 Gems)',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
             ),
           ),
         ],

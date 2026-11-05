@@ -2974,6 +2974,21 @@ class FirebaseService {
         .doc(questId);
 
     return _db.runTransaction((transaction) async {
+      final questDoc = await transaction.get(questRef);
+      if (!questDoc.exists) {
+        throw Exception("Quest does not exist.");
+      }
+      final data = questDoc.data();
+      final isClaimed = data?['isClaimed'] ?? false;
+      if (isClaimed) {
+        throw Exception("Quest reward already claimed.");
+      }
+      final current = data?['current'] ?? 0;
+      final target = data?['target'] ?? 1;
+      if (current < target) {
+        throw Exception("Quest requirements not yet met.");
+      }
+
       transaction.update(userRef, {
         'mistCrystals': FieldValue.increment(reward),
       });

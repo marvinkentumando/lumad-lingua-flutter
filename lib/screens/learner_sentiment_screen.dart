@@ -3,14 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_typography.dart';
 import '../theme/app_colors.dart';
 import 'package:lumad_lingua/models/sentiment_post.dart';
 import 'package:lumad_lingua/services/sentiment_service.dart';
 import '../services/haptic_service.dart';
+import '../services/auth_service.dart';
+import '../providers/student_provider.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_background.dart';
 import '../widgets/app_shimmer_skeleton.dart';
+import '../widgets/spirit_particle_overlay.dart';
 
 class LearnerSentimentScreen extends ConsumerStatefulWidget {
   const LearnerSentimentScreen({super.key});
@@ -23,6 +27,139 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
   final ScrollController _scrollController = ScrollController();
   final Set<String> _savedPostIds = {};
   final Set<String> _sparkedPostIds = {};
+  bool _checkedInToday = false;
+  String? _selectedMood;
+  bool _minigameCompletedToday = false;
+  String? _minigameSelectedGuess;
+  bool _minigameCorrect = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkDailyCheckInStatus();
+    _checkMiniGameStatus();
+  }
+
+  Future<void> _checkDailyCheckInStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final dateStr = "${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}";
+    final userId = ref.read(authServiceProvider).currentUser?.uid ?? 'guest';
+    final key = 'sentiment_checkin_${userId}_$dateStr';
+    final moodKey = 'sentiment_mood_${userId}_$dateStr';
+    if (mounted) {
+      setState(() {
+        _checkedInToday = prefs.getBool(key) ?? false;
+        _selectedMood = prefs.getString(moodKey);
+      });
+    }
+  }
+
+  Future<void> _checkMiniGameStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final dateStr = "${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}";
+    final userId = ref.read(authServiceProvider).currentUser?.uid ?? 'guest';
+    final key = 'sentiment_minigame_${userId}_$dateStr';
+    final guessKey = 'sentiment_minigame_guess_${userId}_$dateStr';
+    final correctKey = 'sentiment_minigame_correct_${userId}_$dateStr';
+    if (mounted) {
+      setState(() {
+        _minigameCompletedToday = prefs.getBool(key) ?? false;
+        _minigameSelectedGuess = prefs.getString(guessKey);
+        _minigameCorrect = prefs.getBool(correctKey) ?? false;
+      });
+    }
+  }
+
+  Future<void> _submitMiniGameGuess(String guess, String correctCategory) async {
+    if (_minigameCompletedToday) return;
+
+    final isCorrect = guess.toLowerCase() == correctCategory.toLowerCase();
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final dateStr = "${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}";
+    final userId = ref.read(authServiceProvider).currentUser?.uid ?? 'guest';
+    final key = 'sentiment_minigame_${userId}_$dateStr';
+    final guessKey = 'sentiment_minigame_guess_${userId}_$dateStr';
+    final correctKey = 'sentiment_minigame_correct_${userId}_$dateStr';
+
+    await prefs.setBool(key, true);
+    await prefs.setString(guessKey, guess);
+    await prefs.setBool(correctKey, isCorrect);
+
+    if (isCorrect) {
+      ref.read(studentProvider.notifier).addXp(25);
+      ref.read(studentProvider.notifier).addMistCrystals(15);
+      HapticService.celebration();
+      if (!mounted) return;
+      showSpiritParticles(context, duration: const Duration(seconds: 3));
+    } else {
+      HapticService.error();
+    }
+
+    setState(() {
+      _minigameCompletedToday = true;
+      _minigameSelectedGuess = guess;
+      _minigameCorrect = isCorrect;
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isCorrect
+                ? 'Correct tone! +25 XP & +15 Mist Crystals earned 💎🎉'
+                : 'Not quite! The correct tone was "$correctCategory". Keep practicing!',
+            style: AppTypography.label.copyWith(color: Colors.white),
+          ),
+          backgroundColor: isCorrect ? AppColors.semanticGreen : AppColors.gold500,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _logDailyCheckIn(String mood, String mansakaTerm) async {
+    if (_checkedInToday) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final dateStr = "${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}";
+    final userId = ref.read(authServiceProvider).currentUser?.uid ?? 'guest';
+    final key = 'sentiment_checkin_${userId}_$dateStr';
+    final moodKey = 'sentiment_mood_${userId}_$dateStr';
+
+    await prefs.setBool(key, true);
+    await prefs.setString(moodKey, mansakaTerm);
+
+    if (!mounted) return;
+
+    ref.read(studentProvider.notifier).addXp(10);
+    ref.read(studentProvider.notifier).incrementStreak();
+
+    HapticService.celebration();
+    if (!mounted) return;
+    showSpiritParticles(context, duration: const Duration(seconds: 3));
+
+    setState(() {
+      _checkedInToday = true;
+      _selectedMood = mansakaTerm;
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Spirit Check-in logged! "$mansakaTerm" recorded. +10 XP earned 🎉',
+            style: AppTypography.label.copyWith(color: Colors.white),
+          ),
+          backgroundColor: AppColors.semanticGreen,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -64,11 +201,6 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
   Widget _buildLearnerContent(List<SentimentPost> posts, bool isDark) {
     final bool hasData = posts.isNotEmpty;
 
-    // Calculate friendly vitality percentage
-    final totalPosts = posts.length;
-    final posCount = posts.where((p) => p.sentimentCategory == 'positive').length;
-    final vitalityIndex = !hasData ? 75 : ((posCount / totalPosts) * 100).clamp(50, 99).toInt();
-
     return CustomScrollView(
       controller: _scrollController,
       physics: const BouncingScrollPhysics(),
@@ -81,7 +213,9 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 16),
-                _buildVitalityBannerCard(vitalityIndex, hasData, isDark),
+                _buildSpiritCheckInCard(isDark),
+                const SizedBox(height: 16),
+                _buildSentimentMiniGameCard(posts, isDark),
                 const SizedBox(height: 24),
                 _buildSectionHeader('Trending Words & Expressions 🌿', isDark),
                 const SizedBox(height: 12),
@@ -192,91 +326,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
     );
   }
 
-  Widget _buildVitalityBannerCard(int vitalityIndex, bool hasData, bool isDark) {
-    return Theme(
-      data: Theme.of(context).copyWith(brightness: Brightness.dark),
-      child: BrandCard(
-        theme: BrandCardTheme.gold,
-        padding: const EdgeInsets.all(24),
-        borderRadius: 28,
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'CULTURAL HEALTH',
-                    style: AppTypography.label.copyWith(
-                      color: AppColors.forest900.withValues(alpha: 0.7),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Language Vitality 🌿',
-                    style: AppTypography.h2.copyWith(
-                      color: AppColors.forest900,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    hasData
-                        ? 'Mansaka language usage is flourishing across community expressions and everyday dialogues!'
-                        : 'Explore real-world phrases, learn new vocabulary, and share tribal encouragement.',
-                    style: AppTypography.body.copyWith(
-                      color: AppColors.forest900.withValues(alpha: 0.8),
-                      fontSize: 12,
-                      height: 1.3,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.forest900,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '$vitalityIndex%',
-                    style: AppTypography.h2.copyWith(
-                      color: AppColors.gold500,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  Text(
-                    'VITAL',
-                    style: AppTypography.label.copyWith(
-                      color: Colors.white60,
-                      fontSize: 8,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildLearnerKeywordCloud(List<SentimentPost> posts, bool isDark) {
     if (posts.isEmpty) {
@@ -552,6 +602,316 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
         letterSpacing: 1.5,
         fontSize: 11,
         fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+
+  Widget _buildSpiritCheckInCard(bool isDark) {
+    final moods = [
+      {'name': 'Madyaw', 'desc': 'Great / Flourishing', 'emoji': '🌿'},
+      {'name': 'Malipayon', 'desc': 'Joyful / Happy', 'emoji': '✨'},
+      {'name': 'Naghunahuna', 'desc': 'Reflective / Thoughtful', 'emoji': '🌾'},
+      {'name': 'Malinawon', 'desc': 'Peaceful / Calm', 'emoji': '🍃'},
+    ];
+
+    return BrandCard(
+      theme: BrandCardTheme.vibrant,
+      padding: const EdgeInsets.all(20),
+      borderRadius: 24,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.gold500.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Text('🌾', style: TextStyle(fontSize: 20)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'DAILY SPIRIT CHECK-IN',
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.gold500,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Kasing-kasing 🌿',
+                      style: AppTypography.h3.copyWith(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_checkedInToday)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.semanticGreen.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.semanticGreen.withValues(alpha: 0.5)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.check_circle_rounded, size: 14, color: AppColors.semanticGreen),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Logged (+10 XP)',
+                        style: TextStyle(
+                          color: AppColors.semanticGreen,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _checkedInToday
+                ? 'You checked in today feeling "${_selectedMood ?? 'Madyaw'}". Come back tomorrow for your next spirit check-in!'
+                : 'How is your spirit today? Choose your feeling in Mansaka/Cebuano to earn +10 XP and boost your streak:',
+            style: AppTypography.body.copyWith(
+              color: Colors.white70,
+              fontSize: 13,
+              height: 1.3,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (!_checkedInToday)
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: moods.map((m) {
+                return InkWell(
+                  onTap: () => _logDailyCheckIn(m['desc']!, m['name']!),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(m['emoji']!, style: const TextStyle(fontSize: 16)),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              m['name']!,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              m['desc']!,
+                              style: TextStyle(
+                                color: Colors.white60,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSentimentMiniGameCard(List<SentimentPost> posts, bool isDark) {
+    final now = DateTime.now();
+    final challengePost = posts.isNotEmpty
+        ? posts[now.day % posts.length]
+        : SentimentPost(
+            id: 'demo_1',
+            originalText: 'Madyaw na adlaw kanatong tanan! Padayon ta sa pagpangga sa atong pinulongan.',
+            filipinoTranslation: 'Magandang araw sa ating lahat! Patuloy nating mahalin ang ating wika.',
+            englishTranslation: 'Good day to us all! Let us continue cherishing our language.',
+            sentimentCategory: 'encouraging',
+          );
+
+    final correctTone = challengePost.sentimentCategory.isNotEmpty
+        ? challengePost.sentimentCategory[0].toUpperCase() + challengePost.sentimentCategory.substring(1)
+        : 'Encouraging';
+
+    final options = ['Encouraging', 'Gratitude', 'Question', 'Joyful'];
+
+    return BrandCard(
+      theme: BrandCardTheme.gold,
+      padding: const EdgeInsets.all(20),
+      borderRadius: 24,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.forest900.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Text('🎯', style: TextStyle(fontSize: 20)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'DAILY TONE CHALLENGE',
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.forest900.withValues(alpha: 0.7),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Timbang sa Tingog 🧩',
+                      style: AppTypography.h3.copyWith(
+                        color: AppColors.forest900,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_minigameCompletedToday)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _minigameCorrect ? AppColors.semanticGreen : Colors.orange.shade800,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _minigameCorrect ? Icons.check_circle_rounded : Icons.info_rounded,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _minigameCorrect ? '+25 XP / +15 Gems' : 'Completed',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Read the community excerpt below and guess its emotional tone:',
+            style: AppTypography.body.copyWith(
+              color: AppColors.forest900.withValues(alpha: 0.8),
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.forest900.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.forest900.withValues(alpha: 0.15)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '"${challengePost.redactedOriginalText}"',
+                  style: AppTypography.body.copyWith(
+                    color: AppColors.forest900,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+                if (challengePost.redactedEnglishTranslation.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    '(${challengePost.redactedEnglishTranslation})',
+                    style: TextStyle(
+                      color: AppColors.forest900.withValues(alpha: 0.7),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _minigameCompletedToday
+                ? 'Your guess: "${_minigameSelectedGuess ?? ''}" (${_minigameCorrect ? 'Correct! 🎉' : 'Incorrect'})'
+                : 'Select the correct tone:',
+            style: AppTypography.label.copyWith(
+              color: AppColors.forest900,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 10),
+          if (!_minigameCompletedToday)
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: options.map((opt) {
+                return ElevatedButton(
+                  onPressed: () => _submitMiniGameGuess(opt, correctTone),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.forest900,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: Text(
+                    opt,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                );
+              }).toList(),
+            ),
+        ],
       ),
     );
   }
