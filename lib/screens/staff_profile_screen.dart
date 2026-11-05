@@ -21,7 +21,7 @@ import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 import '../services/haptic_service.dart';
 import '../widgets/artifacts/artifact_inventory_section.dart';
 import '../utils/app_localization.dart';
-import '../providers/user_preferences_provider.dart';
+
 import '../widgets/branded_empty_state.dart';
 
 class StaffProfileScreen extends ConsumerWidget {
@@ -344,14 +344,7 @@ class StaffProfileScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 12),
-        _buildManagementTile(
-          context,
-          Icons.translate_rounded,
-          'App Language',
-          ref.watch(userPreferencesProvider).appLanguage.toUpperCase(),
-          onTap: () => _showLanguageSelector(context, ref, l10n),
-        ),
-        const SizedBox(height: 12),
+
         if (profile?['role']?.toString().toLowerCase() != 'admin' &&
             role != UserRole.educator) ...[
           _buildManagementTile(
@@ -709,49 +702,7 @@ class StaffProfileScreen extends ConsumerWidget {
     );
   }
 
-  void _showLanguageSelector(BuildContext context, WidgetRef ref, AppLocalization l10n) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.forest900,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
-      builder: (ctx) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 24),
-            Text(l10n.translate('select_language'), style: AppTypography.h3.copyWith(color: AppColors.gold500)),
-            const SizedBox(height: 16),
-            ListTile(
-              title: Text(l10n.translate('english'), style: const TextStyle(color: Colors.white)),
-              trailing: ref.watch(userPreferencesProvider).appLanguage == 'en' ? const Icon(Icons.check, color: AppColors.gold500) : null,
-              onTap: () {
-                ref.read(userPreferencesProvider.notifier).setAppLanguage('en');
-                Navigator.pop(ctx);
-              },
-            ),
-            ListTile(
-              title: Text(l10n.translate('filipino'), style: const TextStyle(color: Colors.white)),
-              trailing: ref.watch(userPreferencesProvider).appLanguage == 'tl' ? const Icon(Icons.check, color: AppColors.gold500) : null,
-              onTap: () {
-                ref.read(userPreferencesProvider.notifier).setAppLanguage('tl');
-                Navigator.pop(ctx);
-              },
-            ),
-            ListTile(
-              title: Text(l10n.translate('bisaya'), style: const TextStyle(color: Colors.white)),
-              trailing: ref.watch(userPreferencesProvider).appLanguage == 'bis' ? const Icon(Icons.check, color: AppColors.gold500) : null,
-              onTap: () {
-                ref.read(userPreferencesProvider.notifier).setAppLanguage('bis');
-                Navigator.pop(ctx);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   void _showEditProfileDialog(
     BuildContext context,

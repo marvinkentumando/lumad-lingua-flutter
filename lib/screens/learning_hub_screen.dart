@@ -770,7 +770,7 @@ class LearningHubScreen extends ConsumerWidget {
               const SizedBox(width: 16),
               _buildChallengeCard(
                 context,
-                title: 'Vitality Quest 🌿',
+                title: 'Vitality Quest',
                 subtitle: 'Tone Challenge',
                 icon: Icons.insights_rounded,
                 color: const Color(0xFF1F4432),

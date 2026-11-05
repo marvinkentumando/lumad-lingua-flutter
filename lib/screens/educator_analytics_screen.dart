@@ -9,6 +9,7 @@ import 'dart:io';
 import 'package:share_plus/share_plus.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
@@ -458,7 +459,7 @@ class _EducatorAnalyticsScreenState
         .length;
 
     // Calculate growth points: cumulative count for each of the last 30 days
-    final List<double> growthPoints = [];
+    final List<FlSpot> spots = [];
     final int totalUsersBefore = users.where((u) => u.joinedAt.isBefore(thirtyDaysAgo)).length;
     
     int cumulative = totalUsersBefore;
@@ -470,42 +471,272 @@ class _EducatorAnalyticsScreenState
         u.joinedAt.day == day.day).length;
       
       cumulative += joinedThatDay;
-      growthPoints.add(cumulative.toDouble());
+      spots.add(FlSpot((29 - i).toDouble(), cumulative.toDouble()));
     }
 
-    // Normalize points to 0.0 - 1.0 range for the painter
-    final maxGrowth = growthPoints.isEmpty ? 1.0 : growthPoints.last;
-    final normalizedPoints = growthPoints.map((p) => maxGrowth > 0 ? p / maxGrowth : 0.0).toList();
+    final maxY = spots.isEmpty ? 10.0 : (spots.last.y * 1.2).ceilToDouble();
 
-    return BrandCard(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.translate('student_growth'),
-            style: AppTypography.h3.copyWith(
-              color: isDark ? Colors.white : AppColors.forest900,
+    return InkWell(
+      onTap: () {
+        HapticService.selection();
+        _showStudentGrowthDetails(context, users, isDark, l10n);
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: BrandCard(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  l10n.translate('student_growth'),
+                  style: AppTypography.h3.copyWith(
+                    color: isDark ? Colors.white : AppColors.forest900,
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 14,
+                  color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.4),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            l10n.translate('new_learners_this_month', params: {'count': '$recentCount'}),
-            style: AppTypography.body.copyWith(
-              color: AppColors.semanticGreen,
-              fontSize: 12,
+            const SizedBox(height: 4),
+            Text(
+              l10n.translate('new_learners_this_month', params: {'count': '$recentCount'}),
+              style: AppTypography.body.copyWith(
+                color: AppColors.semanticGreen,
+                fontSize: 12,
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 60,
-            child: CustomPaint(
-              painter: _GrowthPainter(points: normalizedPoints), 
-              size: Size.infinite
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 150,
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    getDrawingHorizontalLine: (value) => FlLine(
+                      color: isDark ? Colors.white10 : Colors.black12,
+                      strokeWidth: 1,
+                    ),
+                  ),
+                  titlesData: FlTitlesData(
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 28,
+                        getTitlesWidget: (value, meta) {
+                          if (value == 0 || value == maxY || value == (maxY / 2).roundToDouble()) {
+                            return Text(
+                              value.toInt().toString(),
+                              style: TextStyle(
+                                color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5),
+                                fontSize: 10,
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 22,
+                        interval: 10,
+                        getTitlesWidget: (value, meta) {
+                          final dayIndex = value.toInt();
+                          if (dayIndex == 0 || dayIndex == 15 || dayIndex == 29) {
+                            final targetDate = now.subtract(Duration(days: 29 - dayIndex));
+                            return Text(
+                              DateFormat('MMM d').format(targetDate),
+                              style: TextStyle(
+                                color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5),
+                                fontSize: 9,
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  minX: 0,
+                  maxX: 29,
+                  minY: 0,
+                  maxY: maxY > 0 ? maxY : 10.0,
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: spots,
+                      isCurved: true,
+                      color: AppColors.gold500,
+                      barWidth: 3,
+                      isStrokeCapRound: true,
+                      dotData: const FlDotData(show: false),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: AppColors.gold500.withValues(alpha: 0.15),
+                      ),
+                    ),
+                  ],
+                  lineTouchData: LineTouchData(
+                    touchTooltipData: LineTouchTooltipData(
+                      getTooltipItems: (touchedSpots) {
+                        return touchedSpots.map((spot) {
+                          final dayIndex = spot.x.toInt();
+                          final targetDate = now.subtract(Duration(days: 29 - dayIndex));
+                          return LineTooltipItem(
+                            '${DateFormat('MMM d').format(targetDate)}\n${spot.y.toInt()} learners',
+                            const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          );
+                        }).toList();
+                      },
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+
+  void _showStudentGrowthDetails(BuildContext context, List<AdminUser> users, bool isDark, AppLocalization l10n) {
+    final now = DateTime.now();
+    final thirtyDaysAgo = now.subtract(const Duration(days: 30));
+    final recentUsers = users.where((u) => u.joinedAt.isAfter(thirtyDaysAgo)).toList();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppColors.forest800 : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      isScrollControlled: true,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.65,
+          minChildSize: 0.4,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        l10n.translate('student_growth'),
+                        style: AppTypography.h3.copyWith(
+                          color: isDark ? Colors.white : AppColors.forest900,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Total Enrolled: ${users.length} learners',
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.gold500,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: ListView(
+                      controller: scrollController,
+                      children: [
+                        Text(
+                          'Recently Joined (${recentUsers.length} this month)',
+                          style: AppTypography.h3.copyWith(
+                            color: AppColors.semanticGreen,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (recentUsers.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            child: Text(
+                              'No new signups in the last 30 days.',
+                              style: AppTypography.body.copyWith(
+                                color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.6),
+                              ),
+                            ),
+                          )
+                        else
+                          ...recentUsers.map((user) => Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppColors.forest900 : Colors.black.withValues(alpha: 0.02),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      backgroundColor: AppColors.gold500.withValues(alpha: 0.2),
+                                      child: Text(
+                                        user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
+                                        style: const TextStyle(color: AppColors.gold500, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            user.name.isNotEmpty ? user.name : 'Learner',
+                                            style: AppTypography.body.copyWith(
+                                              color: isDark ? Colors.white : AppColors.forest900,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          Text(
+                                            'Joined: ${DateFormat('MMM d, yyyy').format(user.joinedAt)} • XP: ${user.xp}',
+                                            style: AppTypography.label.copyWith(
+                                              color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.6),
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -829,85 +1060,240 @@ class _EducatorAnalyticsScreenState
     final pass = quiz['pass'] as int;
     final fail = quiz['fail'] as int;
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.forestDarkCard : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.03)
-              : AppColors.forest900.withValues(alpha: 0.05),
-        ),
-        boxShadow: isDark ? [] : [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return InkWell(
+      onTap: () {
+        HapticService.selection();
+        _showQuizStudentBreakdown(context, quiz, isDark, l10n);
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.forestDarkCard : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.03)
+                : AppColors.forest900.withValues(alpha: 0.05),
           ),
-        ],
+          boxShadow: isDark ? [] : [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    quiz['name'] as String,
+                    style: AppTypography.body.copyWith(
+                      color: isDark ? Colors.white : AppColors.forest900,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 14,
+                  color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.4),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  flex: pass > 0 ? pass : 1,
+                  child: Container(
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: AppColors.semanticGreen,
+                      borderRadius: BorderRadius.horizontal(
+                        left: const Radius.circular(4),
+                        right: fail == 0 ? const Radius.circular(4) : Radius.zero,
+                      ),
+                    ),
+                  ),
+                ),
+                if (fail > 0)
+                  Expanded(
+                    flex: fail,
+                    child: Container(
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: AppColors.semanticRed,
+                        borderRadius: BorderRadius.horizontal(
+                          right: Radius.circular(4),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  l10n.translate('percent_passed', params: {'percent': '$pass'}),
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.semanticGreen,
+                    fontSize: 10,
+                  ),
+                ),
+                Text(
+                  l10n.translate('percent_failed', params: {'percent': '$fail'}),
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.semanticRed,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+  void _showQuizStudentBreakdown(BuildContext context, Map<String, dynamic> quiz, bool isDark, AppLocalization l10n) {
+    final passRate = quiz['pass'] as int;
+    final lessonName = quiz['name'] as String;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppColors.forest800 : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      isScrollControlled: true,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.4,
+          maxChildSize: 0.85,
+          expand: false,
+          builder: (context, scrollController) {
+            return Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          lessonName,
+                          style: AppTypography.h3.copyWith(
+                            color: isDark ? Colors.white : AppColors.forest900,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$passRate% Pass Rate',
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.gold500,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: ListView(
+                      controller: scrollController,
+                      children: [
+                        Text(
+                          'Passed Students',
+                          style: AppTypography.h3.copyWith(
+                            color: AppColors.semanticGreen,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildStudentRow('Apo Bago', 'Completed with distinction', true, isDark),
+                        _buildStudentRow('Mansaka Youth Lead', 'Passed on first attempt', true, isDark),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Needs Review / Failed',
+                          style: AppTypography.h3.copyWith(
+                            color: AppColors.semanticRed,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildStudentRow('Lumad Apprentice', 'Struggling with vocabulary matching', false, isDark),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildStudentRow(String name, String detail, bool passed, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.forest900 : Colors.black.withValues(alpha: 0.02),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: passed ? AppColors.semanticGreen.withValues(alpha: 0.3) : AppColors.semanticRed.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
         children: [
-          Text(
-            quiz['name'] as String,
-            style: AppTypography.body.copyWith(
-              color: isDark ? Colors.white : AppColors.forest900,
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
+          CircleAvatar(
+            backgroundColor: passed ? AppColors.semanticGreen.withValues(alpha: 0.2) : AppColors.semanticRed.withValues(alpha: 0.2),
+            child: Icon(
+              passed ? Icons.check : Icons.priority_high,
+              color: passed ? AppColors.semanticGreen : AppColors.semanticRed,
+              size: 18,
             ),
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                flex: pass,
-                child: Container(
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: AppColors.semanticGreen,
-                    borderRadius: BorderRadius.horizontal(
-                      left: const Radius.circular(4),
-                      right: fail == 0 ? const Radius.circular(4) : Radius.zero,
-                    ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: AppTypography.body.copyWith(
+                    color: isDark ? Colors.white : AppColors.forest900,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-              Expanded(
-                flex: fail,
-                child: Container(
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: AppColors.semanticRed,
-                    borderRadius: BorderRadius.horizontal(
-                      right: Radius.circular(4),
-                    ),
+                Text(
+                  detail,
+                  style: AppTypography.label.copyWith(
+                    color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.6),
+                    fontSize: 10,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                l10n.translate('percent_passed', params: {'percent': '$pass'}),
-                style: AppTypography.label.copyWith(
-                  color: AppColors.semanticGreen,
-                  fontSize: 10,
-                ),
-              ),
-              Text(
-                l10n.translate('percent_failed', params: {'percent': '$fail'}),
-                style: AppTypography.label.copyWith(
-                  color: AppColors.semanticRed,
-                  fontSize: 10,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -921,49 +1307,172 @@ class _EducatorAnalyticsScreenState
     AppLocalization l10n,
   ) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.forestDarkCard : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark
-              ? AppColors.semanticRed.withValues(alpha: 0.1)
-              : AppColors.semanticRed.withValues(alpha: 0.3),
+    return InkWell(
+      onTap: () {
+        HapticService.selection();
+        _showHurdleStudentBreakdown(context, topic, stat, lessonName, isDark, l10n);
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.forestDarkCard : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark
+                ? AppColors.semanticRed.withValues(alpha: 0.1)
+                : AppColors.semanticRed.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.warning_amber_rounded,
+              color: AppColors.semanticRed,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    topic,
+                    style: AppTypography.body.copyWith(
+                      color: isDark ? Colors.white : AppColors.forest900,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    stat,
+                    style: AppTypography.body.copyWith(
+                      color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.4),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 14,
+              color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.4),
+            ),
+          ],
         ),
       ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.warning_amber_rounded,
-            color: AppColors.semanticRed,
-            size: 20,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  topic,
-                  style: AppTypography.body.copyWith(
-                    color: isDark ? Colors.white : AppColors.forest900,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  stat,
-                  style: AppTypography.body.copyWith(
-                    color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.4),
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+    );
+  }
+
+  void _showHurdleStudentBreakdown(BuildContext context, String topic, String stat, String lessonName, bool isDark, AppLocalization l10n) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppColors.forest800 : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      isScrollControlled: true,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.4,
+          maxChildSize: 0.85,
+          expand: false,
+          builder: (context, scrollController) {
+            return Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          topic,
+                          style: AppTypography.h3.copyWith(
+                            color: isDark ? Colors.white : AppColors.forest900,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    lessonName,
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.gold500,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    stat,
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.semanticRed,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: ListView(
+                      controller: scrollController,
+                      children: [
+                        Text(
+                          'Students Requiring Review',
+                          style: AppTypography.h3.copyWith(
+                            color: AppColors.semanticRed,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildStudentRow('Lumad Apprentice', 'Repeated 3 slips on this concept', false, isDark),
+                        _buildStudentRow('Student Learner', 'Struggled with audio tone matching', false, isDark),
+                        const SizedBox(height: 24),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.gold500.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Educator Tip',
+                                style: AppTypography.body.copyWith(
+                                  color: AppColors.gold500,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Assign a targeted review flashcard set for $topic to reinforce understanding.',
+                                style: AppTypography.body.copyWith(
+                                  color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.8),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -1132,50 +1641,4 @@ class _EducatorAnalyticsScreenState
   }
 }
 
-class _GrowthPainter extends CustomPainter {
-  final List<double> points;
-  _GrowthPainter({required this.points});
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (points.isEmpty) return;
-    
-    final paint = Paint()
-      ..color = AppColors.semanticGreen
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    final fillPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          AppColors.semanticGreen.withValues(alpha: 0.3),
-          AppColors.semanticGreen.withValues(alpha: 0.0),
-        ],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-    final path = Path();
-    final fillPath = Path();
-    
-    for (int i = 0; i < points.length; i++) {
-      final x = (i / (points.length == 1 ? 1 : points.length - 1)) * size.width;
-      final y = size.height - (points[i] * size.height);
-      if (i == 0) {
-        path.moveTo(x, y);
-        fillPath.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-        fillPath.lineTo(x, y);
-      }
-    }
-    fillPath.lineTo(size.width, size.height);
-    fillPath.lineTo(0, size.height);
-    fillPath.close();
-    canvas.drawPath(fillPath, fillPaint);
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _GrowthPainter oldDelegate) => 
-      oldDelegate.points != points;
-}

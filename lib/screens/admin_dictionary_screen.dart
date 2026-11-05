@@ -17,7 +17,6 @@ import '../widgets/brand_text_field.dart';
 import '../widgets/preview_audio_player.dart';
 import '../widgets/pagination_bar.dart';
 import '../widgets/admin/import_dictionary_modal.dart';
-import '../widgets/admin/bulk_audio_import_modal.dart';
 import '../widgets/lesson_editors/editor_utils.dart';
 import '../widgets/branded_empty_state.dart';
 import '../widgets/admin/admin_screen_header.dart';
@@ -201,11 +200,6 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
                   icon: const Icon(Icons.delete_sweep_rounded, color: AppColors.semanticRed, size: 20),
                   tooltip: 'Delete All Words',
                   onPressed: () => _confirmDeleteAll(wordsAsync.value ?? [], l10n),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.audio_file_rounded, color: AppColors.gold500, size: 20),
-                  tooltip: l10n.translate('bulk_audio_import'),
-                  onPressed: () => _showBulkAudioModal(context, _sortWords(wordsAsync.value ?? [])),
                 ),
                 IconButton(
                   icon: const Icon(Icons.download_rounded, color: AppColors.gold500, size: 20),
@@ -592,15 +586,6 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => const ImportDictionaryModal(),
-    );
-  }
-
-  void _showBulkAudioModal(BuildContext context, List<DictionaryEntry> words) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => BulkAudioImportModal(entries: words),
     );
   }
 

@@ -266,75 +266,78 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
         final accuracy = (entry.value as num).toDouble();
         final label = entry.key;
 
-        return BrandCard(
-          theme: BrandCardTheme.cream,
-          margin: const EdgeInsets.only(bottom: 12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      label.substring(0, 1).toUpperCase(),
-                      style: AppTypography.h3.copyWith(color: AppColors.gold500, fontSize: 18),
+        return GestureDetector(
+          onTap: () => _showAccuracyDetail(context, label, accuracy, l10n),
+          child: BrandCard(
+            theme: BrandCardTheme.cream,
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        label.isNotEmpty ? label.substring(0, 1).toUpperCase() : '?',
+                        style: AppTypography.h3.copyWith(color: AppColors.gold500, fontSize: 18),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: AppTypography.body.copyWith(
+                            color: isDark ? Colors.white : AppColors.forest900,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(2),
+                          child: LinearProgressIndicator(
+                            value: accuracy,
+                            minHeight: 4,
+                            backgroundColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+                            valueColor: AlwaysStoppedAnimation(
+                              accuracy > 0.8 ? AppColors.semanticGreen : (accuracy > 0.6 ? AppColors.gold500 : AppColors.semanticRed),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        label,
-                        style: AppTypography.body.copyWith(
+                        '${(accuracy * 100).toInt()}%',
+                        style: AppTypography.h3.copyWith(
                           color: isDark ? Colors.white : AppColors.forest900,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(2),
-                        child: LinearProgressIndicator(
-                          value: accuracy,
-                          minHeight: 4,
-                          backgroundColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
-                          valueColor: AlwaysStoppedAnimation(
-                            accuracy > 0.8 ? AppColors.semanticGreen : (accuracy > 0.6 ? AppColors.gold500 : AppColors.semanticRed),
-                          ),
+                      Text(
+                        l10n.translate('accuracy'),
+                        style: AppTypography.label.copyWith(
+                          color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.5),
+                          fontSize: 8,
                         ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 20),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${(accuracy * 100).toInt()}%',
-                      style: AppTypography.h3.copyWith(
-                        color: isDark ? Colors.white : AppColors.forest900,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Text(
-                      l10n.translate('accuracy'),
-                      style: AppTypography.label.copyWith(
-                        color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.5),
-                        fontSize: 8,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -360,90 +363,164 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
         final lessonName = names[lessonId] ?? l10n.translate('ancestral_lesson_default');
         final maxStumble = taskStruggles.values.isEmpty ? 1 : taskStruggles.values.reduce((a, b) => a > b ? a : b);
         
-        return BrandCard(
-          theme: BrandCardTheme.vibrant,
-          margin: const EdgeInsets.only(bottom: 16),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        lessonName, 
-                        style: AppTypography.h3.copyWith(
-                          color: isDark ? AppColors.gold500 : AppColors.gold700, 
-                          fontSize: 14
+        return GestureDetector(
+          onTap: () => _showLessonDetail(context, lessonName, taskStruggles, l10n),
+          child: BrandCard(
+            theme: BrandCardTheme.vibrant,
+            margin: const EdgeInsets.only(bottom: 16),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          lessonName, 
+                          style: AppTypography.h3.copyWith(
+                            color: isDark ? AppColors.gold500 : AppColors.gold700, 
+                            fontSize: 14
+                          ),
                         ),
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.semanticRed.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        l10n.translate('critical'),
-                        style: AppTypography.label.copyWith(color: AppColors.semanticRed, fontSize: 8, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                // Heatmap Grid
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: taskStruggles.entries.map((ts) {
-                    final intensity = ts.value / maxStumble;
-                    return Tooltip(
-                      message: '${l10n.translate('task')} ${ts.key}: ${ts.value} ${l10n.translate('slips')}',
-                      child: Container(
-                        width: 40,
-                        height: 40,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Color.lerp(
-                            isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
-                            AppColors.semanticRed,
-                            intensity,
-                          ),
+                          color: AppColors.semanticRed.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: intensity > 0.7 ? AppColors.semanticRed.withValues(alpha: 0.5) : Colors.transparent,
-                          ),
                         ),
-                        child: Center(
-                          child: Text(
-                            ts.key.split('_').last.substring(0, min(2, ts.key.split('_').last.length)),
-                            style: TextStyle(
-                              color: intensity > 0.5 ? Colors.white : (isDark ? Colors.white60 : Colors.black38),
-                              fontSize: 10,
-                              fontWeight: intensity > 0.5 ? FontWeight.bold : FontWeight.normal,
+                        child: Text(
+                          l10n.translate('critical'),
+                          style: AppTypography.label.copyWith(color: AppColors.semanticRed, fontSize: 8, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  // Heatmap Grid
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: taskStruggles.entries.map((ts) {
+                      final intensity = ts.value / maxStumble;
+                      return Tooltip(
+                        message: '${l10n.translate('task')} ${ts.key}: ${ts.value} ${l10n.translate('slips')}',
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Color.lerp(
+                              isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+                              AppColors.semanticRed,
+                              intensity,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: intensity > 0.7 ? AppColors.semanticRed.withValues(alpha: 0.5) : Colors.transparent,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              ts.key.split('_').last.substring(0, min(2, ts.key.split('_').last.length)),
+                              style: TextStyle(
+                                color: intensity > 0.5 ? Colors.white : (isDark ? Colors.white60 : Colors.black38),
+                                fontSize: 10,
+                                fontWeight: intensity > 0.5 ? FontWeight.bold : FontWeight.normal,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.translate('heatmap_intensity_desc'),
-                  style: AppTypography.label.copyWith(
-                    color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
-                    fontSize: 8,
-                    fontStyle: FontStyle.italic,
+                      );
+                    }).toList(),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  Text(
+                    l10n.translate('heatmap_intensity_desc'),
+                    style: AppTypography.label.copyWith(
+                      color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
+                      fontSize: 8,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
       }).toList(),
+    );
+  }
+
+  void _showAccuracyDetail(BuildContext context, String label, double accuracy, AppLocalization l10n) {
+    HapticService.selection();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark ? AppColors.forest900 : AppColors.creamBg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: AppTypography.h3.copyWith(fontSize: 20)),
+            const SizedBox(height: 12),
+            Text('Pronunciation Accuracy: ${(accuracy * 100).toStringAsFixed(1)}%', style: AppTypography.body),
+            const SizedBox(height: 8),
+            Text(
+              accuracy > 0.8
+                  ? 'High proficiency cohort. Learners demonstrate strong phonetic mastery.'
+                  : accuracy > 0.6
+                      ? 'Moderate proficiency. Additional pronunciation drills recommended.'
+                      : 'Critical intervention needed. High error frequency in vowel/consonant alignment.',
+              style: AppTypography.body.copyWith(color: AppColors.gold500),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showLessonDetail(BuildContext context, String lessonName, Map<String, int> taskStruggles, AppLocalization l10n) {
+    HapticService.selection();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark ? AppColors.forest900 : AppColors.creamBg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(lessonName, style: AppTypography.h3.copyWith(fontSize: 20)),
+            const SizedBox(height: 16),
+            Text('Task Stumble Breakdown:', style: AppTypography.label),
+            const SizedBox(height: 12),
+            Expanded(
+              child: ListView(
+                shrinkWrap: true,
+                children: taskStruggles.entries.map((e) => ListTile(
+                  title: Text('Task: ${e.key}'),
+                  trailing: Text('${e.value} stumbles', style: const TextStyle(color: AppColors.semanticRed, fontWeight: FontWeight.bold)),
+                )).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -597,12 +674,33 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
         ['Lumad Lingua - Advanced Pedagogical Analytics Report'],
         ['Generated At', DateFormat('yyyy-MM-dd HH:mm:ss').format(now)],
         [],
-        ['Metric', 'Value'],
+        ['=== SYSTEM HEALTH ==='],
       ];
 
       final health = data['srsHealth'] as Map<String, dynamic>? ?? {};
       health.forEach((key, val) {
         rows.add(['SRS Health - $key', val]);
+      });
+
+      rows.add([]);
+      rows.add(['=== XP TRENDS (Last 7 Days) ===']);
+      final xpTrends = data['xpTrends'] as Map<String, dynamic>? ?? {};
+      xpTrends.forEach((date, xp) {
+        rows.add([date, xp]);
+      });
+
+      rows.add([]);
+      rows.add(['=== DIALECT ACCURACY ===']);
+      final dialectAcc = data['dialectAccuracy'] as Map<String, dynamic>? ?? {};
+      dialectAcc.forEach((dialect, acc) {
+        rows.add([dialect, '${((acc is num ? acc.toDouble() : 0.0) * 100).toStringAsFixed(1)}%']);
+      });
+
+      rows.add([]);
+      rows.add(['=== LOCATION ACCURACY ===']);
+      final locationAcc = data['locationAccuracy'] as Map<String, dynamic>? ?? {};
+      locationAcc.forEach((loc, acc) {
+        rows.add([loc, '${((acc is num ? acc.toDouble() : 0.0) * 100).toStringAsFixed(1)}%']);
       });
 
       final csvData = const CsvEncoder().convert(rows);

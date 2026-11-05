@@ -8,6 +8,7 @@ import '../widgets/brand_card.dart';
 import '../utils/app_localization.dart';
 import '../providers/user_preferences_provider.dart';
 import '../providers/theme_provider.dart';
+import '../providers/role_provider.dart';
 import '../widgets/streak_reminder_settings_dialog.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -17,6 +18,8 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = ref.watch(localizationProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final role = ref.watch(roleProvider);
+    final isEducatorOrAdmin = role == UserRole.educator || role == UserRole.admin;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -88,14 +91,16 @@ class SettingsScreen extends ConsumerWidget {
                       l10n.translate('notification_desc'),
                       onTap: () => context.push('/notifications'),
                     ),
-                    const SizedBox(height: 12),
-                    _buildTile(
-                      context,
-                      Icons.alarm_rounded,
-                      'Daily Streak Reminders',
-                      'Set daily practice alerts & schedule',
-                      onTap: () => showStreakReminderSettingsDialog(context),
-                    ),
+                    if (!isEducatorOrAdmin) ...[
+                      const SizedBox(height: 12),
+                      _buildTile(
+                        context,
+                        Icons.alarm_rounded,
+                        'Daily Streak Reminders',
+                        'Set daily practice alerts & schedule',
+                        onTap: () => showStreakReminderSettingsDialog(context),
+                      ),
+                    ],
                     const SizedBox(height: 24),
                     Text(
                       'DATA & PRIVACY',

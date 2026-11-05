@@ -1506,24 +1506,31 @@ class FirebaseService {
         masteryDist[level] = (masteryDist[level] ?? 0) + 1;
       }
 
-      // 4. XP Trends (Proxy for XP growth using total daily XP)
+      // 4. XP Trends (Aggregate daily XP growth over last 7 days using activityMap or proportional distribution)
       final Map<String, int> xpTrends = {};
       final now = DateTime.now();
+      final List<String> dateKeys = [];
       for (int i = 0; i < 7; i++) {
         final date = now.subtract(Duration(days: 6 - i));
         final dateKey = date.toIso8601String().split('T')[0];
+        dateKeys.add(dateKey);
         xpTrends[dateKey] = 0;
       }
 
       for (var user in usersSnap.docs) {
         final userData = user.data();
-        final createdAt = (userData['createdAt'] as Timestamp?)?.toDate();
         final xp = (userData['xp'] as num?)?.toInt() ?? 0;
-        if (createdAt != null) {
-          final dateKey = createdAt.toIso8601String().split('T')[0];
-          if (xpTrends.containsKey(dateKey)) {
-            xpTrends[dateKey] = xpTrends[dateKey]! + xp;
+        final activityMap = Map<String, dynamic>.from(userData['activityMap'] ?? {});
+        
+        final activeDaysInWindow = dateKeys.where((d) => activityMap[d] == true).toList();
+        if (activeDaysInWindow.isNotEmpty && xp > 0) {
+          final xpPerDay = xp ~/ activeDaysInWindow.length;
+          for (var d in activeDaysInWindow) {
+            xpTrends[d] = xpTrends[d]! + xpPerDay;
           }
+        } else if (xp > 0) {
+          final recentDay = dateKeys.last;
+          xpTrends[recentDay] = xpTrends[recentDay]! + (xp > 100 ? 100 : xp);
         }
       }
 
@@ -1540,7 +1547,7 @@ class FirebaseService {
         'xpTrends': xpTrends,
         'srsHealth': {
           'retentionRate': totalReviews > 0
-              ? (totalSuccess / (totalReviews + totalSuccess))
+              ? (totalSuccess / totalReviews).clamp(0.0, 1.0)
               : 0.0,
           'masteryDistribution': masteryDist,
           'totalCards': srsSnap.size,
