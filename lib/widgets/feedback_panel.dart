@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import 'brand_button.dart';
@@ -10,6 +11,7 @@ class FeedbackPanel extends StatelessWidget {
   final String subtitle;
   final VoidCallback onContinue;
   final int? xpEarned;
+  final int? combo;
 
   const FeedbackPanel({
     super.key,
@@ -18,6 +20,7 @@ class FeedbackPanel extends StatelessWidget {
     required this.subtitle,
     required this.onContinue,
     this.xpEarned,
+    this.combo,
   });
 
   @override
@@ -84,7 +87,31 @@ class FeedbackPanel extends StatelessWidget {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            ),
+                            ).animate().scale(begin: const Offset(0.7, 0.7), end: const Offset(1, 1), curve: Curves.elasticOut),
+                          ],
+                          if (isCorrect && combo != null && combo! >= 3) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.orange,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Text(
+                                "🔥 ${combo}x COMBO!",
+                                style: AppTypography.label.copyWith(
+                                  color: Colors.orange,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ).animate().scale(begin: const Offset(0.7, 0.7), end: const Offset(1, 1), curve: Curves.elasticOut),
                           ],
                         ],
                       ),

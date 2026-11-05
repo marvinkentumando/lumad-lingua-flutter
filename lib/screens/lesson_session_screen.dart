@@ -86,6 +86,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
   bool _isCelebrating = false;
   int _currentTaskXp = 0;
   int _calculatedSessionXp = 0;
+  int _earnedCrystals = 0;
 
   bool _isContinuing = false;
 
@@ -493,6 +494,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
             .then((result) {
               if (!mounted) return;
               final bool unlockedBadge = result['unlockedBadge'] ?? false;
+              _earnedCrystals = result['crystalsEarned'] ?? (stars == 3 ? 50 : 25);
               final Artifact? droppedArtifact =
                   result['droppedArtifact'] as Artifact?;
 
@@ -698,6 +700,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     required int totalTasks,
     required int distinctMistakeTasks,
     required int bonusXp,
+    required int crystalsEarned,
   }) {
     if (!mounted) return;
 
@@ -719,6 +722,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
         totalTasks: totalTasks,
         distinctMistakeTasks: distinctMistakeTasks,
         bonusXp: bonusXp,
+        crystalsEarned: crystalsEarned,
         onFinish: () {
           Navigator.of(dialogContext).pop();
           if (lessonId != null) {
@@ -1692,6 +1696,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                     subtitle: _feedbackSubtitle,
                     onContinue: _handleContinue,
                     xpEarned: _lastAnswerCorrect ? _currentTaskXp : null,
+                    combo: _combo,
                   ),
                 ),
 
@@ -1708,6 +1713,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                         totalTasks: state.totalTasks,
                         distinctMistakeTasks: distinctMistakeTasks,
                         bonusXp: _bonusXp,
+                        crystalsEarned: _earnedCrystals,
                       ),
                     ),
                   ),

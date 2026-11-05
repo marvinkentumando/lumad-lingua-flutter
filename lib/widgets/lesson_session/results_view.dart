@@ -6,6 +6,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../services/audio_service.dart';
 import '../../services/haptic_service.dart';
+import '../../providers/student_provider.dart';
 import 'summary_widgets.dart';
 
 class SessionResultsView extends ConsumerStatefulWidget {
@@ -14,6 +15,7 @@ class SessionResultsView extends ConsumerStatefulWidget {
   final int totalTasks;
   final int distinctMistakeTasks;
   final int bonusXp;
+  final int crystalsEarned;
   final VoidCallback onFinish;
 
   const SessionResultsView({
@@ -23,6 +25,7 @@ class SessionResultsView extends ConsumerStatefulWidget {
     required this.totalTasks,
     required this.distinctMistakeTasks,
     required this.bonusXp,
+    required this.crystalsEarned,
     required this.onFinish,
   });
 
@@ -114,13 +117,23 @@ class _SessionResultsViewState extends ConsumerState<SessionResultsView> {
                         ),
                         const SizedBox(height: 12),
                         AnimatedSummaryStatRow(
+                          icon: Icons.diamond_rounded,
+                          iconColor: Colors.cyanAccent,
+                          label: 'Mist Crystals Earned',
+                          endValue: widget.crystalsEarned,
+                          prefix: '+',
+                          suffix: ' Crystals',
+                          delay: 300.ms,
+                        ),
+                        const SizedBox(height: 12),
+                        AnimatedSummaryStatRow(
                           icon: Icons.check_circle_rounded,
                           iconColor: AppColors.semanticGreen,
                           label: 'Accuracy',
                           endValue: accuracy,
                           prefix: '',
                           suffix: '%',
-                          delay: 350.ms,
+                          delay: 400.ms,
                         ),
                         const SizedBox(height: 12),
                         AnimatedSummaryStatRow(
@@ -141,13 +154,69 @@ class _SessionResultsViewState extends ConsumerState<SessionResultsView> {
                             endValue: widget.bonusXp,
                             prefix: '+',
                             suffix: ' XP',
-                            delay: 650.ms,
+                            delay: 600.ms,
                           ),
                         ],
                         const SizedBox(height: 20),
                         SrsMasteryBadgeWidget(
                           stars: widget.stars,
                           accuracy: accuracy,
+                        ),
+                        const SizedBox(height: 16),
+                        Consumer(
+                          builder: (context, ref, child) {
+                            final student = ref.watch(studentProvider);
+                            return Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: Colors.orange.withValues(alpha: 0.4), width: 1.5),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.withValues(alpha: 0.2),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.local_fire_department_rounded,
+                                      color: Colors.orangeAccent,
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "STREAK MILESTONE",
+                                          style: AppTypography.label.copyWith(
+                                            color: Colors.orangeAccent,
+                                            fontSize: 10,
+                                            letterSpacing: 1.5,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          "${student.dailyStreak} Day Streak Maintained! 🔥",
+                                          style: AppTypography.body.copyWith(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ).animate().fadeIn(delay: 700.ms).scale(begin: const Offset(0.95, 0.95));
+                          },
                         ),
                       ],
                     ),
