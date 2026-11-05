@@ -48,6 +48,11 @@ class SupabaseDatasetEntry {
   final bool isCompatible;
   final List<ReferenceAudioTake> takes;
   final bool isAvailable;
+  /// Storage root this entry was discovered from (`dataset` or `dataset_2`).
+  /// `dataset` entries are the learner-facing main references (take 1 default);
+  /// `dataset_2` entries are supplementary references used only to improve
+  /// comparison accuracy.
+  final String sourceRoot;
 
   const SupabaseDatasetEntry({
     required this.folderName,
@@ -57,9 +62,22 @@ class SupabaseDatasetEntry {
     required this.isCompatible,
     required this.takes,
     this.isAvailable = true,
+    this.sourceRoot = 'dataset',
   });
 
-  ReferenceAudioTake? get primaryTake => takes.isNotEmpty ? takes.first : null;
+  /// Supplementary references (e.g. dataset_2) are not learner-facing playback
+  /// items; they participate only in pronunciation comparison.
+  bool get isSupplementaryReference => sourceRoot != 'dataset';
+
+  /// The main reference the learner should hear and copy: take 1 (default).
+  /// Falls back to the first available take if take 1 is missing.
+  ReferenceAudioTake? get primaryTake {
+    if (takes.isEmpty) return null;
+    for (final take in takes) {
+      if (take.takeNumber == 1) return take;
+    }
+    return takes.first;
+  }
   String get referenceFileName => primaryTake?.fileName ?? '';
   String get referenceAudioPath => primaryTake?.audioPath ?? '';
   String get referenceAudioUrl => primaryTake?.audioUrl ?? '';
@@ -80,6 +98,7 @@ class SupabaseDatasetEntry {
     bool? isCompatible,
     List<ReferenceAudioTake>? takes,
     bool? isAvailable,
+    String? sourceRoot,
   }) {
     return SupabaseDatasetEntry(
       folderName: folderName ?? this.folderName,
@@ -89,6 +108,7 @@ class SupabaseDatasetEntry {
       isCompatible: isCompatible ?? this.isCompatible,
       takes: takes ?? this.takes,
       isAvailable: isAvailable ?? this.isAvailable,
+      sourceRoot: sourceRoot ?? this.sourceRoot,
     );
   }
 }

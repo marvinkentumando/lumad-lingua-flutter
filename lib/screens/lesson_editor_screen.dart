@@ -772,18 +772,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
             onReorderStart: (index) {
               HapticService.selection();
             },
-            onReorder: (int oldIndex, int newIndex) {
-              HapticService.medium();
-              setState(() {
-                _isDirty = true;
-                if (oldIndex < newIndex) {
-                  newIndex -= 1;
-                }
-                if (oldIndex == newIndex) return;
-                final step = _steps.removeAt(oldIndex);
-                _steps.insert(newIndex, step);
-              });
-            },
+            onReorderItem: _onReorderSteps,
             children: _steps.map((step) {
               final isSelected = _selectedStep == step;
               final isStepValid = step.isValid;
@@ -866,6 +855,16 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         ),
       ],
     );
+  }
+
+  void _onReorderSteps(int oldIndex, int newIndex) {
+    HapticService.medium();
+    setState(() {
+      _isDirty = true;
+      if (oldIndex == newIndex) return;
+      final step = _steps.removeAt(oldIndex);
+      _steps.insert(newIndex, step);
+    });
   }
 
   void _showAddActivityDialog() {

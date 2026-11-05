@@ -53,7 +53,11 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   String _resultFeedback = "";
   int _currentIndex = 0;
   bool _isShuffled = false;
+  /// Learner-facing practice items: primary dataset references only (take 1 default).
+  /// dataset_2 entries are excluded here and used only for comparison accuracy.
   List<SupabaseDatasetEntry> _items = [];
+  /// Full pool (primary + supplementary dataset_2 takes) for multi-reference comparison.
+  List<SupabaseDatasetEntry> _comparisonEntries = [];
   bool _isLoadingNativeAudio = false;
 
   String? _recordedFilePath;
@@ -173,7 +177,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
   List<ReferenceAudioTake> _collectReferenceTakes(SupabaseDatasetEntry currentItem) {
     final byRun = <String, List<ReferenceAudioTake>>{};
     final seenPaths = <String>{};
-    for (final entry in _items) {
+    final pool = _comparisonEntries.isNotEmpty ? _comparisonEntries : _items;
+    for (final entry in pool) {
       if (entry.folderName != currentItem.folderName) continue;
       if (!entry.isCompatible || !entry.isAvailable) continue;
       final takes = byRun.putIfAbsent(entry.runId, () => <ReferenceAudioTake>[]);
@@ -797,24 +802,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     }
   }
 
-  void _logExploratoryPitchRobustness(
-    String takeLabel,
-    List<double> referencePcm,
-    List<double> learnerPcm,
-  ) {
-    try {
-      final scores = PronunciationService.exploratoryPitchRobustnessScores(
-        referencePcm,
-        learnerPcm,
-      );
-      debugPrint(
-        'Exploratory pitch robustness ($takeLabel, diagnostic only): '
-        '${scores.entries.map((entry) => '${entry.key > 0 ? '+' : ''}${entry.key} st=${entry.value.toStringAsFixed(1)}%').join(', ')}',
-      );
-    } catch (error) {
-      debugPrint('Exploratory pitch robustness skipped for $takeLabel: $error');
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -853,8 +841,19 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       body: BrandBackground(
         child: datasetAsync.when(
           data: (entries) {
-            if (_items.isEmpty && entries.isNotEmpty) {
-              _items = List.from(entries);
+            if (_comparisonEntries.isEmpty && entries.isNotEmpty) {
+              _comparisonEntries = List.from(entries);
+              // Learners practice/copy main reference audios from dataset (take 1
+              // default). dataset_2 takes are supplementary and used only for
+              // additional comparison accuracy.
+              _items = entries
+                  .where((e) => !e.isSupplementaryReference && e.isCompatible && e.isAvailable)
+                  .toList();
+              if (_items.isEmpty) {
+                _items = entries
+                    .where((e) => !e.isSupplementaryReference)
+                    .toList();
+              }
               if (_isShuffled) _items.shuffle();
             }
 
@@ -868,7 +867,9 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
                       const Icon(Icons.folder_off_rounded, size: 64, color: Colors.white38),
                       const SizedBox(height: 16),
                       Text(
-                        'No preprocessed Mansaka dataset entries found in Supabase Storage.',
+                        _comparisonEntries.any((e) => e.isSupplementaryReference)
+                            ? 'No primary Mansaka dataset references found. dataset_2 takes are available only for additional comparison accuracy.'
+                            : 'No preprocessed Mansaka dataset entries found in Supabase Storage.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: isDark ? Colors.white60 : AppColors.creamText3),
                       ),
@@ -930,6 +931,11 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
                     text: 'RETRY CONNECTION',
                     onTap: () {
                       HapticService.light();
+                      setState(() {
+                        _items = [];
+                        _comparisonEntries = [];
+                        _currentIndex = 0;
+                      });
                       ref.invalidate(supabaseDatasetEntriesProvider);
                     },
                     type: BrandButtonType.primary,

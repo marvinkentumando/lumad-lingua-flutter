@@ -65,7 +65,7 @@ class _EducatorUnitManagementScreenState
                   onReorderStart: (index) {
                     HapticService.selection();
                   },
-                  onReorder: (int oldIndex, int newIndex) {
+                  onReorderItem: (int oldIndex, int newIndex) {
                     _onReorderUnits(oldIndex, newIndex, filteredLessons);
                   },
                   children: List.generate(
@@ -210,9 +210,6 @@ class _EducatorUnitManagementScreenState
 
   Future<void> _onReorderUnits(int oldIndex, int newIndex, List<Lesson> filteredLessons) async {
     HapticService.medium();
-    if (oldIndex < newIndex) {
-      newIndex -= 1;
-    }
     if (oldIndex == newIndex) return;
 
     final movedLesson = filteredLessons.removeAt(oldIndex);

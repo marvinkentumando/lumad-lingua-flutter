@@ -188,7 +188,10 @@ class SupabaseDatasetService {
             }
 
             final title = SupabaseDatasetEntry.formatTitleFromFolder(name);
-            final subtitle = '($entryRunId) • Verified';
+            final isSupplementary = root != 'dataset';
+            final subtitle = isSupplementary
+                ? '($entryRunId) • Additional reference'
+                : '($entryRunId) • Verified';
             entries.add(SupabaseDatasetEntry(
               folderName: name,
               title: title,
@@ -197,11 +200,22 @@ class SupabaseDatasetService {
               isCompatible: isCompatibleRun,
               takes: takes,
               isAvailable: isCompatibleRun,
+              sourceRoot: root,
             ));
           }
         }
       }
 
+      // Learner-facing main references first (dataset/take 1 default), then
+      // supplementary references (dataset_2) which are used only for comparison.
+      entries.sort((a, b) {
+        final aSupp = a.isSupplementaryReference ? 1 : 0;
+        final bSupp = b.isSupplementaryReference ? 1 : 0;
+        if (aSupp != bSupp) return aSupp.compareTo(bSupp);
+        final titleCmp = a.title.toLowerCase().compareTo(b.title.toLowerCase());
+        if (titleCmp != 0) return titleCmp;
+        return a.runId.compareTo(b.runId);
+      });
       return entries;
     } catch (e, st) {
       debugPrint('Error discovering Supabase dataset entries: $e\n$st');
