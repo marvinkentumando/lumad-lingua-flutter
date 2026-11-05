@@ -20,7 +20,6 @@ import '../widgets/profile_avatar.dart';
 import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 import '../services/haptic_service.dart';
 import '../widgets/artifacts/artifact_inventory_section.dart';
-import '../providers/theme_provider.dart';
 import '../utils/app_localization.dart';
 import '../providers/user_preferences_provider.dart';
 import '../widgets/branded_empty_state.dart';
@@ -366,38 +365,10 @@ class StaffProfileScreen extends ConsumerWidget {
         ],
         _buildManagementTile(
           context,
-          Icons.notifications_active_rounded,
-          l10n.translate('notification_sanctuary'),
-          l10n.translate('notification_desc'),
-          onTap: () => context.push('/notifications'),
-        ),
-        const SizedBox(height: 12),
-        _buildManagementTile(
-          context,
-          Icons.security_rounded,
-          l10n.translate('data_privacy'),
-          l10n.translate('data_privacy_desc'),
-          onTap: () => context.push('/privacy-settings'),
-        ),
-        const SizedBox(height: 12),
-        _buildManagementTile(
-          context,
-          Icons.cloud_download_rounded,
-          l10n.translate('offline_wisdom'),
-          l10n.translate('offline_wisdom_desc'),
-          onTap: () => context.push('/offline-wisdom'),
-        ),
-        const SizedBox(height: 12),
-        _buildManagementTile(
-          context,
-          Theme.of(context).brightness == Brightness.dark
-              ? Icons.light_mode_rounded
-              : Icons.dark_mode_rounded,
-          Theme.of(context).brightness == Brightness.dark
-              ? l10n.translate('light_sanctuary')
-              : l10n.translate('dark_forest'),
-          l10n.translate('switch_themes'),
-          onTap: () => ref.read(themeProvider.notifier).toggleTheme(),
+          Icons.settings_applications_rounded,
+          'Settings & Preferences',
+          'Language, notifications, reminders, privacy & offline mode',
+          onTap: () => context.push('/settings'),
         ),
         const SizedBox(height: 12),
         if (role == UserRole.admin) ...[

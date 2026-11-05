@@ -18,7 +18,7 @@ List<NavItem> getNavItemsForRole(UserRole role) {
 
   switch (role) {
     case UserRole.learner:
-      return [home, words, learn, sentiment, profile];
+      return [home, words, learn, profile];
     case UserRole.staff:
       return [
         home,

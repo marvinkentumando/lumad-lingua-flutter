@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../providers/student_provider.dart';
@@ -86,7 +87,64 @@ void showMistCrystalStore(BuildContext context, WidgetRef ref) {
                     ),
                   ],
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    context.push('/ancestral-vault-shop');
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF2C1E12), Color(0xFF19100A)],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.gold500.withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.gold500.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Text('🏛️', style: TextStyle(fontSize: 18)),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Ancestral Vault Shop 🏛️',
+                                style: AppTypography.h3.copyWith(
+                                  color: AppColors.gold500,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                'Unlock cultural titles, avatar frames & themes',
+                                style: AppTypography.body.copyWith(
+                                  color: Colors.white70,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: AppColors.gold500,
+                          size: 14,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 Expanded(
                   child: ListView(
                     children: [
@@ -155,21 +213,7 @@ void showMistCrystalStore(BuildContext context, WidgetRef ref) {
                               .buyMultiDayShieldBundle();
                         },
                       ),
-                      _buildStoreItem(
-                        context,
-                        ref,
-                        title: 'Mountain Guide Map',
-                        description: 'Unlock a hidden locale on the map.',
-                        price: 200,
-                        icon: Icons.map_rounded,
-                        iconColor: AppColors.gold500,
-                        onPurchase: () {
-                          ref
-                              .read(studentProvider.notifier)
-                              .spendMistCrystals(200);
-                          return true;
-                        },
-                      ),
+
                       _buildStoreItem(
                         context,
                         ref,

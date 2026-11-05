@@ -21,8 +21,6 @@ import '../services/haptic_service.dart';
 import '../widgets/dynamic_glass_box.dart';
 import '../utils/app_localization.dart';
 
-import '../providers/daily_challenge_provider.dart';
-
 class LearningHubScreen extends ConsumerWidget {
   const LearningHubScreen({super.key});
 
@@ -94,90 +92,6 @@ class LearningHubScreen extends ConsumerWidget {
                         ),
                       ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
                       const SizedBox(height: 32),
-
-                      // Daily Challenge Card
-                      ref.watch(dailyChallengeProvider).when(
-                        data: (challenge) {
-                          if (challenge == null) return const SizedBox.shrink();
-                          final isCompleted = ref.watch(dailyChallengeStatusProvider);
-
-                          return GestureDetector(
-                            onTap: () {
-                              HapticService.selection();
-                              if (isCompleted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(l10n.translate('challenge_completed')),
-                                  ),
-                                );
-                              } else {
-                                context.push('/daily-challenge', extra: challenge);
-                              }
-                            },
-                            child: BrandCard(
-                              theme: isCompleted ? BrandCardTheme.gold : BrandCardTheme.vibrant,
-                              padding: const EdgeInsets.all(24),
-                              borderRadius: 32,
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: isCompleted ? Colors.black12 : Colors.white10,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      isCompleted ? Icons.check_circle_rounded : Icons.auto_awesome_rounded,
-                                      color: isCompleted 
-                                          ? AppColors.forest900 
-                                          : (isDark ? Colors.white : AppColors.gold700),
-                                      size: 28,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 20),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          isCompleted ? 'Challenge Completed' : challenge.title,
-                                          style: AppTypography.h3.copyWith(
-                                            color: isCompleted 
-                                                ? AppColors.forest900 
-                                                : (isDark ? Colors.white : AppColors.forest900),
-                                            fontWeight: FontWeight.w900,
-                                          ),
-                                        ),
-                                        Text(
-                                          isCompleted
-                                              ? 'Your spirit grows stronger. Come back in 24h.'
-                                              : challenge.description,
-                                          style: AppTypography.body.copyWith(
-                                            color: isCompleted 
-                                                ? AppColors.forest700 
-                                                : (isDark ? Colors.white60 : AppColors.forest700),
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  if (!isCompleted)
-                                    Icon(
-                                      Icons.arrow_forward_ios_rounded,
-                                      color: isDark ? Colors.white : AppColors.forest900,
-                                      size: 16,
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ).animate().fadeIn(delay: 220.ms).slideX(begin: -0.1);
-                        },
-                        loading: () => const HubCardSkeleton(),
-                        error: (_, __) => const SizedBox.shrink(),
-                      ),
-
-                      const SizedBox(height: 16),
 
                       // Mastery Trends Entry Card
                       GestureDetector(
@@ -388,6 +302,8 @@ class LearningHubScreen extends ConsumerWidget {
                             error: (err, _) =>
                                 Text('Error loading lessons: $err'),
                           ),
+                      const SizedBox(height: 32),
+                      _buildInteractiveChallengesSection(context, l10n),
                       const SizedBox(height: 40),
                     ],
                   ),
@@ -808,6 +724,122 @@ class LearningHubScreen extends ConsumerWidget {
                 ),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInteractiveChallengesSection(BuildContext context, AppLocalization l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.translate('challenge_hub').toUpperCase(),
+          style: AppTypography.label.copyWith(
+            color: AppColors.gold500,
+            letterSpacing: 2,
+            fontWeight: FontWeight.w900,
+            fontSize: 11,
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 160,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            children: [
+              _buildChallengeCard(
+                context,
+                title: l10n.translate('lingua_duel'),
+                subtitle: 'P2P Battle',
+                icon: Icons.bolt_rounded,
+                color: const Color(0xFF4F3422),
+                route: '/lingua-duel',
+              ),
+              const SizedBox(width: 16),
+              _buildChallengeCard(
+                context,
+                title: 'Shadowing',
+                subtitle: 'Audio Compare',
+                icon: Icons.mic_external_on_rounded,
+                color: const Color(0xFF4A2C2C),
+                route: '/audio-comparison',
+              ),
+              const SizedBox(width: 16),
+              _buildChallengeCard(
+                context,
+                title: 'Vitality Quest 🌿',
+                subtitle: 'Tone Challenge',
+                icon: Icons.insights_rounded,
+                color: const Color(0xFF1F4432),
+                route: '/sentiment',
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChallengeCard(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required String route,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        HapticService.light();
+        context.push(route);
+      },
+      child: Container(
+        width: 200,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.35),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: Colors.white, size: 24),
+            ),
+            const Spacer(),
+            Text(
+              title,
+              style: AppTypography.h3.copyWith(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: AppTypography.body.copyWith(
+                color: Colors.white70,
+                fontSize: 12,
+              ),
+            ),
           ],
         ),
       ),

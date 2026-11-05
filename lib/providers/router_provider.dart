@@ -38,6 +38,7 @@ import '../screens/lesson_editor_screen.dart';
 import '../screens/educator_unit_management_screen.dart';
 import '../screens/educator_broadcast_history_screen.dart';
 import '../screens/educator_feedback_screen.dart';
+import '../screens/settings_screen.dart';
 import '../screens/member_profile_screen.dart';
 
 import '../screens/lingua_duel_screen.dart';
@@ -348,6 +349,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/offline-wisdom',
         builder: (context, state) => const OfflineWisdomScreen(),
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
         path: '/flashcards',

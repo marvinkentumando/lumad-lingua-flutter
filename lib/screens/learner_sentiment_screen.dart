@@ -39,6 +39,62 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
     super.initState();
     _checkDailyCheckInStatus();
     _checkMiniGameStatus();
+    _loadSavedAndSparkedPosts();
+  }
+
+  Future<void> _loadSavedAndSparkedPosts() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = ref.read(authServiceProvider).currentUser?.uid ?? 'guest';
+    final savedList = prefs.getStringList('saved_sentiment_posts_$userId') ?? [];
+    final sparkedList = prefs.getStringList('sparked_sentiment_posts_$userId') ?? [];
+    if (mounted) {
+      setState(() {
+        _savedPostIds.addAll(savedList);
+        _sparkedPostIds.addAll(sparkedList);
+      });
+    }
+  }
+
+  Future<void> _toggleSavePost(String postId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = ref.read(authServiceProvider).currentUser?.uid ?? 'guest';
+    final key = 'saved_sentiment_posts_$userId';
+    final isSaved = _savedPostIds.contains(postId);
+    setState(() {
+      if (isSaved) {
+        _savedPostIds.remove(postId);
+      } else {
+        _savedPostIds.add(postId);
+      }
+    });
+    await prefs.setStringList(key, _savedPostIds.toList());
+    HapticService.selection();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          isSaved ? 'Reflection removed from saved items' : 'Reflection saved to profile 🌿',
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _toggleSparkPost(String postId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = ref.read(authServiceProvider).currentUser?.uid ?? 'guest';
+    final key = 'sparked_sentiment_posts_$userId';
+    final isSparked = _sparkedPostIds.contains(postId);
+    setState(() {
+      if (isSparked) {
+        _sparkedPostIds.remove(postId);
+      } else {
+        _sparkedPostIds.add(postId);
+      }
+    });
+    await prefs.setStringList(key, _sparkedPostIds.toList());
+    HapticService.selection();
   }
 
   Future<void> _checkDailyCheckInStatus() async {
@@ -76,7 +132,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
   Future<void> _submitMiniGameGuess(String guess, String correctCategory) async {
     if (_minigameCompletedToday) return;
 
-    final isCorrect = guess.toLowerCase() == correctCategory.toLowerCase();
+    final isCorrect = guess.toLowerCase().trim() == correctCategory.toLowerCase().trim();
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now();
     final dateStr = "${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}";
@@ -106,6 +162,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
     });
 
     if (mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -121,7 +178,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
     }
   }
 
-  Future<void> _logDailyCheckIn(String mood, String mansakaTerm) async {
+  Future<void> _logDailyCheckIn(String moodDesc, String mansakaTerm) async {
     if (_checkedInToday) return;
 
     final prefs = await SharedPreferences.getInstance();
@@ -131,8 +188,9 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
     final key = 'sentiment_checkin_${userId}_$dateStr';
     final moodKey = 'sentiment_mood_${userId}_$dateStr';
 
+    final displayMood = '$mansakaTerm ($moodDesc)';
     await prefs.setBool(key, true);
-    await prefs.setString(moodKey, mansakaTerm);
+    await prefs.setString(moodKey, displayMood);
 
     if (!mounted) return;
 
@@ -145,14 +203,15 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
 
     setState(() {
       _checkedInToday = true;
-      _selectedMood = mansakaTerm;
+      _selectedMood = displayMood;
     });
 
     if (mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Spirit Check-in logged! "$mansakaTerm" recorded. +10 XP earned 🎉',
+            'Spirit Check-in logged! "$displayMood" recorded. +10 XP earned 🎉',
             style: AppTypography.label.copyWith(color: Colors.white),
           ),
           backgroundColor: AppColors.semanticGreen,
@@ -219,14 +278,10 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
                 const SizedBox(height: 16),
                 _buildSentimentMiniGameCard(posts, isDark),
                 const SizedBox(height: 24),
-                _buildSectionHeader('Trending Words & Expressions 🌿', isDark),
-                const SizedBox(height: 12),
-                _buildLearnerKeywordCloud(posts, isDark),
-                const SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildSectionHeader('Community Reflections', isDark),
+                    _buildSectionHeader(l10n.translate('community_reflections'), isDark),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
@@ -235,12 +290,12 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(Icons.shield_rounded, size: 12, color: AppColors.semanticGreen),
-                          SizedBox(width: 4),
+                        children: [
+                          const Icon(Icons.shield_rounded, size: 12, color: AppColors.semanticGreen),
+                          const SizedBox(width: 4),
                           Text(
-                            'Privacy Safe 🛡️',
-                            style: TextStyle(
+                            l10n.translate('privacy_safe'),
+                            style: const TextStyle(
                               color: AppColors.semanticGreen,
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
@@ -266,7 +321,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
                   posts[index],
                   index,
                   isDark,
-                ).animate(delay: (60 * index).ms).fadeIn().slideY(begin: 0.05),
+                ).animate(delay: (60 * (index % 5)).ms).fadeIn().slideY(begin: 0.05),
                 childCount: posts.length,
               ),
             ),
@@ -287,10 +342,10 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
         ),
         onPressed: () => context.pop(),
       ),
-      expandedHeight: 100,
+      expandedHeight: 80,
       pinned: true,
       flexibleSpace: FlexibleSpaceBar(
-        titlePadding: const EdgeInsets.only(left: 60, bottom: 16),
+        titlePadding: const EdgeInsets.only(left: 52, bottom: 14, right: 16),
         centerTitle: false,
         title: Column(
           mainAxisSize: MainAxisSize.min,
@@ -301,14 +356,14 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
                 Icon(
                   Icons.auto_awesome_rounded,
                   color: AppColors.gold500,
-                  size: 10,
+                  size: 9,
                 ),
-                SizedBox(width: 6),
+                SizedBox(width: 4),
                 Text(
                   'COMMUNITY VITALITY',
                   style: TextStyle(
                     color: AppColors.gold500,
-                    letterSpacing: 2,
+                    letterSpacing: 1.5,
                     fontSize: 8,
                     fontWeight: FontWeight.bold,
                   ),
@@ -317,68 +372,16 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
             ),
             Text(
               'Tribal Expressions & Reflections',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: AppTypography.h3.copyWith(
                 color: isDark ? Colors.white : AppColors.forest900,
-                fontSize: 14,
+                fontSize: 13,
               ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-
-
-  Widget _buildLearnerKeywordCloud(List<SentimentPost> posts, bool isDark) {
-    if (posts.isEmpty) {
-      return Text(
-        'Check back soon for community keyword highlights! 🌿',
-        style: TextStyle(
-          color: isDark ? Colors.white60 : Colors.black54,
-          fontSize: 12,
-        ),
-      );
-    }
-
-    final keywords = posts.expand((p) => p.redactedKeywords).toList();
-    final counts = <String, int>{};
-    for (var k in keywords) {
-      counts[k] = (counts[k] ?? 0) + 1;
-    }
-
-    final sorted = counts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: sorted.take(10).map((entry) {
-        return ActionChip(
-          onPressed: () {
-            context.push('/dictionary?q=${Uri.encodeComponent(entry.key)}');
-          },
-          avatar: const Icon(
-            Icons.menu_book_rounded,
-            size: 14,
-            color: AppColors.gold500,
-          ),
-          label: Text(
-            '#${entry.key}',
-            style: TextStyle(
-              color: isDark ? Colors.white : AppColors.forest900,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          backgroundColor: isDark
-              ? Colors.white.withValues(alpha: 0.08)
-              : AppColors.forest900.withValues(alpha: 0.05),
-          side: const BorderSide(color: AppColors.gold500, width: 0.8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-        );
-      }).toList(),
     );
   }
 
@@ -474,7 +477,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
                 },
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   child: Row(
                     children: [
                       const Icon(
@@ -482,12 +485,13 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
                         color: AppColors.gold500,
                         size: 16,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 6),
                       Text(
                         'Learn this word',
                         style: AppTypography.label.copyWith(
                           color: AppColors.gold500,
-                          fontSize: 11,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
@@ -496,16 +500,8 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
               ),
               const Spacer(),
               IconButton(
-                onPressed: () {
-                  setState(() {
-                    if (isSparked) {
-                      _sparkedPostIds.remove(post.id);
-                    } else {
-                      _sparkedPostIds.add(post.id);
-                    }
-                  });
-                  HapticService.selection();
-                },
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                onPressed: () => _toggleSparkPost(post.id),
                 icon: Icon(
                   isSparked ? Icons.bolt_rounded : Icons.bolt_outlined,
                   color: isSparked
@@ -516,24 +512,8 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
                 tooltip: 'Spark',
               ),
               IconButton(
-                onPressed: () {
-                  setState(() {
-                    if (isSaved) {
-                      _savedPostIds.remove(post.id);
-                    } else {
-                      _savedPostIds.add(post.id);
-                    }
-                  });
-                  HapticService.selection();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        isSaved ? 'Reflection removed' : 'Reflection saved to profile 🌿',
-                      ),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                },
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                onPressed: () => _toggleSavePost(post.id),
                 icon: Icon(
                   isSaved ? Icons.bookmark_rounded : Icons.bookmark_outline_rounded,
                   color: isSaved
@@ -544,6 +524,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
                 tooltip: 'Save',
               ),
               IconButton(
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
                 onPressed: () {
                   final shareText =
                       '${post.originalText}\n${post.englishTranslation.isNotEmpty ? "(${post.englishTranslation})" : ""}\n\nVia LUMAD Lingua';
@@ -628,7 +609,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.gold500.withValues(alpha: 0.2),
+                  color: AppColors.gold500.withValues(alpha: 0.25),
                   shape: BoxShape.circle,
                 ),
                 child: const Text('🌾', style: TextStyle(fontSize: 20)),
@@ -663,15 +644,15 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.semanticGreen.withValues(alpha: 0.2),
+                    color: AppColors.semanticGreen.withValues(alpha: 0.25),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.semanticGreen.withValues(alpha: 0.5)),
+                    border: Border.all(color: AppColors.semanticGreen.withValues(alpha: 0.6)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.check_circle_rounded, size: 14, color: AppColors.semanticGreen),
-                      const SizedBox(width: 4),
+                    children: const [
+                      Icon(Icons.check_circle_rounded, size: 14, color: AppColors.semanticGreen),
+                      SizedBox(width: 4),
                       Text(
                         'Logged (+10 XP)',
                         style: TextStyle(
@@ -691,13 +672,13 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
                 ? 'You checked in today feeling "${_selectedMood ?? 'Madyaw'}". Come back tomorrow for your next spirit check-in!'
                 : 'How is your spirit today? Choose your feeling in Mansaka/Cebuano to earn +10 XP and boost your streak:',
             style: AppTypography.body.copyWith(
-              color: Colors.white70,
+              color: Colors.white.withValues(alpha: 0.9),
               fontSize: 13,
               height: 1.3,
             ),
           ),
-          const SizedBox(height: 16),
-          if (!_checkedInToday)
+          if (!_checkedInToday) ...[
+            const SizedBox(height: 16),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -708,9 +689,9 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.08),
+                      color: Colors.white.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -731,7 +712,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
                             Text(
                               m['desc']!,
                               style: TextStyle(
-                                color: Colors.white60,
+                                color: Colors.white.withValues(alpha: 0.75),
                                 fontSize: 10,
                               ),
                             ),
@@ -743,6 +724,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
                 );
               }).toList(),
             ),
+          ],
         ],
       ),
     );
@@ -760,11 +742,25 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
             sentimentCategory: 'encouraging',
           );
 
-    final correctTone = challengePost.sentimentCategory.isNotEmpty
-        ? challengePost.sentimentCategory[0].toUpperCase() + challengePost.sentimentCategory.substring(1)
-        : 'Encouraging';
+    final categoryDisplayMap = {
+      'positive': 'Positive / Encouraging',
+      'neutral': 'Neutral / Reflective',
+      'negative': 'Negative / Somber',
+      'encouraging': 'Positive / Encouraging',
+      'gratitude': 'Gratitude / Sacred',
+    };
 
-    final options = ['Encouraging', 'Gratitude', 'Question', 'Joyful'];
+    final rawCat = challengePost.sentimentCategory.toLowerCase();
+    final correctTone = categoryDisplayMap[rawCat] ??
+        (challengePost.sentimentCategory.isNotEmpty
+            ? challengePost.sentimentCategory[0].toUpperCase() + challengePost.sentimentCategory.substring(1)
+            : 'Positive / Encouraging');
+
+    final baseOptions = ['Positive / Encouraging', 'Neutral / Reflective', 'Negative / Somber', 'Gratitude / Sacred'];
+    final options = List<String>.from(baseOptions);
+    if (!options.contains(correctTone)) {
+      options[0] = correctTone;
+    }
 
     return BrandCard(
       theme: BrandCardTheme.gold,
@@ -791,7 +787,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
                     Text(
                       'DAILY TONE CHALLENGE',
                       style: AppTypography.label.copyWith(
-                        color: AppColors.forest900.withValues(alpha: 0.7),
+                        color: AppColors.forest900.withValues(alpha: 0.8),
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.2,
@@ -813,7 +809,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: _minigameCorrect ? AppColors.semanticGreen : Colors.orange.shade800,
+                    color: _minigameCorrect ? AppColors.semanticGreen : Colors.orange.shade900,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -842,7 +838,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
           Text(
             'Read the community excerpt below and guess its emotional tone:',
             style: AppTypography.body.copyWith(
-              color: AppColors.forest900.withValues(alpha: 0.8),
+              color: AppColors.forest900.withValues(alpha: 0.85),
               fontSize: 13,
             ),
           ),
@@ -871,7 +867,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
                   Text(
                     '(${challengePost.redactedEnglishTranslation})',
                     style: TextStyle(
-                      color: AppColors.forest900.withValues(alpha: 0.7),
+                      color: AppColors.forest900.withValues(alpha: 0.75),
                       fontSize: 12,
                     ),
                   ),
@@ -880,18 +876,49 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
             ),
           ),
           const SizedBox(height: 16),
-          Text(
-            _minigameCompletedToday
-                ? 'Your guess: "${_minigameSelectedGuess ?? ''}" (${_minigameCorrect ? 'Correct! 🎉' : 'Incorrect'})'
-                : 'Select the correct tone:',
-            style: AppTypography.label.copyWith(
-              color: AppColors.forest900,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
+          if (_minigameCompletedToday) ...[
+            if (_minigameCorrect)
+              Text(
+                'Your guess: "${_minigameSelectedGuess ?? ''}" (Correct! 🎉)',
+                style: AppTypography.label.copyWith(
+                  color: AppColors.forest900,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              )
+            else
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Your guess: "${_minigameSelectedGuess ?? ''}" (Incorrect ❌)',
+                    style: AppTypography.label.copyWith(
+                      color: Colors.red.shade900,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Correct tone: "$correctTone"',
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.forest900,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+          ] else ...[
+            Text(
+              'Select the correct tone:',
+              style: AppTypography.label.copyWith(
+                color: AppColors.forest900,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
-          if (!_minigameCompletedToday)
+            const SizedBox(height: 10),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -913,6 +940,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
                 );
               }).toList(),
             ),
+          ],
         ],
       ),
     );
@@ -926,10 +954,6 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
         children: const [
           SizedBox(height: 20),
           AppShimmerSkeleton(height: 120, borderRadius: 28),
-          SizedBox(height: 24),
-          AppShimmerSkeleton(width: 180, height: 16, borderRadius: 4),
-          SizedBox(height: 12),
-          AppShimmerSkeleton(height: 50, borderRadius: 20),
           SizedBox(height: 24),
           AppShimmerSkeleton(height: 160, borderRadius: 24),
           SizedBox(height: 16),
