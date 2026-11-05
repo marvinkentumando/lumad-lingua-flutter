@@ -265,7 +265,7 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
             },
             child: Text(
               l10n.translate('decline'),
-              style: TextStyle(color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5)),
+              style: TextStyle(color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.75)),
             ),
           ),
           BrandButton(
@@ -506,7 +506,7 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
         child: CircularProgressIndicator(color: AppColors.gold500),
       ),
       error: (err, _) => Center(
-        child: Text('Search error: $err', style: const TextStyle(color: AppColors.semanticRed)),
+        child: Text(l10n.translate('search_error', params: {'error': err.toString()}), style: const TextStyle(color: AppColors.semanticRed)),
       ),
     );
   }
@@ -632,9 +632,9 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
                     child: modalQuery.isEmpty
                         ? Center(
                             child: Text(
-                              'Type a username or email to search for tribal kin.',
+                              l10n.translate('search_tribal_kin_prompt'),
                               style: AppTypography.body.copyWith(
-                                color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5),
+                                color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.75),
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -743,7 +743,7 @@ class _WarriorsCircleScreenState extends ConsumerState<WarriorsCircleScreen> {
                                   child: CircularProgressIndicator(color: AppColors.gold500),
                                 ),
                                 error: (e, _) => Center(
-                                  child: Text('Search error: $e', style: const TextStyle(color: AppColors.semanticRed)),
+                                  child: Text(l10n.translate('search_error', params: {'error': e.toString()}), style: const TextStyle(color: AppColors.semanticRed)),
                                 ),
                               );
                             },

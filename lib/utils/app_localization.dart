@@ -982,6 +982,8 @@ class AppLocalization {
       'confirm_process_request': 'Are you sure you want to {action} {username}\'s request?',
       'request_processed_msg': 'Request {status} for {username}',
       'minutes_ago': '{count}m ago',
+      'search_tribal_kin_prompt': 'Type a username or email to search for tribal kin.',
+      'search_error': 'Search error: {error}',
       'error_prefix': 'Error: {error}',
     },
     'tl': {
@@ -1905,6 +1907,8 @@ class AppLocalization {
       'confirm_process_request': 'Sigurado ka bang gusto mong {action} ang hiling ni {username}?',
       'request_processed_msg': 'Ang hiling ni {username} ay {status}',
       'minutes_ago': '{count}m ang nakalipas',
+      'search_tribal_kin_prompt': 'Mag-type ng username o email para maghanap ng katribu.',
+      'search_error': 'Mali sa paghahanap: {error}',
       'error_prefix': 'Error: {error}',
     },
     'bis': {
@@ -2796,6 +2800,8 @@ class AppLocalization {
       'confirm_process_request': 'Sigurado ka ba nga gusto nimong {action} ang hangyo ni {username}?',
       'request_processed_msg': 'Ang hangyo ni {username} kay {status}',
       'minutes_ago': '{count}m ang milabay',
+      'search_tribal_kin_prompt': 'Pag-type og username o email aron mangita og kaubang tribu.',
+      'search_error': 'Sayop sa pagpangita: {error}',
       'error_prefix': 'Error: {error}',
     },
   };

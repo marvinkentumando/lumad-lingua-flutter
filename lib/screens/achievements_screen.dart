@@ -66,8 +66,8 @@ class AchievementsScreen extends ConsumerWidget {
                       l10n.translate('legacy_desc'),
                       style: AppTypography.body.copyWith(
                         color: isDark
-                            ? Colors.white.withValues(alpha: 0.5)
-                            : AppColors.forest900.withValues(alpha: 0.5),
+                            ? Colors.white.withValues(alpha: 0.7)
+                            : AppColors.forest900.withValues(alpha: 0.75),
                       ),
                     ),
                     const SizedBox(height: 32),

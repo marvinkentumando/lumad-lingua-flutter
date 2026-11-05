@@ -257,7 +257,7 @@ class StreakHistoryScreen extends ConsumerWidget {
           Text(
             l10n.translate('streak_desc'),
             style: AppTypography.body.copyWith(
-              color: isDark ? Colors.grey : AppColors.forest900.withValues(alpha: 0.5),
+              color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.75),
             ),
           ),
         ],

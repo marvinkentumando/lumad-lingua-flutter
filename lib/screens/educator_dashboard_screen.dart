@@ -209,7 +209,37 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
               Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.05), shape: BoxShape.circle), child: Icon(Icons.auto_stories_rounded, color: isDark ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.secondary, size: 36)),
             ],
           ),
-          Positioned(top: 0, right: 0, child: GestureDetector(onTap: () { HapticService.selection(); context.push('/notifications'); }, child: Stack(children: [Icon(Icons.notifications_none_rounded, color: Colors.black.withValues(alpha: 0.4), size: 24), if (unreadCount > 0) Positioned(right: 0, top: 0, child: Container(width: 10, height: 10, decoration: const BoxDecoration(color: AppColors.semanticRed, shape: BoxShape.circle)))]))),
+          Positioned(
+            top: -12,
+            right: -12,
+            child: SizedBox(
+              width: 48,
+              height: 48,
+              child: Center(
+                child: GestureDetector(
+                  onTap: () {
+                    HapticService.selection();
+                    context.push('/notifications');
+                  },
+                  child: Stack(
+                    children: [
+                      Icon(Icons.notifications_none_rounded, color: Colors.black.withValues(alpha: 0.4), size: 24),
+                      if (unreadCount > 0)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            width: 10,
+                            height: 10,
+                            decoration: const BoxDecoration(color: AppColors.semanticRed, shape: BoxShape.circle),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

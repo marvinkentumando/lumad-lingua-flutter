@@ -787,7 +787,7 @@ class _EducatorStudentsScreenState
                 Text(
                   'Accuracy: ${(lp.accuracy * 100).toInt()}%',
                   style: AppTypography.label.copyWith(
-                    color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5),
+                    color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.75),
                     fontSize: 8,
                   ),
                 ),

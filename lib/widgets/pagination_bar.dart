@@ -187,25 +187,30 @@ class PaginationBar extends StatelessWidget {
       pages.add(
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 2),
-          child: InkWell(
-            onTap: () => _goToPage(i),
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.gold500
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                '$i',
-                style: TextStyle(
-                  color: isSelected
-                      ? AppColors.forest900
-                      : (isDark ? Colors.white : AppColors.forest900),
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 12,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            child: InkWell(
+              onTap: () => _goToPage(i),
+              borderRadius: BorderRadius.circular(8),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.gold500
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '$i',
+                    style: TextStyle(
+                      color: isSelected
+                          ? AppColors.forest900
+                          : (isDark ? Colors.white : AppColors.forest900),
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontSize: 12,
+                    ),
+                  ),
                 ),
               ),
             ),

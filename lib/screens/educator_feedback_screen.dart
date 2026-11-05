@@ -133,7 +133,7 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
                     Text(
                       dateStr,
                       style: AppTypography.label.copyWith(
-                        color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5),
+                        color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.75),
                         fontSize: 10,
                       ),
                     ),
