@@ -248,27 +248,39 @@ class UploadQueueService extends Notifier<UploadQueueState> {
     final uid = payload['uid'] as String?;
     if (uid == null || uid.isEmpty) return;
 
+    final rawActionId = action['id'] as String? ?? 'action_${DateTime.now().millisecondsSinceEpoch}';
+
     switch (type) {
       case 'claimMilestone':
         final days = payload['days'] as int?;
         final crystals = payload['crystals'] as int?;
         if (days != null && crystals != null) {
-          await firebaseService.db.collection('users').doc(uid).update({
-            'claimedMilestones': FieldValue.arrayUnion([days]),
-            'mistCrystals': FieldValue.increment(crystals),
-          });
+          await firebaseService.applyIdempotentCurrencyOp(
+            userId: uid,
+            opId: 'milestone_${days}_$rawActionId',
+            crystals: crystals,
+            milestoneDays: days,
+          );
         }
         break;
       case 'addMistCrystals':
         final amount = payload['amount'] as int?;
         if (amount != null) {
-          await firebaseService.addMistCrystals(uid, amount);
+          await firebaseService.applyIdempotentCurrencyOp(
+            userId: uid,
+            opId: 'crystals_${amount}_$rawActionId',
+            crystals: amount,
+          );
         }
         break;
       case 'addXp':
         final amount = payload['amount'] as int?;
         if (amount != null) {
-          await firebaseService.addXp(uid, amount);
+          await firebaseService.applyIdempotentCurrencyOp(
+            userId: uid,
+            opId: 'xp_${amount}_$rawActionId',
+            xp: amount,
+          );
         }
         break;
       case 'incrementStreak':

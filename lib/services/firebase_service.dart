@@ -738,11 +738,16 @@ class FirebaseService {
       final validatorDoc = await transaction.get(validatorRef);
       final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
 
-      for (var id in ids) {
-        final docRef = _db.collection('words').doc(id);
-        final doc = await transaction.get(docRef);
+      final wordDocs = await Future.wait(
+        ids.map((id) => transaction.get(_db.collection('words').doc(id))),
+      );
+
+      for (var doc in wordDocs) {
+        if (!doc.exists) continue;
         final data = doc.data();
         if (data == null || data['status'] == 'approved') continue;
+        final id = doc.id;
+        final docRef = doc.reference;
 
         _saveVersionTransaction(transaction, docRef, data, validatorId);
 
@@ -793,11 +798,16 @@ class FirebaseService {
       final validatorDoc = await transaction.get(validatorRef);
       final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
 
-      for (var id in ids) {
-        final docRef = _db.collection('words').doc(id);
-        final doc = await transaction.get(docRef);
+      final wordDocs = await Future.wait(
+        ids.map((id) => transaction.get(_db.collection('words').doc(id))),
+      );
+
+      for (var doc in wordDocs) {
+        if (!doc.exists) continue;
         final data = doc.data();
         if (data == null) continue;
+        final id = doc.id;
+        final docRef = doc.reference;
 
         _saveVersionTransaction(transaction, docRef, data, validatorId);
 
@@ -846,11 +856,16 @@ class FirebaseService {
       final validatorDoc = await transaction.get(validatorRef);
       final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
 
-      for (var id in ids) {
-        final docRef = _db.collection('words').doc(id);
-        final doc = await transaction.get(docRef);
+      final wordDocs = await Future.wait(
+        ids.map((id) => transaction.get(_db.collection('words').doc(id))),
+      );
+
+      for (var doc in wordDocs) {
+        if (!doc.exists) continue;
         final data = doc.data();
         if (data == null) continue;
+        final id = doc.id;
+        final docRef = doc.reference;
 
         _saveVersionTransaction(transaction, docRef, data, validatorId);
 
@@ -2318,11 +2333,16 @@ class FirebaseService {
       final validatorDoc = await transaction.get(validatorRef);
       final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
 
-      for (var id in ids) {
-        final docRef = _db.collection('lessons').doc(id);
-        final doc = await transaction.get(docRef);
+      final lessonDocs = await Future.wait(
+        ids.map((id) => transaction.get(_db.collection('lessons').doc(id))),
+      );
+
+      for (var doc in lessonDocs) {
+        if (!doc.exists) continue;
         final data = doc.data();
         if (data == null || data['status'] == 'PUBLISHED') continue;
+        final id = doc.id;
+        final docRef = doc.reference;
 
         _saveVersionTransaction(transaction, docRef, data, validatorId);
 
@@ -2877,6 +2897,48 @@ class FirebaseService {
         'xpEarned': xpReward,
         'crystalsEarned': crystalReward,
       };
+    });
+  }
+
+  Future<void> applyIdempotentCurrencyOp({
+    required String userId,
+    required String opId,
+    int? xp,
+    int? crystals,
+    int? milestoneDays,
+  }) async {
+    final userRef = _db.collection('users').doc(userId);
+    final opRef = userRef.collection('processed_ops').doc(opId);
+
+    return _db.runTransaction((transaction) async {
+      final opDoc = await transaction.get(opRef);
+      if (opDoc.exists) {
+        // Operation was already applied on the server. Return safely without duplicate execution.
+        return;
+      }
+
+      final updates = <String, dynamic>{};
+      if (xp != null && xp != 0) {
+        updates['xp'] = FieldValue.increment(xp);
+        updates['weeklyXp'] = FieldValue.increment(xp);
+      }
+      if (crystals != null && crystals != 0) {
+        updates['mistCrystals'] = FieldValue.increment(crystals);
+      }
+      if (milestoneDays != null) {
+        updates['claimedMilestones'] = FieldValue.arrayUnion([milestoneDays]);
+      }
+
+      if (updates.isNotEmpty) {
+        transaction.update(userRef, updates);
+      }
+
+      transaction.set(opRef, {
+        'appliedAt': FieldValue.serverTimestamp(),
+        'opId': opId,
+        'xp': xp,
+        'crystals': crystals,
+      });
     });
   }
 
@@ -3805,11 +3867,16 @@ class FirebaseService {
       final validatorDoc = await transaction.get(validatorRef);
       final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
 
-      for (var id in ids) {
-        final docRef = _db.collection('voice_submissions').doc(id);
-        final doc = await transaction.get(docRef);
+      final submissionDocs = await Future.wait(
+        ids.map((id) => transaction.get(_db.collection('voice_submissions').doc(id))),
+      );
+
+      for (var doc in submissionDocs) {
+        if (!doc.exists) continue;
         final data = doc.data();
         if (data == null) continue;
+        final id = doc.id;
+        final docRef = doc.reference;
 
         _saveVersionTransaction(transaction, docRef, data, validatorId);
 
@@ -3854,11 +3921,16 @@ class FirebaseService {
       final validatorDoc = await transaction.get(validatorRef);
       final validatorName = validatorDoc.data()?['username'] ?? 'Validator';
 
-      for (var id in ids) {
-        final docRef = _db.collection('voice_submissions').doc(id);
-        final doc = await transaction.get(docRef);
+      final submissionDocs = await Future.wait(
+        ids.map((id) => transaction.get(_db.collection('voice_submissions').doc(id))),
+      );
+
+      for (var doc in submissionDocs) {
+        if (!doc.exists) continue;
         final data = doc.data();
         if (data == null) continue;
+        final id = doc.id;
+        final docRef = doc.reference;
 
         _saveVersionTransaction(transaction, docRef, data, validatorId);
 
