@@ -190,8 +190,8 @@ class SupabaseDatasetService {
             final title = SupabaseDatasetEntry.formatTitleFromFolder(name);
             final isSupplementary = root != 'dataset';
             final subtitle = isSupplementary
-                ? '($entryRunId) • Additional reference'
-                : '($entryRunId) • Verified';
+                ? 'Additional reference'
+                : 'Verified';
             entries.add(SupabaseDatasetEntry(
               folderName: name,
               title: title,
