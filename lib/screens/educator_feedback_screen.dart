@@ -5,7 +5,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../services/firebase_service.dart';
 import '../models/feedback.dart';
-import '../widgets/ambient_topo_background.dart';
+import '../widgets/brand_background.dart';
 import '../widgets/branded_empty_state.dart';
 import '../widgets/profile_avatar.dart';
 import '../utils/app_localization.dart';
@@ -20,14 +20,14 @@ class EducatorFeedbackScreen extends ConsumerWidget {
     final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text(l10n.translate('educator_feedback')),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: isDark ? Colors.white : AppColors.forest900,
       ),
-      body: AmbientTopoBackground(
+      body: BrandBackground(
         child: feedbackAsync.when(
           data: (feedbackList) {
             if (feedbackList.isEmpty) {
@@ -96,9 +96,18 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
         border: Border.all(
           color: widget.feedback.isRead
               ? (isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.creamBorder)
-              : AppColors.gold500.withValues(alpha: 0.3),
+              : AppColors.gold500.withValues(alpha: 0.4),
           width: widget.feedback.isRead ? 1 : 2,
         ),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: AppColors.forest900.withValues(alpha: 0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -124,7 +133,7 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
                     Text(
                       dateStr,
                       style: AppTypography.label.copyWith(
-                        color: isDark ? Colors.white24 : AppColors.creamText3,
+                        color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5),
                         fontSize: 10,
                       ),
                     ),
@@ -142,7 +151,7 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
           Text(
             widget.feedback.message,
             style: AppTypography.body.copyWith(
-              color: isDark ? Colors.white70 : AppColors.creamText2,
+              color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.8),
               height: 1.5,
             ),
           ),
@@ -151,21 +160,27 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.gold500.withValues(alpha: 0.05),
+                color: AppColors.gold500.withValues(alpha: isDark ? 0.05 : 0.08),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.gold500.withValues(alpha: 0.1)),
+                border: Border.all(
+                  color: AppColors.gold500.withValues(alpha: isDark ? 0.1 : 0.2),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.reply_rounded, size: 14, color: AppColors.gold500),
+                      Icon(
+                        Icons.reply_rounded,
+                        size: 14,
+                        color: isDark ? AppColors.gold500 : AppColors.gold700,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'YOUR REPLY',
                         style: AppTypography.label.copyWith(
-                          color: AppColors.gold500,
+                          color: isDark ? AppColors.gold500 : AppColors.gold700,
                           fontSize: 9,
                           fontWeight: FontWeight.w900,
                         ),
@@ -176,7 +191,7 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
                   Text(
                     widget.feedback.educatorReply!,
                     style: AppTypography.body.copyWith(
-                      color: isDark ? Colors.white60 : AppColors.forest700,
+                      color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.8),
                       fontStyle: FontStyle.italic,
                       fontSize: 13,
                     ),
@@ -205,6 +220,9 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
                 if (!widget.feedback.isRead)
                   TextButton(
                     onPressed: () => ref.read(firebaseServiceProvider).markFeedbackAsRead(widget.feedback.id),
+                    style: TextButton.styleFrom(
+                      foregroundColor: isDark ? AppColors.gold500 : AppColors.gold700,
+                    ),
                     child: const Text('MARK AS READ'),
                   ),
               ],
@@ -216,15 +234,25 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
                   controller: _replyController,
                   maxLines: 3,
                   autofocus: true,
-                  style: TextStyle(color: isDark ? Colors.white : AppColors.creamText),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : AppColors.forest900,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'Type your reply...',
-                    hintStyle: TextStyle(color: isDark ? Colors.white24 : AppColors.creamText3),
+                    hintStyle: TextStyle(
+                      color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.4),
+                    ),
                     filled: true,
                     fillColor: isDark ? AppColors.forest800 : AppColors.creamBg,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+                      borderSide: BorderSide(
+                        color: isDark ? Colors.white.withValues(alpha: 0.1) : AppColors.creamBorder,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.gold500),
                     ),
                   ),
                 ),
@@ -234,6 +262,9 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
                   children: [
                     TextButton(
                       onPressed: () => setState(() => _isReplying = false),
+                      style: TextButton.styleFrom(
+                        foregroundColor: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.6),
+                      ),
                       child: const Text('CANCEL'),
                     ),
                     const SizedBox(width: 8),

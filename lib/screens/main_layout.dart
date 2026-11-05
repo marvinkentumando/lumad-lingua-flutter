@@ -326,8 +326,6 @@ class MainLayout extends ConsumerWidget {
     );
   }
 
-
-
   Widget _buildStreakStat(BuildContext context, WidgetRef ref) {
     final student = ref.watch(studentProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -368,39 +366,198 @@ class MainLayout extends ConsumerWidget {
   }
 
   void _showSystemGuide(BuildContext context, AppLocalization l10n) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.85,
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.forest800 : AppColors.creamBg,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
-        ),
-        child: Column(
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: isDark ? Colors.white10 : Colors.black12,
-                borderRadius: BorderRadius.circular(2),
+      builder: (context) => _InteractiveSystemGuideModal(l10n: l10n),
+    );
+  }
+}
+
+class _InteractiveSystemGuideModal extends StatefulWidget {
+  final AppLocalization l10n;
+
+  const _InteractiveSystemGuideModal({
+    required this.l10n,
+  });
+
+  @override
+  State<_InteractiveSystemGuideModal> createState() =>
+      __InteractiveSystemGuideModalState();
+}
+
+class __InteractiveSystemGuideModalState
+    extends State<_InteractiveSystemGuideModal> {
+  late final PageController _pageController;
+  int _currentPage = 0;
+  int _selectedCategoryIndex = 0; // 0: ALL, 1: CULTURE, 2: LEARNING, 3: COMMUNITY
+  bool _isPlayingSample = false;
+  final Set<int> _expandedCards = {};
+
+  final List<String> _categories = [
+    'ALL',
+    'CULTURE',
+    'LEARNING',
+    'COMMUNITY',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  List<Map<String, dynamic>> _getAllGuideItems(AppLocalization l10n) {
+    return [
+      {
+        'id': 1,
+        'category': 'CULTURE',
+        'icon': Icons.auto_stories_rounded,
+        'title': l10n.translate('guide_title_1'),
+        'description': l10n.translate('guide_desc_1'),
+        'tip': 'Explore oral history, ancestral traditions, and cultural heritage exhibits.',
+        'actionLabel': 'EXPLORE HERITAGE 🌿',
+        'route': '/mansaka-history',
+      },
+      {
+        'id': 2,
+        'category': 'LEARNING',
+        'icon': Icons.map_rounded,
+        'title': l10n.translate('guide_title_2'),
+        'description': l10n.translate('guide_desc_2'),
+        'tip': 'Complete path nodes, earn XP, and level up your mastery streak.',
+        'actionLabel': 'GO TO LEARNING PATH 🗺️',
+        'route': '/',
+      },
+      {
+        'id': 3,
+        'category': 'LEARNING',
+        'icon': Icons.mic_external_on_rounded,
+        'title': l10n.translate('guide_title_3'),
+        'description': l10n.translate('guide_desc_3'),
+        'tip': 'Speak into the microphone to analyze pronunciation accuracy & pitch.',
+        'actionLabel': 'TEST AUDIO SAMPLE 🎧',
+        'isAudioSample': true,
+      },
+      {
+        'id': 4,
+        'category': 'LEARNING',
+        'icon': Icons.translate_rounded,
+        'title': l10n.translate('guide_title_4'),
+        'description': l10n.translate('guide_desc_4'),
+        'tip': 'Search indigenous words, bookmark favorites, and filter by parts of speech.',
+        'actionLabel': 'OPEN DICTIONARY 📖',
+        'route': '/dictionary',
+      },
+      {
+        'id': 5,
+        'category': 'COMMUNITY',
+        'icon': Icons.workspace_premium_rounded,
+        'title': l10n.translate('guide_title_5'),
+        'description': l10n.translate('guide_desc_5'),
+        'tip': 'Climb rankings, send "Salute!" cheers to friends, and earn merit badges.',
+        'actionLabel': 'VIEW LEADERBOARD 🏆',
+        'route': '/leaderboard',
+      },
+      {
+        'id': 6,
+        'category': 'COMMUNITY',
+        'icon': Icons.gavel_rounded,
+        'title': l10n.translate('guide_title_6'),
+        'description': l10n.translate('guide_desc_6'),
+        'tip': 'All community audio contributions are verified by elder council members.',
+        'actionLabel': 'COMMUNITY FEED 💬',
+        'route': '/community-feed',
+      },
+    ];
+  }
+
+  List<Map<String, dynamic>> _filteredItems(List<Map<String, dynamic>> allItems) {
+    if (_selectedCategoryIndex == 0) return allItems;
+    final cat = _categories[_selectedCategoryIndex];
+    return allItems.where((item) => item['category'] == cat).toList();
+  }
+
+  void _onCategorySelected(int index) {
+    HapticService.selection();
+    setState(() {
+      _selectedCategoryIndex = index;
+      _currentPage = 0;
+    });
+    if (_pageController.hasClients) {
+      _pageController.jumpToPage(0);
+    }
+  }
+
+  void _playAudioSample() async {
+    HapticService.medium();
+    setState(() => _isPlayingSample = true);
+    await Future.delayed(const Duration(milliseconds: 1000));
+    if (mounted) {
+      setState(() => _isPlayingSample = false);
+      HapticService.success();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.volume_up_rounded, color: AppColors.gold500, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text('Audio Sample: "Madyaw na madyaw!" (100% Clarity)'),
               ),
+            ],
+          ),
+          backgroundColor: AppColors.forest900,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final allItems = _getAllGuideItems(widget.l10n);
+    final items = _filteredItems(allItems);
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.88,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.forest800 : AppColors.creamBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white10 : Colors.black12,
+              borderRadius: BorderRadius.circular(2),
             ),
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        l10n.translate('system_nav_guide'),
+                        widget.l10n.translate('system_nav_guide'),
                         style: AppTypography.label.copyWith(
                           color: AppColors.gold500,
                           fontWeight: FontWeight.w900,
@@ -409,117 +566,401 @@ class MainLayout extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        l10n.translate('welcome_lumad_lingua'),
+                        widget.l10n.translate('welcome_lumad_lingua'),
                         style: AppTypography.h2.copyWith(
                           color: isDark ? Colors.white : AppColors.forest900,
+                          fontSize: 18,
                         ),
                       ),
                     ],
                   ),
-                  IconButton(
-                    onPressed: () => context.pop(),
-                    icon: const Icon(Icons.close_rounded),
-                    color: isDark ? Colors.white70 : AppColors.forest900,
-                  ),
-                ],
-              ),
+                ),
+                IconButton(
+                  onPressed: () => context.pop(),
+                  icon: const Icon(Icons.close_rounded),
+                  color: isDark ? Colors.white70 : AppColors.forest900,
+                ),
+              ],
             ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                children: [
-                  _buildGuideItem(
-                    icon: Icons.auto_stories_rounded,
-                    title: l10n.translate('guide_title_1'),
-                    description: l10n.translate('guide_desc_1'),
-                    isDark: isDark,
-                  ),
-                  _buildGuideItem(
-                    icon: Icons.map_rounded,
-                    title: l10n.translate('guide_title_2'),
-                    description: l10n.translate('guide_desc_2'),
-                    isDark: isDark,
-                  ),
-                  _buildGuideItem(
-                    icon: Icons.mic_external_on_rounded,
-                    title: l10n.translate('guide_title_3'),
-                    description: l10n.translate('guide_desc_3'),
-                    isDark: isDark,
-                  ),
-                  _buildGuideItem(
-                    icon: Icons.translate_rounded,
-                    title: l10n.translate('guide_title_4'),
-                    description: l10n.translate('guide_desc_4'),
-                    isDark: isDark,
-                  ),
-                  _buildGuideItem(
-                    icon: Icons.workspace_premium_rounded,
-                    title: l10n.translate('guide_title_5'),
-                    description: l10n.translate('guide_desc_5'),
-                    isDark: isDark,
-                  ),
-                  _buildGuideItem(
-                    icon: Icons.gavel_rounded,
-                    title: l10n.translate('guide_title_6'),
-                    description: l10n.translate('guide_desc_6'),
-                    isDark: isDark,
-                  ),
-                  const SizedBox(height: 40),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGuideItem({
-    required IconData icon,
-    required String title,
-    required String description,
-    required bool isDark,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.gold500.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: AppColors.gold500, size: 24),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+
+          // Category Filter Chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              children: List.generate(_categories.length, (index) {
+                final category = _categories[index];
+                final isSelected = _selectedCategoryIndex == index;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(category),
+                    selected: isSelected,
+                    onSelected: (_) => _onCategorySelected(index),
+                    selectedColor: AppColors.gold500,
+                    backgroundColor: isDark
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.black.withValues(alpha: 0.05),
+                    labelStyle: TextStyle(
+                      color: isSelected
+                          ? AppColors.forest900
+                          : (isDark ? Colors.white70 : AppColors.forest900),
+                      fontWeight: isSelected ? FontWeight.w900 : FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: BorderSide(
+                        color: isSelected
+                            ? AppColors.gold500
+                            : (isDark ? Colors.white10 : Colors.black12),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Step Indicator Badge
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  title,
-                  style: AppTypography.h3.copyWith(
-                    color: isDark ? Colors.white : AppColors.forest900,
-                    fontSize: 16,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold500.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
+                  ),
+                  child: Text(
+                    'STEP ${_currentPage + 1} OF ${items.length}',
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.gold500,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 6),
                 Text(
-                  description,
-                  style: AppTypography.body.copyWith(
-                    color: isDark ? Colors.white60 : AppColors.forest700,
-                    fontSize: 13,
-                    height: 1.5,
+                  _categories[_selectedCategoryIndex],
+                  style: AppTypography.label.copyWith(
+                    color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.4),
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Interactive PageView Carousel
+          Expanded(
+            child: items.isEmpty
+                ? Center(
+                    child: Text(
+                      'No items in this category',
+                      style: TextStyle(
+                        color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.4),
+                      ),
+                    ),
+                  )
+                : PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: (page) {
+                      HapticService.selection();
+                      setState(() => _currentPage = page);
+                    },
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      final item = items[index];
+                      final int itemId = item['id'];
+                      final bool isExpanded = _expandedCards.contains(itemId);
+
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.03)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(28),
+                            border: Border.all(
+                              color: isDark
+                                  ? Colors.white10
+                                  : AppColors.creamBorder,
+                            ),
+                            boxShadow: isDark
+                                ? null
+                                : [
+                                    BoxShadow(
+                                      color: AppColors.forest900.withValues(alpha: 0.04),
+                                      blurRadius: 16,
+                                      offset: const Offset(0, 6),
+                                    ),
+                                  ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.gold500.withValues(alpha: 0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      item['icon'] as IconData,
+                                      color: AppColors.gold500,
+                                      size: 28,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.gold500.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            item['category'],
+                                            style: AppTypography.label.copyWith(
+                                              color: AppColors.gold500,
+                                              fontSize: 8,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          item['title'],
+                                          style: AppTypography.h3.copyWith(
+                                            color: isDark ? Colors.white : AppColors.forest900,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              Text(
+                                item['description'],
+                                style: AppTypography.body.copyWith(
+                                  color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.8),
+                                  fontSize: 13,
+                                  height: 1.6,
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // Expandable Tip
+                              GestureDetector(
+                                onTap: () {
+                                  HapticService.light();
+                                  setState(() {
+                                    if (isExpanded) {
+                                      _expandedCards.remove(itemId);
+                                    } else {
+                                      _expandedCards.add(itemId);
+                                    }
+                                  });
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.gold500.withValues(alpha: 0.05),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: AppColors.gold500.withValues(alpha: 0.15),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.lightbulb_outline_rounded,
+                                                size: 16,
+                                                color: AppColors.gold500,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                'KEY TAKEAWAY',
+                                                style: AppTypography.label.copyWith(
+                                                  color: AppColors.gold500,
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.w900,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          Icon(
+                                            isExpanded
+                                                ? Icons.keyboard_arrow_up_rounded
+                                                : Icons.keyboard_arrow_down_rounded,
+                                            color: AppColors.gold500,
+                                            size: 18,
+                                          ),
+                                        ],
+                                      ),
+                                      if (isExpanded) ...[
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          item['tip'],
+                                          style: AppTypography.body.copyWith(
+                                            color: isDark
+                                                ? Colors.white60
+                                                : AppColors.forest900.withValues(alpha: 0.7),
+                                            fontSize: 12,
+                                            height: 1.4,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              // Interactive Action Button
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    if (item['isAudioSample'] == true) {
+                                      _playAudioSample();
+                                    } else {
+                                      HapticService.selection();
+                                      context.pop();
+                                      if (item['route'] != null) {
+                                        context.go(item['route']);
+                                      }
+                                    }
+                                  },
+                                  icon: _isPlayingSample && item['isAudioSample'] == true
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AppColors.forest900,
+                                          ),
+                                        )
+                                      : Icon(
+                                          item['isAudioSample'] == true
+                                              ? Icons.volume_up_rounded
+                                              : Icons.arrow_forward_rounded,
+                                          size: 18,
+                                        ),
+                                  label: Text(item['actionLabel']),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.gold500,
+                                    foregroundColor: AppColors.forest900,
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+
+          // Bottom Slide Controls & Indicators
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  onPressed: _currentPage > 0
+                      ? () {
+                          HapticService.selection();
+                          _pageController.previousPage(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          );
+                        }
+                      : null,
+                  style: TextButton.styleFrom(
+                    foregroundColor: isDark ? Colors.white70 : AppColors.forest900,
+                  ),
+                  child: const Text('PREVIOUS'),
+                ),
+
+                // Dot Page Indicators
+                Row(
+                  children: List.generate(items.length, (idx) {
+                    final isCurrent = idx == _currentPage;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      width: isCurrent ? 20 : 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: isCurrent
+                            ? AppColors.gold500
+                            : (isDark ? Colors.white24 : Colors.black12),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    );
+                  }),
+                ),
+
+                ElevatedButton(
+                  onPressed: () {
+                    HapticService.selection();
+                    if (_currentPage < items.length - 1) {
+                      _pageController.nextPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    } else {
+                      HapticService.success();
+                      context.pop();
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.gold500,
+                    foregroundColor: AppColors.forest900,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    _currentPage < items.length - 1 ? 'NEXT ➔' : 'GOT IT! 🚀',
                   ),
                 ),
               ],

@@ -1,16 +1,20 @@
 # Lumad Lingua - Development TODO & Project Roadmap
 
 ## 📌 Recent Completed Tasks
+- [x] **Bulk Moderation Transactions Read-After-Write Ordering & Parallelization**:
+  - Gathered all document snapshots in an initial `Future.wait` batch before applying transaction updates in `bulkApproveWords`, `bulkRejectWords`, `bulkFlagWords`, `bulkApproveLessons`, `bulkRejectVoiceSubmissions`, and `bulkFlagVoiceSubmissions` to satisfy Firestore transaction read-before-write requirements and eliminate concurrency failures.
+  - Added idempotent currency and XP transaction operations to prevent double-rewards.
 - [x] **Dictionary Screen (Learner View)**:
   - Added Part of Speech badge/tag to entry cards.
   - Added Part of Speech filter chip row (All, Noun, Verb, Adjective, Phrase, etc.).
   - Removed phonetic pronunciation text display from entry cards.
   - Implemented SRS mastery stars and saved words bookmarking system.
   - Implemented Hive offline caching for global dictionary searches and local fallbacks.
-  - Implemented smooth infinite scrolling / lazy loading (replacing page navigation) for optimal mobile vocabulary browsing UX.
+  - Implemented smooth infinite scrolling / lazy loading for optimal mobile vocabulary browsing UX.
 - [x] **Community Sentiment Dashboard**:
   - Connected `SentimentService` to load pre-analyzed sentiment posts from Firestore (`sentiment_posts`), local JSON asset (`assets/data/sentiment_posts.json`), or custom local storage.
   - Added "Import JSON Dataset" modal on Sentiment Dashboard Screen supporting direct file picking (`.json`) or raw JSON text pasting.
+  - Integrated single fine-tuned sentiment engine model pipeline.
 - [x] **Text-To-Speech (TTS) Engine**:
   - Implemented native TTS language check prioritizing Cebuano (`ceb-PH`) for phonetic similarity to Mansaka, falling back to Filipino (`fil-PH`).
 - [x] **Admin Dictionary Screen**:
@@ -31,6 +35,7 @@
   - Created expanded `ClaimRewardModal` featuring cultural sun-ray rotating badge, spirit particle background overlay, animated count-up for Mist Crystals and XP, and haptic/audio feedback.
   - Upgraded `CrystalBurstAnimation` with multi-symbol particles radiating from center.
   - Integrated rich reward claiming dialogs into Tribal Quests (Dashboard), Daily Challenge sessions, and Streak Milestone claims.
+  - Added Avatar Cultural Customization Shop in Ancestral Vault.
 - [x] **Notifications & Reminders**:
   - Implemented `NotificationService` for local push notifications using `flutter_local_notifications`.
   - Added daily repeating streak reminders with custom hour/minute settings modal (`StreakReminderSettingsDialog`).
@@ -64,14 +69,19 @@
   - Added explicit meatball action button (`...`) to list cards to trigger the management bottom sheet.
   - Displayed student count badge (`Icons.people_rounded`) alongside view count on list items.
   - Added metadata badge chips (`Language • Level • Unit N`) for quick lesson scope recognition.
+  - Added Unit sorting (`LessonSort.unit` / 'By Unit') option to lesson sorting dropdown.
 - [x] **Sentence Reordering Duplicate Word Index Conflict Fix**:
   - Added unique `ValueKey` identifiers (`scrambled_${entry.key}_${entry.value}` and `available_${entry.key}_${entry.value}`) to all Draggable chips in `SentenceReorderingView` to prevent Flutter element reconciliation conflicts when sentences contain duplicate words (e.g. "madyaw na madyaw").
   - Hardened `onWordTap` and `onScrambledWordTap` callbacks in `LessonSessionScreen` and `DailyChallengeSessionScreen` with index bounds and exact word checks before removal.
   - Created widget test suite `test/widgets/sentence_reordering_view_test.dart`.
-- [x] **Atomic Room Joining Race Condition Fix**:
-  - Implemented `DuelService.canClaimMatchData` to enforce that a waiting match can only be claimed if `status == 'waiting'`, `player1Id != userId`, and `player2Id` is empty/null.
-  - Updated Firestore security rules for `duel_matches/{matchId}` to reject room updates if `player2Id` is already set on the waiting room (`!('player2Id' in resource.data) || resource.data.player2Id == null || resource.data.player2Id == ''`).
-  - Added unit test suite in `test/duel_sync_logic_test.dart` verifying race condition claim prevention.
+- [x] **Lingua Duel & Multiplayer Optimizations**:
+  - Optimized Firestore state sync and turn timeouts during live multiplayer duels.
+  - Deployed `duel_matches` Firestore security rules to production.
+  - Implemented `DuelService.canClaimMatchData` and security rules check to prevent room joining race conditions.
+  - Fixed Leaderboard Salute build error and wired single-salute limit per session.
+- [x] **Firebase Crashlytics Integration**:
+  - Wired `firebase_crashlytics` with `runZonedGuarded` root zone, `FlutterError.onError` fatal capture, and `PlatformDispatcher.onError` handler in `main.dart`.
+  - Added Crashlytics Gradle plugin (v3.0.6) on Android and upgraded google-services to 4.4.2.
 - [x] **Offline Sync Exponential Backoff Retry Fix**:
   - Enhanced `UploadQueueService` to automatically schedule exponential backoff retries (5s, 10s, 20s, 40s, up to 60s max delay) when offline sync operations encounter network dropouts or errors mid-sync.
   - Added `retryAttempt` tracking to `UploadQueueState` and auto-resets attempt count upon successful sync or network reconnect events.
@@ -82,12 +92,6 @@
 ## 🚀 High & Medium Priority Tasks
 
 ### 📚 Dictionary & Vocabulary
-- [x] **Part of Speech Filter Chips**: Add Part of Speech filter chip row to Learner Dictionary Screen.
-  - 📁 `lib/screens/dictionary_screen.dart`, `lib/providers/dictionary_provider.dart`
-- [x] **Admin Native Audio Uploads**: Support native audio file upload directly from Admin Entry Form modal.
-  - 📁 `lib/screens/admin_dictionary_screen.dart`, `lib/services/firebase_service.dart`
-- [x] **Offline Hive Caching**: Implement Hive offline caching for global dictionary searches.
-  - 📁 `lib/services/hive_service.dart`, `lib/providers/dictionary_provider.dart`
 - [ ] **Interactive Phonetic Tooltips**: Interactive IPA pronunciation guides with playable audio chips on term details.
   - 📁 `lib/screens/dictionary_screen.dart`
 - [ ] **Bulk Audio Import**: Admin utility to match and bulk-upload audio recordings by dictionary term keys.
@@ -95,39 +99,9 @@
 - [ ] **Elder Voice Contributor Verification**: Community validation queue for elder audio recordings submitted via contributor requests before publishing to official dictionary entries.
   - 📁 `lib/screens/admin_requests_screen.dart`, `lib/models/contributor_request.dart`
 
-### ⚙️ Admin Gamification & Economics Screen
-- [x] **Number Parsing Crash Prevention**: Add `tryParse` or form validation in reward and shop dialogs to prevent crashes when empty or invalid inputs are submitted.
-  - 📁 `lib/screens/admin_gamification_screen.dart`
-- [x] **Delete Functionality for Shop Items**: Add delete action buttons with confirmation dialogs to shop cards calling `deleteShopItem`.
-  - 📁 `lib/screens/admin_gamification_screen.dart`, `lib/services/firebase_service.dart`
-- [x] **Shop Item Availability Toggle**: Add an `isAvailable` switch to shop items and dialogs to allow hiding items without deleting them.
-  - 📁 `lib/screens/admin_gamification_screen.dart`, `lib/models/gamification_models.dart`
-- [x] **Admin Action Feedback (Snackbars)**: Wrap Firebase operations in try-catch blocks and display `ScaffoldMessenger` SnackBar feedback on success/failure.
-  - 📁 `lib/screens/admin_gamification_screen.dart`
-
 ### 🎮 Lessons & Learning Session
-- [x] **Audio Recording Evaluation & Pronunciation Preview**: Live waveform visualizer and pronunciation scoring during speaking activities.
-  - 📁 `lib/screens/lesson_session_screen.dart`, `lib/widgets/activity_views/speaking_practice_view.dart`, `lib/services/pronunciation_service.dart`
-- [x] **Post-Test Survey Data Submission**: Submit post-test survey ratings and feedback directly to Firebase.
-  - 📁 `lib/screens/lesson_session_screen.dart`, `lib/services/firebase_service.dart`
-- [x] **Lesson Audio Pre-Caching**: Pre-download all lesson module audio assets into Hive/Cache before starting a session.
-  - 📁 `lib/services/audio_service.dart`, `lib/screens/learning_path_screen.dart`, `lib/providers/learning_provider.dart`
-- [x] **Sentence Reordering Duplicate Word Index Conflict Fix**: Added unique `ValueKey` identifiers (`scrambled_${entry.key}_${entry.value}` and `available_${entry.key}_${entry.value}`) to Draggable chips in `SentenceReorderingView` to prevent element reconciliation conflicts when sentences contain duplicate words (e.g., "madyaw na madyaw"). Hardened `onWordTap` and `onScrambledWordTap` callbacks in `LessonSessionScreen` and `DailyChallengeSessionScreen` with index bounds and exact word matching before removal.
-  - 📁 `lib/widgets/activity_views/sentence_reordering_view.dart`, `lib/screens/lesson_session_screen.dart`, `lib/screens/daily_challenge_session_screen.dart`, `test/widgets/sentence_reordering_view_test.dart`
 - [ ] **Adaptive Difficulty Scaling**: Dynamically adjust SRS intervals and task distractors based on learner error history and accuracy metrics.
   - 📁 `lib/services/srs_service.dart`, `lib/providers/learning_provider.dart`
-
-### 🏆 Gamification, Customization & Social
-- [x] **Claim Reward Modal & Animations**: Expand Tribal Quests & Daily Challenge claim reward modal and particle effects.
-  - 📁 `lib/widgets/claim_reward_modal.dart`, `lib/widgets/crystal_burst_animation.dart`
-- [x] **Local Push Notifications**: Implement daily streak reminders with user-scheduled times.
-  - 📁 `lib/services/notification_service.dart`, `lib/widgets/streak_reminder_settings_dialog.dart`, `lib/screens/learner_profile_screen.dart`
-- [x] **Avatar Cultural Customization Shop**: Equip and purchase cultural titles, avatar frames, and badges in the Ancestral Vault using Mist Crystals.
-  - 📁 `lib/screens/ancestral_vault_shop_screen.dart`, `lib/providers/student_provider.dart`, `lib/models/artifact.dart`
-- [x] **Leaderboard Encouragement "Salutes"**: Send instant tribal cheer toasts ("Salute! 🛡️") to friends on the leaderboard.
-  - 📁 `lib/screens/leaderboard_screen.dart`, `lib/services/firebase_service.dart`
-- [x] **Fix Leaderboard Salute Build Error**: `_buildSaluteButton` was referenced in the leaderboard compact list but never defined, breaking compilation of `lib/screens/leaderboard_screen.dart` and failing `test/widget_test.dart`. Implemented the missing button (podium spots) reusing `_sendCheer`, and wired the previously unused `_salutedUids` set so a member can only be saluted once per session in both podium and rank-row salute UIs.
-  - 📁 `lib/screens/leaderboard_screen.dart`
 
 ### 🏫 Educator & Classroom Management (Village Sanctuary)
 - [ ] **Educator Class Analytics Export**: Export student progress, quiz accuracy, and active streak metrics to CSV or PDF reports for village educators.
@@ -144,16 +118,8 @@
 ### 📊 Sentiment & Community Analytics
 - [ ] **Facebook Graph API Integration**: Replace mock/secondary post data with real retrieval of publicly available Mansaka-language Facebook posts via the Facebook Graph API (unblocks real-data sentiment classification).
   - 📁 `lib/services/sentiment_service.dart`, `lib/screens/sentiment_dashboard_screen.dart`
-- [x] **Colab-Trained Single Sentiment Model Pipeline**: Integrated single fine-tuned sentiment engine (tested and validated in Google Colab) to display classified Mansaka sentiment outputs on the dashboard.
-  - 📁 `lib/services/sentiment_service.dart`
 
 ### ⚔️ Community & Multiplayer
-- [x] **Lingua Duel Real-Time Sync**: Optimize Firestore state sync and turn timeouts during live multiplayer duels.
-  - 📁 `lib/screens/lingua_duel_screen.dart`, `lib/services/duel_service.dart`
-- [x] **Deploy Duel Firestore Rules**: Shipped the `duel_matches` rules block to production (`firebase deploy --only firestore:rules --project lumadlingua`) — rules compiled and released successfully; live duels now work in production.
-  - 📁 `firestore.rules`
-- [x] **Atomic Room Joining Race Condition Fix**: Prevent overwriting `player2Id` when two players attempt to join the same waiting room simultaneously; enforce `canClaimMatchData` check and security rules check that `player2Id` is unpopulated.
-  - 📁 `lib/services/duel_service.dart`, `firestore.rules`, `test/duel_sync_logic_test.dart`
 - [ ] **Duel Rematch & Persistent Duel Records**: Add a rematch action on the results screen and store per-user win/loss history (wins, losses, win streaks) in Firestore.
   - 📁 `lib/screens/lingua_duel_screen.dart`, `lib/services/duel_service.dart`
 - [ ] **Duel State Riverpod Refactor**: Move matchmaking/battle state out of the screen into a `DuelSessionNotifier` so live duels survive navigation and can re-attach to an in-progress match after an app restart.
@@ -172,16 +138,8 @@
 ---
 
 ## 🛠 Low Priority, Refactoring & Infrastructure
-- [x] **State Management Offline Sync Refactor**: Smooth state recovery and background queue retry with automatic exponential backoff when reconnecting online or facing mid-sync network drops.
-  - 📁 `lib/services/offline_service.dart`, `lib/providers/student_provider.dart`, `lib/services/upload_queue_service.dart`, `lib/providers/learning_provider.dart`
-- [x] **Shimmer Skeleton Loading Optimization**: Optimize shimmer animations for low-end Android mobile devices.
-  - 📁 `lib/widgets/app_shimmer_skeleton.dart`, `lib/screens/dictionary_screen.dart`, `lib/screens/learning_hub_screen.dart`
-- [x] **Firebase Crashlytics Integration**: Added crash reporting so the ≥95% crash-free session reliability requirement (Non-Functional) is actually measurable in production. Wired `firebase_crashlytics` (5.2.0) with `runZonedGuarded` root zone, `FlutterError.onError` fatal capture, and `PlatformDispatcher.onError` handler in `main.dart`; added the Crashlytics Gradle plugin (v3.0.6) on Android and upgraded google-services to 4.4.2 (required by plugin v3). iOS Podfile not present in repo — run `flutter pub get` inside `ios/` before first iOS build if desired.
-  - 📁 `lib/main.dart`, `pubspec.yaml`, `android/app/build.gradle.kts`, `android/settings.gradle.kts`
 - [ ] **Navigation Consistency**: Standardize back-navigation across all modules (GoRouter vs Navigator mixing) per roadmap Phase 4.
   - 📁 `lib/providers/router_provider.dart`
-- [x] **Haptic Consistency Audit**: Ensure all critical success/error actions across screens trigger appropriate haptic patterns (roadmap Phase 4 open item).
-  - 📁 `lib/services/haptic_service.dart` + call sites
 - [ ] **Audio Asset Compression Pipeline**: Compress recorded WAV files to AAC/Ogg Opus before Cloud Storage uploads to minimize cellular bandwidth usage in remote communities.
   - 📁 `lib/services/supabase_storage_service.dart`, `lib/utils/audio_validator.dart`
 - [ ] **Hive Storage Compaction & Cache Pruning**: Scheduled local database box compaction and media cache cleanup to maintain low storage footprint (<100MB) on budget devices.

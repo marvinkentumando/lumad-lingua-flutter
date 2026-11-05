@@ -129,11 +129,6 @@ class _EducatorAnalyticsScreenState
                   ),
 
                   const SizedBox(height: 32),
-                  _buildRetentionCard(allUsersAsync, l10n),
-                  const SizedBox(height: 16),
-                  _buildWordsStatsCard(totalWordsAsync, l10n),
-
-                  const SizedBox(height: 32),
                   analyticsAsync.when(
                     data: (analytics) {
                       final quizPerformance = List<Map<String, dynamic>>.from(analytics['quizPerformance'] ?? []);
@@ -514,41 +509,7 @@ class _EducatorAnalyticsScreenState
     );
   }
 
-  Widget _buildRetentionCard(
-    AsyncValue<List<AdminUser>> usersAsync,
-    AppLocalization l10n,
-  ) {
-    return usersAsync.when(
-      data: (users) {
-        final active = users.where((u) => u.xp > 0).length;
-        final retention = users.isEmpty
-            ? 0
-            : (active / users.length * 100).toInt();
-        return _buildAnalyticsCard(
-          l10n.translate('overall_retention'),
-          l10n.translate('retention_started_learning', params: {'percent': '$retention'}),
-          Icons.trending_up_rounded,
-        );
-      },
-      loading: () => _buildLoadingCard(80),
-      error: (_, __) => const SizedBox.shrink(),
-    );
-  }
 
-  Widget _buildWordsStatsCard(
-    AsyncValue<int> countAsync,
-    AppLocalization l10n,
-  ) {
-    return countAsync.when(
-      data: (count) => _buildAnalyticsCard(
-        l10n.translate('preservation_status'),
-        l10n.translate('terms_recorded_dict', params: {'count': '$count'}),
-        Icons.menu_book_rounded,
-      ),
-      loading: () => _buildLoadingCard(80),
-      error: (_, __) => const SizedBox.shrink(),
-    );
-  }
 
   // --- Static/Helper UI Components ---
 
@@ -996,61 +957,6 @@ class _EducatorAnalyticsScreenState
                   style: AppTypography.body.copyWith(
                     color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.4),
                     fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.gold500.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              l10n.translate('fix_caps'),
-              style: AppTypography.label.copyWith(
-                color: AppColors.gold500,
-                fontSize: 9,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAnalyticsCard(String title, String data, IconData icon) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return BrandCard(
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.gold500.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: isDark ? AppColors.gold500 : AppColors.gold700, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTypography.h3.copyWith(
-                    color: isDark ? Colors.white : AppColors.forest900,
-                    fontSize: 16,
-                  ),
-                ),
-                Text(
-                  data,
-                  style: AppTypography.body.copyWith(
-                    color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.5),
-                    fontSize: 12,
                   ),
                 ),
               ],

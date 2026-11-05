@@ -13,7 +13,7 @@ import '../services/haptic_service.dart';
 import '../providers/educator_provider.dart';
 import '../utils/app_localization.dart';
 
-enum LessonSort { newest, oldest, name, views }
+enum LessonSort { newest, oldest, name, unit, views }
 
 class EducatorLessonsScreen extends ConsumerStatefulWidget {
   const EducatorLessonsScreen({super.key});
@@ -72,6 +72,9 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
         break;
       case LessonSort.name:
         list.sort((a, b) => a.title.compareTo(b.title));
+        break;
+      case LessonSort.unit:
+        list.sort((a, b) => a.unitNumber.compareTo(b.unitNumber));
         break;
       case LessonSort.views:
         list.sort((a, b) => b.viewCount.compareTo(a.viewCount));
@@ -315,6 +318,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
         _sortMenuItem(LessonSort.newest, 'Newest First'),
         _sortMenuItem(LessonSort.oldest, 'Oldest First'),
         _sortMenuItem(LessonSort.name, 'By Name'),
+        _sortMenuItem(LessonSort.unit, 'By Unit'),
         _sortMenuItem(LessonSort.views, 'By Views'),
       ],
     );
