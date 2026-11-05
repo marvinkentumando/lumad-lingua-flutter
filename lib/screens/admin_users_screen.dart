@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../services/firebase_service.dart';
+import '../services/auth_service.dart';
 import '../services/haptic_service.dart';
 import '../models/admin_models.dart';
 import '../theme/app_colors.dart';
@@ -854,14 +855,42 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     switch (action) {
       case 'promote':
         _showRoleSwitcherModal(user);
+        break;
       case 'suspend':
         _toggleUserStatus(user);
+        break;
       case 'edit':
         _showEditUserDialog(user);
+        break;
+      case 'reset_password':
+        _handleResetPassword(user);
+        break;
       default:
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Action "$action" triggered.')));
+        _showEditUserDialog(user);
+    }
+  }
+
+  void _handleResetPassword(AdminUser user) async {
+    if (user.email.isEmpty) return;
+    try {
+      await ref.read(authServiceProvider).sendPasswordResetEmail(user.email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Password reset email sent to ${user.email}'),
+            backgroundColor: AppColors.semanticGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send reset email: $e'),
+            backgroundColor: AppColors.semanticRed,
+          ),
+        );
+      }
     }
   }
 

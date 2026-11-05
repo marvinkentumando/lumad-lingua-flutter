@@ -5,11 +5,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'dart:math' as math;
 import 'package:google_sign_in/google_sign_in.dart';
+import '../providers/student_provider.dart';
+import '../providers/role_provider.dart';
+import '../providers/saved_words_provider.dart';
+import '../providers/search_history_provider.dart';
 
 class AuthService {
   final FirebaseAuth? _authInstance;
   final FirebaseFirestore? _firestoreInstance;
   final GoogleSignIn _googleSignIn;
+  final VoidCallback? onSignOut;
 
   FirebaseAuth get _auth => _authInstance ?? FirebaseAuth.instance;
   FirebaseFirestore get firestore => _firestoreInstance ?? FirebaseFirestore.instance;
@@ -21,6 +26,7 @@ class AuthService {
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
     GoogleSignIn? googleSignIn,
+    this.onSignOut,
   })  : _authInstance = auth,
         _firestoreInstance = firestore,
         _googleSignIn = googleSignIn ??
@@ -336,6 +342,7 @@ class AuthService {
       if (kDebugMode) debugPrint("Google Sign-Out Error: $e");
     }
     await _auth.signOut();
+    onSignOut?.call();
   }
 
   Future<void> updatePassword(String newPassword) async {
@@ -424,7 +431,16 @@ class AuthService {
   }
 }
 
-final authServiceProvider = Provider<AuthService>((ref) => AuthService());
+final authServiceProvider = Provider<AuthService>((ref) {
+  return AuthService(
+    onSignOut: () {
+      ref.invalidate(studentProvider);
+      ref.invalidate(roleProvider);
+      ref.invalidate(savedWordsProvider);
+      ref.invalidate(searchHistoryProvider);
+    },
+  );
+});
 
 final authStateProvider = StreamProvider<User?>((ref) {
   return ref.watch(authServiceProvider).authStateChanges;

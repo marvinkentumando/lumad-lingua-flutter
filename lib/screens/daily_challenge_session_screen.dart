@@ -282,7 +282,6 @@ class _DailyChallengeSessionScreenState
       
       // Complete in Firebase
       await ref.read(dailyChallengeCompletionProvider.notifier).completeChallenge(widget.challenge);
-      ref.read(studentProvider.notifier).incrementStreak();
       
       if (!mounted) return;
       final student = ref.read(studentProvider);

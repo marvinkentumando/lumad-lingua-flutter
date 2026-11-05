@@ -15,7 +15,7 @@ class WordOfDayService {
       doc,
     ) async {
       try {
-        final now = DateTime.now();
+        final now = DateTime.now().toUtc();
 
         if (!doc.exists) {
           debugPrint('WOTD: Document does not exist. Picking new word...');
@@ -35,7 +35,7 @@ class WordOfDayService {
           return await _pickNewWord();
         }
 
-        final lastPicked = lastPickedTs.toDate();
+        final lastPicked = lastPickedTs.toDate().toUtc();
         final isManual = data['isManual'] as bool? ?? false;
 
         // If it's a new day, pick a new word
@@ -128,13 +128,13 @@ class WordOfDayService {
       await _db.runTransaction((transaction) async {
         final docRef = _db.collection('global_stats').doc('word_of_day');
         final doc = await transaction.get(docRef);
-        final now = DateTime.now();
+        final now = DateTime.now().toUtc();
 
         if (doc.exists) {
           final data = doc.data()!;
           final lastPickedTs = data['lastPicked'] as Timestamp?;
           if (lastPickedTs != null) {
-            final lastPicked = lastPickedTs.toDate();
+            final lastPicked = lastPickedTs.toDate().toUtc();
             if (lastPicked.day == now.day &&
                 lastPicked.month == now.month &&
                 lastPicked.year == now.year) {

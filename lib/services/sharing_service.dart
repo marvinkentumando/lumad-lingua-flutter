@@ -1,5 +1,6 @@
 import 'package:share_plus/share_plus.dart';
 import '../models/dictionary_entry.dart';
+import '../models/community_activity.dart';
 
 class SharingService {
   static const String webBaseUrl = "https://lumad-lingua.web.app";
@@ -24,7 +25,27 @@ Learn more at: $webBaseUrl/word/${entry.id}
       ),
     );
   }
+
+  Future<void> shareActivity(CommunityActivity activity) async {
+    final String text =
+        '''
+Check out this achievement on Lumad Lingua! 🌿
+
+${activity.emoji} ${activity.userName}: ${activity.message}
+
+Join the movement to preserve indigenous languages & heritage:
+$webBaseUrl
+''';
+
+    await SharePlus.instance.share(
+      ShareParams(
+        text: text,
+        subject: 'Lumad Lingua Community Update from ${activity.userName}',
+      ),
+    );
+  }
 }
+
 
 
 

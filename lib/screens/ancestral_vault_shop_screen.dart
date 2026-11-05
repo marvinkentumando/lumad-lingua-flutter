@@ -13,6 +13,8 @@ import '../services/audio_service.dart';
 import '../widgets/spirit_particle_overlay.dart';
 import '../utils/app_localization.dart';
 import '../providers/student_provider.dart';
+import '../providers/artifact_provider.dart';
+import '../services/offline_service.dart';
 
 class AncestralVaultShopScreen extends ConsumerStatefulWidget {
   const AncestralVaultShopScreen({super.key});
@@ -701,6 +703,10 @@ class _AncestralVaultShopScreenState
                                             .read(studentProvider.notifier)
                                             .spendMistCrystals(
                                                 artifact.crystalCost);
+
+                                        ref.invalidate(userProfileProvider);
+                                        ref.invalidate(cachedArtifactsProvider);
+                                        ref.invalidate(userArtifactsProvider);
 
                                         if (!context.mounted) return;
                                         Navigator.pop(context);

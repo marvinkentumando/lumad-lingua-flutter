@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:intl/intl.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
@@ -81,7 +82,7 @@ class DataPrivacyScreen extends ConsumerWidget {
             Icons.history_rounded,
             l10n.translate('activity_logs'),
             l10n.translate('review_security'),
-            onTap: () => _showComingSoon(context, l10n.translate('activity_logs'), l10n),
+            onTap: () => _showActivityLogsDialog(context, ref, l10n),
           ),
           const SizedBox(height: 32),
           _sectionLabel(context, l10n.translate('privacy_controls')),
@@ -474,11 +475,108 @@ class DataPrivacyScreen extends ConsumerWidget {
     );
   }
 
-  void _showComingSoon(BuildContext context, String feature, AppLocalization l10n) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature ${l10n.translate('prepared_by_elders')}'),
-        behavior: SnackBarBehavior.floating,
+  void _showActivityLogsDialog(BuildContext context, WidgetRef ref, AppLocalization l10n) {
+    final user = ref.read(authServiceProvider).currentUser;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    final signInTime = user?.metadata.lastSignInTime != null
+        ? DateFormat('MMM dd, yyyy - hh:mm a').format(user!.metadata.lastSignInTime!)
+        : 'Recent session';
+    final creationTime = user?.metadata.creationTime != null
+        ? DateFormat('MMM dd, yyyy').format(user!.metadata.creationTime!)
+        : 'Unknown';
+    final provider = user?.providerData.isNotEmpty == true
+        ? user!.providerData.first.providerId
+        : 'email';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? AppColors.forest900 : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: AppColors.gold500, width: 1.5),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.shield_outlined, color: AppColors.gold500, size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                l10n.translate('activity_logs'),
+                style: AppTypography.h3.copyWith(
+                  color: isDark ? Colors.white : AppColors.forest900,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildLogTile('Last Sign-In', signInTime, Icons.login_rounded, isDark),
+              const SizedBox(height: 10),
+              _buildLogTile('Account Created', creationTime, Icons.cake_rounded, isDark),
+              const SizedBox(height: 10),
+              _buildLogTile('Auth Provider', provider, Icons.verified_user_rounded, isDark),
+              const SizedBox(height: 10),
+              _buildLogTile('Security Status', 'Active & Protected 🛡️', Icons.lock_outline_rounded, isDark),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text(
+              'CLOSE',
+              style: TextStyle(color: AppColors.gold500, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogTile(String label, String value, IconData icon, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.gold50.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.gold500, size: 18),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: isDark ? Colors.white54 : AppColors.forest700,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: AppTypography.body.copyWith(
+                    color: isDark ? Colors.white : AppColors.forest900,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

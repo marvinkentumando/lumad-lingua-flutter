@@ -401,14 +401,10 @@ class LearnerProfileScreen extends ConsumerWidget {
     IconData icon,
     String title,
     String sub, {
-    VoidCallback? onTap,
+    required VoidCallback onTap,
   }) {
     return BrandCard(
-      onTap: onTap ?? () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Opening $title...')),
-        );
-      },
+      onTap: onTap,
       theme: BrandCardTheme.gold,
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       borderRadius: 35,

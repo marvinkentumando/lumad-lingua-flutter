@@ -7,6 +7,7 @@ import '../models/community_activity.dart';
 import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../services/sharing_service.dart';
 import '../widgets/brand_background.dart';
 import '../utils/app_localization.dart';
 
@@ -359,18 +360,8 @@ class _FeedItemWidgetState extends ConsumerState<_FeedItemWidget> {
                       const SizedBox(width: 16),
                       // Share
                       InkWell(
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                widget.l10n.translate(
-                                  'sharing_update',
-                                  params: {'name': widget.activity.userName},
-                                ),
-                              ),
-                              backgroundColor: AppColors.semanticBlue,
-                            ),
-                          );
+                        onTap: () async {
+                          await SharingService().shareActivity(widget.activity);
                         },
                         borderRadius: BorderRadius.circular(4),
                         child: Padding(

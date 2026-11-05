@@ -17,7 +17,6 @@ import '../widgets/brand_button.dart';
 import '../widgets/brand_background.dart';
 import '../widgets/app_shimmer_skeleton.dart';
 import '../providers/role_provider.dart';
-import '../providers/student_provider.dart';
 import 'learner_sentiment_screen.dart';
 
 class SentimentDashboardScreen extends ConsumerStatefulWidget {

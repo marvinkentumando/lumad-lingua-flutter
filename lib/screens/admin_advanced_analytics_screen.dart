@@ -10,6 +10,11 @@ import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/branded_empty_state.dart';
 import '../widgets/brand_background.dart';
+import 'dart:io';
+import 'package:csv/csv.dart';
+import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../utils/app_localization.dart';
 
@@ -39,6 +44,16 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
           icon: Icon(Icons.arrow_back_ios_new_rounded, color: isDark ? Colors.white : AppColors.forest900),
           onPressed: () => context.pop(),
         ),
+        actions: [
+          analyticsAsync.maybeWhen(
+            data: (data) => IconButton(
+              icon: const Icon(Icons.file_download_outlined, color: AppColors.gold500),
+              tooltip: 'Export Analytics Report',
+              onPressed: () => _exportAnalyticsData(context, data, l10n),
+            ),
+            orElse: () => const SizedBox.shrink(),
+          ),
+        ],
       ),
       body: BrandBackground(
         child: analyticsAsync.when(
@@ -567,4 +582,47 @@ class AdminAdvancedAnalyticsScreen extends ConsumerWidget {
     message: message,
     icon: Icons.analytics_outlined,
   );
+
+  Future<void> _exportAnalyticsData(
+    BuildContext context,
+    Map<String, dynamic> data,
+    AppLocalization l10n,
+  ) async {
+    try {
+      final now = DateTime.now();
+      final dateStr = DateFormat('yyyyMMdd_HHmm').format(now);
+      final filename = 'LumadLingua_Advanced_Analytics_$dateStr';
+
+      final List<List<dynamic>> rows = [
+        ['Lumad Lingua - Advanced Pedagogical Analytics Report'],
+        ['Generated At', DateFormat('yyyy-MM-dd HH:mm:ss').format(now)],
+        [],
+        ['Metric', 'Value'],
+      ];
+
+      final health = data['srsHealth'] as Map<String, dynamic>? ?? {};
+      health.forEach((key, val) {
+        rows.add(['SRS Health - $key', val]);
+      });
+
+      final csvData = const CsvEncoder().convert(rows);
+      final directory = await getTemporaryDirectory();
+      final file = File('${directory.path}/$filename.csv');
+      await file.writeAsString(csvData);
+
+      await SharePlus.instance.share(ShareParams(
+        files: [XFile(file.path)],
+        text: 'Lumad Lingua Advanced Pedagogical Analytics Report ($dateStr)',
+      ));
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to export report: $e'),
+            backgroundColor: AppColors.semanticRed,
+          ),
+        );
+      }
+    }
+  }
 }
