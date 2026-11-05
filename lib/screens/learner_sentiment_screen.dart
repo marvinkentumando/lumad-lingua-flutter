@@ -28,6 +28,8 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
   final ScrollController _scrollController = ScrollController();
   final Set<String> _savedPostIds = {};
   final Set<String> _sparkedPostIds = {};
+  final Map<String, String> _userPostGuesses = {};
+  final Set<String> _correctlyGuessedPosts = {};
   bool _checkedInToday = false;
   String? _selectedMood;
   bool _minigameCompletedToday = false;
@@ -47,11 +49,86 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
     final userId = ref.read(authServiceProvider).currentUser?.uid ?? 'guest';
     final savedList = prefs.getStringList('saved_sentiment_posts_$userId') ?? [];
     final sparkedList = prefs.getStringList('sparked_sentiment_posts_$userId') ?? [];
+    final guessesList = prefs.getStringList('sentiment_guesses_$userId') ?? [];
+    final correctList = prefs.getStringList('sentiment_correct_$userId') ?? [];
+    final guesses = <String, String>{};
+    for (final item in guessesList) {
+      final parts = item.split(':');
+      if (parts.length == 2) {
+        guesses[parts[0]] = parts[1];
+      }
+    }
     if (mounted) {
       setState(() {
         _savedPostIds.addAll(savedList);
         _sparkedPostIds.addAll(sparkedList);
+        _userPostGuesses.addAll(guesses);
+        _correctlyGuessedPosts.addAll(correctList);
       });
+    }
+  }
+
+  Future<void> _submitPostSentimentGuess(SentimentPost post, String guessedCategory) async {
+    if (_userPostGuesses.containsKey(post.id)) return;
+
+    final rawCat = post.sentimentCategory.toLowerCase();
+    String normalizedCorrect = 'neutral';
+    if (rawCat.contains('pos') || rawCat.contains('enc') || rawCat.contains('grat') || rawCat.contains('joy')) {
+      normalizedCorrect = 'positive';
+    } else if (rawCat.contains('neg') || rawCat.contains('som') || rawCat.contains('sad')) {
+      normalizedCorrect = 'negative';
+    } else {
+      normalizedCorrect = 'neutral';
+    }
+
+    final isCorrect = guessedCategory == normalizedCorrect;
+    final prefs = await SharedPreferences.getInstance();
+    final userId = ref.read(authServiceProvider).currentUser?.uid ?? 'guest';
+
+    setState(() {
+      _userPostGuesses[post.id] = guessedCategory;
+      if (isCorrect) {
+        _correctlyGuessedPosts.add(post.id);
+      }
+    });
+
+    final guessesList = _userPostGuesses.entries.map((e) => '${e.key}:${e.value}').toList();
+    await prefs.setStringList('sentiment_guesses_$userId', guessesList);
+    await prefs.setStringList('sentiment_correct_$userId', _correctlyGuessedPosts.toList());
+
+    if (isCorrect) {
+      ref.read(studentProvider.notifier).addXp(25);
+      ref.read(studentProvider.notifier).addMistCrystals(15);
+      HapticService.celebration();
+      if (mounted) {
+        showSpiritParticles(context, duration: const Duration(seconds: 3));
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Correct sentiment tone! +25 XP & +15 Mist Crystals earned 💎🎉',
+              style: AppTypography.label.copyWith(color: Colors.white),
+            ),
+            backgroundColor: AppColors.semanticGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } else {
+      HapticService.error();
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Not quite! The tone was "$normalizedCorrect". Keep practicing!',
+              style: AppTypography.label.copyWith(color: Colors.white),
+            ),
+            backgroundColor: AppColors.gold500,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -388,6 +465,9 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
   Widget _buildReflectionCard(SentimentPost post, int index, bool isDark) {
     final isSaved = _savedPostIds.contains(post.id);
     final isSparked = _sparkedPostIds.contains(post.id);
+    final guessedTone = _userPostGuesses[post.id];
+    final isGuessed = guessedTone != null;
+    final isCorrect = _correctlyGuessedPosts.contains(post.id);
 
     return BrandCard(
       margin: const EdgeInsets.only(bottom: 16),
@@ -397,33 +477,73 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.forum_rounded, color: AppColors.gold500, size: 16),
-                  const SizedBox(width: 8),
-                  Text(
-                    'MANSAKA REFLECTION',
-                    style: AppTypography.label.copyWith(
-                      color: AppColors.gold500,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 10,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ],
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.gold500.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Text('🌿', style: TextStyle(fontSize: 18)),
+                ),
               ),
-              Text(
-                post.relativeTime,
-                style: TextStyle(
-                  color: isDark ? Colors.white38 : Colors.black38,
-                  fontSize: 11,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Lumad Community Member',
+                          style: AppTypography.h3.copyWith(
+                            color: isDark ? Colors.white : AppColors.forest900,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.verified_rounded, size: 14, color: AppColors.gold500),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      post.relativeTime,
+                      style: TextStyle(
+                        color: isDark ? Colors.white38 : Colors.black38,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.gold500.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.auto_awesome_rounded, size: 12, color: AppColors.gold500),
+                    SizedBox(width: 4),
+                    Text(
+                      'Live Post',
+                      style: TextStyle(
+                        color: AppColors.gold500,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Text(
             post.redactedOriginalText,
             style: AppTypography.body.copyWith(
@@ -454,6 +574,69 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
               ),
             ),
           ],
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.forest900.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? Colors.white.withValues(alpha: 0.1) : AppColors.forest900.withValues(alpha: 0.08),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.psychology_rounded, size: 16, color: AppColors.gold500),
+                    const SizedBox(width: 6),
+                    Text(
+                      'GUESS TONE (+25 XP)',
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.gold500,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (isGuessed)
+                  Row(
+                    children: [
+                      Icon(
+                        isCorrect ? Icons.check_circle_rounded : Icons.info_rounded,
+                        size: 16,
+                        color: isCorrect ? AppColors.semanticGreen : AppColors.gold500,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        isCorrect
+                            ? 'You guessed "$guessedTone" (Correct! +25 XP 🎉)'
+                            : 'You guessed "$guessedTone" (Incorrect ❌)',
+                        style: TextStyle(
+                          color: isCorrect ? AppColors.semanticGreen : (isDark ? Colors.white70 : Colors.black87),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    children: [
+                      _buildToneButton(post, 'positive', 'Positive 🌿', AppColors.semanticGreen),
+                      const SizedBox(width: 8),
+                      _buildToneButton(post, 'neutral', 'Neutral 🌾', AppColors.gold500),
+                      const SizedBox(width: 8),
+                      _buildToneButton(post, 'negative', 'Negative 🍂', AppColors.semanticRed),
+                    ],
+                  ),
+              ],
+            ),
+          ),
           const SizedBox(height: 16),
           Divider(
             color: isDark ? Colors.white10 : Colors.black12,
@@ -540,6 +723,33 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildToneButton(SentimentPost post, String category, String label, Color color) {
+    return Expanded(
+      child: InkWell(
+        onTap: () => _submitPostSentimentGuess(post, category),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withValues(alpha: 0.4)),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -265,7 +265,7 @@ class LearnerProfileScreen extends ConsumerWidget {
       _buildManagementTile(
         context,
         Icons.account_balance_rounded,
-        'Ancestral Vault Shop 🏛️',
+        'Ancestral Vault Shop',
         'Unlock cultural titles, avatar frames & sacred themes',
         onTap: () => context.push('/ancestral-vault-shop'),
       ),

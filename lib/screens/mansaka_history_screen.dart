@@ -23,7 +23,115 @@ class MansakaHistoryScreen extends ConsumerStatefulWidget {
 class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
   String _selectedCategory = 'All';
   final Set<String> _bookmarkedSections = {};
+  final Set<String> _expandedSections = {'Origins', 'Dagmay', 'Governance', 'Spirituality', 'Language', 'Sources'};
+  final Set<String> _exploredSections = {};
   final ScrollController _scrollController = ScrollController();
+
+  void _toggleSectionExpansion(String sectionKey) {
+    HapticService.light();
+    setState(() {
+      if (_expandedSections.contains(sectionKey)) {
+        _expandedSections.remove(sectionKey);
+      } else {
+        _expandedSections.add(sectionKey);
+      }
+    });
+  }
+
+  void _exploreSection(String sectionKey, String sectionTitle) {
+    HapticService.selection();
+    if (!_exploredSections.contains(sectionKey)) {
+      setState(() {
+        _exploredSections.add(sectionKey);
+      });
+      ref.read(studentProvider.notifier).addXp(15);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Explored "$sectionTitle"! +15 XP earned ⭐'),
+          backgroundColor: AppColors.gold500,
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  void _playAudioSimulation(String title, String description) {
+    HapticService.light();
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return AlertDialog(
+          backgroundColor: isDark ? AppColors.forest900 : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: const BorderSide(color: AppColors.gold500, width: 1.5),
+          ),
+          title: Row(
+            children: [
+              const Icon(Icons.volume_up_rounded, color: AppColors.gold500, size: 24),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Audio Archive: $title',
+                  style: AppTypography.h3.copyWith(
+                    color: isDark ? Colors.white : AppColors.forest900,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Playing authentic Mansaka pronunciation and oral recording...',
+                style: AppTypography.body.copyWith(
+                  color: isDark ? Colors.white70 : Colors.black87,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.gold500.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.graphic_eq_rounded, color: AppColors.gold500, size: 28),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        description,
+                        style: const TextStyle(
+                          color: AppColors.gold500,
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('CLOSE', style: TextStyle(color: AppColors.gold500, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   final List<String> _categories = [
     'All',
@@ -729,31 +837,76 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
   }
 
   Widget _buildSectionHeader(String title, String sectionKey, bool isDark) {
+    final isExpanded = _expandedSections.contains(sectionKey);
+    final isExplored = _exploredSections.contains(sectionKey);
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Expanded(
-          child: Text(
-            title,
-            style: AppTypography.label.copyWith(
-              color: AppColors.gold500,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.5,
-            ),
+          child: Row(
+            children: [
+              Flexible(
+                child: Text(
+                  title,
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.gold500,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ),
+              if (isExplored) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.semanticGreen.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.semanticGreen.withValues(alpha: 0.5)),
+                  ),
+                  child: const Text(
+                    '✓ Explored',
+                    style: TextStyle(
+                      color: AppColors.semanticGreen,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
-        IconButton(
-          onPressed: () => _toggleBookmark(sectionKey),
-          icon: Icon(
-            _bookmarkedSections.contains(sectionKey)
-                ? Icons.bookmark_rounded
-                : Icons.bookmark_border_rounded,
-            color: AppColors.gold500,
-            size: 20,
-          ),
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              onPressed: () => _toggleBookmark(sectionKey),
+              icon: Icon(
+                _bookmarkedSections.contains(sectionKey)
+                    ? Icons.bookmark_rounded
+                    : Icons.bookmark_border_rounded,
+                color: AppColors.gold500,
+                size: 20,
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              tooltip: 'Bookmark section',
+            ),
+            IconButton(
+              onPressed: () => _toggleSectionExpansion(sectionKey),
+              icon: Icon(
+                isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                color: AppColors.gold500,
+                size: 22,
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              tooltip: isExpanded ? 'Collapse section' : 'Expand section',
+            ),
+          ],
         ),
       ],
     );
@@ -769,92 +922,168 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
     String? imageAsset,
     required bool isDark,
   }) {
+    final isExpanded = _expandedSections.contains(sectionKey);
+    final isExplored = _exploredSections.contains(sectionKey);
+
     return BrandCard(
       padding: const EdgeInsets.all(20),
       borderRadius: 24,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: AppTypography.h3.copyWith(
-              color: isDark ? Colors.white : AppColors.forest900,
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            subtitle,
-            style: AppTypography.body.copyWith(
-              color: isDark ? AppColors.gold500 : AppColors.forest700,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            details,
-            style: AppTypography.body.copyWith(
-              color: isDark ? Colors.white.withValues(alpha: 0.87) : Colors.black87,
-              fontSize: 13,
-              height: 1.5,
-            ),
-          ),
-          if (bulletPoints.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: isDark ? Colors.white.withValues(alpha: 0.04) : AppColors.gold50.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTypography.h3.copyWith(
+                        color: isDark ? Colors.white : AppColors.forest900,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: AppTypography.body.copyWith(
+                        color: isDark ? AppColors.gold500 : AppColors.forest700,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: bulletPoints.map((pt) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          '• ',
-                          style: TextStyle(
-                            color: AppColors.gold500,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            pt,
-                            style: AppTypography.body.copyWith(
-                              color: isDark ? Colors.white70 : Colors.black87,
-                              fontSize: 12,
-                              height: 1.4,
+              IconButton(
+                onPressed: () => _toggleSectionExpansion(sectionKey),
+                icon: Icon(
+                  isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                  color: AppColors.gold500,
+                ),
+              ),
+            ],
+          ),
+          if (isExpanded) ...[
+            const SizedBox(height: 12),
+            Text(
+              details,
+              style: AppTypography.body.copyWith(
+                color: isDark ? Colors.white.withValues(alpha: 0.87) : Colors.black87,
+                fontSize: 13,
+                height: 1.5,
+              ),
+            ),
+            if (bulletPoints.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withValues(alpha: 0.04) : AppColors.gold50.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.gold500.withValues(alpha: 0.2)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: bulletPoints.map((pt) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            '• ',
+                            style: TextStyle(
+                              color: AppColors.gold500,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
+                          Expanded(
+                            child: Text(
+                              pt,
+                              style: AppTypography.body.copyWith(
+                                color: isDark ? Colors.white70 : Colors.black87,
+                                fontSize: 12,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
               ),
-            ),
-          ],
-          if (imageAsset != null) ...[
+            ],
+            if (imageAsset != null) ...[
+              const SizedBox(height: 16),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: Image.asset(
+                  imageAsset,
+                  height: 160,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: Image.asset(
-                imageAsset,
-                height: 160,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _playAudioSimulation(title, subtitle),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.gold500,
+                      side: BorderSide(color: AppColors.gold500.withValues(alpha: 0.5)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    icon: const Icon(Icons.volume_up_rounded, size: 16),
+                    label: const Text('Listen Audio', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: isExplored ? null : () => _exploreSection(sectionKey, title),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isExplored ? Colors.grey.withValues(alpha: 0.3) : AppColors.gold500,
+                      foregroundColor: AppColors.forest900,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      elevation: isExplored ? 0 : 2,
+                    ),
+                    icon: Icon(isExplored ? Icons.check_circle_rounded : Icons.star_rounded, size: 16),
+                    label: Text(
+                      isExplored ? 'Explored (+15 XP)' : 'Mark Read (+15 XP)',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isExplored ? (isDark ? Colors.white60 : Colors.black54) : AppColors.forest900),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Tap to expand and read full history & audio archives...',
+                    style: TextStyle(
+                      color: isDark ? Colors.white38 : Colors.black45,
+                      fontSize: 11,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+                const Icon(Icons.unfold_more_rounded, color: AppColors.gold500, size: 16),
+              ],
             ),
           ],
         ],
