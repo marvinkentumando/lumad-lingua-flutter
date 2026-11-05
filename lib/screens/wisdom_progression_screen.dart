@@ -7,6 +7,7 @@ import '../providers/student_provider.dart';
 import '../services/firebase_service.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_background.dart';
+import '../utils/app_localization.dart';
 
 import '../providers/role_provider.dart';
 
@@ -18,6 +19,7 @@ class WisdomProgressionScreen extends ConsumerWidget {
     final student = ref.watch(studentProvider);
     final config = ref.watch(appConfigProvider).value;
     final role = ref.watch(roleProvider);
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -25,7 +27,7 @@ class WisdomProgressionScreen extends ConsumerWidget {
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(context),
+              _buildHeader(context, l10n),
               Expanded(
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
@@ -50,7 +52,7 @@ class WisdomProgressionScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, AppLocalization l10n) {
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Row(
@@ -68,7 +70,7 @@ class WisdomProgressionScreen extends ConsumerWidget {
           ),
           const SizedBox(width: 16),
           Text(
-            'Wisdom Progression',
+            l10n.translate('wisdom_progression'),
             style: AppTypography.h2ExtraBold.copyWith(
               color: Theme.of(context).brightness == Brightness.dark
                   ? Colors.white

@@ -50,6 +50,7 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
           children: [
             AdminScreenHeader(
               title: l10n.translate('gamification_economics'),
+              subtitle: 'Manage reward caps, XP payouts, and Ancestral Vault store inventory',
               eyebrow: 'ECONOMY MANAGEMENT',
             ),
             TabBar(

@@ -11,6 +11,7 @@ import '../widgets/brand_button.dart';
 import '../services/haptic_service.dart';
 import '../providers/student_provider.dart';
 import '../widgets/spirit_particle_overlay.dart';
+import '../utils/app_localization.dart';
 
 class MansakaHistoryScreen extends ConsumerStatefulWidget {
   const MansakaHistoryScreen({super.key});
@@ -284,6 +285,7 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -291,7 +293,7 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(context, isDark),
+              _buildHeader(context, isDark, l10n),
               _buildCategoryBar(isDark),
               const SizedBox(height: 8),
               Expanded(
@@ -438,7 +440,7 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, bool isDark) {
+  Widget _buildHeader(BuildContext context, bool isDark, AppLocalization l10n) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
@@ -463,13 +465,13 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  children: const [
-                    Icon(Icons.auto_awesome_rounded, color: AppColors.gold500, size: 12),
-                    SizedBox(width: 4),
+                  children: [
+                    const Icon(Icons.auto_awesome_rounded, color: AppColors.gold500, size: 12),
+                    const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        'CULTURAL HERITAGE ARCHIVE',
-                        style: TextStyle(
+                        l10n.translate('cultural_heritage_archive'),
+                        style: const TextStyle(
                           color: AppColors.gold500,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -482,7 +484,7 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                   ],
                 ),
                 Text(
-                  'History of the Mansaka',
+                  l10n.translate('mansaka_history_title'),
                   style: AppTypography.h2.copyWith(
                     color: isDark ? Colors.white : AppColors.forest900,
                     fontSize: 18,

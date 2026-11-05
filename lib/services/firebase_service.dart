@@ -1898,11 +1898,12 @@ class FirebaseService {
         if (timeFilter == 'week') {
           int getWeeklyXp(Map<String, dynamic> u) {
             final reset = (u['lastWeeklyReset'] as Timestamp?)?.toDate();
-            if (reset != null) {
-              if (reset.isBefore(startOfWeek)) return 0;
-              return (u['weeklyXp'] as num?)?.toInt() ?? 0;
+            final totalXp = (u['xp'] as num?)?.toInt() ?? 0;
+            if (reset != null && reset.isBefore(startOfWeek)) return 0;
+            if (u.containsKey('weeklyXp') && u['weeklyXp'] != null) {
+              return (u['weeklyXp'] as num).toInt();
             }
-            return (u['weeklyXp'] as num?)?.toInt() ?? 0;
+            return (totalXp * 0.3).round();
           }
 
           final aWeekly = getWeeklyXp(a);

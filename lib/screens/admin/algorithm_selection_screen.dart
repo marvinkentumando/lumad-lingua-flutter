@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../services/firebase_service.dart';
@@ -8,6 +7,7 @@ import '../../services/pronunciation_service.dart';
 import '../../widgets/brand_card.dart';
 import '../../widgets/brand_button.dart';
 import '../../widgets/brand_background.dart';
+import '../../widgets/admin/admin_screen_header.dart';
 import '../../utils/app_localization.dart';
 
 class AlgorithmSelectionScreen extends ConsumerStatefulWidget {
@@ -56,7 +56,10 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
   Widget _buildContent(dynamic config, bool isDark, AppLocalization l10n) {
     return Column(
       children: [
-        _buildAppBar(isDark, l10n),
+        AdminScreenHeader(
+          title: l10n.translate('model_deployment_control'),
+          eyebrow: 'AI ENGINE MANAGEMENT',
+        ),
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -66,6 +69,7 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
                 _buildSectionHeader(
                   'SENTIMENT ENGINE',
                   'Active classification model selected via Colab evaluation',
+                  isDark,
                 ),
                 const SizedBox(height: 16),
                 _buildSentimentStatusCard(isDark),
@@ -73,6 +77,7 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
                 _buildSectionHeader(
                   l10n.translate('pronunciation_algorithms'),
                   l10n.translate('pronunciation_eval_desc'),
+                  isDark,
                 ),
                 const SizedBox(height: 16),
                 _buildPronunciationGrid(config, isDark, l10n),
@@ -85,35 +90,24 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
     );
   }
 
-  Widget _buildAppBar(bool isDark, AppLocalization l10n) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      child: Row(
-        children: [
-          IconButton(
-            icon: Icon(Icons.arrow_back_ios_new_rounded, color: isDark ? Colors.white : AppColors.forest900),
-            onPressed: () => context.pop(),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            l10n.translate('model_deployment_control'),
-            style: AppTypography.label.copyWith(
-              color: AppColors.gold500,
-              letterSpacing: 2,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title, String subtitle) {
+  Widget _buildSectionHeader(String title, String subtitle, bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: AppTypography.h2.copyWith(color: Colors.white)),
-        Text(subtitle, style: AppTypography.body.copyWith(color: Colors.white60, fontSize: 12)),
+        Text(
+          title,
+          style: AppTypography.h2.copyWith(
+            color: isDark ? Colors.white : AppColors.forest900,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          subtitle,
+          style: AppTypography.body.copyWith(
+            color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.7),
+            fontSize: 12,
+          ),
+        ),
       ],
     );
   }
@@ -171,6 +165,7 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
       },
       onSelect: () => _updateActiveModel(algo.name, l10n),
       l10n: l10n,
+      isDark: isDark,
     );
   }
 
@@ -180,12 +175,13 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
     required Map<String, String> metrics,
     required VoidCallback onSelect,
     required AppLocalization l10n,
+    required bool isDark,
   }) {
     return BrandCard(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
       borderRadius: 24,
-      theme: isSelected ? BrandCardTheme.gold : BrandCardTheme.cream,
+      theme: isSelected ? BrandCardTheme.gold : (isDark ? BrandCardTheme.vibrant : BrandCardTheme.cream),
       child: Column(
         children: [
           Row(
@@ -194,7 +190,7 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
               Text(
                 title,
                 style: AppTypography.h3.copyWith(
-                  color: isSelected ? AppColors.forest900 : Colors.white,
+                  color: isSelected ? AppColors.forest900 : (isDark ? Colors.white : AppColors.forest900),
                 ),
               ),
               if (isSelected)
@@ -227,14 +223,14 @@ class _AlgorithmSelectionScreenState extends ConsumerState<AlgorithmSelectionScr
                   Text(
                     entry.key.toUpperCase(),
                     style: AppTypography.label.copyWith(
-                      color: isSelected ? AppColors.forest700 : Colors.white38,
+                      color: isSelected ? AppColors.forest700 : (isDark ? Colors.white38 : AppColors.forest700),
                       fontSize: 8,
                     ),
                   ),
                   Text(
                     entry.value,
                     style: AppTypography.mono.copyWith(
-                      color: isSelected ? AppColors.forest900 : Colors.white,
+                      color: isSelected ? AppColors.forest900 : (isDark ? Colors.white : AppColors.forest900),
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),

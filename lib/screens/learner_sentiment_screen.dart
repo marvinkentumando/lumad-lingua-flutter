@@ -15,6 +15,7 @@ import '../widgets/brand_card.dart';
 import '../widgets/brand_background.dart';
 import '../widgets/app_shimmer_skeleton.dart';
 import '../widgets/spirit_particle_overlay.dart';
+import '../utils/app_localization.dart';
 
 class LearnerSentimentScreen extends ConsumerStatefulWidget {
   const LearnerSentimentScreen({super.key});
@@ -171,6 +172,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
   Widget build(BuildContext context) {
     final postsAsync = ref.watch(communitySentimentPostsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -178,7 +180,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
         child: SafeArea(
           bottom: false,
           child: postsAsync.when(
-            data: (posts) => _buildLearnerContent(posts, isDark),
+            data: (posts) => _buildLearnerContent(posts, isDark, l10n),
             loading: () => _buildLearnerSkeleton(isDark),
             error: (e, _) => Center(
               child: Padding(
@@ -198,7 +200,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
     );
   }
 
-  Widget _buildLearnerContent(List<SentimentPost> posts, bool isDark) {
+  Widget _buildLearnerContent(List<SentimentPost> posts, bool isDark, AppLocalization l10n) {
     final bool hasData = posts.isNotEmpty;
 
     return CustomScrollView(

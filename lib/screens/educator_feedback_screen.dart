@@ -8,6 +8,7 @@ import '../models/feedback.dart';
 import '../widgets/ambient_topo_background.dart';
 import '../widgets/branded_empty_state.dart';
 import '../widgets/profile_avatar.dart';
+import '../utils/app_localization.dart';
 
 class EducatorFeedbackScreen extends ConsumerWidget {
   const EducatorFeedbackScreen({super.key});
@@ -16,11 +17,12 @@ class EducatorFeedbackScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final feedbackAsync = ref.watch(studentFeedbackProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
       appBar: AppBar(
-        title: const Text('Student Feedback'),
+        title: Text(l10n.translate('educator_feedback')),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: isDark ? Colors.white : AppColors.forest900,

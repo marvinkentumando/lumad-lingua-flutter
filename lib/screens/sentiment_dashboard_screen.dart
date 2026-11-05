@@ -18,6 +18,7 @@ import '../widgets/brand_background.dart';
 import '../widgets/app_shimmer_skeleton.dart';
 import '../providers/role_provider.dart';
 import 'learner_sentiment_screen.dart';
+import '../widgets/admin/admin_screen_header.dart';
 
 class SentimentDashboardScreen extends ConsumerStatefulWidget {
   const SentimentDashboardScreen({super.key});
@@ -270,14 +271,26 @@ class _SentimentDashboardScreenState
       controller: _scrollController,
       physics: const BouncingScrollPhysics(),
       slivers: [
-        _buildSliverAppBar(isDark),
+        SliverToBoxAdapter(
+          child: AdminScreenHeader(
+            title: 'Sentiment Dashboard',
+            subtitle: 'Real-time community vitality index, sentiment distribution, and post insights',
+            eyebrow: 'COMMUNITY SENTIMENT MONITOR',
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.upload_file_rounded, color: AppColors.gold500, size: 20),
+                tooltip: 'Import JSON Dataset',
+                onPressed: _showImportJsonModal,
+              ),
+            ],
+          ),
+        ),
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 20),
                 _buildSentimentSummaryCard(
                   overallIndex: overallIndex,
                   hasData: hasData,

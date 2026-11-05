@@ -7,6 +7,7 @@ import '../services/firebase_service.dart';
 import '../models/broadcast.dart';
 import '../widgets/ambient_topo_background.dart';
 import '../widgets/branded_empty_state.dart';
+import '../utils/app_localization.dart';
 
 class EducatorBroadcastHistoryScreen extends ConsumerWidget {
   const EducatorBroadcastHistoryScreen({super.key});
@@ -15,11 +16,12 @@ class EducatorBroadcastHistoryScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final broadcastsAsync = ref.watch(broadcastsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
       appBar: AppBar(
-        title: const Text('Broadcast History'),
+        title: Text(l10n.translate('broadcast_history')),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: isDark ? Colors.white : AppColors.forest900,

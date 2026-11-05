@@ -11,6 +11,7 @@ import '../widgets/branded_empty_state.dart';
 import '../services/firebase_service.dart';
 import '../services/haptic_service.dart';
 import '../providers/educator_provider.dart';
+import '../utils/app_localization.dart';
 
 enum LessonSort { newest, oldest, name, views }
 
@@ -83,6 +84,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
   Widget build(BuildContext context) {
     final educatorLessonsAsync = ref.watch(educatorLessonsProvider);
     final rawLessonsAsync = ref.watch(allLessonsStreamProvider);
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -106,7 +108,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Lessons Library',
+                                l10n.translate('lessons_library'),
                                 style: AppTypography.displayBold.copyWith(
                                   color: AppColors.gold500,
                                   fontSize: 32,

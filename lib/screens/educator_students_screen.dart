@@ -15,6 +15,7 @@ import '../models/educator_models.dart';
 import '../widgets/brand_search_bar.dart';
 import '../providers/educator_provider.dart';
 import '../services/haptic_service.dart';
+import '../utils/app_localization.dart';
 
 enum StudentSort { name, progress, level }
 
@@ -69,6 +70,7 @@ class _EducatorStudentsScreenState
   @override
   Widget build(BuildContext context) {
     final studentsAsync = ref.watch(educatorStudentsProvider);
+    final l10n = ref.watch(localizationProvider);
 
     return studentsAsync.when(
       data: (allStudents) {
@@ -87,7 +89,7 @@ class _EducatorStudentsScreenState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Student Hub',
+                        l10n.translate('student_roster'),
                         style: AppTypography.displayBold.copyWith(
                           color: AppColors.gold500,
                           fontSize: 32,

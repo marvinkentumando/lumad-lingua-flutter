@@ -6,6 +6,7 @@ import '../theme/app_typography.dart';
 import '../models/lesson.dart';
 import '../services/firebase_service.dart';
 import '../services/haptic_service.dart';
+import '../utils/app_localization.dart';
 
 class EducatorUnitManagementScreen extends ConsumerStatefulWidget {
   const EducatorUnitManagementScreen({super.key});
@@ -24,6 +25,7 @@ class _EducatorUnitManagementScreenState
   Widget build(BuildContext context) {
     final lessonsAsync = ref.watch(allLessonsStreamProvider);
     final dialectsAsync = ref.watch(dialectsProvider);
+    final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -31,7 +33,7 @@ class _EducatorUnitManagementScreenState
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          'Unit Management',
+          l10n.translate('unit_management'),
           style: AppTypography.h2ExtraBold.copyWith(color: AppColors.gold500),
         ),
         leading: IconButton(

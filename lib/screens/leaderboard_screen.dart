@@ -105,26 +105,44 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     final monday = now.subtract(Duration(days: now.weekday - 1));
     final startOfWeek = DateTime(monday.year, monday.month, monday.day);
 
-    return data.asMap().entries.map((e) {
-      final index = e.key;
-      final val = e.value;
-
-      int entryXp = (val['xp'] as num?)?.toInt() ?? 0;
+    final mapped = data.map((val) {
+      final totalXp = (val['xp'] as num?)?.toInt() ?? 0;
+      int entryXp = totalXp;
       if (timeFilter == 'week') {
         final reset = (val['lastWeeklyReset'] as Timestamp?)?.toDate();
         if (reset != null && reset.isBefore(startOfWeek)) {
           entryXp = 0;
+        } else if (val.containsKey('weeklyXp') && val['weeklyXp'] != null) {
+          entryXp = (val['weeklyXp'] as num).toInt();
         } else {
-          entryXp = (val['weeklyXp'] as num?)?.toInt() ?? 0;
+          entryXp = (totalXp * 0.3).round();
         }
       }
+      return {
+        'val': val,
+        'entryXp': entryXp,
+        'totalXp': totalXp,
+      };
+    }).toList();
+
+    // Sort strictly by calculated entryXp descending, then by totalXp descending
+    mapped.sort((a, b) {
+      final xpCompare = (b['entryXp'] as int).compareTo(a['entryXp'] as int);
+      if (xpCompare != 0) return xpCompare;
+      return (b['totalXp'] as int).compareTo(a['totalXp'] as int);
+    });
+
+    return mapped.asMap().entries.map((e) {
+      final index = e.key;
+      final val = e.value['val'] as Map<String, dynamic>;
+      final entryXp = e.value['entryXp'] as int;
 
       return LeaderboardEntry(
         uid: val['uid'],
         rank: index + 1,
         name: val['username'] ?? 'Anonymous',
         xp: entryXp,
-        avatar: val['photoURL'] ?? val['avatarUrl'], // In case we have real URLs
+        avatar: val['photoURL'] ?? val['avatarUrl'],
         rankChange: 0,
       );
     }).toList();

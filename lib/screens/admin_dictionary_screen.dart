@@ -9,6 +9,7 @@ import '../models/dictionary_entry.dart';
 import '../services/firebase_service.dart';
 import '../services/haptic_service.dart';
 import '../utils/file_downloader.dart';
+import '../utils/app_localization.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/brand_search_bar.dart';
@@ -95,10 +96,10 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
     return list;
   }
 
-  Widget _buildSortButton(bool isDark) {
+  Widget _buildSortButton(bool isDark, AppLocalization l10n) {
     return PopupMenuButton<DictionarySortOption>(
       initialValue: _selectedSort,
-      tooltip: 'Sort dictionary entries',
+      tooltip: l10n.translate('sort_entries_tooltip'),
       onSelected: (sort) {
         HapticService.selection();
         setState(() {
@@ -179,6 +180,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 768;
+    final l10n = ref.watch(localizationProvider);
 
     final wordsAsync = ref.watch(globalDictionaryStreamProvider(
       ValidatorQuery('', 500, search: _searchQuery, dialect: _selectedDialect),
@@ -191,27 +193,28 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
         child: Column(
           children: [
             AdminScreenHeader(
-              title: 'Dictionary Management',
-              eyebrow: 'CONTENT ARCHIVE',
+              title: l10n.translate('dictionary_label'),
+              subtitle: l10n.translate('total_dict_words', params: {'count': '${wordsAsync.value?.length ?? 0}'}),
+              eyebrow: l10n.translate('dictionary_archive'),
               actions: [
                 IconButton(
                   icon: const Icon(Icons.delete_sweep_rounded, color: AppColors.semanticRed, size: 20),
                   tooltip: 'Delete All Words',
-                  onPressed: () => _confirmDeleteAll(wordsAsync.value ?? []),
+                  onPressed: () => _confirmDeleteAll(wordsAsync.value ?? [], l10n),
                 ),
                 IconButton(
                   icon: const Icon(Icons.audio_file_rounded, color: AppColors.gold500, size: 20),
-                  tooltip: 'Bulk Audio Import',
+                  tooltip: l10n.translate('bulk_audio_import'),
                   onPressed: () => _showBulkAudioModal(context, _sortWords(wordsAsync.value ?? [])),
                 ),
                 IconButton(
                   icon: const Icon(Icons.download_rounded, color: AppColors.gold500, size: 20),
-                  tooltip: 'Export CSV',
-                  onPressed: () => _exportDictionary(_sortWords(wordsAsync.value ?? [])),
+                  tooltip: l10n.translate('export_csv'),
+                  onPressed: () => _exportDictionary(_sortWords(wordsAsync.value ?? []), l10n),
                 ),
                 IconButton(
                   icon: const Icon(Icons.upload_file_rounded, color: AppColors.gold500, size: 20),
-                  tooltip: 'Import CSV',
+                  tooltip: l10n.translate('import_csv'),
                   onPressed: () => _showImportModal(context),
                 ),
               ],
@@ -220,13 +223,13 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 children: [
-                  _buildSearchBar(),
+                  _buildSearchBar(l10n),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Expanded(child: _buildDialectFilters(dialectsAsync, isDark)),
+                      Expanded(child: _buildDialectFilters(dialectsAsync, isDark, l10n)),
                       const SizedBox(width: 8),
-                      _buildSortButton(isDark),
+                      _buildSortButton(isDark, l10n),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -237,7 +240,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
               child: wordsAsync.when(
                 data: (words) {
                   final sortedWords = _sortWords(words);
-                  if (sortedWords.isEmpty) return _buildEmptyState(isDark);
+                  if (sortedWords.isEmpty) return _buildEmptyState(isDark, l10n);
 
                   final totalPages = (sortedWords.length / _pageSize).ceil().clamp(1, 9999);
                   if (_currentPage > totalPages) {
@@ -261,13 +264,13 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
                                   mainAxisExtent: 110,
                                 ),
                                 itemCount: pagedWords.length,
-                                itemBuilder: (context, index) => _buildWordCard(pagedWords[index], isDark, index),
+                                itemBuilder: (context, index) => _buildWordCard(pagedWords[index], isDark, index, l10n),
                               )
                             : ListView.builder(
                                 physics: const BouncingScrollPhysics(),
                                 padding: const EdgeInsets.symmetric(horizontal: 20),
                                 itemCount: pagedWords.length,
-                                itemBuilder: (context, index) => _buildWordCard(pagedWords[index], isDark, index),
+                                itemBuilder: (context, index) => _buildWordCard(pagedWords[index], isDark, index, l10n),
                               ),
                       ),
                       PaginationBar(
@@ -305,10 +308,10 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(AppLocalization l10n) {
     return BrandSearchBar(
       controller: _searchController,
-      hintText: 'Search indigenous or translation...',
+      hintText: l10n.translate('search_indigenous_hint'),
       onChanged: (v) => setState(() {
         _searchQuery = v;
         _currentPage = 1;
@@ -316,7 +319,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
     );
   }
 
-  Widget _buildDialectFilters(AsyncValue<List<String>> dialectsAsync, bool isDark) {
+  Widget _buildDialectFilters(AsyncValue<List<String>> dialectsAsync, bool isDark, AppLocalization l10n) {
     return dialectsAsync.when(
       data: (dialects) => SizedBox(
         height: 40,
@@ -326,10 +329,11 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
           itemBuilder: (context, i) {
             final d = dialects[i];
             final isSelected = _selectedDialect == d;
+            final labelText = d == 'All' ? l10n.translate('all_label') : d;
             return Padding(
               padding: const EdgeInsets.only(right: 8),
               child: ChoiceChip(
-                label: Text(d),
+                label: Text(labelText),
                 selected: isSelected,
                 onSelected: (s) => setState(() {
                   _selectedDialect = d;
@@ -352,7 +356,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
     );
   }
 
-  Widget _buildWordCard(DictionaryEntry word, bool isDark, int index) {
+  Widget _buildWordCard(DictionaryEntry word, bool isDark, int index, AppLocalization l10n) {
     return BrandCard(
       theme: isDark ? BrandCardTheme.cream : BrandCardTheme.gold,
       margin: const EdgeInsets.only(bottom: 16),
@@ -436,14 +440,14 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline_rounded, color: AppColors.semanticRed, size: 20),
-            onPressed: () => _confirmDelete(word),
+            onPressed: () => _confirmDelete(word, l10n),
           ),
         ],
       ),
     ).animate().fadeIn(delay: (50 * index).ms).slideX(begin: 0.1);
   }
 
-  Widget _buildEmptyState(bool isDark) {
+  Widget _buildEmptyState(bool isDark, AppLocalization l10n) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -451,7 +455,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
           Icon(Icons.search_off_rounded, size: 64, color: isDark ? Colors.white10 : Colors.black12),
           const SizedBox(height: 16),
           Text(
-            'No matching words found.',
+            l10n.translate('no_matching_words'),
             style: TextStyle(color: isDark ? Colors.white60 : Colors.black38),
           ),
         ],
@@ -459,14 +463,17 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
     );
   }
 
-  void _confirmDelete(DictionaryEntry word) {
+  void _confirmDelete(DictionaryEntry word, AppLocalization l10n) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Entry?'),
-        content: Text('Are you sure you want to delete "${word.indigenousWord}"? This action cannot be undone.'),
+        title: Text(l10n.translate('delete_entry_title')),
+        content: Text(l10n.translate('delete_entry_confirm', params: {'word': word.indigenousWord})),
         actions: [
-          TextButton(onPressed: () => context.pop(), child: const Text('CANCEL')),
+          TextButton(
+            onPressed: () => context.pop(),
+            child: Text(l10n.translate('cancel').toUpperCase()),
+          ),
           ElevatedButton(
             onPressed: () async {
               HapticService.delete();
@@ -477,21 +484,21 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
               ref.invalidate(globalDictionaryStreamProvider);
               ref.invalidate(dictionaryStreamProvider);
               scaffoldMessenger.showSnackBar(
-                SnackBar(content: Text('"$term" deleted.')),
+                SnackBar(content: Text(l10n.translate('entry_deleted', params: {'term': term}))),
               );
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticRed),
-            child: const Text('DELETE'),
+            child: Text(l10n.translate('delete').toUpperCase()),
           ),
         ],
       ),
     );
   }
 
-  void _confirmDeleteAll(List<DictionaryEntry> words) {
+  void _confirmDeleteAll(List<DictionaryEntry> words, AppLocalization l10n) {
     if (words.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No dictionary words available to delete.')),
+        SnackBar(content: Text(l10n.translate('no_entries_export'))),
       );
       return;
     }
@@ -504,14 +511,14 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
             : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Row(
-          children: const [
-            Icon(Icons.warning_amber_rounded, color: AppColors.semanticRed, size: 28),
-            SizedBox(width: 8),
-            Text('Delete All Words?'),
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: AppColors.semanticRed, size: 28),
+            const SizedBox(width: 8),
+            Text(l10n.translate('delete_entry_title')),
           ],
         ),
         content: Text(
-          'Are you sure you want to permanently delete all ${words.length} dictionary entries?\n\nThis action CANNOT BE UNDONE.',
+          l10n.translate('delete_entry_confirm', params: {'word': '${words.length} entries'}),
           style: TextStyle(
             color: Theme.of(context).brightness == Brightness.dark
                 ? Colors.white70
@@ -521,7 +528,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('CANCEL'),
+            child: Text(l10n.translate('cancel').toUpperCase()),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -531,7 +538,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
               final scaffoldMessenger = ScaffoldMessenger.of(context);
               scaffoldMessenger.showSnackBar(
                 SnackBar(
-                  content: Text('Deleting ${words.length} dictionary entries...'),
+                  content: Text(l10n.translate('deleting_entries', params: {'count': '${words.length}'})),
                   duration: const Duration(seconds: 10),
                 ),
               );
@@ -545,7 +552,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
                 scaffoldMessenger.hideCurrentSnackBar();
                 scaffoldMessenger.showSnackBar(
                   SnackBar(
-                    content: Text('Successfully deleted all ${words.length} words.'),
+                    content: Text(l10n.translate('entry_deleted', params: {'term': '${words.length} entries'})),
                     backgroundColor: AppColors.semanticGreen,
                   ),
                 );
@@ -553,7 +560,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
                 scaffoldMessenger.hideCurrentSnackBar();
                 scaffoldMessenger.showSnackBar(
                   SnackBar(
-                    content: Text('Failed to delete entries: $e'),
+                    content: Text(l10n.translate('export_failed_msg', params: {'error': '$e'})),
                     backgroundColor: AppColors.semanticRed,
                   ),
                 );
@@ -563,7 +570,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
               backgroundColor: AppColors.semanticRed,
               foregroundColor: Colors.white,
             ),
-            child: Text('DELETE ALL (${words.length})'),
+            child: Text('${l10n.translate('delete').toUpperCase()} ALL (${words.length})'),
           ),
         ],
       ),
@@ -597,11 +604,11 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
     );
   }
 
-  Future<void> _exportDictionary(List<DictionaryEntry> words) async {
+  Future<void> _exportDictionary(List<DictionaryEntry> words, AppLocalization l10n) async {
     HapticService.light();
     if (words.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No dictionary entries available to export.')),
+        SnackBar(content: Text(l10n.translate('no_entries_export'))),
       );
       return;
     }
@@ -627,7 +634,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Exported ${words.length} entries ($path)'),
+            content: Text(l10n.translate('export_success', params: {'count': '${words.length}', 'path': path})),
             backgroundColor: AppColors.semanticGreen,
           ),
         );
@@ -636,7 +643,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to export dictionary: $e'),
+            content: Text(l10n.translate('export_failed_msg', params: {'error': '$e'})),
             backgroundColor: AppColors.semanticRed,
           ),
         );
@@ -695,6 +702,7 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final dialectsAsync = ref.watch(dialectsProvider);
+    final l10n = ref.watch(localizationProvider);
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
@@ -719,7 +727,7 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  widget.entry == null ? 'New Entry' : 'Edit Entry',
+                  widget.entry == null ? l10n.translate('new_entry') : l10n.translate('edit_entry'),
                   style: AppTypography.h2.copyWith(color: isDark ? Colors.white : AppColors.forest900),
                 ),
                 IconButton(onPressed: () => context.pop(), icon: const Icon(Icons.close_rounded)),
@@ -732,7 +740,7 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildLabel('Language / Dialect', isDark),
+                  _buildLabel(l10n.translate('language_dialect'), isDark),
                   dialectsAsync.when(
                     data: (list) => DropdownButtonFormField<String>(
                       initialValue: list.contains(_language) ? _language : list.firstWhere((e) => e != 'All', orElse: () => 'Mansaka'),
@@ -743,10 +751,10 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
                       onChanged: (v) => setState(() => _language = v!),
                     ),
                     loading: () => const LinearProgressIndicator(),
-                    error: (_, __) => const Text('Error loading dialects'),
+                    error: (_, __) => Text(l10n.translate('error_loading_dialects')),
                   ),
                   const SizedBox(height: 16),
-                  _buildLabel('Part of Speech', isDark),
+                  _buildLabel(l10n.translate('part_of_speech'), isDark),
                   DropdownButtonFormField<PartOfSpeech>(
                     initialValue: _pos,
                     dropdownColor: isDark ? AppColors.forest800 : Colors.white,
@@ -759,11 +767,11 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
                     onChanged: (v) => setState(() => _pos = v!),
                   ),
                   const SizedBox(height: 16),
-                  BrandTextField(controller: _termCtrl, labelText: 'Indigenous Term (Word)', prefixIcon: Icons.translate_rounded),
+                  BrandTextField(controller: _termCtrl, labelText: l10n.translate('indigenous_term_label'), prefixIcon: Icons.translate_rounded),
                   const SizedBox(height: 16),
                   BrandTextField(
                     controller: _phoneticCtrl,
-                    labelText: 'IPA Phonetic Guide (e.g. /mɐŋ.sɐ.kɐ/)',
+                    labelText: l10n.translate('phonetic_guide_label'),
                     prefixIcon: Icons.record_voice_over_outlined,
                   ),
                   const SizedBox(height: 6),
@@ -773,7 +781,7 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'IPA TRANSCRIPTION GUIDANCE:',
+                          l10n.translate('ipa_guidance_title'),
                           style: AppTypography.label.copyWith(
                             color: isDark ? AppColors.gold500 : AppColors.forest700,
                             fontSize: 10,
@@ -783,10 +791,7 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '• Enter validated IPA transcriptions from authentic linguistic or native-speaker sources.\n'
-                          '• Include syllable dots (.) or hyphens (-) only when validated by native speakers or elders.\n'
-                          '• Do not enter English-style spelling approximations or fabricated syllable divisions.\n'
-                          '• Attached audio serves as the validated native reference recording (from dataset).',
+                          l10n.translate('ipa_guidance_desc'),
                           style: AppTypography.caption.copyWith(
                             color: isDark ? Colors.white.withValues(alpha: 0.6) : AppColors.forest700.withValues(alpha: 0.7),
                             fontSize: 11,
@@ -797,13 +802,13 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  BrandTextField(controller: _defCtrl, labelText: 'Definition / Description', prefixIcon: Icons.description_rounded, maxLines: 3),
+                  BrandTextField(controller: _defCtrl, labelText: l10n.translate('definition_description'), prefixIcon: Icons.description_rounded, maxLines: 3),
                   const SizedBox(height: 16),
-                  BrandTextField(controller: _exNativeCtrl, labelText: 'Example Sentence (Indigenous)', prefixIcon: Icons.history_edu_rounded),
+                  BrandTextField(controller: _exNativeCtrl, labelText: l10n.translate('example_sentence_indigenous'), prefixIcon: Icons.history_edu_rounded),
                   const SizedBox(height: 16),
-                  BrandTextField(controller: _exTransCtrl, labelText: 'Example Translation (English)', prefixIcon: Icons.auto_stories_rounded),
+                  BrandTextField(controller: _exTransCtrl, labelText: l10n.translate('example_translation_english'), prefixIcon: Icons.auto_stories_rounded),
                   const SizedBox(height: 16),
-                  _buildLabel('Pronunciation Audio', isDark),
+                  _buildLabel(l10n.translate('pronunciation_audio'), isDark),
                   EditorUtils.buildAudioRecorderPlaceholder(
                     context: context,
                     currentAudioUrl: _audioUrl,
@@ -825,7 +830,7 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Audio Attached',
+                            l10n.translate('audio_attached'),
                             style: AppTypography.body.copyWith(
                               color: isDark ? Colors.white70 : AppColors.forest900,
                               fontSize: 12,
@@ -834,7 +839,7 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
                         ),
                         IconButton(
                           icon: const Icon(Icons.delete_outline_rounded, color: AppColors.semanticRed, size: 20),
-                          tooltip: 'Remove Audio',
+                          tooltip: l10n.translate('remove_audio_tooltip'),
                           onPressed: () {
                             setState(() {
                               _audioUrl = null;
@@ -848,9 +853,9 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
                   SizedBox(
                     width: double.infinity,
                     child: BrandButton(
-                      text: _loading ? 'SAVING...' : 'SAVE',
+                      text: _loading ? l10n.translate('saving_caps') : l10n.translate('save').toUpperCase(),
                       type: BrandButtonType.primary,
-                      onTap: _loading ? null : _save,
+                      onTap: _loading ? null : () => _save(l10n),
                     ),
                   ),
                   const SizedBox(height: 40),
@@ -886,10 +891,10 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
     );
   }
 
-  Future<void> _save() async {
+  Future<void> _save(AppLocalization l10n) async {
     if (_termCtrl.text.isEmpty || _defCtrl.text.isEmpty) {
       HapticService.warning();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Term and Definition are required.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.translate('term_def_required'))));
       return;
     }
 
@@ -924,12 +929,12 @@ class _EntryFormSheetState extends ConsumerState<_EntryFormSheet> {
       if (mounted) {
         HapticService.success();
         Navigator.of(context).pop();
-        messenger.showSnackBar(const SnackBar(content: Text('Entry saved successfully.')));
+        messenger.showSnackBar(SnackBar(content: Text(l10n.translate('entry_saved_success'))));
       }
     } catch (e) {
       if (mounted) {
         HapticService.error();
-        messenger.showSnackBar(SnackBar(content: Text('Save failed: $e')));
+        messenger.showSnackBar(SnackBar(content: Text(l10n.translate('save_failed_msg', params: {'error': '$e'}))));
       }
     } finally {
       if (mounted) setState(() => _loading = false);

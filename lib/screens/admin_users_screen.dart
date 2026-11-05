@@ -216,6 +216,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   Widget _buildHeader(BuildContext context, AppLocalization l10n) {
     return AdminScreenHeader(
       title: l10n.translate('user_management'),
+      subtitle: 'Manage user accounts, staff roles, and community access',
       eyebrow: 'ADMINISTRATION CONSOLE',
     );
   }

@@ -7,6 +7,7 @@ import '../widgets/brand_card.dart';
 import '../widgets/brand_button.dart';
 import '../widgets/brand_background.dart';
 import '../services/srs_service.dart';
+import '../utils/app_localization.dart';
 
 enum QuizTaskType { mcq, matching, scrambled, audio }
 
@@ -108,7 +109,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isFinished) return _buildResultScreen();
+    final l10n = ref.watch(localizationProvider);
+    if (_isFinished) return _buildResultScreen(l10n);
     final task = _tasks[_currentIndex];
 
     return Scaffold(
@@ -119,7 +121,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
-            title: Text("Quest: ${_currentIndex + 1}/${_tasks.length}"),
+            title: Text("Quest ${_currentIndex + 1}/${_tasks.length}"),
             leading: IconButton(
               icon: const Icon(Icons.close_rounded),
               onPressed: () => context.pop(),
@@ -269,7 +271,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     );
   }
 
-  Widget _buildResultScreen() {
+  Widget _buildResultScreen(AppLocalization l10n) {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: BrandBackground(
@@ -281,12 +283,12 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
               children: [
                 const Text("🏆", style: TextStyle(fontSize: 80)),
                 const SizedBox(height: 24),
-                Text("Ancestral Mastery", style: AppTypography.display.copyWith(color: AppColors.gold500, fontSize: 32)),
+                Text(l10n.translate('quiz_passed'), style: AppTypography.display.copyWith(color: AppColors.gold500, fontSize: 32)),
                 const SizedBox(height: 12),
                 Text("Your IQ session earned $_score XP!", style: AppTypography.h3.copyWith(color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : AppColors.forest900)),
                 const SizedBox(height: 40),
                 BrandButton(
-                  text: "Return to Trail",
+                  text: l10n.translate('return_to_trail'),
                   type: BrandButtonType.primary,
                   onTap: () => Navigator.pop(context),
                 ),
