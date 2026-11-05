@@ -1033,12 +1033,40 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     );
   }
 
+  Widget _buildRecordingTipBanner() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.gold500.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.gold500.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.tips_and_updates_rounded, size: 16, color: AppColors.gold500),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'For best accuracy: Speak clearly & loudly near the mic, in a quiet space.',
+              style: AppTypography.caption.copyWith(
+                color: Colors.white70,
+                fontSize: 11,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildUserRecordingCard(bool isDark, AppLocalization l10n) {
     return BrandCard(
       theme: BrandCardTheme.vibrant,
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
+          _buildRecordingTipBanner(),
           if (_state == AudioComparisonState.recording) ...[
             _buildActiveRecordingIndicator(),
           ] else if (_state == AudioComparisonState.comparing) ...[
