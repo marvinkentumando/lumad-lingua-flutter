@@ -151,5 +151,108 @@ void main() {
       expect(normalResult.isSilent, isFalse);
       expect(normalResult.isQuiet, isFalse);
     });
+
+    test('Rejects compressed containers instead of wrapping them as PCM', () {
+      final webm = Uint8List.fromList([
+        0x1A, 0x45, 0xDF, 0xA3, 0x9F, 0x42, 0x86, 0x81, 0x01, 0x42, 0x82, 0x84,
+        0x77, 0x65, 0x62, 0x6D,
+      ]);
+      expect(
+        () => WavDecoder.ensureWavBytes(webm),
+        throwsA(isA<WavDecodeException>()),
+      );
+      expect(
+        () => WavDecoder.decodeAudioBytes(webm),
+        throwsA(isA<WavDecodeException>()),
+      );
+
+      final m4a = Uint8List.fromList([
+        0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70, 0x4D, 0x34, 0x41, 0x20,
+        0x00, 0x00, 0x00, 0x00,
+      ]);
+      expect(
+        () => WavDecoder.decodeAudioBytes(m4a),
+        throwsA(isA<WavDecodeException>()),
+      );
+    });
+
+    test('Decodes IEEE float 32-bit WAV samples (format code 3)', () {
+      final floatSamples = List.generate(1600, (i) => 0.4 * math.sin(2 * math.pi * 440 * i / 16000));
+      final bd = ByteData(44 + floatSamples.length * 4);
+
+      void writeAscii(int offset, String text) {
+        for (int i = 0; i < text.length; i++) {
+          bd.setUint8(offset + i, text.codeUnitAt(i));
+        }
+      }
+
+      final dataSize = floatSamples.length * 4;
+      writeAscii(0, 'RIFF');
+      bd.setUint32(4, 36 + dataSize, Endian.little);
+      writeAscii(8, 'WAVE');
+      writeAscii(12, 'fmt ');
+      bd.setUint32(16, 16, Endian.little);
+      bd.setUint16(20, 3, Endian.little); // IEEE float
+      bd.setUint16(22, 1, Endian.little);
+      bd.setUint32(24, 16000, Endian.little);
+      bd.setUint32(28, 16000 * 4, Endian.little);
+      bd.setUint16(32, 4, Endian.little);
+      bd.setUint16(34, 32, Endian.little);
+      writeAscii(36, 'data');
+      bd.setUint32(40, dataSize, Endian.little);
+      for (int i = 0; i < floatSamples.length; i++) {
+        bd.setFloat32(44 + i * 4, floatSamples[i], Endian.little);
+      }
+
+      final result = WavDecoder.decodeAudioBytes(bd.buffer.asUint8List());
+      expect(result.pcmSamples.length, equals(floatSamples.length));
+      for (int i = 0; i < 200; i++) {
+        expect(result.pcmSamples[i], closeTo(floatSamples[i], 1e-6));
+      }
+    });
+
+    test('Windowed-sinc resampling preserves duration and amplitude of a 48 kHz tone', () {
+      final tone48k = List.generate(48000, (i) => math.sin(2 * math.pi * 1000 * i / 48000));
+      final resampled = WavDecoder.resampleToTargetRate(tone48k, 48000);
+
+      expect(resampled.length, equals(16000));
+      final peak = resampled.map((s) => s.abs()).reduce(math.max);
+      expect(peak, greaterThan(0.9));
+      expect(peak, lessThan(1.1));
+    });
+
+    test('Learner and reference preparation share the same loudness target', () {
+      final cleanTone = List.generate(8000, (i) => 0.3 * math.sin(2 * math.pi * 220 * i / 16000));
+
+      final learner = WavDecoder.prepareLearnerPcm(cleanTone);
+      final reference = WavDecoder.prepareReferencePcm(cleanTone);
+
+      double rmsOf(List<double> samples) {
+        final sum = samples.fold<double>(0.0, (acc, s) => acc + s * s);
+        return math.sqrt(sum / samples.length);
+      }
+
+      expect(rmsOf(learner), closeTo(WavDecoder.targetRmsLinear, 0.01));
+      expect(rmsOf(reference), closeTo(WavDecoder.targetRmsLinear, 0.01));
+    });
+
+    test('Noise gate no longer treats the opening phoneme as the noise floor', () {
+      // Speech starting at sample 0 (no leading silence) over a faint noise bed.
+      final samples = List.generate(16000, (i) {
+        final envelope = i < 4800 ? 0.30 : 0.0;
+        return envelope * math.sin(2 * math.pi * 220 * i / 16000) + 0.0008 * math.sin(i * 0.7);
+      });
+
+      final processed = WavDecoder.prepareLearnerPcm(samples);
+      final openingRms = math.sqrt(
+        processed.take(800).fold<double>(0.0, (acc, s) => acc + s * s) / 800,
+      );
+      final overallRms = math.sqrt(
+        processed.fold<double>(0.0, (acc, s) => acc + s * s) / processed.length,
+      );
+
+      // The onset must survive instead of being gated down to near silence.
+      expect(openingRms, greaterThan(overallRms * 0.7));
+    });
   });
 }

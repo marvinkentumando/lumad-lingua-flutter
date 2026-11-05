@@ -23,7 +23,9 @@ import '../models/quest.dart';
 import '../providers/student_provider.dart';
 import '../providers/quest_provider.dart';
 import '../utils/wav_decoder.dart';
+import '../utils/audio_bytes_decoder.dart';
 import '../utils/app_localization.dart';
+import '../services/firebase_service.dart';
 
 enum AudioComparisonState {
   idle,       // Ready to start recording
@@ -47,6 +49,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
 
   AudioComparisonState _state = AudioComparisonState.idle;
   double _scorePercentage = 0.0;
+  bool _isMismatchResult = false;
+  String _resultFeedback = "";
   int _currentIndex = 0;
   bool _isShuffled = false;
   List<SupabaseDatasetEntry> _items = [];
@@ -157,9 +161,56 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       nativeBytes = await nativeFile.readAsBytes();
     }
 
-    final validNativeWav = WavDecoder.ensureWavBytes(nativeBytes);
-    final nativeWavResult = WavDecoder.decodeWavBytes(validNativeWav);
-    return nativeWavResult.pcmSamples;
+    return (await decodeAudioBytes(nativeBytes)).pcmSamples;
+  }
+
+  static const int _maxReferenceTakes = 6;
+
+  /// Every verified take of this phrase across all compatible runs, ordered so
+  /// that each run contributes a take before any run contributes a second one.
+  /// Comparing against one take made the score depend on how typical that single
+  /// recording happened to be.
+  List<ReferenceAudioTake> _collectReferenceTakes(SupabaseDatasetEntry currentItem) {
+    final byRun = <String, List<ReferenceAudioTake>>{};
+    final seenPaths = <String>{};
+    for (final entry in _items) {
+      if (entry.folderName != currentItem.folderName) continue;
+      if (!entry.isCompatible || !entry.isAvailable) continue;
+      final takes = byRun.putIfAbsent(entry.runId, () => <ReferenceAudioTake>[]);
+      for (final take in entry.takes) {
+        if (seenPaths.add(take.audioPath)) takes.add(take);
+      }
+    }
+
+    final runs = byRun.keys.toList()..sort();
+    for (final run in runs) {
+      byRun[run]!.sort((a, b) => a.takeNumber.compareTo(b.takeNumber));
+    }
+
+    final ordered = <ReferenceAudioTake>[];
+    var takeIndex = 0;
+    while (ordered.length < _maxReferenceTakes) {
+      var addedAny = false;
+      for (final run in runs) {
+        final takes = byRun[run]!;
+        if (takeIndex >= takes.length) continue;
+        ordered.add(takes[takeIndex]);
+        addedAny = true;
+        if (ordered.length >= _maxReferenceTakes) break;
+      }
+      if (!addedAny) break;
+      takeIndex++;
+    }
+    return ordered;
+  }
+
+  PronunciationAlgorithm _configuredAlgorithm() {
+    final config = ref.read(appConfigProvider).value;
+    final configuredName = config?.activePronunciationAlgorithm ?? 'dtw';
+    return PronunciationAlgorithm.values.firstWhere(
+      (algorithm) => algorithm.name == configuredName,
+      orElse: () => PronunciationAlgorithm.dtw,
+    );
   }
 
   Future<void> _playUserAudio() async {
@@ -207,6 +258,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         _currentIndex++;
         _state = AudioComparisonState.idle;
         _scorePercentage = 0.0;
+        _isMismatchResult = false;
+        _resultFeedback = "";
         _recordedFilePath = null;
         _userVisualWaveform = [];
         _nativeVisualWaveform = [];
@@ -224,6 +277,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         _currentIndex--;
         _state = AudioComparisonState.idle;
         _scorePercentage = 0.0;
+        _isMismatchResult = false;
+        _resultFeedback = "";
         _recordedFilePath = null;
         _userVisualWaveform = [];
         _nativeVisualWaveform = [];
@@ -301,8 +356,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         encoder: AudioEncoder.wav,
         sampleRate: 16000,
         numChannels: 1,
-        autoGain: true,
-        echoCancel: true,
+        autoGain: false,
+        echoCancel: false,
       );
 
       bool isWavSupported = true;
@@ -454,8 +509,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         return;
       }
 
-      final validWavBytes = WavDecoder.ensureWavBytes(bytes);
-      final learnerWavResult = WavDecoder.decodeWavBytes(validWavBytes);
+      final learnerWavResult = await decodeAudioBytes(bytes);
       final learnerPcm = learnerWavResult.pcmSamples;
 
       if (learnerPcm.length < WavDecoder.minimumComparisonSamples) {
@@ -495,33 +549,11 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         return;
       }
 
-      if (signal.isInterrupted) {
-        if (mounted) {
-          setState(() {
-            _state = AudioComparisonState.error;
-            _errorMessage = "Microphone connection was interrupted. Please check your audio input device and try again.";
-            _isQuietWarning = false;
-          });
-        }
-        return;
-      }
-
       if (signal.isExcessivePause) {
         if (mounted) {
           setState(() {
             _state = AudioComparisonState.error;
             _errorMessage = "Long pause detected. Try pronouncing the complete phrase smoothly without stopping.";
-            _isQuietWarning = false;
-          });
-        }
-        return;
-      }
-
-      if (signal.isMultiSpeaker) {
-        if (mounted) {
-          setState(() {
-            _state = AudioComparisonState.error;
-            _errorMessage = "Multiple voices detected. Please make sure you are the only one speaking.";
             _isQuietWarning = false;
           });
         }
@@ -543,7 +575,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       _userVisualWaveform = WavDecoder.extractVisualWaveform(learnerPcm, noOfSamples: 128);
 
       try {
-        final preprocessedPcm = WavDecoder.preprocessPcmRecommendedV1(learnerPcm);
+        final preprocessedPcm = WavDecoder.prepareLearnerPcm(learnerPcm);
         _preprocessedWavBytes = WavDecoder.encodePcmToWavBytes(preprocessedPcm, sampleRate: 16000);
       } catch (e) {
         debugPrint('Failed to pre-encode preprocessed preview: $e');
@@ -589,6 +621,8 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       _state = AudioComparisonState.idle;
       _userVisualWaveform = [];
       _scorePercentage = 0.0;
+      _isMismatchResult = false;
+      _resultFeedback = "";
       _errorMessage = null;
       _isQuietWarning = false;
       _isStoppingRecording = false;
@@ -612,8 +646,6 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       }
       return;
     }
-
-    final take1 = currentItem.primaryTake ?? currentItem.takes.firstWhere((t) => t.takeNumber == 1, orElse: () => currentItem.takes.first);
 
     HapticService.selection();
 
@@ -644,8 +676,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         learnerBytes = await learnerFile.readAsBytes();
       }
 
-      final validLearnerWav = WavDecoder.ensureWavBytes(learnerBytes);
-      final learnerWavResult = WavDecoder.decodeWavBytes(validLearnerWav);
+      final learnerWavResult = await decodeAudioBytes(learnerBytes);
       final learnerPcm = learnerWavResult.pcmSamples;
 
       if (learnerPcm.length < WavDecoder.minimumComparisonSamples) {
@@ -671,18 +702,13 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         }
         return;
       }
-      if (signal.isClipped || signal.isInterrupted || signal.isExcessivePause ||
-          signal.isMultiSpeaker || signal.isHighNoise) {
+      if (signal.isClipped || signal.isExcessivePause || signal.isHighNoise) {
         if (mounted) {
           final reason = signal.isClipped
               ? 'Recording is distorted or too loud. Move farther from the microphone and record again.'
-              : signal.isInterrupted
-                  ? 'The microphone connection was interrupted. Check the audio input and record again.'
-                  : signal.isExcessivePause
-                      ? 'A long pause was detected. Say the complete phrase smoothly and record again.'
-                      : signal.isMultiSpeaker
-                          ? 'More than one voice was detected. Record again with only your voice.'
-                          : 'High background noise was detected. Move somewhere quieter and record again.';
+              : signal.isExcessivePause
+                  ? 'A long pause was detected. Say the complete phrase smoothly and record again.'
+                  : 'High background noise was detected. Move somewhere quieter and record again.';
           setState(() {
             _state = AudioComparisonState.error;
             _errorMessage = reason;
@@ -692,40 +718,37 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
         return;
       }
 
-      // 2. Fetch & decode Take 1 PCM
-      final nativePcm1 = await _fetchAndDecodeNativePcm(currentItem, take1);
-      _nativeVisualWaveform = WavDecoder.extractVisualWaveform(nativePcm1, noOfSamples: 128);
-
-      // Compare against Take 1
-      final score1 = PronunciationService.analyzePronunciation(
-        nativePcm1,
-        learnerPcm,
-        strictness: PronunciationStrictness.normal,
-        algorithm: PronunciationAlgorithm.dtw,
-      );
-      _logExploratoryPitchRobustness('take 1', nativePcm1, learnerPcm);
-
-      double finalScore = score1.overallScore;
-
-      // Check if Take 2 exists for extra comparison accuracy
-      final take2 = currentItem.takes.where((t) => t.takeNumber == 2).firstOrNull;
-      if (take2 != null) {
+      // 2. Load and compare against every verified take of this phrase
+      final referencePcms = <List<double>>[];
+      List<double>? primaryReferencePcm;
+      for (final take in _collectReferenceTakes(currentItem)) {
         try {
-          final nativePcm2 = await _fetchAndDecodeNativePcm(currentItem, take2);
-          final score2 = PronunciationService.analyzePronunciation(
-            nativePcm2,
-            learnerPcm,
-            strictness: PronunciationStrictness.normal,
-            algorithm: PronunciationAlgorithm.dtw,
-          );
-          _logExploratoryPitchRobustness('take 2', nativePcm2, learnerPcm);
-          // Average verified takes so natural variation between reference speakers
-          // does not make one take alone determine the learner's result.
-          finalScore = (score1.overallScore + score2.overallScore) / 2.0;
-        } catch (e2) {
-          debugPrint('Take 2 comparison skipped due to error: $e2');
+          final pcm = await _fetchAndDecodeNativePcm(currentItem, take);
+          if (pcm.length < WavDecoder.minimumComparisonSamples) continue;
+          referencePcms.add(pcm);
+          primaryReferencePcm ??= pcm;
+        } catch (e) {
+          debugPrint('Skipping undecodable reference take ${take.audioPath}: $e');
         }
       }
+
+      if (referencePcms.isEmpty) {
+        throw Exception('No reference audio could be decoded for this phrase.');
+      }
+
+      _nativeVisualWaveform = WavDecoder.extractVisualWaveform(primaryReferencePcm!, noOfSamples: 128);
+
+      // Distances are aggregated in distance space inside the service, then
+      // mapped once; averaging percentages from a non-linear map double-penalised
+      // learners who matched one take well.
+      final referenceSet = PronunciationService.buildReferenceSet(referencePcms);
+      final score = PronunciationService.compareAgainstReferenceSet(
+        referenceSet,
+        learnerPcm,
+        strictness: PronunciationStrictness.normal,
+        algorithm: _configuredAlgorithm(),
+      );
+      final finalScore = score.overallScore;
 
       if (mounted) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -733,12 +756,19 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
 
         setState(() {
           _scorePercentage = finalScore;
+          _isMismatchResult = score.isMismatch;
+          _resultFeedback = score.feedback;
           _state = AudioComparisonState.result;
         });
 
         _showResultPopupModal(context, isDark, l10n);
 
-        if (_scorePercentage >= 60.0) {
+        if (score.isMismatch) {
+          HapticService.selection();
+          try {
+            await _nativePlayer.play(ap.AssetSource('audio/error.MP3'));
+          } catch (_) {}
+        } else if (_scorePercentage >= 60.0) {
           HapticService.success();
           try {
             ref.read(studentProvider.notifier).addXp(15);
@@ -1269,13 +1299,22 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
     // High contrast dark font colors for excellent legibility over gold card background
     Color scoreColor = const Color(0xFF4E342E);
     String feedback = l10n.translate('feedback_good_effort');
+    String title = l10n.translate('acoustic_match');
 
-    if (_scorePercentage >= 80.0) {
+    if (_isMismatchResult) {
+      scoreColor = const Color(0xFFBF360C);
+      title = 'NOT THE TARGET PHRASE';
+      feedback = _resultFeedback.isNotEmpty
+          ? _resultFeedback
+          : "That doesn't sound like the target phrase. Please listen and record the phrase shown.";
+    } else if (_scorePercentage >= 80.0) {
       scoreColor = const Color(0xFF1B5E20);
-      feedback = l10n.translate('feedback_excellent');
+      feedback = _resultFeedback.isNotEmpty ? _resultFeedback : l10n.translate('feedback_excellent');
     } else if (_scorePercentage < 60.0) {
       scoreColor = const Color(0xFFBF360C);
-      feedback = l10n.translate('feedback_needs_work');
+      feedback = _resultFeedback.isNotEmpty ? _resultFeedback : l10n.translate('feedback_needs_work');
+    } else if (_resultFeedback.isNotEmpty) {
+      feedback = _resultFeedback;
     }
 
     return BrandCard(
@@ -1284,7 +1323,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
       child: Column(
         children: [
           Text(
-            l10n.translate('acoustic_match'),
+            title,
             style: AppTypography.label.copyWith(
               color: Colors.black87,
               fontWeight: FontWeight.w900,
@@ -1310,7 +1349,7 @@ class _AudioComparisonScreenState extends ConsumerState<AudioComparisonScreen> {
               fontSize: 14,
             ),
           ),
-          if (_scorePercentage >= 60.0) ...[
+          if (!_isMismatchResult && _scorePercentage >= 60.0) ...[
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

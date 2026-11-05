@@ -1,6 +1,7 @@
 import 'dart:math' as math;
-import 'mfcc_service.dart';
+
 import '../utils/wav_decoder.dart';
+import 'mfcc_service.dart';
 import 'pronunciation_comparer_interface.dart';
 
 enum PronunciationAlgorithm {
@@ -18,6 +19,55 @@ enum PronunciationStrictness {
   const PronunciationStrictness(this.sensitivity);
 }
 
+/// Scale reference for the normalized DTW distance of one phrase.
+///
+/// [mean] and [sigma] describe the distance between two *native* recordings of
+/// the same phrase ("same word, different take/speaker"). Mapping the learner's
+/// distance relative to that distribution makes scores comparable across phrases
+/// and speakers, instead of using one global hand-tuned constant.
+class ReferenceBaseline {
+  final double mean;
+  final double sigma;
+  final int pairCount;
+  final bool isCalibrated;
+
+  const ReferenceBaseline({
+    required this.mean,
+    required this.sigma,
+    required this.pairCount,
+    required this.isCalibrated,
+  });
+
+  /// Used when only one reference recording exists and no reference-to-reference
+  /// distance can be measured. Provisional (CMN feature scale) until fitted on a
+  /// labelled set; measured baselines replace it as soon as two takes exist.
+  static const ReferenceBaseline provisional = ReferenceBaseline(
+    mean: 6.0,
+    sigma: 1.5,
+    pairCount: 0,
+    isCalibrated: false,
+  );
+}
+
+/// A phrase's reference recordings, pre-processed and featurized once so that
+/// every take and every cross-take pair can be compared without recomputation.
+class PronunciationReferenceSet {
+  final List<List<List<double>>> referenceFeatures;
+  final List<double> primaryPcm;
+  final ReferenceBaseline baseline;
+  final int baseTakeCount;
+
+  const PronunciationReferenceSet({
+    required this.referenceFeatures,
+    required this.primaryPcm,
+    required this.baseline,
+    this.baseTakeCount = 0,
+  });
+
+  bool get isUsable => referenceFeatures.isNotEmpty && primaryPcm.isNotEmpty;
+  int get takeCount => baseTakeCount > 0 ? baseTakeCount : referenceFeatures.length;
+}
+
 class PronunciationScore {
   final double overallScore;
   final double accuracy;
@@ -28,6 +78,21 @@ class PronunciationScore {
   final String feedback;
   final PronunciationAlgorithm algorithmUsed;
 
+  /// Path-normalized distance in the MFCC feature space (NaN for non-DTW paths).
+  final double distance;
+
+  /// True when the score map was anchored on measured reference-to-reference
+  /// distances rather than the provisional baseline.
+  final bool isCalibrated;
+
+  /// Number of reference takes used for this comparison.
+  final int referenceCount;
+
+  /// True when the recording is very unlikely to be the target phrase (or is
+  /// non-speech that slipped past VAD). The score is forced to zero and the
+  /// learner should re-record the phrase shown.
+  final bool isMismatch;
+
   PronunciationScore({
     required this.overallScore,
     required this.accuracy,
@@ -37,6 +102,10 @@ class PronunciationScore {
     required this.studentWaveform,
     this.feedback = "",
     this.algorithmUsed = PronunciationAlgorithm.dtw,
+    this.distance = double.nan,
+    this.isCalibrated = false,
+    this.referenceCount = 1,
+    this.isMismatch = false,
   });
 }
 
@@ -110,74 +179,266 @@ class PronunciationService implements IPronunciationComparer {
         'fluency': score.fluency,
         'clarity': score.clarity,
         'algorithm': score.algorithmUsed.name,
+        'distance': score.distance,
+        'calibrated': score.isCalibrated,
+        'referenceCount': score.referenceCount,
+        'mismatch': score.isMismatch,
         'runId': request.metadata.runId,
         'configHash': request.metadata.configHash,
       },
     );
   }
 
-  /// Compares two 16kHz mono PCM waveforms using the Recommended (v1) preprocessing pipeline.
+  /// Compares a learner recording against a single reference take.
+  ///
+  /// [referenceIsPreprocessed] keeps the reference out of the learner noise gate:
+  /// the Supabase dataset takes were already denoised/trimmed/normalized.
   static PronunciationScore analyzePronunciation(
     List<double> nativeSamples,
     List<double> userSamples, {
     PronunciationStrictness strictness = PronunciationStrictness.normal,
     PronunciationAlgorithm algorithm = PronunciationAlgorithm.dtw,
+    bool referenceIsPreprocessed = true,
+    ReferenceBaseline? baseline,
   }) {
-    // 1. Preprocessing using the exact Recommended (v1) pipeline
-    List<double> processedNative = [];
-    List<double> processedUser = [];
+    if (nativeSamples.isEmpty || userSamples.isEmpty) {
+      return _emptyScore(nativeSamples, userSamples);
+    }
 
+    List<double> processedNative;
+    List<List<double>> nativeFeatures;
     try {
-      processedNative = WavDecoder.preprocessPcmRecommendedV1(nativeSamples);
-      processedUser = WavDecoder.preprocessPcmRecommendedV1(userSamples);
-    } catch (e) {
+      processedNative = referenceIsPreprocessed
+          ? WavDecoder.prepareReferencePcm(nativeSamples)
+          : WavDecoder.prepareLearnerPcm(nativeSamples);
+      nativeFeatures = MFCCService.extractMFCC(processedNative);
+    } catch (_) {
+      return _emptyScore(nativeSamples, userSamples);
+    }
+    if (nativeFeatures.isEmpty) {
       return _emptyScore(nativeSamples, userSamples);
     }
 
-    if (processedNative.isEmpty || processedUser.isEmpty) {
-      return _emptyScore(nativeSamples, userSamples);
+    final referenceSet = PronunciationReferenceSet(
+      referenceFeatures: [nativeFeatures],
+      primaryPcm: processedNative,
+      baseline: baseline ?? ReferenceBaseline.provisional,
+      baseTakeCount: 1,
+    );
+
+    return compareAgainstReferenceSet(
+      referenceSet,
+      userSamples,
+      strictness: strictness,
+      algorithm: algorithm,
+    );
+  }
+
+  /// Builds a reference set from every verified take of one phrase.
+  ///
+  /// With two or more takes the baseline is measured from the native-vs-native
+  /// distances, which calibrates the score to "as close as another native
+  /// recording of this phrase" instead of a fixed global constant.
+  static PronunciationReferenceSet buildReferenceSet(List<List<double>> referencePcmSamples) {
+    final features = <List<List<double>>>[];
+    final processedPcms = <List<double>>[];
+
+    for (final pcm in referencePcmSamples) {
+      if (pcm.isEmpty) continue;
+      try {
+        final processed = WavDecoder.prepareReferencePcm(pcm);
+        if (processed.isEmpty) continue;
+        final mfcc = MFCCService.extractMFCC(processed);
+        if (mfcc.isEmpty) continue;
+        features.add(mfcc);
+        processedPcms.add(processed);
+        // Lightweight pitch/timbre variation: resample the reference by small
+        // factors so the learner can match natural speaker-pitch differences.
+        // Only the MFCCs are added (not the PCM) to keep scoring memory bounded.
+        for (final factor in const [0.94, 1.06]) {
+          final variantRate = (WavDecoder.targetSampleRate * factor).round();
+          final variantPcm = WavDecoder.resampleToTargetRate(processed, variantRate);
+          if (variantPcm.length < 200) continue;
+          // Re-normalize to the same target loudness as the base reference.
+          final variantReady = WavDecoder.prepareReferencePcm(variantPcm);
+          final variantMfcc = MFCCService.extractMFCC(variantReady);
+          if (variantMfcc.isNotEmpty) features.add(variantMfcc);
+        }
+      } catch (_) {
+        // A single corrupt take must not discard the whole reference set.
+      }
     }
 
-    // 2. Feature Extraction (13 MFCC coefficients)
-    // Keep the reference and learner in the same feature space. Per-clip CMVN
-    // makes unrelated words with different spectra look artificially similar.
-    final rawNativeMFCC = MFCCService.extractMFCC(processedNative, normalize: false);
-    final rawUserMFCC = MFCCService.extractMFCC(processedUser, normalize: false);
-    final jointFeatures = MFCCService.normalizeTogether(rawNativeMFCC, rawUserMFCC);
-    final nativeMFCC = jointFeatures.take(rawNativeMFCC.length).toList();
-    final userMFCC = jointFeatures.skip(rawNativeMFCC.length).toList();
+    // Baseline from original (non-augmented) inter-take distances only: augmented
+    // self-variants are closer than a different speaker and would under-estimate
+    // natural variation, making the score too strict.
+    final baseFeatures = features.isEmpty
+        ? <List<List<double>>>[]
+        : [for (int i = 0; i < features.length && i < processedPcms.length * 3; i += 3) features[i]];
+
+    return PronunciationReferenceSet(
+      referenceFeatures: features,
+      primaryPcm: processedPcms.isEmpty ? const [] : processedPcms.first,
+      baseline: _baselineFromReferences(baseFeatures),
+      baseTakeCount: processedPcms.length,
+    );
+  }
+
+  static ReferenceBaseline _baselineFromReferences(List<List<List<double>>> references) {
+    if (references.length < 2) return ReferenceBaseline.provisional;
+
+    final distances = <double>[];
+    for (int i = 0; i < references.length; i++) {
+      for (int j = i + 1; j < references.length; j++) {
+        final distance = MFCCService.calculateMFCCDistance(references[i], references[j]);
+        if (distance.isFinite) distances.add(distance);
+      }
+    }
+    if (distances.isEmpty) return ReferenceBaseline.provisional;
+
+    final mean = distances.reduce((a, b) => a + b) / distances.length;
+    double sumSquaredDeviations = 0.0;
+    for (final distance in distances) {
+      final deviation = distance - mean;
+      sumSquaredDeviations += deviation * deviation;
+    }
+    final sigma = math.sqrt(sumSquaredDeviations / distances.length);
+
+    return ReferenceBaseline(
+      mean: mean,
+      sigma: math.max(sigma, mean * 0.20),
+      pairCount: distances.length,
+      isCalibrated: true,
+    );
+  }
+
+  /// Compares a learner recording against every reference take.
+  ///
+  /// Distances are aggregated in *distance* space (mean of the two best takes)
+  /// and mapped once, instead of averaging percentages from a non-linear map.
+  static PronunciationScore compareAgainstReferenceSet(
+    PronunciationReferenceSet referenceSet,
+    List<double> userSamples, {
+    PronunciationStrictness strictness = PronunciationStrictness.normal,
+    PronunciationAlgorithm algorithm = PronunciationAlgorithm.dtw,
+  }) {
+    if (!referenceSet.isUsable || userSamples.isEmpty) {
+      return _emptyScore(referenceSet.primaryPcm, userSamples);
+    }
+
+    List<double> processedUser;
+    List<List<double>> userFeatures;
+    try {
+      processedUser = WavDecoder.prepareLearnerPcm(userSamples);
+      userFeatures = MFCCService.extractMFCC(processedUser);
+    } catch (_) {
+      return _emptyScore(referenceSet.primaryPcm, userSamples);
+    }
+    if (userFeatures.isEmpty) {
+      return _emptyScore(referenceSet.primaryPcm, userSamples);
+    }
 
     double similarity;
+    var distance = double.nan;
 
-    // 3. Algorithmic Comparison
-    switch (algorithm) {
-      case PronunciationAlgorithm.dtw:
-        similarity = _calculateDTWScore(nativeMFCC, userMFCC, strictness);
-        break;
-      case PronunciationAlgorithm.hmm:
-        similarity = _calculateHMMScore(nativeMFCC, userMFCC, strictness);
-        break;
-      case PronunciationAlgorithm.cosineSimilarity:
-        similarity = _calculateCosineScore(nativeMFCC, userMFCC, strictness);
-        break;
+    if (algorithm == PronunciationAlgorithm.dtw) {
+      final distances = <double>[];
+      for (final referenceFeatures in referenceSet.referenceFeatures) {
+        final candidate = MFCCService.calculateMFCCDistance(referenceFeatures, userFeatures);
+        if (candidate.isFinite) distances.add(candidate);
+      }
+      if (distances.isEmpty) {
+        return _emptyScore(referenceSet.primaryPcm, userSamples);
+      }
+
+      distances.sort();
+      final bestCount = distances.length >= 2 ? 2 : 1;
+      distance = distances.take(bestCount).reduce((a, b) => a + b) / bestCount;
+      similarity = scoreFromDistance(distance, referenceSet.baseline, strictness);
+
+      // Utterance-mismatch / non-target rejection: if the distance is far beyond
+      // the native-vs-native range for this phrase, the recording is very likely
+      // the wrong word/phrase (or non-speech that slipped past VAD). Rejecting
+      // here prevents a misleading percentage for a non-matching utterance.
+      if (distance > _mismatchThreshold(referenceSet.baseline)) {
+        return PronunciationScore(
+          overallScore: 0,
+          accuracy: 0,
+          fluency: 0,
+          clarity: _speechClarity(processedUser),
+          nativeWaveform: referenceSet.primaryPcm,
+          studentWaveform: userSamples,
+          feedback: "That doesn't sound like the target phrase. Please listen to the native speaker and record the phrase shown.",
+          algorithmUsed: algorithm,
+          distance: distance,
+          isCalibrated: referenceSet.baseline.isCalibrated,
+          referenceCount: referenceSet.takeCount,
+          isMismatch: true,
+        );
+      }
+    } else {
+      var best = 0.0;
+      for (final referenceFeatures in referenceSet.referenceFeatures) {
+        final candidate = algorithm == PronunciationAlgorithm.hmm
+            ? _calculateHMMScore(referenceFeatures, userFeatures, strictness)
+            : _calculateCosineScore(referenceFeatures, userFeatures, strictness);
+        if (candidate > best) best = candidate;
+      }
+      similarity = best;
     }
 
-    final accuracy = similarity;
-    final durationRatio = math.min(processedNative.length, processedUser.length) / 
-                         math.max(processedNative.length, processedUser.length);
-    final fluency = (durationRatio * 0.5 + similarity * 0.5).clamp(0.0, 1.0);
-    final clarity = (processedUser.where((v) => v.abs() > 0.05).length / processedUser.length).clamp(0.3, 1.0);
+    final paceRatio = processedUser.length / math.max(1, referenceSet.primaryPcm.length);
+    final paceScore = (1.0 - (paceRatio - 1.0).abs() / 1.5).clamp(0.0, 1.0);
+    final fluency = (0.6 * paceScore + 0.4 * similarity).clamp(0.0, 1.0);
 
     return PronunciationScore(
       overallScore: similarity * 100,
-      accuracy: accuracy,
+      accuracy: similarity,
       fluency: fluency,
-      clarity: clarity,
-      nativeWaveform: nativeSamples,
+      clarity: _speechClarity(processedUser),
+      nativeWaveform: referenceSet.primaryPcm,
       studentWaveform: userSamples,
       feedback: _generateFeedback(similarity),
       algorithmUsed: algorithm,
+      distance: distance,
+      isCalibrated: referenceSet.baseline.isCalibrated,
+      referenceCount: referenceSet.takeCount,
+      isMismatch: false,
     );
+  }
+
+  /// Distance above which an utterance is treated as not matching the target
+  /// phrase (wrong word / non-target speech). Derived from the native-vs-native
+  /// baseline so it adapts per phrase; a conservative absolute floor keeps the
+  /// provisional (single-reference) case from accepting obvious mismatches.
+  static double _mismatchThreshold(ReferenceBaseline baseline) {
+    final sigma = math.max(baseline.sigma, math.max(baseline.mean * 0.15, 1e-6));
+    final calibrated = baseline.mean + 3.5 * sigma;
+    if (baseline.isCalibrated) return math.max(calibrated, baseline.mean * 2.0);
+    // CMN-scale provisional: good ~6, different word ~24 => floor 13 rejects it.
+    return math.max(calibrated, math.max(baseline.mean + 4.0 * sigma, 13.0));
+  }
+
+  /// Maps a path-normalized DTW distance to a 0-1 score.
+  ///
+  /// The logistic pivot sits one standard deviation above the mean
+  /// native-vs-native distance: matching a reference as closely as another
+  /// native take does lands near 75, a clear-but-accented attempt above that, and
+  /// a different word (2+ sigma) falls below 25. [PronunciationStrictness]
+  /// changes the slope, not the pivot, so the four feedback bands stay meaningful.
+  static double scoreFromDistance(
+    double distance,
+    ReferenceBaseline baseline,
+    PronunciationStrictness strictness,
+  ) {
+    if (!distance.isFinite) return 0.0;
+    if (distance <= 0) return 1.0;
+    final sigma = math.max(baseline.sigma, 1e-6);
+    final pivot = baseline.mean + sigma;
+    final slope = 1.1 * (strictness.sensitivity / 3.0);
+    final z = (distance - pivot) / sigma;
+    final score = 1.0 / (1.0 + math.exp(slope * z));
+    return score.isFinite ? score.clamp(0.0, 1.0) : 0.0;
   }
 
   static double compareWaveforms(
@@ -189,8 +450,8 @@ class PronunciationService implements IPronunciationComparer {
     if (nativeWave.isEmpty || userWave.isEmpty) return 0.0;
 
     final result = analyzePronunciation(
-      nativeWave, 
-      userWave, 
+      nativeWave,
+      userWave,
       strictness: strictness,
       algorithm: algorithm,
     );
@@ -259,28 +520,8 @@ class PronunciationService implements IPronunciationComparer {
     return numerator / denominator;
   }
 
-  static double _calculateDTWScore(
-    List<List<double>> s, 
-    List<List<double>> t, 
-    PronunciationStrictness strictness
-  ) {
-    final distance = MFCCService.calculateMFCCDistance(s, t);
-    if (distance == double.infinity) return 0.0;
-
-    // Calibrated 39-D CMVN MFCC feature space distance mapping:
-    // Identical audio: d = 0.0 -> 100%
-    // Phone speaker playback / clear native speech: d ~ 8.0 to 10.0 -> 70% to 85%
-    // Moderate speech attempt: d ~ 11.0 to 13.5 -> 50% to 65%
-    // Mispronounced / wrong word: d >= 16.0 -> < 25%
-    final baseMin = 5.0;
-    final baseRange = 15.0 / strictness.sensitivity;
-
-    final normalizedScore = 1.0 - ((distance - baseMin) / baseRange);
-    return normalizedScore.clamp(0.0, 1.0);
-  }
-
   static double _calculateHMMScore(
-    List<List<double>> modelFrames, 
+    List<List<double>> modelFrames,
     List<List<double>> observationFrames,
     PronunciationStrictness strictness
   ) {
@@ -302,31 +543,18 @@ class PronunciationService implements IPronunciationComparer {
   }
 
   static double _calculateCosineScore(
-    List<List<double>> s, 
+    List<List<double>> s,
     List<List<double>> t,
     PronunciationStrictness strictness
   ) {
-    final n = s.length;
-    final m = t.length;
-    List<List<double>> dtw = List.generate(n + 1, (_) => List.filled(m + 1, 0.0));
+    final alignment = MFCCService.align(
+      s,
+      t,
+      frameCost: (a, b) => 1.0 - _cosineSimilarity(a, b),
+    );
+    if (!alignment.isUsable) return 0.0;
 
-    for (int i = 1; i <= n; i++) {
-      for (int j = 1; j <= m; j++) {
-        double cost = 1.0 - _cosineSimilarity(s[i - 1], t[j - 1]);
-        if (i == 1 && j == 1) {
-          dtw[i][j] = cost;
-        } else if (i == 1) {
-          dtw[i][j] = cost + dtw[i][j - 1];
-        } else if (j == 1) {
-          dtw[i][j] = cost + dtw[i - 1][j];
-        } else {
-          dtw[i][j] = cost + math.min(dtw[i - 1][j], math.min(dtw[i][j - 1], dtw[i - 1][j - 1]));
-        }
-      }
-    }
-
-    final avgDistance = dtw[n][m] / (n + m);
-    return math.exp(-strictness.sensitivity * 2.0 * avgDistance).clamp(0.0, 1.0);
+    return math.exp(-strictness.sensitivity * 2.0 * alignment.meanLocalCost).clamp(0.0, 1.0);
   }
 
   static double _cosineSimilarity(List<double> a, List<double> b) {
@@ -348,6 +576,25 @@ class PronunciationService implements IPronunciationComparer {
       sum += math.pow(a[i] - b[i], 2);
     }
     return math.sqrt(sum);
+  }
+
+  /// Share of 10 ms frames carrying meaningful energy relative to the clip peak.
+  /// This is an activity measure, not a perceptual clarity judgement.
+  static double _speechClarity(List<double> pcm) {
+    if (pcm.length < 160) return 0.0;
+    final frames = <double>[];
+    for (int i = 0; i + 160 <= pcm.length; i += 160) {
+      double sum = 0.0;
+      for (int j = i; j < i + 160; j++) {
+        sum += pcm[j] * pcm[j];
+      }
+      frames.add(math.sqrt(sum / 160));
+    }
+    if (frames.isEmpty) return 0.0;
+    final peak = frames.reduce(math.max);
+    if (peak <= 0) return 0.0;
+    final active = frames.where((value) => value >= peak * 0.10).length;
+    return (active / frames.length).clamp(0.0, 1.0);
   }
 
   static PronunciationScore _emptyScore(List<double> n, List<double> u) {

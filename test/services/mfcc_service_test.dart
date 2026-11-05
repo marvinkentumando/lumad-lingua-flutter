@@ -37,7 +37,7 @@ void main() {
       }
     });
 
-    test('CMVN normalizes each feature channel to zero mean and unit variance across frames', () {
+    test('CMN centers each feature channel on zero while keeping its variance', () {
       final samples = List.generate(4800, (i) => 0.2 * math.sin(2 * math.pi * 300 * i / 16000));
       final mfccMatrix = MFCCService.extractMFCC(samples);
 
@@ -52,15 +52,16 @@ void main() {
         }
         final mean = sum / numFrames;
         expect(mean.abs(), lessThan(1e-5), reason: 'Feature channel $d mean should be ~0');
-
-        double sumSqDiff = 0.0;
-        for (int t = 0; t < numFrames; t++) {
-          final diff = mfccMatrix[t][d] - mean;
-          sumSqDiff += diff * diff;
-        }
-        final stdDev = math.sqrt(sumSqDiff / numFrames);
-        expect((stdDev - 1.0).abs(), lessThan(1e-3), reason: 'Feature channel $d stdDev should be ~1.0');
       }
+
+      // Variance is intentionally preserved: scaling it away erases the spectral
+      // envelope that separates words from each other.
+      double varianceOfChannel0 = 0.0;
+      for (int t = 0; t < numFrames; t++) {
+        varianceOfChannel0 += mfccMatrix[t][0] * mfccMatrix[t][0];
+      }
+      varianceOfChannel0 /= numFrames;
+      expect(varianceOfChannel0, isNot(closeTo(1.0, 1e-3)));
     });
 
     test('Handles short audio safely without throwing exceptions or generating non-finite values', () {

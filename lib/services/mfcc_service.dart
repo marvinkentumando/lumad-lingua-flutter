@@ -1,5 +1,47 @@
 import 'dart:math';
 
+/// Result of a dynamic-time-warping alignment between two feature sequences.
+class DtwAlignment {
+  /// Accumulated local cost divided by the total step weight of the optimal
+  /// path, i.e. the mean frame-level cost along the alignment.
+  final double meanLocalCost;
+
+  /// Raw accumulated cost of the optimal path.
+  final double totalCost;
+
+  /// Sum of the step weights along the path; used as the normalization term.
+  final int pathWeight;
+
+  /// Number of matched frame pairs along the path.
+  final int pathLength;
+
+  const DtwAlignment({
+    required this.meanLocalCost,
+    required this.totalCost,
+    required this.pathWeight,
+    required this.pathLength,
+  });
+
+  bool get isUsable => meanLocalCost.isFinite && pathWeight > 0;
+}
+
+/// Custom frame-to-frame cost, used by the cosine-similarity candidate.
+typedef FrameCostFunction = double Function(List<double> a, List<double> b);
+
+/// Normalization applied to the 39-D frame matrix.
+enum MfccNormalization {
+  /// No normalization.
+  none,
+
+  /// Cepstral mean normalization: subtract each channel's mean over the clip.
+  /// Removes channel/gain differences while keeping the spectral envelope.
+  cepstralMean,
+
+  /// Mean and variance normalization. Variance scaling removes the spectral
+  /// envelope that distinguishes words from each other.
+  cepstralMeanVariance,
+}
+
 /// A service to extract Mel-Frequency Cepstral Coefficients (MFCC) from audio samples.
 /// This implementation provides a pure Dart way to analyze audio spectral features
 /// using the approved recommended_v1 configuration:
@@ -12,8 +54,13 @@ import 'dart:math';
 /// - Pre-emphasis: 0.97
 /// - Window function: Hamming
 /// - Delta features: Delta (width 2) + Delta-Delta (width 2)
-/// - Feature normalization: CMVN (Cepstral Mean and Variance Normalization)
+/// - Feature normalization: CMN (Cepstral Mean Normalization)
 /// Total output feature dimension per frame: 39 (13 static + 13 delta + 13 delta-delta).
+///
+/// Mean-only normalization is deliberate. Dividing by each channel's variance
+/// (CMVN) scales away the spectral envelope that carries vowel identity, so a
+/// different word by the same speaker ends up as close as another native take of
+/// the right word. CMN removes channel/gain while keeping that envelope.
 class MFCCService {
   static const int sampleRate = 16000;
   static const int frameSize = 400; // 25 ms at 16,000 Hz
@@ -24,10 +71,30 @@ class MFCCService {
   static const double preEmphasisAlpha = 0.97;
   static const int deltaWidth = 2; // Delta width = 2
 
-  /// Extracts MFCC features (static + delta + delta-delta with CMVN) from audio samples.
+  /// Sakoe-Chiba band (as a fraction of the sequence length) around the
+  /// diagonal. The band stops the alignment from compressing one clip into a
+  /// tiny span of the other, which used to produce inflated scores.
+  static const double defaultBandRatio = 0.25;
+
+  /// Slope-constrained step pattern (di, dj, weight). Plain {1,0}/{0,1} steps are
+  /// deliberately absent: without a slope bound, DTW can map many reference
+  /// frames onto one learner frame and report a near-perfect match for the wrong
+  /// word. Max length ratio is 3:1 in either direction.
+  static const List<List<int>> _dtwSteps = [
+    [1, 1, 2],
+    [1, 2, 3],
+    [2, 1, 3],
+    [1, 3, 4],
+    [3, 1, 4],
+  ];
+
+  /// Extracts MFCC features (static + delta + delta-delta) from audio samples.
   /// Expects normalized PCM samples (-1.0 to 1.0).
   /// Returns a matrix of shape [T x 39] where T is the number of frames.
-  static List<List<double>> extractMFCC(List<double> samples, {bool normalize = true}) {
+  static List<List<double>> extractMFCC(
+    List<double> samples, {
+    MfccNormalization normalization = MfccNormalization.cepstralMean,
+  }) {
     if (samples.isEmpty) return [];
 
     // Sanitize input samples (replace non-finite values with 0.0)
@@ -80,16 +147,15 @@ class MFCCService {
       ]);
     }
 
-    // 11. Apply CMVN (Cepstral Mean and Variance Normalization)
-    return normalize ? _applyCMVN(combinedFeatures) : combinedFeatures;
-  }
-
-  /// Normalizes reference and learner features together so clip-specific
-  /// normalization cannot erase the acoustic differences between them.
-  static List<List<double>> normalizeTogether(List<List<double>> first, List<List<double>> second) {
-    if (first.isEmpty || second.isEmpty) return [];
-    final combined = _applyCMVN([...first, ...second]);
-    return combined;
+    // 11. Apply the requested cepstral normalization
+    switch (normalization) {
+      case MfccNormalization.none:
+        return combinedFeatures;
+      case MfccNormalization.cepstralMean:
+        return _applyCMN(combinedFeatures);
+      case MfccNormalization.cepstralMeanVariance:
+        return _applyCMVN(combinedFeatures);
+    }
   }
 
   static List<double> _preEmphasis(List<double> samples, double alpha) {
@@ -209,6 +275,34 @@ class MFCCService {
     return deltas;
   }
 
+  /// Applies Cepstral Mean Normalization (CMN) across frames: each channel's
+  /// mean over the clip is removed, its variance is preserved.
+  static List<List<double>> _applyCMN(List<List<double>> featureMatrix) {
+    if (featureMatrix.isEmpty) return [];
+
+    final numFrames = featureMatrix.length;
+    final numFeatures = featureMatrix[0].length;
+    final normalized = List.generate(
+      numFrames,
+      (_) => List<double>.filled(numFeatures, 0.0),
+    );
+
+    for (int d = 0; d < numFeatures; d++) {
+      double sum = 0.0;
+      for (int t = 0; t < numFrames; t++) {
+        sum += featureMatrix[t][d];
+      }
+      final mean = sum / numFrames;
+
+      for (int t = 0; t < numFrames; t++) {
+        final val = featureMatrix[t][d] - mean;
+        normalized[t][d] = val.isFinite ? val : 0.0;
+      }
+    }
+
+    return normalized;
+  }
+
   /// Applies Cepstral Mean and Variance Normalization (CMVN) across frames.
   static List<List<double>> _applyCMVN(List<List<double>> featureMatrix) {
     if (featureMatrix.isEmpty) return [];
@@ -246,31 +340,96 @@ class MFCCService {
     return normalized;
   }
 
-  /// Calculates DTW distance between two MFCC feature sets.
-  static double calculateMFCCDistance(List<List<double>> s, List<List<double>> t) {
+  /// Banded, slope-constrained DTW alignment normalized by the path's total
+  /// step weight (not by `n + m`).
+  ///
+  /// The previous `dtw[n][m] / (n + m)` divided by a path length that the real
+  /// alignment never reaches, so mean frame cost was under-estimated, and it was
+  /// under-estimated *more* for longer attempts - slow recordings were rewarded.
+  static DtwAlignment align(
+    List<List<double>> s,
+    List<List<double>> t, {
+    double bandRatio = defaultBandRatio,
+    FrameCostFunction? frameCost,
+  }) {
     final n = s.length;
     final m = t.length;
-    if (n == 0 || m == 0) return double.infinity;
+    if (n == 0 || m == 0) {
+      return const DtwAlignment(
+        meanLocalCost: double.infinity,
+        totalCost: double.infinity,
+        pathWeight: 0,
+        pathLength: 0,
+      );
+    }
 
-    List<List<double>> dtw = List.generate(
-      n + 1,
-      (_) => List.filled(m + 1, double.infinity),
-    );
-
-    dtw[0][0] = 0;
+    final cost = List.generate(n + 1, (_) => List<double>.filled(m + 1, double.infinity));
+    final weight = List.generate(n + 1, (_) => List<int>.filled(m + 1, 0));
+    final pathLength = List.generate(n + 1, (_) => List<int>.filled(m + 1, 0));
+    cost[0][0] = 0.0;
 
     for (int i = 1; i <= n; i++) {
-      for (int j = 1; j <= m; j++) {
-        double cost = _euclideanDistance(s[i - 1], t[j - 1]);
-        dtw[i][j] = cost + _min3(
-          dtw[i - 1][j],
-          dtw[i][j - 1],
-          dtw[i - 1][j - 1],
-        );
+      final progress = i / n;
+      final jStart = max(1, ((progress - bandRatio) * m).ceil());
+      final jEnd = min(m, ((progress + bandRatio) * m).floor());
+      if (jStart > jEnd) continue;
+
+      for (int j = jStart; j <= jEnd; j++) {
+        final localCost = frameCost != null
+            ? frameCost(s[i - 1], t[j - 1])
+            : _euclideanDistance(s[i - 1], t[j - 1]);
+        if (!localCost.isFinite) continue;
+
+        var bestCost = double.infinity;
+        var bestWeight = 0;
+        var bestLength = 0;
+
+        for (final step in _dtwSteps) {
+          final di = step[0];
+          final dj = step[1];
+          final stepWeight = step[2];
+          final previousI = i - di;
+          final previousJ = j - dj;
+          if (previousI < 0 || previousJ < 0) continue;
+
+          final previousCost = cost[previousI][previousJ];
+          if (!previousCost.isFinite) continue;
+
+          final candidate = previousCost + stepWeight * localCost;
+          if (candidate < bestCost) {
+            bestCost = candidate;
+            bestWeight = weight[previousI][previousJ] + stepWeight;
+            bestLength = pathLength[previousI][previousJ] + 1;
+          }
+        }
+
+        if (!bestCost.isFinite || bestWeight == 0) continue;
+        cost[i][j] = bestCost;
+        weight[i][j] = bestWeight;
+        pathLength[i][j] = bestLength;
       }
     }
 
-    return dtw[n][m] / (n + m);
+    if (!cost[n][m].isFinite || weight[n][m] == 0) {
+      return const DtwAlignment(
+        meanLocalCost: double.infinity,
+        totalCost: double.infinity,
+        pathWeight: 0,
+        pathLength: 0,
+      );
+    }
+
+    return DtwAlignment(
+      meanLocalCost: cost[n][m] / weight[n][m],
+      totalCost: cost[n][m],
+      pathWeight: weight[n][m],
+      pathLength: pathLength[n][m],
+    );
+  }
+
+  /// Calculates the path-normalized DTW distance between two MFCC feature sets.
+  static double calculateMFCCDistance(List<List<double>> s, List<List<double>> t) {
+    return align(s, t).meanLocalCost;
   }
 
   static double _euclideanDistance(List<double> a, List<double> b) {
@@ -280,6 +439,4 @@ class MFCCService {
     }
     return sqrt(sum);
   }
-
-  static double _min3(double a, double b, double c) => min(a, min(b, c));
 }
