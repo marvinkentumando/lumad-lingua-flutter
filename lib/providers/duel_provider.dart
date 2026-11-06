@@ -104,11 +104,14 @@ class DuelSessionState {
       opponentHp: opponentHp ?? this.opponentHp,
       currentQuestionIndex: currentQuestionIndex ?? this.currentQuestionIndex,
       secondsLeft: secondsLeft ?? this.secondsLeft,
-      matchmakingSecondsLeft: matchmakingSecondsLeft ?? this.matchmakingSecondsLeft,
+      matchmakingSecondsLeft:
+          matchmakingSecondsLeft ?? this.matchmakingSecondsLeft,
       matchmakingTimedOut: matchmakingTimedOut ?? this.matchmakingTimedOut,
       isPlayerWinning: isPlayerWinning ?? this.isPlayerWinning,
-      showPlayerDamageEffect: showPlayerDamageEffect ?? this.showPlayerDamageEffect,
-      showOpponentDamageEffect: showOpponentDamageEffect ?? this.showOpponentDamageEffect,
+      showPlayerDamageEffect:
+          showPlayerDamageEffect ?? this.showPlayerDamageEffect,
+      showOpponentDamageEffect:
+          showOpponentDamageEffect ?? this.showOpponentDamageEffect,
       answerLocked: answerLocked ?? this.answerLocked,
       rewardsAwarded: rewardsAwarded ?? this.rewardsAwarded,
       resultsRecorded: resultsRecorded ?? this.resultsRecorded,
@@ -121,6 +124,8 @@ class DuelSessionState {
 
 class DuelSessionNotifier extends Notifier<DuelSessionState> {
   StreamSubscription<DuelMatch?>? _subscription;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
+      _candidateSubscription;
   Timer? _roundTimer;
   Timer? _heartbeatTimer;
   Timer? _matchmakingTimer;
@@ -138,6 +143,8 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
   void _cancelTimersAndSubscriptions() {
     _subscription?.cancel();
     _subscription = null;
+    _candidateSubscription?.cancel();
+    _candidateSubscription = null;
     _roundTimer?.cancel();
     _roundTimer = null;
     _heartbeatTimer?.cancel();
@@ -232,6 +239,7 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
       _matchmakingMatchId = matchId;
       state = state.copyWith(matchId: matchId, isLoading: false);
       _listenToMatch(matchId);
+      _watchForOpponent(matchId, myId, userProfile, attempt);
     } catch (e) {
       if (attempt != _matchmakingAttempt || state.matchmakingTimedOut) return;
       debugPrint('Matchmaking error in provider: $e');
@@ -247,8 +255,10 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
 
   void _startMatchmakingTimer(int attempt) {
     _matchmakingTimer?.cancel();
-    _matchmakingTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
-      if (attempt != _matchmakingAttempt || state.phase != DuelPhase.searching) {
+    _matchmakingTimer =
+        Timer.periodic(const Duration(seconds: 1), (timer) async {
+      if (attempt != _matchmakingAttempt ||
+          state.phase != DuelPhase.searching) {
         timer.cancel();
         return;
       }
@@ -264,9 +274,13 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
   }
 
   Future<void> _onMatchmakingTimeout(int attempt) async {
-    if (attempt != _matchmakingAttempt || state.phase != DuelPhase.searching) return;
+    if (attempt != _matchmakingAttempt || state.phase != DuelPhase.searching) {
+      return;
+    }
     _subscription?.cancel();
     _subscription = null;
+    _candidateSubscription?.cancel();
+    _candidateSubscription = null;
     final matchId = _matchmakingMatchId;
     if (matchId != null) {
       try {
@@ -280,24 +294,158 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
     state = DuelSessionState(
       phase: DuelPhase.idle,
       matchmakingTimedOut: true,
-      error: 'No opponent found within ${DuelSyncConfig.matchmakingTimeoutSeconds}s. Try again when another learner is online.',
+      error:
+          'No opponent found within ${DuelSyncConfig.matchmakingTimeoutSeconds}s. Try again when another learner is online.',
     );
-    debugPrint('Matchmaking attempt timed out; match=${stateToShow.matchId ?? matchId ?? "pending"}');
+    debugPrint(
+        'Matchmaking attempt timed out; match=${stateToShow.matchId ?? matchId ?? "pending"}');
+  }
+
+  void _watchForOpponent(
+    String waitingMatchId,
+    String userId,
+    Map<String, dynamic> userProfile,
+    int attempt,
+  ) {
+    ref
+        .read(duelServiceProvider)
+        .watchForOpponent(
+          waitingMatchId: waitingMatchId,
+          userId: userId,
+          userProfile: userProfile,
+          onMatchFound: (matchId) {
+            _attachToDiscoveredMatch(waitingMatchId, matchId, attempt);
+          },
+          onError: (error) {
+            if (attempt != _matchmakingAttempt ||
+                state.phase != DuelPhase.searching) {
+              return;
+            }
+            debugPrint('Matchmaking lobby watcher failed: $error');
+            _matchmakingTimer?.cancel();
+            _matchmakingTimer = null;
+            state = state.copyWith(
+              phase: DuelPhase.idle,
+              isLoading: false,
+              error: matchmakingFailureMessage(error),
+            );
+          },
+        )
+        .then((subscription) {
+      if (subscription == null) return;
+      if (attempt != _matchmakingAttempt ||
+          state.phase != DuelPhase.searching) {
+        subscription.cancel();
+        return;
+      }
+      _candidateSubscription?.cancel();
+      _candidateSubscription = subscription;
+    }).catchError((Object error) {
+      if (attempt != _matchmakingAttempt ||
+          state.phase != DuelPhase.searching) {
+        return;
+      }
+      debugPrint('Could not watch matchmaking lobbies: $error');
+      _matchmakingTimer?.cancel();
+      _matchmakingTimer = null;
+      state = state.copyWith(
+        phase: DuelPhase.idle,
+        isLoading: false,
+        error: matchmakingFailureMessage(error),
+      );
+    });
+  }
+
+  Future<void> _attachToDiscoveredMatch(
+    String ownWaitingMatchId,
+    String discoveredMatchId,
+    int attempt,
+  ) async {
+    if (attempt != _matchmakingAttempt || state.phase != DuelPhase.searching) {
+      return;
+    }
+
+    // Stop listening to our own lobby before cancelling it, so its cancellation
+    // snapshot cannot race the newly claimed active match.
+    _subscription?.cancel();
+    _subscription = null;
+    _candidateSubscription?.cancel();
+    _candidateSubscription = null;
+    try {
+      await ref.read(duelServiceProvider).cancelMatch(ownWaitingMatchId);
+    } catch (error) {
+      debugPrint('Could not close duplicate waiting lobby: $error');
+    }
+    if (attempt != _matchmakingAttempt || state.phase != DuelPhase.searching) {
+      return;
+    }
+
+    _matchmakingMatchId = discoveredMatchId;
+    state = state.copyWith(matchId: discoveredMatchId, isLoading: false);
+    _listenToMatch(discoveredMatchId);
   }
 
   static String matchmakingFailureMessage(Object error) {
-    if (error is FirebaseException) {
-      switch (error.code) {
-        case 'permission-denied':
-          return 'Matchmaking was blocked by Firestore permissions. Deploy the latest Firestore rules and try again.';
-        case 'failed-precondition':
-          return 'Matchmaking needs a Firestore index. Deploy the project indexes and try again.';
-        case 'unavailable':
-        case 'deadline-exceeded':
-          return 'Could not reach the matchmaking service. Check the connection and try again.';
-      }
+    final code = _extractErrorCode(error);
+    switch (code) {
+      case 'permission-denied':
+        return 'Matchmaking was blocked by Firestore permissions. Deploy the latest Firestore rules and try again.';
+      case 'failed-precondition':
+        return 'Matchmaking needs a Firestore index or it is still building. If you deployed indexes recently, please wait 2–3 minutes for Firestore to finish building.';
+      case 'unavailable':
+      case 'deadline-exceeded':
+        return 'Could not reach the matchmaking service. Check your connection and try again.';
     }
-    return 'Matchmaking could not start: $error';
+
+    final message = _cleanErrorMessage(error);
+    return 'Matchmaking could not start: $message';
+  }
+
+  static String _extractErrorCode(Object error) {
+    if (error is FirebaseException) return error.code;
+    try {
+      final dynamic e = error;
+      final boxed = e.error;
+      if (boxed != null) {
+        if (boxed is FirebaseException) return boxed.code;
+        final boxedCode = (boxed as dynamic).code;
+        if (boxedCode != null) return boxedCode.toString();
+      }
+      final directCode = e.code;
+      if (directCode != null) return directCode.toString();
+    } catch (_) {}
+
+    final str = error.toString().toLowerCase();
+    if (str.contains('failed-precondition') ||
+        str.contains('index') ||
+        str.contains('building')) {
+      return 'failed-precondition';
+    }
+    if (str.contains('permission-denied') || str.contains('permission')) {
+      return 'permission-denied';
+    }
+    if (str.contains('unavailable') ||
+        str.contains('network') ||
+        str.contains('offline')) {
+      return 'unavailable';
+    }
+    return '';
+  }
+
+  static String _cleanErrorMessage(Object error) {
+    try {
+      final dynamic e = error;
+      final boxed = e.error;
+      if (boxed != null) {
+        return boxed.toString();
+      }
+    } catch (_) {}
+
+    final str = error.toString();
+    if (str.contains('converted Future')) {
+      return 'The browser hid the Firestore error details. Check Firebase sign-in, Firestore rules, and the network, then reload and try again.';
+    }
+    return str;
   }
 
   void _listenToMatch(String matchId) {
@@ -319,8 +467,10 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
 
   void _onMatchUpdate(DuelMatch? match) {
     if (match == null) {
-      if (state.phase == DuelPhase.battling || state.phase == DuelPhase.searching) {
-        _finishLocally(won: state.playerHp >= state.opponentHp, opponentGone: true);
+      if (state.phase == DuelPhase.battling ||
+          state.phase == DuelPhase.searching) {
+        _finishLocally(
+            won: state.playerHp >= state.opponentHp, opponentGone: true);
       }
       return;
     }
@@ -340,31 +490,44 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
       case DuelStatus.active:
         _matchmakingTimer?.cancel();
         _matchmakingTimer = null;
-        if (state.phase == DuelPhase.searching || state.phase == DuelPhase.idle) {
+        _candidateSubscription?.cancel();
+        _candidateSubscription = null;
+        if (state.phase == DuelPhase.searching ||
+            state.phase == DuelPhase.idle) {
           _onBattleStart(match);
-        } else if (state.phase == DuelPhase.battling || state.phase == DuelPhase.matchFound) {
+        } else if (state.phase == DuelPhase.battling ||
+            state.phase == DuelPhase.matchFound) {
           _onBattleUpdate(match);
         }
         break;
 
       case DuelStatus.finished:
       case DuelStatus.cancelled:
-        if (match.status == DuelStatus.cancelled && state.phase == DuelPhase.searching) {
+        if (match.status == DuelStatus.cancelled &&
+            state.phase == DuelPhase.searching) {
           _matchmakingTimer?.cancel();
           _matchmakingTimer = null;
+          _candidateSubscription?.cancel();
+          _candidateSubscription = null;
           _subscription?.cancel();
           _subscription = null;
           state = DuelSessionState(
-            error: 'This waiting lobby closed before an opponent joined. Please enter the arena again.',
+            error:
+                'This waiting lobby closed before an opponent joined. Please enter the arena again.',
           );
           break;
         }
-        if (state.phase == DuelPhase.battling || state.phase == DuelPhase.searching || state.phase == DuelPhase.matchFound) {
-          final myId = state.myId ?? ref.read(authServiceProvider).currentUser?.uid ?? '';
+        if (state.phase == DuelPhase.battling ||
+            state.phase == DuelPhase.searching ||
+            state.phase == DuelPhase.matchFound) {
+          final myId = state.myId ??
+              ref.read(authServiceProvider).currentUser?.uid ??
+              '';
           final won = match.winnerId != null
               ? match.winnerId == myId
               : state.playerHp >= state.opponentHp;
-          _finishLocally(won: won, cancelled: match.status == DuelStatus.cancelled);
+          _finishLocally(
+              won: won, cancelled: match.status == DuelStatus.cancelled);
         }
         break;
     }
@@ -373,10 +536,12 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
   void _onBattleStart(DuelMatch match) {
     _matchmakingTimer?.cancel();
     _matchmakingTimer = null;
-    final myId = state.myId ?? ref.read(authServiceProvider).currentUser?.uid ?? '';
+    final myId =
+        state.myId ?? ref.read(authServiceProvider).currentUser?.uid ?? '';
     final isPlayer1 = match.player1Id == myId;
     final opponentId = isPlayer1 ? match.player2Id : match.player1Id;
-    final opponentName = (isPlayer1 ? match.player2Name : match.player1Name) ?? 'Warrior';
+    final opponentName =
+        (isPlayer1 ? match.player2Name : match.player1Name) ?? 'Warrior';
     final pHp = isPlayer1 ? match.player1Hp : match.player2Hp;
     final oHp = isPlayer1 ? match.player2Hp : match.player1Hp;
 
@@ -409,15 +574,19 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
   }
 
   void _onBattleUpdate(DuelMatch match) {
-    final myId = state.myId ?? ref.read(authServiceProvider).currentUser?.uid ?? '';
+    final myId =
+        state.myId ?? ref.read(authServiceProvider).currentUser?.uid ?? '';
     final isPlayer1 = match.player1Id == myId;
 
     final newPlayerHp = isPlayer1 ? match.player1Hp : match.player2Hp;
     final newOpponentHp = isPlayer1 ? match.player2Hp : match.player1Hp;
 
     final remote = !match.hasPendingWrites;
-    final showPlayerDamage = remote && newPlayerHp < state.playerHp && !state.showPlayerDamageEffect;
-    final showOpponentDamage = remote && newOpponentHp < state.opponentHp && !state.showOpponentDamageEffect;
+    final showPlayerDamage =
+        remote && newPlayerHp < state.playerHp && !state.showPlayerDamageEffect;
+    final showOpponentDamage = remote &&
+        newOpponentHp < state.opponentHp &&
+        !state.showOpponentDamageEffect;
 
     int newUiRound = state.uiRound;
     DateTime? newUiRoundStartedAt = state.uiRoundStartedAt;
@@ -427,7 +596,8 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
     if (state.uiRound != match.currentRound && match.roundStartedAt != null) {
       newUiRound = match.currentRound;
       newUiRoundStartedAt = match.roundStartedAt;
-      if (match.currentRound < state.battleQuestions.length && state.answerLocked) {
+      if (match.currentRound < state.battleQuestions.length &&
+          state.answerLocked) {
         newAnswerLocked = false;
         newQuestionIndex = match.currentRound;
         _roundTimer?.cancel();
@@ -461,7 +631,10 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
     final matchId = state.matchId;
     final myId = state.myId;
     if (matchId == null || myId == null) return;
-    if (state.phase != DuelPhase.battling && state.phase != DuelPhase.matchFound) return;
+    if (state.phase != DuelPhase.battling &&
+        state.phase != DuelPhase.matchFound) {
+      return;
+    }
     ref.read(duelServiceProvider).heartbeat(matchId, myId);
   }
 
@@ -532,7 +705,8 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
     if (matchId != null && myId != null && opponentId != null) {
       try {
         if (isCorrect) {
-          await duelService.applyDamage(matchId, opponentId, DuelMatch.damagePerHit);
+          await duelService.applyDamage(
+              matchId, opponentId, DuelMatch.damagePerHit);
         } else {
           await duelService.applyDamage(matchId, myId, DuelMatch.damagePerHit);
         }
@@ -541,7 +715,8 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
       }
 
       try {
-        final authoritative = await duelService.advanceRound(matchId, state.currentQuestionIndex);
+        final authoritative =
+            await duelService.advanceRound(matchId, state.currentQuestionIndex);
         state = state.copyWith(
           uiRound: authoritative.round,
           uiRoundStartedAt: authoritative.roundStartedAt,
@@ -554,10 +729,12 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
     await Future.delayed(const Duration(seconds: 1));
 
     final outOfHp = state.playerHp <= 0 || state.opponentHp <= 0;
-    final lastQuestion = state.currentQuestionIndex >= state.battleQuestions.length - 1;
+    final lastQuestion =
+        state.currentQuestionIndex >= state.battleQuestions.length - 1;
 
     if (outOfHp || lastQuestion) {
-      if (state.opponentHp <= 0 || (state.playerHp > state.opponentHp && lastQuestion)) {
+      if (state.opponentHp <= 0 ||
+          (state.playerHp > state.opponentHp && lastQuestion)) {
         _finishLocally(won: true);
       } else {
         _finishLocally(won: false);
@@ -656,6 +833,7 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
   }
 }
 
-final duelSessionProvider = NotifierProvider<DuelSessionNotifier, DuelSessionState>(() {
+final duelSessionProvider =
+    NotifierProvider<DuelSessionNotifier, DuelSessionState>(() {
   return DuelSessionNotifier();
 });
