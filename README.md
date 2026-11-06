@@ -41,7 +41,7 @@ By combining sentiment analysis algorithms, gamified interactive learning, audio
 * **Educator Console**:
   * Classroom management and individual student performance tracking.
   * Lesson/Unit authoring and dynamic feedback delivery.
-  * Broadcast history and announcement dispatching.
+  * Broadcast history and announcement dispatching
 * **Admin Console**:
   * Multi-tab management for Dictionary, Voice Submissions, Lessons, Cultural Scenarios, and Audit Logs.
   * Bulk actions (bulk selection & delete) protected by administrator security re-authentication.
