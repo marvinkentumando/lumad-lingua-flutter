@@ -98,12 +98,18 @@ class DuelService {
     try {
       final waitingMatches = await _matches
           .where('status', isEqualTo: DuelStatus.waiting.name)
-          .orderBy('createdAt', descending: false)
-          .limit(10)
+          .limit(25)
           .get();
 
       final now = DateTime.now();
-      for (final matchDoc in waitingMatches.docs) {
+      final candidates = waitingMatches.docs.toList()
+        ..sort((a, b) {
+          final aCreated = DuelMatch.parseTimestamp(a.data()['createdAt']);
+          final bCreated = DuelMatch.parseTimestamp(b.data()['createdAt']);
+          return (aCreated ?? DateTime.fromMillisecondsSinceEpoch(0))
+              .compareTo(bCreated ?? DateTime.fromMillisecondsSinceEpoch(0));
+        });
+      for (final matchDoc in candidates) {
         final data = matchDoc.data();
         if (data['player1Id'] == userId) continue; // never match ourselves
 
@@ -120,11 +126,91 @@ class DuelService {
         final claimed = await _tryClaimWaitingMatch(matchDoc.reference, userId, userProfile);
         if (claimed) return matchDoc.id;
       }
-    } on FirebaseException {
-      // Composite index or rules issue: fall through to creating a match.
+    } on FirebaseException catch (e) {
+      // Do not silently create a separate lobby when the matchmaking query
+      // fails (for example, because its composite index is missing).
+      debugPrint('Firestore matchmaking query failed: ${e.code}: ${e.message}');
+      rethrow;
     }
 
-    return _createMatch(userId, userProfile, questions);
+    return _joinOrCreateQueuedMatch(userId, userProfile, questions);
+  }
+
+  /// Serializes the empty-queue case. Without this document, two clients can
+  /// both observe an empty collection and create separate waiting lobbies.
+  Future<String> _joinOrCreateQueuedMatch(
+    String userId,
+    Map<String, dynamic> userProfile,
+    List<DuelQuestion>? questions,
+  ) async {
+    final generated = questions ?? await _generateQuestions();
+    final queueRef = _db.collection('duel_matchmaking').doc('queue');
+    String? resultId;
+
+    await _db.runTransaction((transaction) async {
+      final queueSnapshot = await transaction.get(queueRef);
+      final queuedMatchId = queueSnapshot.data()?['waitingMatchId'] as String?;
+      DocumentSnapshot<Map<String, dynamic>>? queuedMatch;
+      if (queuedMatchId != null && queuedMatchId.isNotEmpty) {
+        queuedMatch = await transaction.get(_matches.doc(queuedMatchId));
+      }
+
+      final queueData = queuedMatch?.data();
+      final createdAt = DuelMatch.parseTimestamp(queueData?['createdAt']);
+      final isFresh = createdAt == null ||
+          DateTime.now().difference(createdAt) <= DuelSyncConfig.waitingMatchTtl;
+      if (queuedMatch != null &&
+          queuedMatch.exists &&
+          queueData != null &&
+          queueData['player1Id'] != userId &&
+          canClaimMatchData(queueData, userId) &&
+          isFresh) {
+        transaction.update(queuedMatch.reference, {
+          'player2Id': userId,
+          'player2Name': userProfile['username'] ?? 'Warrior',
+          'player2Avatar': userProfile['avatar'] ?? '👤',
+          'status': DuelStatus.active.name,
+          'battleStartedAt': FieldValue.serverTimestamp(),
+          'lastSeen.$userId': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+        transaction.delete(queueRef);
+        resultId = queuedMatch.id;
+        return;
+      }
+
+      final newMatchRef = _matches.doc();
+      final newMatch = DuelMatch(
+        id: newMatchRef.id,
+        player1Id: userId,
+        player1Name: userProfile['username'] ?? 'Warrior',
+        player1Avatar: userProfile['avatar'] ?? '👤',
+        status: DuelStatus.waiting,
+        questions: generated,
+        createdAt: DateTime.now(),
+      );
+      if (queuedMatch != null &&
+          queuedMatch.exists &&
+          queueData?['status'] == DuelStatus.waiting.name &&
+          queueData?['player1Id'] == userId) {
+        transaction.update(queuedMatch.reference, {
+          'status': DuelStatus.cancelled.name,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+      transaction.set(newMatchRef, {
+        ...newMatch.toFirestore(),
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastSeen.$userId': FieldValue.serverTimestamp(),
+      });
+      transaction.set(queueRef, {
+        'waitingMatchId': newMatchRef.id,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      resultId = newMatchRef.id;
+    });
+
+    return resultId!;
   }
 
   /// Returns true if a waiting match document can be atomically claimed by [userId].
@@ -167,29 +253,6 @@ class DuelService {
     } on FirebaseException {
       return false;
     }
-  }
-
-  Future<String> _createMatch(
-    String userId,
-    Map<String, dynamic> userProfile,
-    List<DuelQuestion>? questions,
-  ) async {
-    final generated = questions ?? await _generateQuestions();
-    final newMatch = DuelMatch(
-      id: '',
-      player1Id: userId,
-      player1Name: userProfile['username'] ?? 'Warrior',
-      player1Avatar: userProfile['avatar'] ?? '👤',
-      status: DuelStatus.waiting,
-      questions: generated,
-      createdAt: DateTime.now(),
-    );
-
-    final docRef = await _matches.add({
-      ...newMatch.toFirestore(),
-      'lastSeen.$userId': FieldValue.serverTimestamp(),
-    });
-    return docRef.id;
   }
 
   Future<List<DuelQuestion>> _generateQuestions() async {
@@ -385,13 +448,14 @@ class DuelService {
     }
   }
 
-  /// Finds any active or waiting match for [userId] so the session can be restored.
+  /// Finds an active battle for [userId]. Waiting lobbies are not restored on
+  /// page entry: users should explicitly press Enter Arena to start searching.
   Future<DuelMatch?> findActiveMatchForUser(String userId) async {
     try {
-      // 1. Check if user is player1 in an active or waiting match
+      // 1. Check if user is player1 in an active match
       final p1Snap = await _matches
           .where('player1Id', isEqualTo: userId)
-          .where('status', whereIn: [DuelStatus.waiting.name, DuelStatus.active.name])
+          .where('status', isEqualTo: DuelStatus.active.name)
           .limit(1)
           .get();
 

@@ -140,6 +140,12 @@ service cloud.firestore {
       );
     }
 
+    // A single signed-in-user queue pointer serializes matchmaking when no
+    // legacy waiting lobby exists, preventing simultaneous orphan lobbies.
+    match /duel_matchmaking/{queueId} {
+      allow read, write: if isSignedIn() && queueId == 'queue';
+    }
+
     match /lingua_duels/{duelId} {
       allow read: if isSignedIn();
       allow write: if isEducator();
