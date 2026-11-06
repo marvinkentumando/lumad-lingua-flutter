@@ -17,7 +17,7 @@ abstract final class DuelSyncConfig {
 
   /// Maximum time a learner waits in matchmaking before timing out.
   /// Prevents indefinite "searching" when no opponent is available.
-  static const int matchmakingTimeoutSeconds = 45;
+  static const int matchmakingTimeoutSeconds = 30;
 
   /// A match is considered abandoned when a player's heartbeat is older
   /// than this while the battle is active.

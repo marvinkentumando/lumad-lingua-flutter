@@ -293,7 +293,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'Searching for ${sessionState.matchmakingSecondsLeft}s…',
+              'Searching… ${sessionState.matchmakingSecondsLeft}s remaining',
               style: AppTypography.label.copyWith(
                 color: Colors.white54,
                 letterSpacing: 1.2,
@@ -313,7 +313,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
               },
               icon: const Icon(Icons.close_rounded, size: 18),
               label: Text(
-                'CANCEL MATCHMAKING',
+                'CANCEL (${sessionState.matchmakingSecondsLeft}s)',
                 style: AppTypography.label.copyWith(
                   color: Colors.white70,
                   fontWeight: FontWeight.bold,
