@@ -6,6 +6,7 @@ import '../models/duel_models.dart';
 import '../models/quest.dart';
 import '../services/duel_service.dart';
 import '../services/auth_service.dart';
+import '../utils/js_error_unwrapper.dart';
 import 'quest_provider.dart';
 import 'student_provider.dart';
 
@@ -415,6 +416,10 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
   }
 
   static String _extractErrorCode(Object error) {
+    final unboxedError = unboxJavaScriptError(error);
+    if (unboxedError != null && !identical(unboxedError, error)) {
+      return _extractErrorCode(unboxedError);
+    }
     if (error is FirebaseException) return error.code;
     try {
       final dynamic e = error;
@@ -446,6 +451,14 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
   }
 
   static String _cleanErrorMessage(Object error) {
+    final interopStack = javascriptErrorStack(error);
+    if (interopStack != null) {
+      debugPrint('Matchmaking browser Future stack: $interopStack');
+    }
+    final unboxedError = unboxJavaScriptError(error);
+    if (unboxedError != null && !identical(unboxedError, error)) {
+      return _cleanErrorMessage(unboxedError);
+    }
     try {
       final dynamic e = error;
       final boxed = e.error;
