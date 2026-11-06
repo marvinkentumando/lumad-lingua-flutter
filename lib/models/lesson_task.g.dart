@@ -114,6 +114,8 @@ class TaskTypeAdapter extends TypeAdapter<TaskType> {
         return TaskType.trueOrFalse;
       case 9:
         return TaskType.fillInTheBlanks;
+      case 10:
+        return TaskType.overview;
       default:
         return TaskType.multipleChoice;
     }
@@ -151,6 +153,9 @@ class TaskTypeAdapter extends TypeAdapter<TaskType> {
         break;
       case TaskType.fillInTheBlanks:
         writer.writeByte(9);
+        break;
+      case TaskType.overview:
+        writer.writeByte(10);
         break;
     }
   }

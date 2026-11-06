@@ -24,6 +24,8 @@ enum TaskType {
   trueOrFalse,
   @HiveField(9)
   fillInTheBlanks,
+  @HiveField(10)
+  overview,
 }
 
 @HiveType(typeId: 5)

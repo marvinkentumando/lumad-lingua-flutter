@@ -23,6 +23,7 @@ import '../widgets/brand_background.dart';
 import '../widgets/elders_wisdom_panel.dart';
 import '../widgets/lesson_session/session_widgets.dart';
 import '../widgets/activity_views/mcq_view.dart';
+import '../widgets/activity_views/overview_view.dart';
 import '../widgets/activity_views/vocabulary_view.dart';
 import '../widgets/activity_views/sentence_reordering_view.dart';
 import '../widgets/activity_views/matching_view.dart';
@@ -445,6 +446,8 @@ class _DailyChallengeSessionScreenState
         return _hasRecorded;
       case TaskType.vocabulary:
         return _flashcardFlipped;
+      case TaskType.overview:
+        return true;
       case TaskType.wordHunt:
         return _foundWords.length == task.options.length;
       case TaskType.fillInTheBlanks:
@@ -606,6 +609,14 @@ class _DailyChallengeSessionScreenState
               _selectedBlanks.remove(index);
             });
           },
+        );
+      case TaskType.overview:
+        return OverviewView(
+          title: task.questionText,
+          content: task.hintMetadata.isNotEmpty ? task.hintMetadata : task.questionText,
+          culturalNotes: task.grammarDescription,
+          imageUrl: task.imageUrl,
+          audioUrl: task.audioUrl,
         );
     }
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/lesson_step.dart';
 import '../../theme/app_colors.dart';
 import 'configuration_preview.dart';
+import 'overview_preview.dart';
 import 'vocabulary_preview.dart';
 import 'mcq_preview.dart';
 import 'pronunciation_preview.dart';
@@ -98,6 +99,8 @@ class LessonPreviewPanel extends StatelessWidget {
           dialect: dialect,
           onStart: onStart,
         );
+      case ActivityType.overview:
+        return OverviewPreview(step: step);
       case ActivityType.vocabulary:
         return VocabularyPreview(step: step);
       case ActivityType.mcq:

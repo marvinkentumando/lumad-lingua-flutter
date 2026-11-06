@@ -16,6 +16,7 @@ import '../models/lesson_task.dart';
 import '../models/lesson_step.dart';
 import '../services/firebase_service.dart';
 import '../widgets/lesson_editors/configuration_editor.dart';
+import '../widgets/lesson_editors/overview_editor.dart';
 import '../widgets/lesson_editors/vocabulary_editor.dart';
 import '../widgets/lesson_editors/mcq_editor.dart';
 import '../widgets/lesson_editors/pronunciation_editor.dart';
@@ -172,6 +173,16 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
           'audioUrl': task.audioUrl,
         };
         break;
+      case TaskType.overview:
+        type = ActivityType.overview;
+        data = {
+          'title': task.questionText,
+          'content': task.hintMetadata.isNotEmpty ? task.hintMetadata : task.questionText,
+          'culturalNotes': task.grammarDescription ?? '',
+          'imageUrl': task.imageUrl,
+          'audioUrl': task.audioUrl,
+        };
+        break;
       case TaskType.vocabulary:
         type = ActivityType.vocabulary;
         data = {
@@ -281,6 +292,15 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
 
   Map<String, dynamic> _getDefaultDataForType(ActivityType type) {
     switch (type) {
+      case ActivityType.overview:
+        return {
+          'title': 'Lesson Overview',
+          'content': '',
+          'overviewText': '',
+          'culturalNotes': '',
+          'imageUrl': '',
+          'audioUrl': '',
+        };
       case ActivityType.vocabulary:
         return {
           'word': '',
@@ -348,6 +368,9 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
   LessonTask _stepToTask(LessonStep step) {
     TaskType type;
     switch (step.type) {
+      case ActivityType.overview:
+        type = TaskType.overview;
+        break;
       case ActivityType.mcq:
         type = TaskType.multipleChoice;
         break;
@@ -885,6 +908,12 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
             children: [
               _buildActivityOption(
                 dialogContext,
+                ActivityType.overview,
+                'Lesson Overview',
+                Icons.article_rounded,
+              ),
+              _buildActivityOption(
+                dialogContext,
                 ActivityType.vocabulary,
                 'Vocabulary Builder',
                 Icons.text_fields,
@@ -1091,6 +1120,14 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
               _isDirty = true;
             }),
           );
+        case ActivityType.overview:
+          return OverviewEditor(
+            step: _selectedStep!,
+            onUpdated: () => setState(() {
+              _saveStatus = SaveStatus.idle;
+              _isDirty = true;
+            }),
+          );
         case ActivityType.vocabulary:
           return VocabularyEditor(
             step: _selectedStep!,
@@ -1193,6 +1230,8 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
 
   String _getTooltipMessage(ActivityType type) {
     switch (type) {
+      case ActivityType.overview:
+        return 'Present structured educational material and cultural notes.';
       case ActivityType.vocabulary:
         return 'Add a native word, its meaning, and an artifact image.';
       case ActivityType.mcq:
@@ -1535,6 +1574,8 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
     switch (type) {
       case ActivityType.configuration:
         return Icons.settings_rounded;
+      case ActivityType.overview:
+        return Icons.article_rounded;
       case ActivityType.vocabulary:
         return Icons.text_fields;
       case ActivityType.mcq:
