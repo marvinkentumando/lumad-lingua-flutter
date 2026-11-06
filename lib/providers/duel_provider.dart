@@ -403,6 +403,8 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
         return 'Matchmaking was blocked by Firestore permissions. Deploy the latest Firestore rules and try again.';
       case 'failed-precondition':
         return 'Matchmaking needs a Firestore index or it is still building. If you deployed indexes recently, please wait 2–3 minutes for Firestore to finish building.';
+      case 'resource-exhausted':
+        return 'Firebase daily quota exceeded (resource-exhausted). Please check Firebase Console usage or wait for the daily quota to reset.';
       case 'unavailable':
       case 'deadline-exceeded':
         return 'Could not reach the matchmaking service. Check your connection and try again.';
@@ -420,6 +422,7 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
     if (error is FirebaseException) return error.code;
     final javascriptDetails = javascriptErrorDetails(error)?.toLowerCase();
     if (javascriptDetails != null) {
+      if (javascriptDetails.contains('resource-exhausted') || javascriptDetails.contains('429')) return 'resource-exhausted';
       if (javascriptDetails.contains('permission-denied')) return 'permission-denied';
       if (javascriptDetails.contains('failed-precondition')) return 'failed-precondition';
       if (javascriptDetails.contains('unavailable')) return 'unavailable';
@@ -438,6 +441,9 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
     } catch (_) {}
 
     final str = error.toString().toLowerCase();
+    if (str.contains('resource-exhausted') || str.contains('quota') || str.contains('429')) {
+      return 'resource-exhausted';
+    }
     if (str.contains('failed-precondition') ||
         str.contains('index') ||
         str.contains('building')) {
