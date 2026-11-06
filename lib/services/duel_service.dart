@@ -15,6 +15,10 @@ abstract final class DuelSyncConfig {
   /// Seconds each round allows before an auto-timeout answer is submitted.
   static const int secondsPerRound = 15;
 
+  /// Maximum time a learner waits in matchmaking before timing out.
+  /// Prevents indefinite "searching" when no opponent is available.
+  static const int matchmakingTimeoutSeconds = 45;
+
   /// A match is considered abandoned when a player's heartbeat is older
   /// than this while the battle is active.
   static const Duration opponentStaleAfter = Duration(seconds: 45);
@@ -201,8 +205,10 @@ class DuelService {
         .map((d) => DictionaryEntry.fromFirestore(d.data(), d.id))
         .toList();
 
-    if (allWords.length < 4) {
-      // Fallback hardcoded if not enough words
+    // Need at least 4 distinct translations to build 1 correct + 3 distractors.
+    final distinctTranslations = allWords.map((w) => w.translation).toSet();
+    if (allWords.length < 4 || distinctTranslations.length < 4) {
+      // Fallback hardcoded if not enough words / variety
       return [
         DuelQuestion(
           question: 'How do you say "Good Morning" in Mansaka?',
@@ -214,18 +220,29 @@ class DuelService {
 
     final random = Random();
     final List<DuelQuestion> generated = [];
+    final questionCount = allWords.length >= 5 ? 5 : allWords.length;
 
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < questionCount; i++) {
       final correctWord = allWords[random.nextInt(allWords.length)];
       final List<String> options = [correctWord.translation];
 
-      // Add 3 unique distractors
-      while (options.length < 4) {
+      // Add 3 unique distractors (bounded attempts to avoid infinite loops)
+      var attempts = 0;
+      while (options.length < 4 && attempts < 60) {
+        attempts++;
         final distractor = allWords[random.nextInt(allWords.length)].translation;
         if (!options.contains(distractor)) {
           options.add(distractor);
         }
       }
+      // If we somehow still lack distractors, pad from the distinct pool.
+      if (options.length < 4) {
+        for (final t in distinctTranslations) {
+          if (!options.contains(t)) options.add(t);
+          if (options.length >= 4) break;
+        }
+      }
+      if (options.length < 4) continue;
 
       options.shuffle();
       generated.add(DuelQuestion(
@@ -233,6 +250,16 @@ class DuelService {
         options: options,
         correctIndex: options.indexOf(correctWord.translation),
       ));
+    }
+
+    if (generated.isEmpty) {
+      return [
+        DuelQuestion(
+          question: 'How do you say "Good Morning" in Mansaka?',
+          options: ['Madyaw na gabi', 'Madyaw na allaw', 'Madyaw na amase', 'Madyaw na hapon'],
+          correctIndex: 2,
+        ),
+      ];
     }
 
     return generated;
