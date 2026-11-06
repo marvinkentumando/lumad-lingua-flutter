@@ -24,10 +24,12 @@ class LearnerSentimentScreen extends ConsumerStatefulWidget {
   ConsumerState<LearnerSentimentScreen> createState() => _LearnerSentimentScreenState();
 }
 
-class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen> {
+class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen> with WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
   final Set<String> _savedPostIds = {};
   final Set<String> _sparkedPostIds = {};
+  final Set<String> _expandedTranslationPostIds = {};
+  final Set<String> _expandedPostTextIds = {};
   final Map<String, String> _userPostGuesses = {};
   final Set<String> _correctlyGuessedPosts = {};
   bool _checkedInToday = false;
@@ -36,12 +38,43 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
   String? _minigameSelectedGuess;
   bool _minigameCorrect = false;
 
+  void _toggleTranslation(String postId) {
+    setState(() {
+      if (_expandedTranslationPostIds.contains(postId)) {
+        _expandedTranslationPostIds.remove(postId);
+      } else {
+        _expandedTranslationPostIds.add(postId);
+      }
+    });
+    HapticService.selection();
+  }
+
+  void _togglePostTextExpansion(String postId) {
+    setState(() {
+      if (_expandedPostTextIds.contains(postId)) {
+        _expandedPostTextIds.remove(postId);
+      } else {
+        _expandedPostTextIds.add(postId);
+      }
+    });
+    HapticService.selection();
+  }
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkDailyCheckInStatus();
     _checkMiniGameStatus();
     _loadSavedAndSparkedPosts();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkDailyCheckInStatus();
+      _checkMiniGameStatus();
+    }
   }
 
   Future<void> _loadSavedAndSparkedPosts() async {
@@ -300,6 +333,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
     super.dispose();
   }
@@ -315,17 +349,25 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
       body: BrandBackground(
         child: SafeArea(
           bottom: false,
-          child: postsAsync.when(
-            data: (posts) => _buildLearnerContent(posts, isDark, l10n),
-            loading: () => _buildLearnerSkeleton(isDark),
-            error: (e, _) => Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  'Unable to load community vitality. Please check your connection.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: isDark ? Colors.white70 : AppColors.forest900,
+          child: RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(communitySentimentPostsProvider);
+              await Future.delayed(const Duration(milliseconds: 600));
+            },
+            color: AppColors.gold500,
+            backgroundColor: isDark ? AppColors.forest800 : Colors.white,
+            child: postsAsync.when(
+              data: (posts) => _buildLearnerContent(posts, isDark, l10n),
+              loading: () => _buildLearnerSkeleton(isDark),
+              error: (e, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    'Unable to load community vitality. Please check your connection.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: isDark ? Colors.white70 : AppColors.forest900,
+                    ),
                   ),
                 ),
               ),
@@ -403,7 +445,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
               ),
             ),
           ),
-        const SliverToBoxAdapter(child: SizedBox(height: 100)),
+        SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.bottom + 100)),
       ],
     );
   }
@@ -544,35 +586,104 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
             ],
           ),
           const SizedBox(height: 16),
-          Text(
-            post.redactedOriginalText,
-            style: AppTypography.body.copyWith(
-              color: isDark ? Colors.white : AppColors.forest900,
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              height: 1.4,
-            ),
+          Builder(
+            builder: (context) {
+              final bool isTextExpanded = _expandedPostTextIds.contains(post.id);
+              final bool isLengthy = post.redactedOriginalText.length > 160;
+              final displayText = (isLengthy && !isTextExpanded)
+                  ? '${post.redactedOriginalText.substring(0, 160)}...'
+                  : post.redactedOriginalText;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    displayText,
+                    style: AppTypography.body.copyWith(
+                      color: isDark ? Colors.white : AppColors.forest900,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      height: 1.4,
+                    ),
+                  ),
+                  if (isLengthy) ...[
+                    const SizedBox(height: 4),
+                    GestureDetector(
+                      onTap: () => _togglePostTextExpansion(post.id),
+                      child: Text(
+                        isTextExpanded ? 'See less' : 'See more',
+                        style: const TextStyle(
+                          color: AppColors.gold500,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            },
           ),
-          if (post.redactedFilipinoTranslation.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Filipino: ${post.redactedFilipinoTranslation}',
-              style: AppTypography.body.copyWith(
-                color: isDark ? Colors.white70 : AppColors.forest700,
-                fontSize: 13,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
           if (post.redactedEnglishTranslation.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              'English: ${post.redactedEnglishTranslation}',
-              style: AppTypography.body.copyWith(
-                color: isDark ? Colors.white60 : Colors.black54,
-                fontSize: 12,
-              ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                InkWell(
+                  onTap: () => _toggleTranslation(post.id),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.gold500.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.gold500.withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _expandedTranslationPostIds.contains(post.id)
+                              ? Icons.translate_rounded
+                              : Icons.g_translate_rounded,
+                          size: 14,
+                          color: AppColors.gold500,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _expandedTranslationPostIds.contains(post.id)
+                              ? 'Hide English'
+                              : 'Translate to English',
+                          style: const TextStyle(
+                            color: AppColors.gold500,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
+            if (_expandedTranslationPostIds.contains(post.id)) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                ),
+                child: Text(
+                  post.redactedEnglishTranslation,
+                  style: AppTypography.body.copyWith(
+                    color: isDark ? Colors.white70 : AppColors.forest700,
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
           ],
           const SizedBox(height: 16),
           Container(

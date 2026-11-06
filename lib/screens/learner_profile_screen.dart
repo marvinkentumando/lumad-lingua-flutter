@@ -130,6 +130,31 @@ class LearnerProfileScreen extends ConsumerWidget {
     AppLocalization l10n,
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final studentState = ref.watch(studentProvider);
+    final equippedTitle = studentState.equippedTitle ?? profile?['equippedTitle'];
+    final equippedBadge = studentState.equippedBadge ?? profile?['equippedBadge'];
+    final equippedFrame = studentState.equippedFrame ?? profile?['equippedFrame'];
+    final displayName = user?.displayName ?? profile?['username'] ?? l10n.translate('tribe_member');
+
+    Color frameColor = AppColors.gold500;
+    double borderWidth = 3;
+    if (equippedFrame != null) {
+      final fLower = equippedFrame.toLowerCase();
+      if (fLower.contains('vine') || fLower.contains('forest')) {
+        frameColor = AppColors.semanticGreen;
+        borderWidth = 4;
+      } else if (fLower.contains('flame') || fLower.contains('fire')) {
+        frameColor = Colors.deepOrange;
+        borderWidth = 4;
+      } else if (fLower.contains('crown') || fLower.contains('halo') || fLower.contains('ancestral')) {
+        frameColor = AppColors.gold700;
+        borderWidth = 5;
+      } else {
+        frameColor = AppColors.gold500;
+        borderWidth = 4;
+      }
+    }
+
     return Column(
       children: [
         Stack(
@@ -147,10 +172,20 @@ class LearnerProfileScreen extends ConsumerWidget {
               ),
             ),
             Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: AppColors.gold500,
+              padding: EdgeInsets.all(equippedFrame != null ? 6 : 4),
+              decoration: BoxDecoration(
+                color: frameColor,
                 shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: borderWidth),
+                boxShadow: equippedFrame != null
+                    ? [
+                        BoxShadow(
+                          color: frameColor.withValues(alpha: 0.5),
+                          blurRadius: 12,
+                          spreadRadius: 2,
+                        ),
+                      ]
+                    : null,
               ),
               child: Stack(
                 children: [
@@ -188,12 +223,25 @@ class LearnerProfileScreen extends ConsumerWidget {
           curve: Curves.easeOutBack,
         ),
         const SizedBox(height: 24),
-        Text(
-          user?.displayName ?? profile?['username'] ?? l10n.translate('tribe_member'),
-          style: AppTypography.h1ExtraBold.copyWith(
-            color: isDark ? AppColors.gold500 : AppColors.forest500,
-            fontSize: 32,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              displayName,
+              style: AppTypography.h1ExtraBold.copyWith(
+                color: isDark ? AppColors.gold500 : AppColors.forest500,
+                fontSize: 32,
+              ),
+            ),
+            if (equippedBadge != null && equippedBadge.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Text(
+                equippedBadge,
+                style: const TextStyle(fontSize: 24),
+              ),
+            ],
+          ],
         ),
         const SizedBox(height: 4),
         Text(
@@ -204,6 +252,26 @@ class LearnerProfileScreen extends ConsumerWidget {
             letterSpacing: 1.5,
           ),
         ),
+        if (equippedTitle != null && equippedTitle.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.gold500.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.gold500.withValues(alpha: 0.4)),
+            ),
+            child: Text(
+              equippedTitle,
+              style: const TextStyle(
+                color: AppColors.gold500,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -292,7 +360,7 @@ class LearnerProfileScreen extends ConsumerWidget {
           Icons.fort_rounded,
           profile?['educatorId'] == null
               ? l10n.translate('join_village')
-              : 'My Village Sanctuary 🌿',
+              : 'My Village Sanctuary',
           profile?['educatorId'] == null
               ? l10n.translate('join_village_desc')
               : 'View announcements, leaderboard & tribe stats',
@@ -315,18 +383,7 @@ class LearnerProfileScreen extends ConsumerWidget {
     );
     items.add(const SizedBox(height: 12));
 
-    if (isLearner) {
-      items.add(
-        _buildManagementTile(
-          context,
-          Icons.forum_rounded,
-          l10n.translate('send_feedback'),
-          l10n.translate('feedback_desc'),
-          onTap: () => _showFeedbackDialog(context, ref, profile, l10n),
-        ),
-      );
-      items.add(const SizedBox(height: 12));
-    }
+
 
     if (isAdmin) {
       items.add(
@@ -1075,80 +1132,7 @@ class LearnerProfileScreen extends ConsumerWidget {
 
 
 
-  void _showFeedbackDialog(
-    BuildContext context,
-    WidgetRef ref,
-    Map<String, dynamic>? profile,
-    AppLocalization l10n,
-  ) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.forestDarkCard,
-        title: Text(l10n.translate('send_feedback'), style: const TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              l10n.translate('feedback_prompt'),
-              style: const TextStyle(color: Colors.white70, fontSize: 13),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              maxLines: 3,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: l10n.translate('type_message'),
-                hintStyle: const TextStyle(color: Colors.white24),
-                filled: true,
-                fillColor: AppColors.forest800,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.translate('close').toUpperCase()),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (controller.text.trim().isEmpty) return;
-              final user = ref.read(authStateProvider).value;
-              if (user != null) {
-                await ref.read(firebaseServiceProvider).submitStudentFeedback(
-                      studentId: user.uid,
-                      studentName: profile?['username'] ?? 'Tribe Member',
-                      studentPhotoUrl: profile?['photoURL'],
-                      message: controller.text.trim(),
-                    );
-                if (ctx.mounted) Navigator.pop(ctx);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(l10n.translate('feedback_sent')),
-                      backgroundColor: AppColors.semanticGreen,
-                    ),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.gold500,
-              foregroundColor: AppColors.forest900,
-            ),
-            child: Text(l10n.translate('send')),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildEditField(
     String label,

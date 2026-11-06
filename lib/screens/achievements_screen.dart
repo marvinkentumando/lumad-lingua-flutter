@@ -21,8 +21,6 @@ class AchievementsScreen extends ConsumerStatefulWidget {
 }
 
 class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
-  String _selectedStatusFilter = 'all'; // 'all', 'earned', 'in_progress', 'locked'
-  String _selectedTypeFilter = 'all';   // 'all', 'artifact', 'badge', 'title', 'frame'
   String _sortBy = 'tier';              // 'tier', 'progress', 'name'
 
   @override
@@ -69,23 +67,10 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
         child: SafeArea(
           child: artifactsAsync.when(
             data: (artifacts) {
-              // Apply filters
-              List<Artifact> filtered = artifacts.where((artifact) {
-                if (_selectedStatusFilter == 'earned' && !artifact.isEarned) return false;
-                if (_selectedStatusFilter == 'in_progress' && (artifact.isEarned || artifact.currentProgress == 0)) return false;
-                if (_selectedStatusFilter == 'locked' && (artifact.isEarned || artifact.currentProgress > 0)) return false;
-
-                if (_selectedTypeFilter != 'all') {
-                  if (_selectedTypeFilter == 'artifact' && artifact.type != 'artifact') return false;
-                  if (_selectedTypeFilter == 'badge' && !artifact.isBadge) return false;
-                  if (_selectedTypeFilter == 'title' && !artifact.isTitle) return false;
-                  if (_selectedTypeFilter == 'frame' && !artifact.isFrame) return false;
-                }
-                return true;
-              }).toList();
+              List<Artifact> sortedList = List.from(artifacts);
 
               // Apply sorting
-              filtered.sort((a, b) {
+              sortedList.sort((a, b) {
                 if (_sortBy == 'progress') {
                   return b.progress.compareTo(a.progress);
                 } else if (_sortBy == 'tier') {
@@ -119,8 +104,6 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                     const SizedBox(height: 24),
                     _buildStatsRow(stats, isDark, l10n).animate().fadeIn(delay: 200.ms),
                     const SizedBox(height: 24),
-                    _buildFilterChips(isDark, l10n),
-                    const SizedBox(height: 24),
                     _buildSectionHeader(l10n.translate('ancestral_vault')),
                     const SizedBox(height: 16),
                     if (artifacts.isEmpty)
@@ -128,19 +111,6 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                         title: l10n.translate('vault_locked'),
                         message: l10n.translate('unlock_treasures'),
                         icon: Icons.lock_outline,
-                      )
-                    else if (filtered.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 32),
-                        child: Center(
-                          child: Text(
-                            l10n.translate('no_matching_achievements'),
-                            style: AppTypography.body.copyWith(
-                              color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.6),
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
                       )
                     else
                       GridView.builder(
@@ -152,9 +122,9 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                           crossAxisSpacing: 16,
                           childAspectRatio: 0.72,
                         ),
-                        itemCount: filtered.length,
+                        itemCount: sortedList.length,
                         itemBuilder: (context, index) => 
-                            _buildArtifactCard(context, filtered[index], isDark),
+                            _buildArtifactCard(context, sortedList[index], isDark),
                       ),
                     const SizedBox(height: 40),
                   ],
@@ -173,85 +143,7 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
     );
   }
 
-  Widget _buildFilterChips(bool isDark, AppLocalization l10n) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _buildFilterChip('all', l10n.translate('filter_all'), isDark),
-          const SizedBox(width: 8),
-          _buildFilterChip('earned', l10n.translate('filter_earned'), isDark, icon: Icons.check_circle_outline),
-          const SizedBox(width: 8),
-          _buildFilterChip('in_progress', l10n.translate('filter_in_progress'), isDark, icon: Icons.trending_up),
-          const SizedBox(width: 8),
-          _buildFilterChip('locked', l10n.translate('filter_locked'), isDark, icon: Icons.lock_outline),
-          const SizedBox(width: 16),
-          Container(height: 24, width: 1, color: AppColors.gold500.withValues(alpha: 0.3)),
-          const SizedBox(width: 16),
-          _buildTypeFilterChip('all', l10n.translate('type_all'), isDark),
-          const SizedBox(width: 8),
-          _buildTypeFilterChip('badge', l10n.translate('type_badge'), isDark),
-          const SizedBox(width: 8),
-          _buildTypeFilterChip('title', l10n.translate('type_title'), isDark),
-          const SizedBox(width: 8),
-          _buildTypeFilterChip('frame', l10n.translate('type_frame'), isDark),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildFilterChip(String value, String label, bool isDark, {IconData? icon}) {
-    final isSelected = _selectedStatusFilter == value;
-    return ChoiceChip(
-      selected: isSelected,
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 14, color: isSelected ? Colors.white : (isDark ? AppColors.gold500 : AppColors.forest700)),
-            const SizedBox(width: 4),
-          ],
-          Text(label),
-        ],
-      ),
-      selectedColor: AppColors.gold500,
-      backgroundColor: isDark ? AppColors.forest800 : Colors.white,
-      labelStyle: AppTypography.label.copyWith(
-        color: isSelected ? Colors.white : (isDark ? Colors.white70 : AppColors.forest900),
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-      ),
-      onSelected: (selected) {
-        if (selected) {
-          HapticService.selection();
-          setState(() {
-            _selectedStatusFilter = value;
-          });
-        }
-      },
-    );
-  }
-
-  Widget _buildTypeFilterChip(String value, String label, bool isDark) {
-    final isSelected = _selectedTypeFilter == value;
-    return ChoiceChip(
-      selected: isSelected,
-      label: Text(label),
-      selectedColor: AppColors.forest700,
-      backgroundColor: isDark ? AppColors.forest800 : Colors.white,
-      labelStyle: AppTypography.label.copyWith(
-        color: isSelected ? Colors.white : (isDark ? Colors.white70 : AppColors.forest900),
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-      ),
-      onSelected: (selected) {
-        if (selected) {
-          HapticService.selection();
-          setState(() {
-            _selectedTypeFilter = value;
-          });
-        }
-      },
-    );
-  }
 
   void _showSortBottomSheet(BuildContext context, bool isDark, AppLocalization l10n) {
     showModalBottomSheet(

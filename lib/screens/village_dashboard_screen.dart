@@ -104,6 +104,8 @@ class VillageDashboardScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildVillageHeaderBanner(context, educatorProfileAsync, leaderboardAsync, l10n, isDark),
+                        const SizedBox(height: 16),
+                        _buildMessageEducatorCard(context, ref, userProfile, l10n, isDark),
                         const SizedBox(height: 24),
                         _buildAnnouncementsSection(context, broadcastsAsync, l10n, isDark),
                         const SizedBox(height: 24),
@@ -150,6 +152,12 @@ class VillageDashboardScreen extends ConsumerWidget {
               ),
             ),
           ),
+          IconButton(
+            icon: const Icon(Icons.forum_rounded, color: AppColors.gold500),
+            tooltip: l10n.translate('send_feedback'),
+            onPressed: () => _showFeedbackDialog(context, ref, ref.read(userProfileProvider).value, l10n, isDark),
+          ),
+          const SizedBox(width: 4),
           PopupMenuButton<String>(
             icon: Icon(
               Icons.more_vert_rounded,
@@ -193,7 +201,7 @@ class VillageDashboardScreen extends ConsumerWidget {
     return educatorProfileAsync.when(
       loading: () => const AppShimmerSkeleton(height: 160),
       error: (e, _) => BrandCard(
-        theme: isDark ? BrandCardTheme.gold : BrandCardTheme.vibrant,
+        theme: BrandCardTheme.vibrant,
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Text(
@@ -211,7 +219,7 @@ class VillageDashboardScreen extends ConsumerWidget {
         final totalXp = leaderboardAsync.value?.fold<int>(0, (acc, item) => acc + ((item['xp'] as num?)?.toInt() ?? 0)) ?? 0;
 
         return BrandCard(
-          theme: isDark ? BrandCardTheme.gold : BrandCardTheme.vibrant,
+          theme: BrandCardTheme.vibrant,
           padding: const EdgeInsets.all(20),
           borderRadius: 24,
           child: Column(
@@ -396,7 +404,7 @@ class VillageDashboardScreen extends ConsumerWidget {
                 padding: const EdgeInsets.all(20),
                 child: Row(
                   children: [
-                    const Text('🌿', style: TextStyle(fontSize: 24)),
+                    const Icon(Icons.forum_outlined, color: AppColors.gold500, size: 24),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Text(
@@ -1026,6 +1034,159 @@ class VillageDashboardScreen extends ConsumerWidget {
               l10n.translate('leave_village'),
               style: const TextStyle(color: Colors.white),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessageEducatorCard(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic>? userProfile,
+    AppLocalization l10n,
+    bool isDark,
+  ) {
+    return BrandCard(
+      onTap: () {
+        HapticService.light();
+        _showFeedbackDialog(context, ref, userProfile, l10n, isDark);
+      },
+      theme: BrandCardTheme.cream,
+      padding: const EdgeInsets.all(18),
+      borderRadius: 20,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.gold500.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.forum_rounded, color: AppColors.gold500, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.translate('send_feedback'),
+                  style: AppTypography.h3.copyWith(
+                    color: isDark ? Colors.white : AppColors.forest900,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  l10n.translate('feedback_desc'),
+                  style: AppTypography.body.copyWith(
+                    color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.7),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded, color: AppColors.gold500),
+        ],
+      ),
+    );
+  }
+
+  void _showFeedbackDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic>? profile,
+    AppLocalization l10n,
+    bool isDark,
+  ) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: AppColors.gold500.withValues(alpha: 0.5), width: 2),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.forum_rounded, color: AppColors.gold500, size: 24),
+            const SizedBox(width: 12),
+            Text(
+              l10n.translate('send_feedback'),
+              style: TextStyle(color: isDark ? Colors.white : AppColors.forest900, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.translate('feedback_prompt'),
+              style: TextStyle(
+                color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7),
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              maxLines: 4,
+              style: TextStyle(color: isDark ? Colors.white : AppColors.forest900),
+              decoration: InputDecoration(
+                hintText: l10n.translate('type_message'),
+                hintStyle: TextStyle(color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3)),
+                filled: true,
+                fillColor: isDark ? AppColors.forest800 : Colors.black.withValues(alpha: 0.05),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              l10n.translate('close').toUpperCase(),
+              style: const TextStyle(color: AppColors.gold500, fontWeight: FontWeight.bold),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (controller.text.trim().isEmpty) return;
+              final user = ref.read(authStateProvider).value;
+              if (user != null) {
+                HapticService.success();
+                await ref.read(firebaseServiceProvider).submitStudentFeedback(
+                      studentId: user.uid,
+                      studentName: profile?['username'] ?? profile?['fullName'] ?? 'Tribe Member',
+                      studentPhotoUrl: profile?['photoURL'],
+                      message: controller.text.trim(),
+                    );
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(l10n.translate('feedback_sent')),
+                      backgroundColor: AppColors.semanticGreen,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.gold500,
+              foregroundColor: AppColors.forest900,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text(l10n.translate('send'), style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),

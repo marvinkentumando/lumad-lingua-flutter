@@ -28,6 +28,7 @@ import '../widgets/activity_views/true_false_view.dart';
 import '../widgets/activity_views/fill_blanks_view.dart';
 import '../providers/student_provider.dart';
 import '../providers/quest_provider.dart';
+import '../providers/user_preferences_provider.dart';
 import '../models/quest.dart';
 import '../models/assessment.dart';
 import '../services/haptic_service.dart';
@@ -159,7 +160,9 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
               ref.read(audioServiceProvider).preCacheAudio(audioUrls);
             }
 
-            ref.read(audioServiceProvider).playAmbientMusic(lesson.title);
+            if (ref.read(userPreferencesProvider).backgroundMusicEnabled) {
+              ref.read(audioServiceProvider).playAmbientMusic(lesson.title);
+            }
           }
         });
       }
@@ -557,7 +560,39 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
               }
             });
       } else {
-        _isContinuing = false;
+        // For sessions without lessonId (like Village Mini-Quizzes or custom quizzes)
+        int stars = 3;
+        if (hearts <= 2) {
+          stars = 1;
+        } else if (hearts <= 4) {
+          stars = 2;
+        }
+
+        final config = ref.read(appConfigProvider).value ?? AppConfig.fromFirestore({});
+        final totalTasks = state.totalTasks;
+        final distinctMistakeTasks = _taskMistakes.keys.length;
+        final accurateCount = totalTasks - distinctMistakeTasks;
+        final sessionXp =
+            (accurateCount * config.lessonTaskPerfectXp) + 
+            (distinctMistakeTasks * config.lessonTaskRetryXp) + 
+            config.lessonCompletionBaseXp + _bonusXp;
+
+        setState(() {
+          _showFeedback = false;
+          _isCelebrating = true;
+          _calculatedSessionXp = sessionXp;
+        });
+        ref.read(audioServiceProvider).playSFX('session_complete');
+
+        ref.read(studentProvider.notifier).addXp(sessionXp);
+        final crystalsEarned = stars == 3 ? 50 : 25;
+        ref.read(studentProvider.notifier).addMistCrystals(crystalsEarned);
+        _earnedCrystals = crystalsEarned;
+
+        ref.read(studentProvider.notifier).incrementStreak();
+        ref.read(questActionProvider.notifier).updateProgress(QuestType.lesson, 1);
+        
+        setState(() => _isContinuing = false);
       }
     } else if (hearts == 0) {
       _showSuddenDeathChallenge(l10n);

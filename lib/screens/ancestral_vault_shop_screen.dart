@@ -447,20 +447,51 @@ class _AncestralVaultShopScreenState
         children: [
           Expanded(
             child: Center(
-              child: Text(artifact.emoji, style: const TextStyle(fontSize: 48))
-                  .animate(
-                    onPlay: (c) =>
-                        isHighTier ? c.repeat(reverse: true) : c.repeat(),
-                  )
-                  .scaleXY(
-                    begin: 1.0,
-                    end: isHighTier ? 1.15 : 1.0,
-                    duration: 1000.ms,
-                  )
-                  .shimmer(
-                    duration: 2.seconds,
-                    color: tierColor.withValues(alpha: 0.5),
-                  ),
+              child: artifact.isFrame
+                  ? Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.gold500.withValues(alpha: 0.2),
+                        border: Border.all(
+                          color: artifact.title.toLowerCase().contains('vine')
+                              ? AppColors.semanticGreen
+                              : (artifact.title.toLowerCase().contains('flame')
+                                  ? Colors.deepOrange
+                                  : AppColors.gold700),
+                          width: 4,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(artifact.emoji, style: const TextStyle(fontSize: 32)),
+                      ),
+                    )
+                  : artifact.isTitle
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.gold500.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.gold500, width: 1.5),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(artifact.emoji, style: const TextStyle(fontSize: 20)),
+                              const SizedBox(width: 6),
+                              const Text(
+                                'TITLE',
+                                style: TextStyle(
+                                  color: AppColors.gold500,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : Text(artifact.emoji, style: const TextStyle(fontSize: 48)),
             ),
           ),
           const SizedBox(height: 12),

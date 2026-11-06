@@ -45,6 +45,11 @@ class UserPreferencesNotifier extends Notifier<UserPreferences> {
     await _save();
   }
 
+  Future<void> setBackgroundMusicEnabled(bool enabled) async {
+    state = state.copyWith(backgroundMusicEnabled: enabled);
+    await _save();
+  }
+
   Future<void> setStreakReminderTime(int hour, int minute) async {
     state = state.copyWith(
       streakReminderHour: hour,
