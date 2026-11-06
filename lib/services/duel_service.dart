@@ -246,7 +246,9 @@ class DuelService {
     );
     final docRef = await _matches.add({
       ...newMatch.toFirestore(),
-      'lastSeen.$userId': FieldValue.serverTimestamp(),
+      'lastSeen': {
+        userId: FieldValue.serverTimestamp(),
+      },
     });
     return docRef.id;
   }

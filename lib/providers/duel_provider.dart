@@ -379,24 +379,21 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
       return;
     }
 
-    // Stop listening to our own lobby before cancelling it, so its cancellation
-    // snapshot cannot race the newly claimed active match.
+    // Immediately stop listening to the old lobby BEFORE cancelling it, so any
+    // cancellation event cannot race the newly claimed active match.
     _subscription?.cancel();
     _subscription = null;
     _candidateSubscription?.cancel();
     _candidateSubscription = null;
-    try {
-      await ref.read(duelServiceProvider).cancelMatch(ownWaitingMatchId);
-    } catch (error) {
-      debugPrint('Could not close duplicate waiting lobby: $error');
-    }
-    if (attempt != _matchmakingAttempt || state.phase != DuelPhase.searching) {
-      return;
-    }
 
     _matchmakingMatchId = discoveredMatchId;
     state = state.copyWith(matchId: discoveredMatchId, isLoading: false);
     _listenToMatch(discoveredMatchId);
+
+    // Cancel old waiting lobby in background
+    ref.read(duelServiceProvider).cancelMatch(ownWaitingMatchId).catchError((error) {
+      debugPrint('Could not close duplicate waiting lobby: $error');
+    });
   }
 
   static String matchmakingFailureMessage(Object error) {
