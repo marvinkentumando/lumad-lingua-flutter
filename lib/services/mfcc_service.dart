@@ -6,6 +6,10 @@ class DtwAlignment {
   /// path, i.e. the mean frame-level cost along the alignment.
   final double meanLocalCost;
 
+  /// Maximum local frame-to-frame distance encountered along the optimal path.
+  /// Used for local phonetic frame substitution & mismatch detection.
+  final double maxLocalCost;
+
   /// Raw accumulated cost of the optimal path.
   final double totalCost;
 
@@ -17,6 +21,7 @@ class DtwAlignment {
 
   const DtwAlignment({
     required this.meanLocalCost,
+    this.maxLocalCost = 0.0,
     required this.totalCost,
     required this.pathWeight,
     required this.pathLength,
@@ -366,6 +371,7 @@ class MFCCService {
     final cost = List.generate(n + 1, (_) => List<double>.filled(m + 1, double.infinity));
     final weight = List.generate(n + 1, (_) => List<int>.filled(m + 1, 0));
     final pathLength = List.generate(n + 1, (_) => List<int>.filled(m + 1, 0));
+    final maxFrameCost = List.generate(n + 1, (_) => List<double>.filled(m + 1, 0.0));
     cost[0][0] = 0.0;
 
     for (int i = 1; i <= n; i++) {
@@ -383,6 +389,7 @@ class MFCCService {
         var bestCost = double.infinity;
         var bestWeight = 0;
         var bestLength = 0;
+        var bestMaxLocal = 0.0;
 
         for (final step in _dtwSteps) {
           final di = step[0];
@@ -400,6 +407,7 @@ class MFCCService {
             bestCost = candidate;
             bestWeight = weight[previousI][previousJ] + stepWeight;
             bestLength = pathLength[previousI][previousJ] + 1;
+            bestMaxLocal = max(maxFrameCost[previousI][previousJ], localCost);
           }
         }
 
@@ -407,12 +415,14 @@ class MFCCService {
         cost[i][j] = bestCost;
         weight[i][j] = bestWeight;
         pathLength[i][j] = bestLength;
+        maxFrameCost[i][j] = bestMaxLocal;
       }
     }
 
     if (!cost[n][m].isFinite || weight[n][m] == 0) {
       return const DtwAlignment(
         meanLocalCost: double.infinity,
+        maxLocalCost: double.infinity,
         totalCost: double.infinity,
         pathWeight: 0,
         pathLength: 0,
@@ -421,6 +431,7 @@ class MFCCService {
 
     return DtwAlignment(
       meanLocalCost: cost[n][m] / weight[n][m],
+      maxLocalCost: maxFrameCost[n][m],
       totalCost: cost[n][m],
       pathWeight: weight[n][m],
       pathLength: pathLength[n][m],

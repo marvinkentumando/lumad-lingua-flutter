@@ -99,6 +99,16 @@ void main() {
       expect(matching.overallScore, greaterThan(60.0));
       expect(different.overallScore, lessThan(40.0));
       expect(matching.referenceCount, equals(2));
+
+      for (final algorithm in PronunciationAlgorithm.values) {
+        final alternateAlgorithmResult = PronunciationService.compareAgainstReferenceSet(
+          referenceSet,
+          differentWord,
+          algorithm: algorithm,
+        );
+        expect(alternateAlgorithmResult.isMismatch, isTrue, reason: '${algorithm.name} must apply target-utterance validation');
+        expect(alternateAlgorithmResult.overallScore, equals(0));
+      }
     });
   });
 }

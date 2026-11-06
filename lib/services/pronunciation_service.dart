@@ -338,44 +338,49 @@ class PronunciationService implements IPronunciationComparer {
       return _emptyScore(referenceSet.primaryPcm, userSamples);
     }
 
+    // Always calculate the independent DTW distance for target-utterance
+    // validation. HMM and cosine scores alone can be high for acoustically
+    // similar but non-target speech and previously bypassed mismatch rejection.
+    final distances = <double>[];
+    bool maxFrameMismatch = false;
+    for (final referenceFeatures in referenceSet.referenceFeatures) {
+      final alignment = MFCCService.align(referenceFeatures, userFeatures);
+      if (alignment.isUsable) {
+        if (alignment.meanLocalCost.isFinite) distances.add(alignment.meanLocalCost);
+        if (alignment.maxLocalCost > 18.0) {
+          maxFrameMismatch = true;
+        }
+      }
+    }
+    if (distances.isEmpty) {
+      return _emptyScore(referenceSet.primaryPcm, userSamples);
+    }
+    distances.sort();
+    final bestCount = distances.length >= 2 ? 2 : 1;
+    final distance = distances.take(bestCount).reduce((a, b) => a + b) / bestCount;
+
+    // Acoustic target & phoneme-level frame validation:
+    // Rejects overall mismatch or severe local phonetic substitution (max frame distance > 18.0).
+    if (distance > _mismatchThreshold(referenceSet.baseline) || maxFrameMismatch) {
+      return PronunciationScore(
+        overallScore: 0,
+        accuracy: 0,
+        fluency: 0,
+        clarity: _speechClarity(processedUser),
+        nativeWaveform: referenceSet.primaryPcm,
+        studentWaveform: userSamples,
+        feedback: "That doesn't sound like the target phrase. Please listen to the native speaker and record the phrase shown.",
+        algorithmUsed: algorithm,
+        distance: distance,
+        isCalibrated: referenceSet.baseline.isCalibrated,
+        referenceCount: referenceSet.takeCount,
+        isMismatch: true,
+      );
+    }
+
     double similarity;
-    var distance = double.nan;
-
     if (algorithm == PronunciationAlgorithm.dtw) {
-      final distances = <double>[];
-      for (final referenceFeatures in referenceSet.referenceFeatures) {
-        final candidate = MFCCService.calculateMFCCDistance(referenceFeatures, userFeatures);
-        if (candidate.isFinite) distances.add(candidate);
-      }
-      if (distances.isEmpty) {
-        return _emptyScore(referenceSet.primaryPcm, userSamples);
-      }
-
-      distances.sort();
-      final bestCount = distances.length >= 2 ? 2 : 1;
-      distance = distances.take(bestCount).reduce((a, b) => a + b) / bestCount;
       similarity = scoreFromDistance(distance, referenceSet.baseline, strictness);
-
-      // Utterance-mismatch / non-target rejection: if the distance is far beyond
-      // the native-vs-native range for this phrase, the recording is very likely
-      // the wrong word/phrase (or non-speech that slipped past VAD). Rejecting
-      // here prevents a misleading percentage for a non-matching utterance.
-      if (distance > _mismatchThreshold(referenceSet.baseline)) {
-        return PronunciationScore(
-          overallScore: 0,
-          accuracy: 0,
-          fluency: 0,
-          clarity: _speechClarity(processedUser),
-          nativeWaveform: referenceSet.primaryPcm,
-          studentWaveform: userSamples,
-          feedback: "That doesn't sound like the target phrase. Please listen to the native speaker and record the phrase shown.",
-          algorithmUsed: algorithm,
-          distance: distance,
-          isCalibrated: referenceSet.baseline.isCalibrated,
-          referenceCount: referenceSet.takeCount,
-          isMismatch: true,
-        );
-      }
     } else {
       var best = 0.0;
       for (final referenceFeatures in referenceSet.referenceFeatures) {
