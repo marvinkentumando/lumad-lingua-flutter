@@ -46,10 +46,10 @@ class LearningHubScreen extends ConsumerWidget {
                       const SizedBox(height: 24),
                       // Header
                       Text(
-                        'Your Learning\nPaths',
+                        'Your Learning Paths',
                         style: AppTypography.h1ExtraBold.copyWith(
                           color: Theme.of(context).colorScheme.primary,
-                          fontSize: 36,
+                          fontSize: 32,
                           height: 1.1,
                         ),
                       ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1),

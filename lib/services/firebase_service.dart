@@ -356,9 +356,23 @@ class FirebaseService {
         .collection('artifacts')
         .snapshots()
         .map((snapshot) {
-          final list = snapshot.docs
-              .map((doc) => Artifact.fromFirestore(doc.data(), doc.id))
-              .toList();
+          final userMap = <String, Map<String, dynamic>>{};
+          for (var doc in snapshot.docs) {
+            userMap[doc.id] = doc.data();
+          }
+
+          final list = Artifact.masterArtifactCatalog.map((master) {
+            final userData = userMap[master.id];
+            if (userData != null) {
+              return Artifact.fromFirestore(userData, master.id);
+            } else {
+              return master.copyWith(
+                currentProgress: 0,
+                isEarned: false,
+                earnedAt: null,
+              );
+            }
+          }).toList();
 
           // Sort by tier index (descending) then by earned date
           list.sort((a, b) {

@@ -32,10 +32,24 @@ class MainLayout extends ConsumerWidget {
 
     final String location = GoRouterState.of(context).uri.path;
     final bool hideBottomNav = location.startsWith('/scenario-session') ||
+        location.startsWith('/lesson_session') ||
+        location.startsWith('/daily-challenge') ||
+        location == '/learning/quiz' ||
         location == '/lingua-duel' ||
         location == '/saka-game' ||
         location == '/scenario-hub' ||
-        location == '/audio-comparison';
+        location == '/audio-comparison' ||
+        location == '/achievements' ||
+        location == '/village-dashboard' ||
+        location == '/ancestral-vault-shop' ||
+        location == '/streak' ||
+        location == '/wisdom-progression' ||
+        location == '/offline-wisdom' ||
+        location == '/mansaka-history' ||
+        location == '/data-privacy' ||
+        location == '/sentiment' ||
+        location == '/mastery-dashboard' ||
+        location == '/warriors-circle';
 
     // Find matching route. Special handling for '/' to avoid matching everything
     int currentIndex = navItems.indexWhere((item) {

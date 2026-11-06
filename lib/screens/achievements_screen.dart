@@ -21,12 +21,11 @@ class AchievementsScreen extends ConsumerStatefulWidget {
 }
 
 class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
-  String _sortBy = 'tier';              // 'tier', 'progress', 'name'
+  String _selectedCategory = 'ALL';     // 'ALL', 'EARNED', 'LOCKED', 'TITLES', 'FRAMES', 'BADGES'
 
   @override
   Widget build(BuildContext context) {
     final artifactsAsync = ref.watch(userArtifactsProvider);
-    final stats = ref.watch(artifactStatsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = ref.watch(localizationProvider);
 
@@ -51,34 +50,24 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
             }
           },
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.sort_rounded, color: AppColors.gold500),
-            tooltip: l10n.translate('sort'),
-            onPressed: () {
-              HapticService.selection();
-              _showSortBottomSheet(context, isDark, l10n);
-            },
-          ),
-        ],
       ),
       extendBodyBehindAppBar: true,
       body: BrandBackground(
         child: SafeArea(
           child: artifactsAsync.when(
             data: (artifacts) {
-              List<Artifact> sortedList = List.from(artifacts);
+              // Apply category filtering
+              List<Artifact> filteredList = artifacts.where((a) {
+                if (_selectedCategory == 'EARNED') return a.isEarned;
+                if (_selectedCategory == 'LOCKED') return !a.isEarned;
+                if (_selectedCategory == 'TITLES') return a.isTitle;
+                if (_selectedCategory == 'FRAMES') return a.isFrame;
+                if (_selectedCategory == 'BADGES') return a.isBadge;
+                return true;
+              }).toList();
 
-              // Apply sorting
-              sortedList.sort((a, b) {
-                if (_sortBy == 'progress') {
-                  return b.progress.compareTo(a.progress);
-                } else if (_sortBy == 'tier') {
-                  return b.tier.index.compareTo(a.tier.index);
-                } else {
-                  return a.title.compareTo(b.title);
-                }
-              });
+              // Default sorting by tier index descending
+              filteredList.sort((a, b) => b.tier.index.compareTo(a.tier.index));
 
               return SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
@@ -102,11 +91,11 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                       ),
                     ).animate().fadeIn(delay: 100.ms),
                     const SizedBox(height: 24),
-                    _buildStatsRow(stats, isDark, l10n).animate().fadeIn(delay: 200.ms),
-                    const SizedBox(height: 24),
                     _buildSectionHeader(l10n.translate('ancestral_vault')),
+                    const SizedBox(height: 12),
+                    _buildCategoryFilterRow(isDark),
                     const SizedBox(height: 16),
-                    if (artifacts.isEmpty)
+                    if (filteredList.isEmpty)
                       BrandedEmptyState(
                         title: l10n.translate('vault_locked'),
                         message: l10n.translate('unlock_treasures'),
@@ -122,9 +111,9 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                           crossAxisSpacing: 16,
                           childAspectRatio: 0.72,
                         ),
-                        itemCount: sortedList.length,
+                        itemCount: filteredList.length,
                         itemBuilder: (context, index) => 
-                            _buildArtifactCard(context, sortedList[index], isDark),
+                            _buildArtifactCard(context, filteredList[index], isDark),
                       ),
                     const SizedBox(height: 40),
                   ],
@@ -143,58 +132,243 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
     );
   }
 
+  Widget _buildCategoryFilterRow(bool isDark) {
+    final categories = ['ALL', 'EARNED', 'LOCKED', 'TITLES', 'FRAMES', 'BADGES'];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        children: categories.map((cat) {
+          final isSelected = _selectedCategory == cat;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () {
+                HapticService.selection();
+                setState(() => _selectedCategory = cat);
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.gold500 : Colors.white.withValues(alpha: isDark ? 0.05 : 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected ? AppColors.gold500 : (isDark ? Colors.white12 : Colors.black12),
+                  ),
+                ),
+                child: Text(
+                  cat,
+                  style: AppTypography.label.copyWith(
+                    color: isSelected ? AppColors.forest900 : (isDark ? Colors.white70 : AppColors.forest900),
+                    fontSize: 11,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
 
-
-  void _showSortBottomSheet(BuildContext context, bool isDark, AppLocalization l10n) {
+  void _showArtifactDetailModal(BuildContext context, Artifact artifact, bool isDark) {
+    final tierColor = _getTierColor(artifact.tier);
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: isDark ? AppColors.forest800 : Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) {
-        return Padding(
+      builder: (context) => SafeArea(
+        child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: tierColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: tierColor.withValues(alpha: 0.5)),
+                    ),
+                    child: Center(
+                      child: Text(artifact.emoji, style: const TextStyle(fontSize: 32)),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: tierColor.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                artifact.tier.name.toUpperCase(),
+                                style: TextStyle(color: tierColor, fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            if (artifact.isEarned)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.semanticGreen.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  'UNLOCKED',
+                                  style: TextStyle(color: AppColors.semanticGreen, fontSize: 10, fontWeight: FontWeight.bold),
+                                ),
+                              )
+                            else
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.white12,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  'LOCKED',
+                                  style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          artifact.title,
+                          style: AppTypography.h3.copyWith(
+                            color: isDark ? Colors.white : AppColors.forest900,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
               Text(
-                l10n.translate('sort_by'),
-                style: AppTypography.h3.copyWith(color: isDark ? Colors.white : AppColors.forest900),
+                artifact.description,
+                style: AppTypography.body.copyWith(
+                  color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.8),
+                  fontSize: 14,
+                  height: 1.4,
+                ),
               ),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const Icon(Icons.star, color: AppColors.gold500),
-                title: Text(l10n.translate('sort_tier'), style: TextStyle(color: isDark ? Colors.white : AppColors.forest900)),
-                trailing: _sortBy == 'tier' ? const Icon(Icons.check, color: AppColors.gold500) : null,
-                onTap: () {
-                  setState(() => _sortBy = 'tier');
-                  Navigator.pop(context);
-                },
+              if (artifact.legend != null && artifact.legend!.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text(
+                  'LORE & LEGEND',
+                  style: AppTypography.label.copyWith(color: AppColors.gold500, fontSize: 10, letterSpacing: 1.5),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  artifact.legend!,
+                  style: TextStyle(
+                    color: isDark ? Colors.white60 : Colors.black54,
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+              if (artifact.passiveBonus != null && artifact.passiveBonus!.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold500.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.auto_awesome, color: AppColors.gold500, size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Passive Bonus: ${artifact.passiveBonus}',
+                        style: const TextStyle(
+                          color: AppColors.gold500,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        context.pop();
+                        context.push('/artifact-detail', extra: artifact);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.gold500,
+                        side: const BorderSide(color: AppColors.gold500),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('VIEW FULL DETAILS'),
+                    ),
+                  ),
+                  if (artifact.isEarned && artifact.isCustomization) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          HapticService.celebration();
+                          context.pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Equipped "${artifact.title}"! 🌿'),
+                              backgroundColor: AppColors.semanticGreen,
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.gold500,
+                          foregroundColor: AppColors.forest900,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('EQUIP', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              ListTile(
-                leading: const Icon(Icons.trending_up, color: AppColors.gold500),
-                title: Text(l10n.translate('sort_progress'), style: TextStyle(color: isDark ? Colors.white : AppColors.forest900)),
-                trailing: _sortBy == 'progress' ? const Icon(Icons.check, color: AppColors.gold500) : null,
-                onTap: () {
-                  setState(() => _sortBy = 'progress');
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.sort_by_alpha, color: AppColors.gold500),
-                title: Text(l10n.translate('sort_name'), style: TextStyle(color: isDark ? Colors.white : AppColors.forest900)),
-                trailing: _sortBy == 'name' ? const Icon(Icons.check, color: AppColors.gold500) : null,
-                onTap: () {
-                  setState(() => _sortBy = 'name');
-                  Navigator.pop(context);
-                },
-              ),
+              const SizedBox(height: 12),
             ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -217,58 +391,12 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
     );
   }
 
-  Widget _buildStatsRow(Map<String, dynamic> stats, bool isDark, AppLocalization l10n) {
-    return Row(
-      children: [
-        _buildStatItem(l10n.translate('collected'), "${stats['earned'] ?? 0}", Icons.auto_awesome, isDark),
-        const SizedBox(width: 16),
-        _buildStatItem(l10n.translate('total_label'), "${stats['total'] ?? 0}", Icons.temple_hindu, isDark),
-        const SizedBox(width: 16),
-        _buildStatItem(
-          l10n.translate('rank_label'),
-          (stats['earned'] ?? 0) >= 10 ? l10n.translate('elder') : ((stats['earned'] ?? 0) >= 5 ? "Warrior" : l10n.translate('novice')),
-          Icons.workspace_premium,
-          isDark,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatItem(String label, String value, IconData icon, bool isDark) {
-    return Expanded(
-      child: BrandCard(
-        theme: BrandCardTheme.vibrant,
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            Icon(icon, color: isDark ? AppColors.gold500 : AppColors.gold700, size: 20),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: AppTypography.h3.copyWith(
-                color: isDark ? Colors.white : AppColors.forest900,
-                fontSize: 16,
-              ),
-            ),
-            Text(
-              label,
-              style: AppTypography.label.copyWith(
-                color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.4),
-                fontSize: 8,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildArtifactCard(BuildContext context, Artifact artifact, bool isDark) {
     final tierColor = _getTierColor(artifact.tier);
     return GestureDetector(
       onTap: () {
         HapticService.selection();
-        context.push('/artifact-detail', extra: artifact);
+        _showArtifactDetailModal(context, artifact, isDark);
       },
       child: Container(
         decoration: BoxDecoration(
@@ -325,19 +453,6 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                           child: Icon(Icons.lock_rounded, color: Colors.white70, size: 28),
                         ),
                       ),
-                    if (artifact.isEarned)
-                      Positioned(
-                        top: 6,
-                        right: 6,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: tierColor,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.check, size: 12, color: Colors.white),
-                        ),
-                      ),
                   ],
                 ),
               ),
@@ -352,31 +467,9 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 2),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    artifact.tier.name.toUpperCase(),
-                    style: AppTypography.label.copyWith(color: tierColor, fontSize: 8, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    "${(artifact.progress * 100).toInt()}%",
-                    style: AppTypography.label.copyWith(
-                      color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.5),
-                      fontSize: 8,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: artifact.progress,
-                  backgroundColor: isDark ? Colors.white12 : Colors.black12,
-                  valueColor: AlwaysStoppedAnimation<Color>(artifact.isEarned ? tierColor : AppColors.gold500),
-                  minHeight: 4,
-                ),
+              Text(
+                artifact.tier.name.toUpperCase(),
+                style: AppTypography.label.copyWith(color: tierColor, fontSize: 8, fontWeight: FontWeight.bold),
               ),
             ],
           ),

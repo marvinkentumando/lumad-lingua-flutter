@@ -28,146 +28,6 @@ class _AncestralVaultShopScreenState
     extends ConsumerState<AncestralVaultShopScreen> {
   String _selectedCategory = 'ALL';
 
-  static final List<Artifact> _defaultVaultCatalog = [
-    // Titles
-    Artifact(
-      id: 'title_mansaka_elder',
-      title: 'Mansaka Elder',
-      description: 'A respected keeper of tribal ancestral stories.',
-      emoji: '📜',
-      type: 'title',
-      tier: ArtifactTier.epic,
-      crystalCost: 150,
-      passiveBonus: '+5% XP from sessions',
-      isAvailableInShop: true,
-    ),
-    Artifact(
-      id: 'title_tribal_guardian',
-      title: 'Tribal Guardian',
-      description: 'Sworn protector of indigenous heritage and language.',
-      emoji: '🛡️',
-      type: 'title',
-      tier: ArtifactTier.sacred,
-      crystalCost: 200,
-      passiveBonus: '+10% XP from quizzes',
-      isAvailableInShop: true,
-    ),
-    Artifact(
-      id: 'title_sacred_weaver',
-      title: 'Sacred Weaver',
-      description: 'Master artisan of traditional indigenous patterns.',
-      emoji: '🧵',
-      type: 'title',
-      tier: ArtifactTier.legendary,
-      crystalCost: 250,
-      passiveBonus: '+15% Mist Crystals from quests',
-      isAvailableInShop: true,
-    ),
-    Artifact(
-      id: 'title_spirit_chanter',
-      title: 'Spirit Chanter',
-      description: 'Voice of the ancient oral chants and ancestral echoes.',
-      emoji: '🎙️',
-      type: 'title',
-      tier: ArtifactTier.ancient,
-      crystalCost: 300,
-      passiveBonus: '+20% XP on speaking practice',
-      isAvailableInShop: true,
-    ),
-
-    // Avatar Frames
-    Artifact(
-      id: 'frame_sunburst_gold',
-      title: 'Golden Sunburst Frame',
-      description: 'Radiant golden sunray halo around your avatar.',
-      emoji: '☀️',
-      type: 'frame',
-      tier: ArtifactTier.rare,
-      crystalCost: 100,
-      passiveBonus: 'Cultural Sun Aura',
-      isAvailableInShop: true,
-    ),
-    Artifact(
-      id: 'frame_forest_vine',
-      title: 'Forest Vine Frame',
-      description: 'Sacred Kagulangan forest vines woven around your avatar.',
-      emoji: '🌿',
-      type: 'frame',
-      tier: ArtifactTier.rare,
-      crystalCost: 120,
-      passiveBonus: 'Ancestral Forest Halo',
-      isAvailableInShop: true,
-    ),
-    Artifact(
-      id: 'frame_tribal_flame',
-      title: 'Tribal Flame Frame',
-      description: 'Sacred spark fire that ignites your warrior presence.',
-      emoji: '🔥',
-      type: 'frame',
-      tier: ArtifactTier.epic,
-      crystalCost: 220,
-      passiveBonus: 'Sacred Fire Glow',
-      isAvailableInShop: true,
-    ),
-    Artifact(
-      id: 'frame_ancestral_crown',
-      title: 'Ancestral Gold Halo',
-      description: 'Glowing golden spirit crown reserved for tribal legends.',
-      emoji: '👑',
-      type: 'frame',
-      tier: ArtifactTier.legendary,
-      crystalCost: 350,
-      passiveBonus: 'Golden Spirit Crown',
-      isAvailableInShop: true,
-    ),
-
-    // Badges & Artifacts
-    Artifact(
-      id: 'badge_waling_waling',
-      title: 'Waling-Waling Spark',
-      description: 'Sacred orchid emblem representing rare beauty and honor.',
-      emoji: '🌸',
-      type: 'badge',
-      tier: ArtifactTier.common,
-      crystalCost: 80,
-      passiveBonus: 'Royal Orchid Badge',
-      isAvailableInShop: true,
-    ),
-    Artifact(
-      id: 'artifact_golden_agung',
-      title: 'Golden Agung',
-      description: 'Resonant brass gong that summons the spirits of the tribe.',
-      emoji: '🔔',
-      type: 'artifact',
-      tier: ArtifactTier.epic,
-      crystalCost: 180,
-      passiveBonus: 'Gong of Resonance',
-      isAvailableInShop: true,
-    ),
-    Artifact(
-      id: 'artifact_kulintang_pearl',
-      title: 'Kulintang Pearl',
-      description: 'Harmonic pearl instrument used in traditional celebrations.',
-      emoji: '💎',
-      type: 'badge',
-      tier: ArtifactTier.sacred,
-      crystalCost: 250,
-      passiveBonus: 'Tribe Harmony Gem',
-      isAvailableInShop: true,
-    ),
-    Artifact(
-      id: 'badge_agila_emblem',
-      title: 'Agila Spirit Emblem',
-      description: 'Emblem of the Philippine Eagle, guardian of mountain skies.',
-      emoji: '🦅',
-      type: 'badge',
-      tier: ArtifactTier.ancient,
-      crystalCost: 400,
-      passiveBonus: 'Great Eagle Badge',
-      isAvailableInShop: true,
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -208,7 +68,7 @@ class _AncestralVaultShopScreenState
                   }
                 }
 
-                for (var def in _defaultVaultCatalog) {
+                for (var def in Artifact.masterArtifactCatalog) {
                   if (!map.containsKey(def.id)) {
                     map[def.id] = def;
                   }
@@ -264,7 +124,7 @@ class _AncestralVaultShopScreenState
                 child: CircularProgressIndicator(color: AppColors.gold500),
               ),
               error: (_, __) {
-                final filtered = _defaultVaultCatalog.where((a) {
+                final filtered = Artifact.masterArtifactCatalog.where((a) {
                   if (_selectedCategory == 'TITLES') return a.isTitle;
                   if (_selectedCategory == 'FRAMES') return a.isFrame;
                   if (_selectedCategory == 'BADGES') {
