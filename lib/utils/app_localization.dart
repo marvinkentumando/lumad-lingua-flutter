@@ -220,7 +220,7 @@ class AppLocalization {
       'not_in_village': 'Not in a Village',
       'join_village_instructions': 'Join a community village using a code provided by your educator.',
       'back_to_profile': 'BACK TO PROFILE',
-      'village_sanctuary_title': 'VILLAGE SANCTUARY 🌿',
+      'village_sanctuary_title': 'VILLAGE SANCTUARY',
       'leave_village': 'Leave Village',
       'unable_load_village_details': 'Unable to load village details:',
       'led_by': 'Led by {name}',
@@ -249,7 +249,7 @@ class AppLocalization {
       'recently': 'Recently',
       'welcome_tribe_title': 'WELCOME TO THE TRIBE! 🌿',
       'village_joined_desc': 'You have successfully connected to your community village sanctuary. Explore announcements, custom assessments, and tribe rankings.',
-      'enter_village_sanctuary': 'ENTER VILLAGE SANCTUARY 🌿',
+      'enter_village_sanctuary': 'ENTER VILLAGE SANCTUARY',
 
       // 3. Gamified Sessions
       'top_3': "YOU'RE IN THE TOP 3! 🔥",
@@ -1198,7 +1198,7 @@ class AppLocalization {
       'not_in_village': 'Wala sa Nayon',
       'join_village_instructions': 'Sumali sa isang nayon gamit ang code na ibinigay ng iyong guro.',
       'back_to_profile': 'BUMALIK SA PROFILE',
-      'village_sanctuary_title': 'SANTUWARIYO NG NAYON 🌿',
+      'village_sanctuary_title': 'SANTUWARIYO NG NAYON',
       'leave_village': 'Umalis sa Nayon',
       'unable_load_village_details': 'Hindi ma-load ang mga detalye ng nayon:',
       'led_by': 'Pinamumunuan ni {name}',
@@ -1227,7 +1227,7 @@ class AppLocalization {
       'recently': 'Kamakailan',
       'welcome_tribe_title': 'MALIGAYANG PAGDATING SA TRIBU! 🌿',
       'village_joined_desc': 'Maitagumpay kang nakakonekta sa santuwariyo ng iyong nayon. Galugarin ang mga anunsyo, pagsusuri, at ranking ng tribu.',
-      'enter_village_sanctuary': 'PUMASOK SA SANTUWARIYO 🌿',
+      'enter_village_sanctuary': 'PUMASOK SA SANTUWARIYO',
 
       // 3. Gamified Sessions
       'top_3': 'NASA TOP 3 KA! 🔥',
@@ -2101,7 +2101,7 @@ class AppLocalization {
       'not_in_village': 'Wala sa Baryo',
       'join_village_instructions': 'Apil sa usa ka baryo gamit ang code nga gihatag sa imong edukador.',
       'back_to_profile': 'BALIK SA PROFILE',
-      'village_sanctuary_title': 'SANTWARYO SA BARYO 🌿',
+      'village_sanctuary_title': 'SANTWARYO SA BARYO',
       'leave_village': 'Mobiya sa Baryo',
       'unable_load_village_details': 'Dili ma-load ang mga detalye sa baryo:',
       'led_by': 'Gipangulohan ni {name}',
@@ -2130,7 +2130,7 @@ class AppLocalization {
       'recently': 'Kamakailan',
       'welcome_tribe_title': 'MAAYONG PAG-ABOT SA TRIBU! 🌿',
       'village_joined_desc': 'Matagumpay kang nakakonektar sa santwaryo sa imong baryo. Susiha ang mga pahinumdom, pagsuway, ug ranking sa tribu.',
-      'enter_village_sanctuary': 'SUMOD SA SANTWARYO 🌿',
+      'enter_village_sanctuary': 'SUMOD SA SANTWARYO',
 
       // 3. Gamified Sessions
       'top_3': 'NAA KA SA TOP 3! 🔥',

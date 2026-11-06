@@ -59,8 +59,10 @@ This study aims to develop LUMAD LINGUA as a cross-platform mobile application t
 The system is designed to evaluate the performance of three different algorithms for each of its core functionalities such as Naïve Bayes, Support Vector Machine (SVM) and Bi-directional Long Short-Term Memory (BiLSTM) for sentiment classification of the Mansaka-language Facebook posts, based on their accuracy, precision, recall, and F1 score. For pronunciation assessment, the system would be evaluating Dynamic Time Warping (DTW), Hidden Markov Model (HMM) and Cosine Similarity based on MFCC feature extraction algorithm.
 The application utilizes an offline-first approach through the use of Firestore's built-in offline persistence, where the app stores locally any previously accessed vocabularies, quizzes, and learners' learning activities. The learners can still be able to access the dictionary entries stored in cache, as well as complete learning activities that were previously downloaded even when operating in offline mode. An offline-first approach becomes especially crucial for our target communities in remote locations in Mindanao where internet connectivity is not very reliable.
 In addition, the pronunciation evaluation component records the learner's utterances using the device's microphone, analyzes the MFCCs of the learner's audio recording and the native speaker's audio reference, and uses the alignment algorithm to calculate the similarity score, after which a configurable tolerance level determines the learner's pronunciation result as either Excellent, Good, or Needs Improvement. Audio preprocessing includes the removal of noise and normalization of the volume of the learner and reference audio recordings before computing their MFCC features.
-In order to safeguard the linguistic information and learner information, the system implements role-based access controls using Firebase Authentication custom claims, ensuring that only the assigned roles have the write capabilities, and ensuring that learners can only gain access to authorized information. The exchange of information from the mobile app to the Firebase services is secured using HTTPS. The authentication of users' login information is carried out using encryption techniques provided by Firebase Authentication. The indigenous language vocabulary is documented following the community co-creation protocols in collaboration with tribal leaders recognized by NCIP, and acknowledging their intellectual property rights using validators in the digital archive.
-There are many limitations that the research is bound to adhere to. For instance, the system uses an algorithm-based pronunciation assessment component to analyze the pronunciation of users while they carry out their practice or quiz exercises; but the system does not make use of deep learning algorithms for speech recognition. The translation process in this case makes use of the dictionaries created and validated by the linguistic Validator and not machine learning algorithms. For sentiment classification, the accuracy of the results will be limited by the availability of publicly available posts in the Mansaka language in Facebook sites. Finally, the prototype focuses on beginner-level materials mainly for the Mansaka language.
+In order to safeguard the linguistic information and learner information, the system implements role-based access controls using Firebase Authentication custom claims, ensuring that only the assigned roles have the write capabilities, and ensuring that learners can only gain access to authorized information. The exchange of information from the mobile app to the Firebase services is secured using HTTPS. The authentication of users' login information is carried out using encryption techniques provided by Firebase Authentication.
+There are many limitations that the research is bound to adhere to. For instance, the system uses an algorithm-based pronunciation assessment component to analyze the pronunciation of users while they carry out their practice or quiz exercises; but the system does not make use of deep learning algorithms for speech recognition. The translation process in this case makes use of dictionaries and language resources that have undergone prior linguistic verification and not machine learning algorithms.For sentiment classification, the accuracy of the results will be limited by the availability of publicly available posts in the Mansaka language in Facebook sites. Finally, the prototype focuses on beginner-level materials mainly for the Mansaka language.
+
+
 
 
 
@@ -163,8 +165,9 @@ MTB-MLE (Mother Tongue-Based Multilingual Education). Term that refers to the ed
 Pronunciation Assessment. This feature refers to a system feature that assesses a user’s pronunciation performance by means of comparing his or her speech sample against reference recordings by means of waveform-based feedback.
 Sentiment Analysis. This term refers to the process of classification of public Facebook posts made in the Mansaka language according to the sentiments expressed in the post (positive, negative, or neutral).
 Sentiment Dashboard. Data visualization interface used in the platform to demonstrate sentiment trends according to the analyzed Facebook posts in the Mansaka language.
-Validator. It refers to the assigned linguistic expert who uploads, documents, and verifies the vocabularies and sound recordings within the system. It is the responsibility of the system to assign a validator so that the content is representative of linguistic standards of the languages.
 Waveform. It refers to the visual presentation of an audio signal which is used within the system to help the user in improving his/her pronunciation by comparing it visually.
+
+
 
 
 
@@ -179,7 +182,7 @@ METHODOLOGY
 Project follows the Hybrid Project Management Methodology that mixes both structural and flexible aspects of Waterfall and Agile shown in Figure 1. The structural Waterfall process is employed at early stages to make sure that proper planning and definition and documentation of requirements takes place in order to prepare all outputs before starting the project, such as project proposal and design of the system. Flexible aspects of Agile are applied while implementing and testing the system by repeating iterations of development and testing of the system's functions, including sentiment analysis, gamification and other components. Following the hybrid approach allows to achieve balance between structure and flexibility in managing processes with static and dynamic components.
 Project development starts from the Planning phase, during which the scope of the project, objectives, schedule, and resources that should be employed according to the approved project proposal are identified. This phase determines the general direction of the project and its viability. The next phase is the Analysis phase. In this phase, proponents analyze the requirements of the system by studying documentation of the current languages and identifying user requirements.
 During the Design stage, the supporters developed the ideals into a system architecture, including the design of the Firestore database, mock-ups of the user interface, and system moments diagrams. In the Implementation stage, the proponents implemented the system according to the Agile process which consisted of two-week sprints that lasted between ten and fourteen days. This process started with a sprint planning session during which deliverables were identified and then continued with development and unit tests and finally a sprint review and sprint retrospective. Sprint cycles were set according to important aspects of the system which included the collection of the data from Facebook, conducting of sentiment analysis, executing gamified learning modules and Leitner technique and pronunciation assessment. It is due to this iterative process that the team managed to develop the features step-by-step and resolve the problems found during the development of the system.
-Within the Maintenance phase, the proponents conduct the system assessment, identify any issues and recommend the improvements that can boost the efficiency of the process. As for the Post-deployment maintenance phase, the proponents constantly check Firebase Crashlytics for crash-free session ratio and abnormal rise in errors. The following is done on a quarterly basis: optimization of Firebase Firestore indexes and removal of the old rejected/pending documents. The following is done on a monthly basis: checking of the audio recordings and vocabulary entries for language correctness, updating of the Firebase Security rules, Flutter dependencies update, and Firebase SDK versions update. Feedback from the validators and learners is gathered via post-deployment surveys and serves as a basis for quarterly interface upgrades. All maintenance activities are recorded in the maintenance log which is managed by the project team and reviewed by the academic supervisor on a semesterly basis.
+Within the Maintenance phase, the proponents conduct the system assessment, identify any issues and recommend the improvements that can boost the efficiency of the process. As for the Post-deployment maintenance phase, the proponents constantly check Firebase Crashlytics for crash-free session ratio and abnormal rise in errors. The following is done on a quarterly basis: optimization of Firebase Firestore indexes and removal of the old rejected/pending documents. The following is done on a monthly basis: checking of the audio recordings and vocabulary entries for language correctness, updating of the Firebase Security rules, Flutter dependencies update, and Firebase SDK versions update. Feedback from learners, educators, and administrators is gathered via post-deployment surveys and serves as a basis for quarterly interface upgrades. All maintenance activities are recorded in the maintenance log which is managed by the project team and reviewed by the academic supervisor on a semesterly basis.
 
 
 
@@ -232,11 +235,10 @@ Figure 4. Gantt Chart of the System
 SYSTEM ANALYSIS
 
 System Architecture
-System Architecture illustrated in Figure 5 provides a systematic structure that highlights how different components of Lumad Lingua come together to facilitate gamified learning, sentiment-based vocabulary discovery, digital language documentation, and content validation. In general, the three main layers that constitute the architecture are client layer (Flutter mobile application), backend layer (Firebase and Supabase services), and external services (Facebook Graph API and hardware).
-The architecture uses a cross-platform mobile application that is designed using Flutter and Dart on iOS and Android devices as the client layer. Learner, Validator, Administrator, and Educator are the four key user roles in the system. Entering new vocabulary entries and their audio recordings and validating all the entries submitted by learners is the responsibility of the Validator who is either a professional linguist or a community tribal leader that unifies documentation and quality assurance into one community trustable role.
-The components that make up the application include Cloud Firestore that is used to store vocabulary terms, user data, validation data, version history data, gamification data, sentiment classification data, and quiz results, Firebase Authentication for role-based access control, and Supabase Storage for audio file management. The processing done on the server side such as sentiment analysis, scoring computations, and analytics collection is done using Firebase Cloud Functions.
-Whereas there are pre-compiled secondary sources of Facebook posts with Mansaka terms and phrases made public, the sentiment analysis process uses those posts to retrieve them. To understand what people's sentiments are about the language, the retrieved posts are translated into Filipino and English languages and sorted according to sentiment classification. The digital dictionary's fields for terms, translations, and context are populated with Mansaka terms that have been identified through the retrieval process, their translations, and context.
-For the external services, there is the Facebook Graph API for data retrieval of sentiment and device microphone for audio recording for pronunciation assessment using the flutter_sound package.
+The System Architecture illustrated in Figure 5 presents the overall structure of the Lumad Lingua platform. The architecture is composed of three major layers: the client layer, the backend layer, and the external services layer. The client layer consists of a cross-platform mobile application developed using Flutter and Dart for Android and iOS devices. The platform supports three user roles: Administrator, Educator, and Learner.
+The Administrator is responsible for managing user accounts, system settings, learning materials, vocabulary entries, audio recordings, and sentiment-related content that have already undergone linguistic verification through in-person consultation with tribal leaders, native speakers, and language experts. Educators access learning materials and learner performance records, while Learners utilize the platform for language learning activities, dictionary searches, pronunciation assessment, and progress tracking.
+The backend layer consists of Firebase Authentication for user authentication and role-based access control, Cloud Firestore for storing vocabulary entries, user profiles, learning content, sentiment analysis records, and learner progress data, and Supabase Storage for managing audio recordings and media assets. Firebase Cloud Functions handle server-side operations such as sentiment analysis processing, scoring computations, analytics generation, and data synchronization.
+The external services layer includes the Facebook Graph API for retrieving publicly available Mansaka-language posts for sentiment analysis and the device microphone for capturing learner pronunciations used in pronunciation assessment.
 
 
 
@@ -256,8 +258,8 @@ The system must use sentiment classification algorithm to classify the sentiment
 The system must present a sentiment dashboard that displays the trends of sentiments generated from the analysis of Facebook posts containing Mansaka language.
 The system must present gamified learning modules with multiple choice quizzes, matching activities, and listening practice with a Leitner spaced repetition algorithm to schedule the vocabulary reviews at increasing intervals based on learner mastery.
 The system shall include a pronunciation assessment feature that computes MFCCs on the recordings of the learner and the authentic reference audio, with dynamic time warping being used for alignment.
-The system shall provide a searchable digital dictionary where users will be able to find out indigenous words, Filipino and English translations, as well as audio clips provided by Supabase Storage service, the search results to be returned within 500 milliseconds.
-The system shall implement a role-based access control mechanism via Firebase Authentication Custom Claims, namely by assigning roles of Learner, Validator, Educator, and Administrator, with appropriate Firestore security rules.
+The system shall provide a searchable digital dictionary where users will be able to find out indigenous words, English translations, as well as audio clips provided by Supabase Storage service, the search results to be returned within 500 milliseconds.
+The system shall implement a role-based access control mechanism via Firebase Authentication Custom Claims, namely by assigning roles of Learner, Educator, and Administrator, with appropriate Firestore security rules.
 The system shall monitor the learners' progress in terms of points, levels, scores, completion and streaking information recorded in Firestore per each learner.
 The system shall provide offline-first capabilities through Firestore offline support, enabling learners to access the downloaded content without the Internet connection, with automatic synchronisation once it becomes available.
 The system shall create an analytics dashboard for the administrators providing information about content coverage and learners' performance summarised from the Firestore database.
@@ -270,7 +272,7 @@ Audio Storage Reliability. The audio recordings stored in Supabase Storage will 
 Application Stability. The application should maintain a minimum crash-free sessions rate of 95% which will be tracked via Firebase Crashlytics.
 Learner Interface Usability. The learners’ interface will score no lower than 4.0 on a scale of 1-5 during a standard usability assessment of community members.
 Authentication Security. User authentication shall take place using Firebase Authentication with encryption of credentials and strong password policies.
-Dictionary Content Security. Vocabulary terms that are approved by the designated Validator shall be the only ones available to Learner accounts using Firestore security rules.
+Dictionary Content Security. Only verified vocabulary terms shall be available to Learner accounts using Firestore security rules.
 Secure Data Transmission. Any data transfer between the app, Firebase, and Supabase Storage shall be encrypted using HTTPS protocol.
 Device Compatibility. The application shall operate correctly on Android devices running API Level 21 or higher and iOS devices running iOS 13 or later using a single Flutter codebase.
 Offline Learning Availability. Previously downloaded vocabulary terms, lessons, quizzes, and learner progression shall remain available for offline use in Firestore offline persistence which shall automatically synchronize with the database once connected to the Internet.
@@ -279,47 +281,65 @@ Database Scalability. Firestore shall be capable of supporting additional users,
 Cloud Storage Scalability. Supabase Storage should support an uninterrupted storage capacity increase for audio files and learning materials with reliable retrieval efficiency.
 Analytics Availability. The analytics dashboard will be accessible to the respective administrator when the system is linked to Firebase services, showing the last synced data.
 
+
+
+
 Use Case Diagram
-The Administrator, the Learner or Youth User, and the Educator are the three system users identified in the platform, as illustrated in Figure 6. All vocabulary entries, audio recordings, lesson materials, and sentiment-derived insights are validated offline by linguistic experts and tribal leaders before ever reaching the system; there is no in-app validation workflow or validator-type role. The Administrator is responsible for bringing this pre-validated content into the platform, in addition to overseeing user accounts, configuring system parameters, and accessing analytics and reports. Specifically, the Administrator manages user accounts, configures system settings, loads validated content, views all content on the platform, and views analytics and system reports. These functions ensure that only content already confirmed as linguistically and culturally accurate is introduced into the system, while giving the Administrator full oversight of platform operations.
-The Learner engages with the system by registering an account, browsing the digital dictionary, viewing lessons, practicing pronunciation, completing quizzes, and monitoring personal progress. Completing a quiz includes viewing the corresponding quiz score as part of the same interaction. The Learner also has access to a sentiment dashboard, allowing them to see community language trends drawn from the pre-validated sentiment insights loaded by the Administrator. These interactions give the Learner an interactive, self-paced way to engage with and track their own progress in learning the Mansaka language.
-The Educator interacts with the system in a purely consumptive and supervisory capacity, browsing the digital dictionary alongside the Learner, viewing learner progress, and viewing learner quiz results. Because all lesson materials, vocabulary, and audio content are validated offline and loaded directly by the Administrator, the Educator does not create, upload, or edit any content within the system; their role is limited to referencing already-validated material and monitoring learner performance to inform instructional decisions outside the platform.
+The Use Case Diagram shown in Figure 6 illustrates the interactions between the four primary user roles of the Lumad Lingua platform: Administrator, Validator, Educator, and Learner.
+The Administrator is responsible for managing user accounts, configuring system settings, importing verified vocabulary entries, audio recordings, lessons, and sentiment resources, viewing content, and accessing system analytics and reports.
+The Validator acts as the linguistic expert responsible for reviewing, verifying, and approving crowdsourced or scraped vocabulary entries, pronunciation audio recordings, and sentiment classification results to ensure high linguistic accuracy before publication to learners.
+The Learner interacts with the platform by registering an account, browsing the digital dictionary, viewing lessons, practicing pronunciation, completing quizzes, accessing sentiment dashboards, and monitoring personal learning progress. These functions provide an interactive and self-paced learning experience for users studying the Mansaka language.
+The Educator uses the platform to create curriculum materials, design interactive lessons and mini-quizzes, broadcast updates, browse dictionary content, view learner progress, and review learner quiz results.
 
 
 Figure 6. Use Case Diagram of the System
 
+
+
 Context Flow Diagram
 
-The Context Flow Diagram shown in Figure 7 presents a high-level view of the Lumad Lingua platform, illustrating how the system interacts with external entities and how data flows across the platform as a whole. The diagram's three external entities are the Administrator, the Learner or Youth User, and the Educator. Facebook and any prior validator-type role are no longer represented as direct system entities, since sentiment analysis and all other content validation now take place offline, in person, before any material is introduced into the platform.
-The Administrator oversees the system's overall operation by supplying account management data for both administrator and educator accounts, system configuration data, and the platform's core content — validated vocabulary entries, validated audio recordings, validated lesson materials, and validated sentiment insights — all of which have already been confirmed accurate by linguistic experts and tribal leaders offline. In exchange, the system provides the Administrator with full view access to all platform content, descriptive analytics, and system usage reports to support supervision and decision-making.
-The Learner engages with the system by submitting registration data, pronunciation input, and quiz responses during gamified learning activities. In return, the Learner receives dictionary results, audio content, lessons, sentiment dashboard content, quiz results, and their own progress data.
-The Educator engages with the system to access lessons and dictionary content already validated and loaded by the Administrator, and receives learner quiz results and learner progress data in return, supporting instructional decisions without requiring the Educator to submit or upload any content of their own.
+The Context Flow Diagram shown in Figure 7 provides a high-level representation of the interaction between the Lumad Lingua platform and its external entities. The system interacts with four entities: Administrator, Validator, Educator, and Learner.
+
+The Administrator supplies account management information, system configuration data, vocabulary entries, audio recordings, lesson materials, and sentiment resources. In return, the Administrator receives access to content management functions, analytics, and system reports.
+The Validator reviews and approves vocabulary submissions, audio recordings, and sentiment analysis results.
+The Learner submits registration information, pronunciation recordings, and quiz responses to the platform. In exchange, the Learner receives dictionary entries, learning materials, audio recordings, quiz results, progress reports, and sentiment dashboard information.
+The Educator accesses and creates learning materials, manages lessons, reviews learner quiz results, and monitors learner progress reports that support instructional activities.
+
 
 Figure 7. Context Flow Diagram of the Lumad Lingua System
 
 
+
+
 Data Flow Diagram
-The Lumad Lingua platform is depicted in greater detail in Figure 8's Level 1 Data Flow Diagram (DFD), which breaks the single process shown in the Context Flow Diagram down into its component sub-processes. This level divides the system into five main processes, illustrating the data flow between them and their interactions with the D1 Lumad Lingua Database, the system's central repository, and its three external entities.
-Process 1.0, Manage Accounts & System Settings, receives admin account management, educator account management, and system configuration data from the Administrator, storing this information in the database as account and system configuration data. In exchange, this process retrieves content data from the database and provides the Administrator with full view access to all platform content.
-Process 2.0, Load Validated Content, receives validated vocabulary entries, validated audio recordings, validated lesson materials, and validated sentiment insights directly from the Administrator — content that has already been confirmed offline by linguistic experts and tribal leaders — and stores each into the database as vocabulary, audio, lesson, and sentiment data respectively. Because validation occurs entirely outside the system beforehand, no separate in-system review or approval step is required at this stage.
-Process 3.0, Deliver Learning Modules, Dictionary, & Lessons, retrieves vocabulary, audio, lesson, and sentiment data from the database to provide the Learner with dictionary results, audio content, lessons, and sentiment dashboard content, while accepting the Learner's pronunciation input in return and storing it in the database as pronunciation data. This process also delivers lessons and dictionary content to the Educator, ensuring that only validated, database-confirmed material reaches both learners and educators.
-Process 4.0, Track Learner Progress & Quiz Results, receives the Learner's quiz responses and retrieves progress data from the database, storing updated quiz response, quiz result, and progress data back into the database. In return, it provides the Learner with quiz results and progress data, and supplies the Educator with learner progress data and learner quiz results to support instructional decision-making.
-Process 5.0, Generate Reports & Analytics, completes the platform's cycle by retrieving analytics and usage data from the database to generate descriptive analytics and system usage reports for the Administrator, supporting ongoing platform supervision.
+The Level 1 Data Flow Diagram shown in Figure 8 presents a detailed breakdown of the processes performed by the Lumad Lingua platform and their interactions with the central database and external users.
+Process 1.0, Manage Accounts and System Settings, allows the Administrator to manage user accounts and configure platform settings. Account data and configuration records are stored in the database and may be retrieved whenever needed.
+Process 2.0, Load Verified Content, enables the Administrator to upload vocabulary entries via CSV import and manage individual dictionary entries with integrated pronunciation audio recording and attachment. These resources are stored in Cloud Firestore and Supabase Storage and become available to platform users.
+Process 3.0, Deliver Learning Modules, Dictionary, and Lessons, retrieves vocabulary, audio, lesson, and sentiment information from the database and provides these resources to Learners and Educators. Learners also submit pronunciation recordings that are stored for processing and evaluation.
+Process 4.0, Track Learner Progress and Quiz Results, records learner quiz responses and updates learner progress data. Quiz results and progress reports are then provided to both Learners and Educators.
+Process 5.0, Generate Reports and Analytics, retrieves system and learner data to produce advanced pedagogical analytics—including Leitner Spaced Repetition System (SRS) health metrics, box mastery distribution, interactive lesson stumbles heatmaps, pronunciation accuracy breakdowns by dialect and municipality, XP growth trends, and multi-section CSV report exports that support administrative monitoring and decision-making.
 
 
 Figure 8. Level 1 Data Flow Diagram of the Lumad Lingua System
+
+
+
+
+
 
 SYSTEM DESIGN
 
 Entity Relationship Diagram
 
-	The database design of the suggested Lumad Lingua platform is shown below in the ERD illustrated in Figure 9.
+	The Entity Relationship Diagram shown in Figure 9 illustrates the logical database structure of the Lumad Lingua platform and the relationships among its entities. The Users entity stores account information for Administrators, Educators, and Learners and serves as the foundation for authentication and role-based access control.
 
-The details about the role of account holder (Validator, Learner, Educator or Administrator) are contained in the Users entity. The Sentiment Results entity analyzes the available in public posts extracted using Facebook Graph API. It stores the translation of the Mansaka term, its classified sentiment label and the decision made by the Validator. After the analysis and approval process, a sentiment result is connected to a corresponding record of the Dictionary Entries entity. The Dictionary Entries record includes the source field that distinguishes entries added by the Validator from the ones obtained from sentiment results analysis and the link to the original post.
+The Dictionary Entries entity stores documented Mansaka vocabulary, including translations, grammatical information, usage contexts, and source information. Audio Recordings are associated with Dictionary Entries to provide native-speaker pronunciation references used for learning and pronunciation assessment.
 
-As the Validator writes and approves all the entries, there can be multiple Audio Recordings corresponding to one Dictionary Entry with a common validator_id field and no separate contributor and validator fields anymore. The Dictionary Entries also serve as the input for the User Cards where Leitner algorithm determines the progress of every learner in spaced repetition, as well as for the Lesson Items and Quiz Questions allowing to include the dictionary entries to the gamified lessons.
-Lessons, along with the Lesson Items and the Resources, store learning module data that have been created by teachers for the gamified learning part of the database. The Quiz Questions, Learner Quiz Results, and Answers for those quizzes are stored in the Quizzes entity that is associated with a lesson. The User Progress stores total points and level of each learner for each lesson. Also, there are additional support entities called Analytics Reports that will store the aggregate documentation and performance information generated for Administrators and the Educator Metadata that will store curriculum-specific information for Educator accounts.
-In order to ensure data integrity, the relationship between the entities above are made via primary and foreign key references. For example, based on the specific role of a user, one Facebook post can generate many sentiment results, one dictionary entry may contain many audio records and many quiz questions, and one user may generate many lessons, quizzes, and dictionary entries.
+The Facebook Posts and Sentiment Results entities support sentiment analysis by storing retrieved public posts, sentiment labels, confidence scores, and related linguistic information. Relevant sentiment-derived vocabulary may be linked to entries within the dictionary.
 
+The Lessons, Lesson Items, Resources, Quizzes, Quiz Questions, Quiz Results, Quiz Answers, User Progress, and User Cards entities support gamified learning, learner assessment, spaced repetition, and progress tracking. Additional supporting entities such as Educator Metadata and Analytics Reports provide instructional and administrative functionality.
+
+The relationships between entities are established through primary and foreign key references to ensure data consistency, integrity, and efficient retrieval throughout the platform.
 
 
 
@@ -327,16 +347,19 @@ In order to ensure data integrity, the relationship between the entities above a
 
 Figure 9. Entity Relationship Diagram of the System
 
-
 JSON Schema Diagram
 
-	Figure 10 illustrates the JSON schema diagrams that are utilized in order to denote the main data structures of the Lumad Lingua application, including the vocabulary entry, user profile, sentiment result, lesson, user progress, and quiz answer structures. For each structure, the list of fields, nested objects, and the data types are defined in order to outline the document structure in Cloud Firestore.
+	Figures 10.1 to 10.6 present the JSON schema diagrams utilized by the Lumad Lingua platform. These schemas define the structure, organization, and storage format of data maintained within Cloud Firestore and serve as the foundation for information management across the system. By standardizing data storage and retrieval, the schemas ensure consistency, scalability, efficient synchronization, and seamless interaction among the platform's learning, pronunciation assessment, sentiment analysis, and progress tracking components.
 
-All of the information about the entry ID, the native word, translation to Filipino language and English, context, validation status, and source are included in the vocabulary entry schema (Figure 10.1). Furthermore, there is also a validator ID that includes both submission and review as the Validator handles both processes. The source field indicates the difference between the entries that are submitted directly by the Validator and those that are found during sentiment analysis. In case of the former one, there is also an additional field source_post_id indicating the Facebook post to which the entry relates. Additionally, the audio_files field, which denotes the array of pronunciation files, and the nested validator object denoting the user who created the entry are present.
-The user account structure including its role, language group, and system access credentials is captured using the user profile schema (Figure 10.2). Only administrator, learner, validator, and educator are the allowed roles to be entered in the role field. Learning progress information and educator metadata of the user is contained in the nested objects.
-The data structure created by the sentiment analysis pipeline is captured using the sentiment result schema (Figure 10.3). Mansaka word discovered in the Facebook post, its translation to English and Filipino, sentiment score, sentiment label, and validator review are all included in each sentiment result. To ensure traceability and auditing, a nested source_post object captures the content of the post, source URL, and post information, while a linked_entry_id field connects an approved sentiment result to its corresponding vocabulary entry once published.
-Gamified Learning Modules have the structure defined by the Lesson Schema (Figure 10.4) containing quizzes with the corresponding questions, learning resources, and arrays of nested lesson items. Apart from the snapshot of learning analytics and a collection of spaced repetition cards employed by the Leitner algorithm, the User Progress Schema (Figure 10.5) contains information about the experience points, lessons completed, and quiz outcomes. The Quiz Answer Schema (Figure 10.6) keeps records of a learner's answer choice to each quiz question, its correctness, and gained points.
-These schemas minimize possible errors and ensure reliable platform synchronization by providing consistent structure for transferring data from the Flutter mobile application to Firebase services and the sentiment analysis pipeline.
+The Vocabulary Entry Schema shown in Figure 10.1 serves as the primary repository of Mansaka language resources. It stores vocabulary terms together with their English and Filipino translations, grammatical classifications, contextual information, source references, and associated audio recordings. These records are utilized throughout the platform's dictionary, lessons, quizzes, and pronunciation activities. Complementing this structure is the User Profile Schema in Figure 10.2, which manages account information for Administrators, Educators, and Learners. The schema supports authentication, role-based access control, profile management, and the storage of user-specific learning information.
+
+To support the sentiment analysis component, the Sentiment Result Schema illustrated in Figure 10.3 stores sentiment classifications generated from Mansaka-language social media content. This schema contains identified terms, sentiment labels, confidence values, source information, and references to related vocabulary records. The collected information supports the monitoring of language usage trends and assists in identifying potentially relevant vocabulary for inclusion in learning materials.
+
+Learning content delivery is facilitated through the Lesson Schema presented in Figure 10.4. This schema organizes lesson titles, descriptions, instructional content, multimedia learning resources, quizzes, and publication details into a structured format. The arrangement allows the platform to provide a progressive and organized learning experience while supporting future content expansion.
+
+Learner performance and engagement are managed through the User Progress Schema and Quiz Answer Schema shown in Figures 10.5 and 10.6, respectively. The User Progress Schema maintains records of completed lessons, earned experience points, achievements, quiz results, and spaced repetition activities that monitor learner advancement. Meanwhile, the Quiz Answer Schema stores learner responses, answer correctness, timestamps, and earned scores necessary for assessment and performance evaluation. Together, these schemas enable the system to track learning outcomes, generate progress reports, and provide feedback based on user performance.
+
+Collectively, the JSON schemas presented in Figures 10.1 to 10.6 establish a comprehensive and interconnected data model for the Lumad Lingua platform. The structure enables efficient management of language resources, learning materials, sentiment analysis results, learner information, and assessment records while supporting the platform's overall goal of promoting the learning and preservation of the Mansaka language.
 
 
 
@@ -361,7 +384,7 @@ Figure 10.6 JSON Schema Diagram — Tree F: quiz_answer
 
 Data Dictionary
 The Data Dictionary represents a thorough explanation of all the data components included in the Lumad Lingua framework, and serves as a reference for the Firestore database schema and management. The Data Dictionary identifies all collections, fields, data types, and descriptions to ensure consistency and accuracy in storing and managing the data in the database. It is extremely important to consider this part of the paper in relation to creating and managing the database.
-All collections used in the database of the system are presented in Table 2. Every single collection relates to some information required by the system. In particular, the Facebook_Posts and Sentiment_Results collections help in gathering and organizing publicly available Mansaka-language posts for vocabulary acquisition, while the Users collection includes all the relevant account and role-related information for administrators, learners, validators, and educators.
+All collections used in the database of the system are presented in Table 2. Every single collection relates to some information required by the system. In particular, the Facebook_Posts and Sentiment_Results collections help in gathering and organizing publicly available Mansaka-language posts for vocabulary acquisition, while the Users collection includes all the relevant account and role-related information for administrators, learners, and educators.
 
 Table 2. Database Tables of the System
 Table Name
@@ -375,7 +398,7 @@ Stores metadata of uploaded or recorded audio files.
 Facebook_Posts
 Stores raw publicly available Facebook posts retrieved for sentiment analysis.
 Sentiment_Results
-Stores translated terms, sentiment classification, and validator review outcomes derived from Facebook posts.
+Stores translated terms, sentiment classification, and outcomes derived from Facebook posts.
 Lessons
 Stores gamified learning module information.
 Lesson_Items
@@ -400,7 +423,7 @@ Analytics_Reports
 Stores aggregated documentation and performance summaries for administrators.
 
 
-The Users table serves as the main identity table for the application. This table holds account passwords as well as the role for the respective accounts. Roles include administrator, learner, validator, and educator. It is the role that determines the Firestore collection rules through custom claims using Firebase Authentication, while language_group determines the indigenous language group of the user.
+The Users table serves as the main identity table for the application. This table holds account passwords as well as the role for the respective accounts. Roles include administrator, learner, and educator. It is the role that determines the Firestore collection rules through custom claims using Firebase Authentication, while language_group determines the indigenous language group of the user.
 
 
 
@@ -430,7 +453,7 @@ User password (hashed)
 role
 Enum
 Not Null
-Role played by the user e.g. admin, learner, validator, educator
+Role played by the user e.g. admin, learner, educator
 language_group
 String
 Nullable
@@ -454,10 +477,10 @@ entry_id
 String
 Primary Key
 Unique identifier of the entry
-validator_id
+admin_id
 String
 Foreign Key, Not Null
-References the validator responsible for the entry
+References the admin responsible for the entry
 word
 String
 Not Null
@@ -508,7 +531,8 @@ Nullable
 Date the entry was validated
 
 
-The Recordings table contains metadata about native speaker recordings of an entry in the dictionary, which includes information about the Supabase Storage file path and dialect information. Every record has a validator_id because the Validator table is the owner of both adding the recording and verifying that the pronouncing recording is genuine.
+The Recordings table contains metadata about native speaker recordings of an entry in the dictionary, which includes information about the Supabase Storage file path and dialect information.
+
 Table 2.3 Recordings  Table
 Field Name
 Data Type
@@ -525,7 +549,7 @@ References the related vocabulary entry
 validator_id
 String
 Foreign Key, Not Null
-References the validator responsible for the recording
+References the validator responsible for the verification of recording.
 audio_url
 String
 Not Null
@@ -577,6 +601,9 @@ Date the post was retrieved by the system
 
 
 The Sentiment_Results table holds the results from the sentiment classification for each Facebook post, which include the identified Mansaka term, translation, sentiment label and confidence score, and the result reviewed by the Validator. The linked_entry_id links an accepted result to the Dictionary_Entries entry it will create.
+
+
+
 Table 2.5 Sentiment_Results Table
 Field Name
 Data Type
@@ -1044,27 +1071,36 @@ End of the reporting period
 
 Technologies, Concepts, and Theories
 
-The main models, algorithms, and technologies used in the creation of the Lumad Lingua platform are presented in this section, arranged in accordance with the four main phases of the system workflow: data collection, pre-processing, feature extraction, and classification. Each step advances the platform's fundamental functions in sentiment-driven vocabulary discovery, pronunciation evaluation, and language documentation.
+The main models, algorithms, technologies, and theoretical concepts utilized in the development of the Lumad Lingua platform are presented in this section. These components are organized according to the four major phases of the system workflow: data collection, data pre-processing, feature extraction, and classification. Each phase contributes to the platform's core functionalities, including vocabulary acquisition and documentation, sentiment analysis, pronunciation assessment, gamified language learning, and learner progress monitoring. Collectively, these models, algorithms, and technologies provide the foundation for supporting the preservation, learning, and digital documentation of the Mansaka language.
 
 Data Collection
 
-Collection of data on the Lumad Lingua platform is done through two streams that serve specific purposes within the entire workflow of the platform. First of all, the workflow in question is community-led in nature and the validator uploads vocabulary items and audio recordings via the Flutter app as the designated linguistic authority. Vocabulary items are recorded in Cloud Firestore database as JSON documents with fields for the native Mansaka word, its translations in English and Filipino languages as well as the context. flutter_sound package helps to record native speakers' pronunciations of the word using the device microphone while audio recordings are saved as audio files in Supabase Storage. Each and every vocabulary item uploaded by the validator is taken as the authoritative one since they have linguistic and cultural authority over the Mansaka language. The aim of the current stream dataset is to collect an infinite number of audio files and vocabulary at beginner level from at least three different geographic locations of Davao de Oro communities. The Validator is allowed to add an unlimited number of entries depending on the linguistic data available in the community since the system is built in a way that allows for limitless growth rather than setting up the minimal threshold. Every entry comes with metadata such as the validator id, timestamp, and history of versions and the maximum audio file size cannot exceed 10 MB but should not be less than one second.
-Stream two harvests Facebook posts that are available in the public domain with the use of Mansaka words/phrases through the Facebook Graph API or, if available, pre-prepared secondary sources that are already validated. These posts act as the raw inputs for the sentiment analysis process that identifies potential vocabulary terms, translations of these terms, and the sentiment expressed through these terms. In the case of the Facebook post dataset, where the raw data comes in the form of unstructured/semi-structured text in a code-mixed language environment, the Mansaka language terms are mixed together with Filipino, English, or Cebuano. Each set of harvested Facebook posts will try to reach up to 50 posts for ensuring that there is enough data to classify the sentiment. Only those posts containing Mansaka language are tokenized and filtered after the filtering out of any formatting characters and other non-language characters. The sentiment results are recorded separately on Cloud Firestore and include the extracted Mansaka term, its translation in Filipino and English languages, sentiment label with confidence score, and review status. The digital dictionary allows for a community-supported vocabulary discovery tool by populating the term, translation, and usage context fields with sentiment-sourced and approved entries. Both of these streams, that is, the authority and expert-backed information and the organic and community-sourced linguistic information, allow the platform to acquire culturally validated and constantly evolving linguistic material for the Mansaka language. Apart from allowing for the completion of the digital dictionary, learners have access to the approved sentiment-sourced entries and their emotional context categorization as additional usage examples. This way, learners will be able to see how the meaning of a certain Mansaka word changes emotionally depending on the context in which it is used.
+Collection of data on the Lumad Lingua platform is done through two streams that serve specific purposes within the entire workflow of the platform. First of all, the workflow in question is community-led in nature, where vocabulary entries and native-speaker audio recordings are gathered through community-based documentation activities involving native speakers, tribal leaders, and language resource persons. Vocabulary items are recorded in the Cloud Firestore database as JSON documents with fields for the native Mansaka word, its translations in English and Filipino languages, as well as the usage context. The flutter_sound package helps record native-speaker pronunciations of words using the device microphone, while audio recordings are saved as audio files in Supabase Storage. Every vocabulary item included in the system undergoes prior linguistic verification to ensure the accuracy and authenticity of the language content. The aim of this dataset stream is to collect an expanding repository of vocabulary entries and audio recordings at the beginner level from at least three different geographic locations within Davao de Oro communities. The platform is designed to support continuous language preservation and documentation and therefore does not impose a fixed limit on the number of vocabulary entries that may be stored. Every entry comes with metadata such as timestamps and version history records, and the maximum audio file size cannot exceed 10 MB but should not be less than one second.
+
+Stream two harvests Facebook posts that are available in the public domain with the use of Mansaka words or phrases through the Facebook Graph API or, if available, pre-prepared secondary sources that have already been verified. These posts act as the raw inputs for the sentiment analysis process that identifies potential vocabulary terms, translations of these terms, and the sentiment expressed through these terms. In the case of the Facebook post dataset, where the raw data comes in the form of unstructured or semi-structured text in a code-mixed language environment, Mansaka language terms are mixed together with Filipino, English, or Cebuano. Each set of harvested Facebook posts will attempt to reach up to 50 posts to ensure that there is sufficient data for sentiment classification. Only posts containing Mansaka language content are tokenized and filtered after the removal of formatting characters and other non-language elements.
+The sentiment results are recorded separately in Cloud Firestore and include the extracted Mansaka term, its translation in Filipino and English languages, sentiment label, confidence score, and source information. The digital dictionary allows for a community-supported vocabulary discovery tool by populating the term, translation, and usage context fields with sentiment-sourced and verified entries.
+Both of these streams, namely verified linguistic resources and community-sourced linguistic information, allow the platform to acquire culturally appropriate and continuously evolving linguistic material for the Mansaka language. Apart from contributing to the digital dictionary, learners also gain access to sentiment-sourced entries and their emotional context categorization as additional usage examples. This allows learners to observe how the meaning and usage of Mansaka words may vary depending on the context in which they are expressed.
+
 
 Data Pre-Processing
 
-The data is pre-processed to improve its quality and reliability prior to storage and analysis. As for the vocabulary entries, it means checking if all required fields have been filled in, normalizing variations in the spelling, and checking for duplicates in Cloud Firestore.
-Pre-processing of the audio recordings involves a set of steps that should be taken to prepare the recording for MFCC feature extraction and waveform comparison. First, the recording is resampled to a standard 16,000 Hz sampling rate to provide uniform dimensions of features irrespective of microphone settings of the device used as the origin of the recording. It is common practice when it comes to using MFCC in speech processing due to the fact that the critical frequency content of human speech does not exceed approximately 8,000 Hz and thus satisfies the Nyquist-Shannon criterion for the sampling rate. The chosen rate coincides with the 16,000 Hz sampling rate, suggested by ITU-T G.722 wideband speech standard [53] as required to cover the frequency range of 50–7,000 Hz necessary for intelligible speech. Then, noise reduction and equalization of the sound wave’s amplitude to have a uniform amplitude regardless of the conditions under which the recording is made are carried out. The recording is then converted to a uniform file type. Pre-emphasis filtering is performed to enhance the higher frequencies in comparison to the lower ones due to the natural roll off in energy in human speech. This pre-emphasized recording is segmented into short time periods known as frames which last for around 20 to 25 milliseconds and have a stride of 10 milliseconds between them since speech is not stationary and can only be considered to be stationary for such a small period of time. These frames allow the analysis to be done on shorter sections of the recording rather than the whole recording. However, segmentation of the recording in frames causes a sudden cutting of the recording which creates distortion in the frequency analysis and is known as spectral leakage. Therefore, a windowing function, the Hamming Window, is applied to these frames. It creates a sequence of clean segments of short duration from which the MFC coefficients are then extracted, as explained in the Feature Extraction section.
-To prepare the Facebook posts for sentiment analysis, pre-processing includes eliminating any formatting or non-linguistic characters from the text, excluding posts that do not have any content in Mansaka language, and tokenization of the text. This will reduce any chances of errors in the learning modules since the input data will be clean and appropriate for sentiment analysis, digital archiving, and pronunciation assessment
+The collected data undergoes pre-processing to improve quality, consistency, and reliability prior to storage, feature extraction, and analysis. For vocabulary entries, pre-processing includes verifying the completeness of required fields, normalizing variations in spelling, and checking for duplicate records within Cloud Firestore. These procedures help maintain the consistency and integrity of the linguistic resources used by the platform.
+For audio recordings utilized in pronunciation assessment, a standardized preprocessing pipeline is applied to minimize variations caused by differences in recording devices, environments, and recording conditions while preserving the original pronunciation characteristics of the speaker. Recorded audio is first converted into a standardized 16 kHz mono Pulse Code Modulation (PCM) format to ensure compatibility throughout the pronunciation assessment process. Prior to comparison, the system performs signal-quality validation procedures that identify invalid recordings, silence, excessive background noise, clipping distortion, excessive internal pauses, and other conditions that may negatively affect pronunciation assessment. Recordings that fail these quality checks are rejected before further processing.
+After validation, DC offset removal is applied to center the audio signal around zero and eliminate waveform bias. The system then performs speech-region trimming to remove unnecessary leading and trailing non-speech segments while preserving pauses occurring within the recorded word or phrase. This process reduces the influence of silence during pronunciation comparison and ensures that feature extraction focuses primarily on speech content. Following trimming, RMS loudness normalization is applied to reduce variations in recording volume caused by differences in microphones and recording environments. These preprocessing operations promote greater consistency between learner recordings and native-speaker reference recordings while preserving pronunciation-related speech characteristics.
+Unlike traditional speech-processing pipelines, the current implementation does not apply learner-only noise gating or aggressive noise-reduction techniques during comparison. Instead, the system relies on signal-quality checks and standardized preprocessing procedures to maintain fairness between learner recordings and reference recordings. This approach minimizes the risk of introducing artifacts that could negatively affect pronunciation comparison results.
+
+For Facebook posts collected for sentiment analysis, pre-processing involves removing hyperlinks, formatting artifacts, symbols, duplicate records, and other non-linguistic characters from the text. Posts that do not contain Mansaka-language content are excluded from further analysis. The remaining textual data is then tokenized and prepared for sentiment classification. These procedures reduce noise within the dataset and ensure that the resulting text is suitable for sentiment analysis, vocabulary discovery, and digital language documentation within the platform.
+The output of the preprocessing stage consists of standardized and high-quality audio and textual data that can be utilized by subsequent processes such as MFCC feature extraction, pronunciation assessment, sentiment classification, vocabulary discovery, and learning-content generation.
 
 Feature Extraction
 
-Feature extraction refers to the process of identifying appropriate features from the collected data in order to facilitate sentiment analysis, pronunciation analysis, and language documentation. The indigenous term, translations, usage context, and audio file from the Supabase Storage database are some of the important elements of the digital dictionary. Word and n-gram frequencies and TF-IDF weighted vectors obtained from the text of Facebook posts are some of the features utilized in sentiment analysis algorithms. Mel-frequency cepstral coefficients (MFCCs) are one of the acoustic features that are extracted from the audio files to assess pronunciation. The above process is carried out using the fundamental parametrization defined by Davis and Mermelstein [55], whose comparative analysis of acoustic representations showed that MFCCs performed better than other types of parametrization in the recognition of words. The three pronunciation assessment algorithms to be covered in the following subsection, Dynamic Time Warping, Hidden Markov Model, and Cosine Similarity, all use the same feature representation, i.e., MFCCs; for convenience purposes only, we refer to them henceforth as DTW, HMM, and Cosine Similarity without the MFCC label. Feature extraction enhances the performance of the system.
-
+Feature extraction refers to the process of identifying appropriate features from the collected data in order to facilitate sentiment analysis, pronunciation assessment, and language documentation. The indigenous term, translations, usage context, and associated audio recordings stored in Supabase Storage are among the important elements utilized within the digital dictionary. Word frequencies, n-gram frequencies, and TF-IDF weighted vectors extracted from publicly available Mansaka-language Facebook posts collected through Apify serve as the primary features used by the sentiment analysis algorithms.
+Mel-Frequency Cepstral Coefficients (MFCCs) are extracted from audio recordings for pronunciation assessment. The extraction process follows the fundamental parameterization proposed by S. Davis and P. Mermelstein [55], whose comparative analysis of acoustic representations demonstrated that MFCCs outperform several alternative parameterization techniques in speech processing applications. By transforming audio recordings into compact numerical representations, MFCCs enable efficient comparison of learner pronunciations with native-speaker reference recordings.
+The three pronunciation assessment algorithms evaluated in this study, namely Dynamic Time Warping (DTW), Hidden Markov Model (HMM), and Cosine Similarity, utilize the same MFCC-based feature representation. For simplicity, these approaches are referred to throughout the study as DTW, HMM, and Cosine Similarity without repeatedly mentioning the MFCC feature extraction stage. Likewise, the sentiment analysis algorithms process textual features derived from tokenized Mansaka-language Facebook posts collected from the target community. The feature extraction process improves the efficiency and effectiveness of sentiment analysis, pronunciation assessment, language documentation, and vocabulary discovery functionalities within the Lumad Lingua platform.
 
 Classification – Sentiment Analysis Algorithms
 
-The three algorithms used for the classification of the sentiment of Facebook posts written in Mansaka language include: Naïve Bayes algorithm, Support Vector Machine algorithm, and Bidirectional Long Short-Term Memory algorithm. Whole sentences or phrases within the posts on Facebook are the units being collected and annotated based on the way the system consumes the data. As counting at the word level or unigram level is statistically valid even with a limited number of data points, but phrase level patterns would never repeat themselves enough times to become recognized due to lack of data sparsity, which becomes a problem for BiLSTM later in the process, phrases are divided into their constituent words for the classical algorithms.
+The sentiment classification component of the study evaluates three candidate algorithms, namely Naïve Bayes (NB), Support Vector Machine (SVM), and Bidirectional Long Short-Term Memory (BiLSTM). These algorithms were selected based on their established use in sentiment analysis research and their applicability to low-resource and code-mixed language environments. Facebook posts containing Mansaka-language content serve as the primary input for sentiment classification. To reduce data sparsity and improve feature representation, text data undergoes tokenization and feature extraction before being processed by the candidate algorithms. This comparative evaluation aims to determine the most suitable sentiment classification approach for the Mansaka-language corpus utilized in the study.
 
 Naïve Bayes
 Naïve Bayes applies Bayes' theorem, assuming conditional independence between words in a post:
@@ -1125,6 +1161,7 @@ Tamil-English code-mixed (DravidianLangTech)
 
 
 It should be noted that the performance measure provided for [49] actually refers to a CNN-BiLSTM hybrid model and not just a BiLSTM system. This is provided as an example of evidence since the inclusion of a CNN into the system will definitely provide results no less effective than those obtained by BiLSTM alone.
+
 Decision Matrix Framing
 
 The criteria below have been borrowed from the ISO/IEC 25010 software quality characteristics that are being applied to the performance, reliability and compatibility aspects of the NFRs in the current study. The study also follows a comparative evaluation approach where candidate algorithms are compared under identical circumstances using identical criteria.
@@ -1229,6 +1266,8 @@ Excellent, but discards timing
 
 The combination of Mel-Frequency Cepstral Coefficients and Dynamic Time Warping has been selected as the algorithm of choice and this is also in accordance with the design of this study, with accuracy figures of 94.0% vs. 91.3%, and error rates of 0.287 vs. 0.473 from a matched comparative testing design.
 
+Hello
+
 Technologies Used in the System
 
 Cross-Platform Mobile Framework (Flutter)
@@ -1237,7 +1276,7 @@ This system mostly uses Flutter 3.x, which is Google's cross-platform mobile dev
 Figure 20. Flutter Framework
 
 Firebase Backend Services
-In order to augment the functionality of the backend without dealing with the dedicated server infrastructure, Firebase is incorporated as the main backend platform of the system as depicted in Figure 12. Firebase Authentication takes care of managing user accounts using email and password authentication, with role-based access control implemented via custom claims which separate Validators, Learners, Educators, and Administrators. Cloud Firestore acts as the NoSQL document database where vocabulary entries, user profiles, sentiment analysis logs, validation logs, version history, gamification logs, and quiz scores are stored. Real-time synchronization of data and offline capability offered by Firestore allow Validator to log in content and learners to go through lessons even without an internet connection which is important when dealing with remote Lumad tribes who do not have stable internet connection. Supabase Storage acts as the backend for the storage of audio files, and it has a perfect compatibility with Flutter through the supabase_flutter package for uploading and playing audio files. Firebase Cloud Functions written in Node.js and TypeScript perform server-side computations such as the sentiment analysis process, scoring of pronunciation, triggering of validation process, version snapshots creation, and analytics generation.
+In order to augment the functionality of the backend without dealing with the dedicated server infrastructure, Firebase is incorporated as the main backend platform of the system as depicted in Figure 12. Firebase Authentication takes care of managing user accounts using email and password authentication, with role-based access control implemented via custom claims which separate Learners, Educators, and Administrators. Cloud Firestore acts as the NoSQL document database where vocabulary entries, user profiles, sentiment analysis logs, validation logs, version history, gamification logs, and quiz scores are stored. Real-time synchronization of data and offline capability offered by Firestore allow Validator to log in content and learners to go through lessons even without an internet connection which is important when dealing with remote Lumad tribes who do not have stable internet connection. Supabase Storage acts as the backend for the storage of audio files, and it has a perfect compatibility with Flutter through the supabase_flutter package for uploading and playing audio files. Firebase Cloud Functions written in Node.js and TypeScript perform server-side computations such as the sentiment analysis process, scoring of pronunciation, triggering of validation process, version snapshots creation, and analytics generation.
 
 Figure 21. Firebase Services
 
@@ -1271,7 +1310,7 @@ The system implements audio recording capabilities using the flutter_sound packa
 Figure 25. Audio Recording and Waveform Visualization
 
 Gamification and Spaced Repetition (Leitner System)
-The gamified learning modules are created using pedagogical techniques incorporated into the Flutter application, as shown in Figure 17 [51]. According to the learner's level of proficiency, the Leitner system, a spaced repetition algorithm, arranges vocabulary reviews at progressively longer intervals. The states of each user's card deck are stored in Firestore. Correct answers lead to higher-level boxes with longer review times, while incorrect answers cause words to be reviewed more frequently. Multiple-choice, matching, and listening exercises are just a few of the question types that the quiz engine supports. Scores saved in Firestore are used to track progress.  Completing modules earns users points, and maintaining streaks and getting perfect scores earn them extra points. XP points and streak mechanics are stored in each user profile, and Flutter Lottie is used to create level-up animations that offer interesting visual feedback. In order to lower the affective filter and sustain motivation among the target audience of 15 to 25 years old, the game's storyline interface employs a metaphor of mountain climbing for character progression screens.
+The gamified learning modules are created using pedagogical techniques incorporated into the Flutter application, as shown in Figure 17 [51]. According to the learner's level of proficiency, the Leitner system, a spaced repetition algorithm, arranges vocabulary reviews at progressively longer intervals. The states of each user's card deck are stored in Firestore. Correct answers lead to higher-level boxes with longer review times, while incorrect answers cause words to be reviewed more frequently. Multiple-choice, matching, and listening exercises are just a few of the question types that the quiz engine supports. Scores saved in Firestore are used to track progress. Completing modules earns users points, and maintaining streaks and getting perfect scores earn them extra points. XP points and streak mechanics are stored in each user profile, and Flutter Lottie is used to create level-up animations that offer interesting visual feedback. In addition to core learning modules, the platform incorporates gamified engagement mechanisms including interactive sentiment tone guessing mini-games, achievement milestone tracking with robust filtering and sorting capabilities, and Ancestral Vault shop reward redemptions. In order to lower the affective filter and sustain motivation among the target audience of 15 to 25 years old, the game's storyline interface employs a metaphor of mountain climbing for character progression screens.
 
 
 Figure 26. Leitner Spaced Repetition System [51]
@@ -1288,12 +1327,6 @@ Test Component
 Test Description
 Expected Result
 Status
-Vocabulary Entry Submission
-Validator submits new words with Filipino and English translations.
-Entry stored on Firestore as "pending" with proper metadata.
-
-
-Pending
 Audio Recording Upload
 User records and uploads audio to Supabase Storage.
 File stored; metadata document stored in Firestore.
@@ -1307,7 +1340,7 @@ Query on Firestore returns entries that match within 500 milliseconds.
 
 Pending
 Facebook Post Retrieval
-System retrieves public posts containing Mansaka words/phrases via Facebook Graph API.
+System retrieves public posts containing Mansaka words/phrases via Facebook Graph API or other platform.
 Posts fetched and stored on Facebook_Posts collection with the source URL and timestamp.
 
 
@@ -1315,12 +1348,6 @@ Pending
 Sentiment Classification
 SVM model classifies retrieved posts as positive, negative, or neutral.
 Sentiment label and confidence level stored in Sentiment_Results within acceptable processing time for a 50 post batch.
-Pending
-Candidate Vocabulary Generation
-System generates candidate dictionary entries from classified posts.
-Candidate entry stored with term, its translation, and usage context; marked as "pending" for Validator.
-
-
 Pending
 Sentiment Dashboard Rendering
 Administrator/researcher views sentiment dashboard.
@@ -1346,21 +1373,9 @@ Similarity score produced with waveform visualization feedback.
 
 
 Pending
-Offline Submission
-Validator submits entry without internet.
-Data stored locally; synchs automatically once connected online.
-
-
-Pending
 Role-Based Access
 Validator approves content; learner views only approved content.
 Firewall access control provided using Firestore Security Rules.
-
-
-Pending
-Version History
-Validator edits existing entry.
-Previous version stored to the version_history subcollection.
 
 
 Pending
@@ -1399,7 +1414,7 @@ No failed test case, no critical crashes, app cold start < 3 seconds, Firestore 
 
 
 
-The implementation phase will begin after the testing is successful. This will entail creating the Flutter application for iOS (IPA) and Android (APK/AAB), setting up the Firebase project with the appropriate security rules and indexes, and distributing the system to the intended communities. Following deployment, a final validation will be carried out to verify that the system functions properly in real-world Davao de Oro community settings. To guarantee efficient system use, users like administrators, teachers, learners, and linguistic validators will also receive the appropriate training. The user training plan is shown in Table 11.
+The implementation phase will begin after the testing is successful. This will entail creating the Flutter application for iOS (IPA) and Android (APK/AAB), setting up the Firebase project with the appropriate security rules and indexes, and distributing the system to the intended communities. Following deployment, a final validation will be carried out to verify that the system functions properly in real-world Davao de Oro community settings. To guarantee efficient system use, users like administrators, teachers, and learners will also receive the appropriate training. The user training plan is shown in Table 11.
 
 Table 11. User Training Plan
 
@@ -1445,7 +1460,7 @@ The automatic export feature that comes with Firebase can be utilized in order t
 
 
 System Security Plan
-An extensive System Security Plan is set up in order to ensure the protection of the system’s resources and information. In terms of the Administrator and Validator accounts, the system uses Firebase Authentication and enables Multi-Factor Authentication (MFA) by requiring both TOTP, generated through an authenticator app, and verified email account credentials. Password enforcement and email authentication are employed in relation to regular Learner and Validator accounts. Custom claims of Firebase Authentication are utilized to facilitate role-based access control. The native platform encryption methods and HTTPS protocol are used to secure the transfer of all data from the Flutter mobile application to Firebase and Supabase services. The stored data is protected by the Firestore security rules and Supabase Row Level Security policies. Quarterly vulnerability assessments are conducted in order to detect and patch any security vulnerabilities. This includes Supabase access policy review, Flutter dependencies scan for known CVEs, and Firestore security rules audit using Firebase Emulator Suite. To establish whether it is possible to restore Firestore export and Supabase Storage backup successfully into a staging environment with an acceptable recovery time objective, the disaster recovery process is carried out every six months using data loss simulations. In order to ensure compliance with the requirements of the Data Privacy Act of 2012 (RA 10173), security upgrades and incident response plan is updated on a regular basis.
+An extensive System Security Plan is set up in order to ensure the protection of the system’s resources and information. In terms of the Administrator accounts, the system uses Firebase Authentication and enables Multi-Factor Authentication (MFA) by requiring both TOTP, generated through an authenticator app, and verified email account credentials. Password enforcement and email authentication are employed in relation to regular Learner and Educatror accounts. Custom claims of Firebase Authentication are utilized to facilitate role-based access control. The native platform encryption methods and HTTPS protocol are used to secure the transfer of all data from the Flutter mobile application to Firebase and Supabase services. The stored data is protected by the Firestore security rules and Supabase Row Level Security policies. Quarterly vulnerability assessments are conducted in order to detect and patch any security vulnerabilities. This includes Supabase access policy review, Flutter dependencies scan for known CVEs, and Firestore security rules audit using Firebase Emulator Suite. To establish whether it is possible to restore Firestore export and Supabase Storage backup successfully into a staging environment with an acceptable recovery time objective, the disaster recovery process is carried out every six months using data loss simulations. In order to ensure compliance with the requirements of the Data Privacy Act of 2012 (RA 10173), security upgrades and incident response plan is updated on a regular basis.
 System Security Plan based on ISO/IEC 27001 standard is presented in Table 12, which ensures that the proposed system will utilize well-established and internationally recognized security controls. Such measures will ensure data security and integrity and proper operation of the Lumad Lingua platform.
 
 
@@ -1484,7 +1499,7 @@ Secure data transfer will be ensured using HTTPS and Firebase encryption; encryp
 
 A.9 Access Control
 Multi-Factor Authentication
-Two-Factor Authentication with TOTP will be enabled for Administrator and Validator roles with Firebase Authentication.
+Two-Factor Authentication with TOTP will be enabled for Administrator and Educator roles with Firebase Authentication.
 
 
 A.12 Operations Security

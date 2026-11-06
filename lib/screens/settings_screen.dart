@@ -73,6 +73,26 @@ class SettingsScreen extends ConsumerWidget {
                       isDark ? l10n.translate('light_sanctuary') : l10n.translate('dark_forest'),
                       l10n.translate('switch_themes'),
                       onTap: () => ref.read(themeProvider.notifier).toggleTheme(),
+                      trailing: Switch(
+                        value: isDark,
+                        onChanged: (_) => ref.read(themeProvider.notifier).toggleTheme(),
+                        activeThumbColor: Colors.black,
+                        activeTrackColor: Colors.black26,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildTile(
+                      context,
+                      Icons.music_note_rounded,
+                      'Background Music',
+                      'Play ambient forest music during lessons',
+                      onTap: () => ref.read(userPreferencesProvider.notifier).setBackgroundMusicEnabled(!ref.read(userPreferencesProvider).backgroundMusicEnabled),
+                      trailing: Switch(
+                        value: ref.watch(userPreferencesProvider).backgroundMusicEnabled,
+                        onChanged: (val) => ref.read(userPreferencesProvider.notifier).setBackgroundMusicEnabled(val),
+                        activeThumbColor: Colors.black,
+                        activeTrackColor: Colors.black26,
+                      ),
                     ),
                     const SizedBox(height: 24),
                     Text(
@@ -143,6 +163,7 @@ class SettingsScreen extends ConsumerWidget {
     String title,
     String sub, {
     required VoidCallback onTap,
+    Widget? trailing,
   }) {
     return BrandCard(
       onTap: onTap,
@@ -151,35 +172,31 @@ class SettingsScreen extends ConsumerWidget {
       borderRadius: 35,
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.gold500.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: AppColors.gold500, size: 22),
-          ),
-          const SizedBox(width: 18),
+          Icon(icon, color: Colors.black, size: 24),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: AppTypography.h3.copyWith(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: AppTypography.h3.copyWith(
+                    color: Colors.black,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
+                  ),
                 ),
-                const SizedBox(height: 2),
                 Text(
                   sub,
                   style: AppTypography.body.copyWith(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    color: Colors.black54,
+                    fontSize: 13,
                   ),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.gold500, size: 16),
+          trailing ?? const Icon(Icons.arrow_forward_ios_rounded, color: Colors.black54, size: 16),
         ],
       ),
     );
