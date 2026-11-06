@@ -96,11 +96,10 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
 
   void _startMatchmaking() {
     HapticService.light();
-    final user = ref.read(authStateProvider).value;
-    if (user == null) return;
+    final user = ref.read(authServiceProvider).currentUser;
 
     final userProfile = {
-      'username': user.displayName ?? 'Warrior',
+      'username': user?.displayName ?? 'Warrior',
       'avatar': '👤',
     };
 
@@ -241,6 +240,33 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
                       Expanded(
                         child: Text(
                           'No opponent found within ${DuelSyncConfig.matchmakingTimeoutSeconds}s. Try again when another learner is online.',
+                          style: AppTypography.body.copyWith(
+                            color: isDark ? Colors.white70 : AppColors.forest800,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              if (sessionState.error != null && !sessionState.matchmakingTimedOut) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.semanticRed.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.semanticRed.withValues(alpha: 0.35)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline_rounded,
+                          color: AppColors.semanticRed, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          sessionState.error!,
                           style: AppTypography.body.copyWith(
                             color: isDark ? Colors.white70 : AppColors.forest800,
                             fontSize: 12,

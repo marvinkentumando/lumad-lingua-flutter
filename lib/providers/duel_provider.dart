@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/duel_models.dart';
@@ -150,32 +151,35 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
     final user = ref.read(authServiceProvider).currentUser;
     if (user == null) return;
 
-    // Do not override if already in active searching/battling state in memory
-    if (state.phase == DuelPhase.battling || state.phase == DuelPhase.searching) {
+    // Preserve a live battle, but discard an old in-memory search when the
+    // arena page is opened again. Search begins only after the user presses
+    // Enter Arena.
+    if (state.phase == DuelPhase.battling) {
       return;
+    }
+    if (state.phase == DuelPhase.searching) {
+      final oldMatchId = state.matchId;
+      ++_matchmakingAttempt;
+      _cancelTimersAndSubscriptions();
+      _matchmakingMatchId = null;
+      state = DuelSessionState();
+      if (oldMatchId != null) {
+        ref.read(duelServiceProvider).cancelMatch(oldMatchId).catchError((e) {
+          debugPrint('Could not clean up previous waiting match: $e');
+        });
+      }
     }
 
     try {
       final duelService = ref.read(duelServiceProvider);
       final activeMatch = await duelService.findActiveMatchForUser(user.uid);
-      if (activeMatch != null && activeMatch.status != DuelStatus.finished && activeMatch.status != DuelStatus.cancelled) {
-        final isWaiting = activeMatch.status == DuelStatus.waiting;
-        final elapsed = DateTime.now().difference(activeMatch.createdAt).inSeconds;
-        final secondsLeft = (DuelSyncConfig.matchmakingTimeoutSeconds - elapsed)
-            .clamp(0, DuelSyncConfig.matchmakingTimeoutSeconds);
-        final attempt = isWaiting ? ++_matchmakingAttempt : _matchmakingAttempt;
+      if (activeMatch != null && activeMatch.status == DuelStatus.active) {
         state = state.copyWith(
           myId: user.uid,
           matchId: activeMatch.id,
           match: activeMatch,
-          phase: isWaiting ? DuelPhase.searching : state.phase,
-          matchmakingSecondsLeft: secondsLeft,
           isLoading: false,
         );
-        if (isWaiting) {
-          _matchmakingMatchId = activeMatch.id;
-          _startMatchmakingTimer(attempt);
-        }
         _listenToMatch(activeMatch.id);
       }
     } catch (e) {
@@ -202,7 +206,11 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
 
     final user = ref.read(authServiceProvider).currentUser;
     if (user == null) {
-      state = state.copyWith(phase: DuelPhase.idle, isLoading: false);
+      state = state.copyWith(
+        phase: DuelPhase.idle,
+        isLoading: false,
+        error: 'Sign in before entering the arena.',
+      );
       return;
     }
 
@@ -229,7 +237,11 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
       debugPrint('Matchmaking error in provider: $e');
       _matchmakingTimer?.cancel();
       _matchmakingTimer = null;
-      state = state.copyWith(phase: DuelPhase.idle, isLoading: false, error: e.toString());
+      state = state.copyWith(
+        phase: DuelPhase.idle,
+        isLoading: false,
+        error: matchmakingFailureMessage(e),
+      );
     }
   }
 
@@ -273,6 +285,21 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
     debugPrint('Matchmaking attempt timed out; match=${stateToShow.matchId ?? matchId ?? "pending"}');
   }
 
+  static String matchmakingFailureMessage(Object error) {
+    if (error is FirebaseException) {
+      switch (error.code) {
+        case 'permission-denied':
+          return 'Matchmaking was blocked by Firestore permissions. Deploy the latest Firestore rules and try again.';
+        case 'failed-precondition':
+          return 'Matchmaking needs a Firestore index. Deploy the project indexes and try again.';
+        case 'unavailable':
+        case 'deadline-exceeded':
+          return 'Could not reach the matchmaking service. Check the connection and try again.';
+      }
+    }
+    return 'Matchmaking could not start: $error';
+  }
+
   void _listenToMatch(String matchId) {
     _subscription?.cancel();
     _subscription = ref
@@ -280,6 +307,13 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
         .streamMatch(matchId)
         .listen(_onMatchUpdate, onError: (e) {
       debugPrint('Match stream error in provider: $e');
+      _matchmakingTimer?.cancel();
+      _matchmakingTimer = null;
+      state = state.copyWith(
+        phase: DuelPhase.idle,
+        isLoading: false,
+        error: matchmakingFailureMessage(e),
+      );
     });
   }
 
@@ -315,6 +349,16 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
 
       case DuelStatus.finished:
       case DuelStatus.cancelled:
+        if (match.status == DuelStatus.cancelled && state.phase == DuelPhase.searching) {
+          _matchmakingTimer?.cancel();
+          _matchmakingTimer = null;
+          _subscription?.cancel();
+          _subscription = null;
+          state = DuelSessionState(
+            error: 'This waiting lobby closed before an opponent joined. Please enter the arena again.',
+          );
+          break;
+        }
         if (state.phase == DuelPhase.battling || state.phase == DuelPhase.searching || state.phase == DuelPhase.matchFound) {
           final myId = state.myId ?? ref.read(authServiceProvider).currentUser?.uid ?? '';
           final won = match.winnerId != null

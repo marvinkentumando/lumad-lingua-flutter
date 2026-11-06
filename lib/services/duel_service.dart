@@ -98,12 +98,18 @@ class DuelService {
     try {
       final waitingMatches = await _matches
           .where('status', isEqualTo: DuelStatus.waiting.name)
-          .orderBy('createdAt', descending: false)
-          .limit(10)
+          .limit(25)
           .get();
 
       final now = DateTime.now();
-      for (final matchDoc in waitingMatches.docs) {
+      final candidates = waitingMatches.docs.toList()
+        ..sort((a, b) {
+          final aCreated = DuelMatch.parseTimestamp(a.data()['createdAt']);
+          final bCreated = DuelMatch.parseTimestamp(b.data()['createdAt']);
+          return (aCreated ?? DateTime.fromMillisecondsSinceEpoch(0))
+              .compareTo(bCreated ?? DateTime.fromMillisecondsSinceEpoch(0));
+        });
+      for (final matchDoc in candidates) {
         final data = matchDoc.data();
         if (data['player1Id'] == userId) continue; // never match ourselves
 
@@ -155,8 +161,9 @@ class DuelService {
           DateTime.now().difference(createdAt) <= DuelSyncConfig.waitingMatchTtl;
       if (queuedMatch != null &&
           queuedMatch.exists &&
-          queueData?['player1Id'] != userId &&
-          canClaimMatchData(queueData!, userId) &&
+          queueData != null &&
+          queueData['player1Id'] != userId &&
+          canClaimMatchData(queueData, userId) &&
           isFresh) {
         transaction.update(queuedMatch.reference, {
           'player2Id': userId,
@@ -441,13 +448,14 @@ class DuelService {
     }
   }
 
-  /// Finds any active or waiting match for [userId] so the session can be restored.
+  /// Finds an active battle for [userId]. Waiting lobbies are not restored on
+  /// page entry: users should explicitly press Enter Arena to start searching.
   Future<DuelMatch?> findActiveMatchForUser(String userId) async {
     try {
-      // 1. Check if user is player1 in an active or waiting match
+      // 1. Check if user is player1 in an active match
       final p1Snap = await _matches
           .where('player1Id', isEqualTo: userId)
-          .where('status', whereIn: [DuelStatus.waiting.name, DuelStatus.active.name])
+          .where('status', isEqualTo: DuelStatus.active.name)
           .limit(1)
           .get();
 
