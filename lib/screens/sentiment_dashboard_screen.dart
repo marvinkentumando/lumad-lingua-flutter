@@ -33,6 +33,8 @@ class _SentimentDashboardScreenState
   final ScrollController _scrollController = ScrollController();
   final Set<String> _savedPostIds = {};
   final Set<String> _sparkedPostIds = {};
+  String _polarityFilter = 'all';
+  String _searchQuery = '';
 
   @override
   void dispose() {
@@ -253,8 +255,85 @@ class _SentimentDashboardScreenState
     );
   }
 
+  Widget _buildFilterBar(bool isDark) {
+    final filters = ['all', 'positive', 'neutral', 'negative'];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          onChanged: (val) => setState(() => _searchQuery = val),
+          style: TextStyle(color: isDark ? Colors.white : AppColors.creamText),
+          decoration: InputDecoration(
+            hintText: 'Search posts or keywords...',
+            hintStyle: TextStyle(color: isDark ? Colors.white38 : AppColors.creamText3),
+            prefixIcon: const Icon(Icons.search_rounded, color: AppColors.gold500),
+            filled: true,
+            fillColor: isDark ? AppColors.forestDarkCard : Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            children: filters.map((f) {
+              final isSelected = _polarityFilter == f;
+              final label = f[0].toUpperCase() + f.substring(1);
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: GestureDetector(
+                  onTap: () {
+                    HapticService.selection();
+                    setState(() => _polarityFilter = f);
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.gold500 : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05)),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected ? AppColors.gold500 : (isDark ? Colors.white12 : Colors.black12),
+                      ),
+                    ),
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        color: isSelected ? AppColors.forest900 : (isDark ? Colors.white70 : AppColors.forest900),
+                        fontSize: 12,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildMainContent(List<SentimentPost> posts, bool isDark) {
     final bool hasData = posts.isNotEmpty;
+
+    final filteredPosts = posts.where((p) {
+      if (_polarityFilter != 'all' && p.sentimentCategory != _polarityFilter) {
+        return false;
+      }
+      if (_searchQuery.isNotEmpty) {
+        final q = _searchQuery.toLowerCase();
+        final textMatches = p.originalText.toLowerCase().contains(q) ||
+            p.englishTranslation.toLowerCase().contains(q);
+        final keywordMatches = p.keywords.any((k) => k.toLowerCase().contains(q));
+        if (!textMatches && !keywordMatches) return false;
+      }
+      return true;
+    }).toList();
 
     // Aggregate metrics if data exists
     final totalPosts = posts.length;
@@ -316,6 +395,8 @@ class _SentimentDashboardScreenState
                 const SizedBox(height: 12),
                 _buildKeywordCloud(posts, isDark),
                 const SizedBox(height: 28),
+                _buildFilterBar(isDark),
+                const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -363,11 +444,11 @@ class _SentimentDashboardScreenState
             sliver: SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) => _buildSentimentPostCard(
-                  posts[index],
+                  filteredPosts[index],
                   index,
                   isDark,
                 ).animate(delay: (80 * index).ms).fadeIn().slideX(begin: 0.05),
-                childCount: posts.length,
+                childCount: filteredPosts.length,
               ),
             ),
           ),
@@ -594,39 +675,74 @@ class _SentimentDashboardScreenState
     final neuPct = totalPosts > 0 ? (neuCount / totalPosts * 100).toInt() : 0;
     final negPct = totalPosts > 0 ? (negCount / totalPosts * 100).toInt() : 0;
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: _buildCategoryCard(
-            'Positive',
-            '$posPct%',
-            '$posCount posts',
-            Icons.sentiment_satisfied_alt_rounded,
-            AppColors.semanticGreen,
-            isDark,
+        Container(
+          height: 16,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: isDark ? Colors.white12 : Colors.black12,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Row(
+              children: [
+                if (posCount > 0)
+                  Expanded(
+                    flex: posCount,
+                    child: Container(color: AppColors.semanticGreen),
+                  ),
+                if (neuCount > 0)
+                  Expanded(
+                    flex: neuCount,
+                    child: Container(color: AppColors.gold500),
+                  ),
+                if (negCount > 0)
+                  Expanded(
+                    flex: negCount,
+                    child: Container(color: AppColors.semanticRed),
+                  ),
+              ],
+            ),
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildCategoryCard(
-            'Neutral',
-            '$neuPct%',
-            '$neuCount posts',
-            Icons.sentiment_neutral_rounded,
-            AppColors.gold500,
-            isDark,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildCategoryCard(
-            'Negative',
-            '$negPct%',
-            '$negCount posts',
-            Icons.sentiment_dissatisfied_rounded,
-            AppColors.semanticRed,
-            isDark,
-          ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildCategoryCard(
+                'Positive',
+                '$posPct%',
+                '$posCount posts',
+                Icons.sentiment_satisfied_alt_rounded,
+                AppColors.semanticGreen,
+                isDark,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildCategoryCard(
+                'Neutral',
+                '$neuPct%',
+                '$neuCount posts',
+                Icons.sentiment_neutral_rounded,
+                AppColors.gold500,
+                isDark,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildCategoryCard(
+                'Negative',
+                '$negPct%',
+                '$negCount posts',
+                Icons.sentiment_dissatisfied_rounded,
+                AppColors.semanticRed,
+                isDark,
+              ),
+            ),
+          ],
         ),
       ],
     );
