@@ -478,7 +478,7 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
 
     final str = error.toString();
     if (str.contains('converted Future')) {
-      return 'Browser interop hid the Firestore error. Open the browser developer console and filter for [DuelMatchmaking] to find the failed stage and Firebase error code.';
+      return 'Unable to start matchmaking. Please check your internet connection and verify that you are signed in.';
     }
     return str;
   }
