@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -51,7 +52,8 @@ class DuelService {
       );
 
   /// Seconds remaining for [roundIndex]; never negative.
-  static int secondsLeftForRound(DateTime now, DateTime battleStartedAt, int roundIndex) {
+  static int secondsLeftForRound(
+      DateTime now, DateTime battleStartedAt, int roundIndex) {
     final remaining =
         deadlineForRound(battleStartedAt, roundIndex).difference(now).inSeconds;
     return remaining < 0 ? 0 : remaining;
@@ -60,7 +62,8 @@ class DuelService {
   /// True when the opponent's heartbeat is missing or older than the
   /// staleness window while a battle is running.
   static bool isOpponentStale(DuelMatch match, String myId, DateTime now) {
-    final opponentId = myId == match.player1Id ? match.player2Id : match.player1Id;
+    final opponentId =
+        myId == match.player1Id ? match.player2Id : match.player1Id;
     if (opponentId == null) return false;
     final lastSeen = match.lastSeen[opponentId];
     if (lastSeen == null) return false;
@@ -68,7 +71,8 @@ class DuelService {
   }
 
   /// Winner id for a finished duel, or null while HP is still positive.
-  static String? winnerFromHp(String player1Id, String player2Id, double player1Hp, double player2Hp) {
+  static String? winnerFromHp(
+      String player1Id, String player2Id, double player1Hp, double player2Hp) {
     if (player1Hp <= 0) return player2Id;
     if (player2Hp <= 0) return player1Id;
     return null;
@@ -118,12 +122,12 @@ class DuelService {
         if (createdAt != null &&
             now.difference(createdAt) > DuelSyncConfig.waitingMatchTtl) {
           await matchDoc.reference
-              .update({'status': DuelStatus.cancelled.name})
-              .catchError((_) {});
+              .update({'status': DuelStatus.cancelled.name}).catchError((_) {});
           continue;
         }
 
-        final claimed = await _tryClaimWaitingMatch(matchDoc.reference, userId, userProfile);
+        final claimed = await _tryClaimWaitingMatch(
+            matchDoc.reference, userId, userProfile);
         if (claimed) return matchDoc.id;
       }
     } on FirebaseException catch (e) {
@@ -133,84 +137,108 @@ class DuelService {
       rethrow;
     }
 
-    return _joinOrCreateQueuedMatch(userId, userProfile, questions);
+    return _createMatch(userId, userProfile, questions);
   }
 
-  /// Serializes the empty-queue case. Without this document, two clients can
-  /// both observe an empty collection and create separate waiting lobbies.
-  Future<String> _joinOrCreateQueuedMatch(
+  /// Watches waiting lobbies while this player waits. If two clients both
+  /// create a lobby before seeing the other's, only the client whose lobby is
+  /// newer claims the older lobby. This deterministic rule prevents both
+  /// clients from claiming each other's lobby and needs no extra queue rules.
+  Future<StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?>
+      watchForOpponent({
+    required String waitingMatchId,
+    required String userId,
+    required Map<String, dynamic> userProfile,
+    required void Function(String matchId) onMatchFound,
+    required void Function(Object error) onError,
+  }) async {
+    final ownMatch = await _matches.doc(waitingMatchId).get();
+    if (!ownMatch.exists ||
+        ownMatch.data()?['status'] != DuelStatus.waiting.name) {
+      return null;
+    }
+
+    var processing = false;
+    var finished = false;
+    final attemptedIds = <String>{};
+    return _matches
+        .where('status', isEqualTo: DuelStatus.waiting.name)
+        .limit(25)
+        .snapshots()
+        .listen((snapshot) async {
+      if (processing || finished) return;
+      processing = true;
+      try {
+        final candidates = snapshot.docs
+            .where((doc) => doc.id != waitingMatchId)
+            .toList()
+          ..sort(_compareLobbyAge);
+        for (final candidate in candidates) {
+          final data = candidate.data();
+          if (data['player1Id'] == userId ||
+              !canClaimMatchData(data, userId) ||
+              _compareLobbyAge(candidate, ownMatch) >= 0 ||
+              attemptedIds.contains(candidate.id)) {
+            continue;
+          }
+          final createdAt = DuelMatch.parseTimestamp(data['createdAt']);
+          if (createdAt != null &&
+              DateTime.now().difference(createdAt) >
+                  DuelSyncConfig.waitingMatchTtl) {
+            attemptedIds.add(candidate.id);
+            continue;
+          }
+
+          attemptedIds.add(candidate.id);
+          if (await _tryClaimWaitingMatch(
+              candidate.reference, userId, userProfile)) {
+            finished = true;
+            onMatchFound(candidate.id);
+            return;
+          }
+        }
+      } catch (error) {
+        onError(error);
+      } finally {
+        processing = false;
+      }
+    }, onError: (Object error) {
+      if (!finished) onError(error);
+    });
+  }
+
+  static int _compareLobbyAge(
+    DocumentSnapshot<Map<String, dynamic>> a,
+    DocumentSnapshot<Map<String, dynamic>> b,
+  ) {
+    final aCreated = DuelMatch.parseTimestamp(a.data()?['createdAt']) ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+    final bCreated = DuelMatch.parseTimestamp(b.data()?['createdAt']) ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+    final ageOrder = aCreated.compareTo(bCreated);
+    return ageOrder != 0 ? ageOrder : a.id.compareTo(b.id);
+  }
+
+  Future<String> _createMatch(
     String userId,
     Map<String, dynamic> userProfile,
     List<DuelQuestion>? questions,
   ) async {
     final generated = questions ?? await _generateQuestions();
-    final queueRef = _db.collection('duel_matchmaking').doc('queue');
-    String? resultId;
-
-    await _db.runTransaction((transaction) async {
-      final queueSnapshot = await transaction.get(queueRef);
-      final queuedMatchId = queueSnapshot.data()?['waitingMatchId'] as String?;
-      DocumentSnapshot<Map<String, dynamic>>? queuedMatch;
-      if (queuedMatchId != null && queuedMatchId.isNotEmpty) {
-        queuedMatch = await transaction.get(_matches.doc(queuedMatchId));
-      }
-
-      final queueData = queuedMatch?.data();
-      final createdAt = DuelMatch.parseTimestamp(queueData?['createdAt']);
-      final isFresh = createdAt == null ||
-          DateTime.now().difference(createdAt) <= DuelSyncConfig.waitingMatchTtl;
-      if (queuedMatch != null &&
-          queuedMatch.exists &&
-          queueData != null &&
-          queueData['player1Id'] != userId &&
-          canClaimMatchData(queueData, userId) &&
-          isFresh) {
-        transaction.update(queuedMatch.reference, {
-          'player2Id': userId,
-          'player2Name': userProfile['username'] ?? 'Warrior',
-          'player2Avatar': userProfile['avatar'] ?? '👤',
-          'status': DuelStatus.active.name,
-          'battleStartedAt': FieldValue.serverTimestamp(),
-          'lastSeen.$userId': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-        transaction.delete(queueRef);
-        resultId = queuedMatch.id;
-        return;
-      }
-
-      final newMatchRef = _matches.doc();
-      final newMatch = DuelMatch(
-        id: newMatchRef.id,
-        player1Id: userId,
-        player1Name: userProfile['username'] ?? 'Warrior',
-        player1Avatar: userProfile['avatar'] ?? '👤',
-        status: DuelStatus.waiting,
-        questions: generated,
-        createdAt: DateTime.now(),
-      );
-      if (queuedMatch != null &&
-          queuedMatch.exists &&
-          queueData?['status'] == DuelStatus.waiting.name &&
-          queueData?['player1Id'] == userId) {
-        transaction.update(queuedMatch.reference, {
-          'status': DuelStatus.cancelled.name,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-      }
-      transaction.set(newMatchRef, {
-        ...newMatch.toFirestore(),
-        'createdAt': FieldValue.serverTimestamp(),
-        'lastSeen.$userId': FieldValue.serverTimestamp(),
-      });
-      transaction.set(queueRef, {
-        'waitingMatchId': newMatchRef.id,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-      resultId = newMatchRef.id;
+    final newMatch = DuelMatch(
+      id: '',
+      player1Id: userId,
+      player1Name: userProfile['username'] ?? 'Warrior',
+      player1Avatar: userProfile['avatar'] ?? '👤',
+      status: DuelStatus.waiting,
+      questions: generated,
+      createdAt: DateTime.now(),
+    );
+    final docRef = await _matches.add({
+      ...newMatch.toFirestore(),
+      'lastSeen.$userId': FieldValue.serverTimestamp(),
     });
-
-    return resultId!;
+    return docRef.id;
   }
 
   /// Returns true if a waiting match document can be atomically claimed by [userId].
@@ -228,31 +256,25 @@ class DuelService {
     String userId,
     Map<String, dynamic> userProfile,
   ) async {
-    var claimed = false;
-    try {
-      await _db.runTransaction((transaction) async {
-        final snapshot = await transaction.get(matchRef);
-        if (!snapshot.exists) return;
-        final data = snapshot.data()!;
-        // Re-verify inside the transaction: this is what makes the claim
-        // race-free between two joiners.
-        if (!canClaimMatchData(data, userId)) return;
+    return _db.runTransaction<bool>((transaction) async {
+      final snapshot = await transaction.get(matchRef);
+      if (!snapshot.exists) return false;
+      final data = snapshot.data()!;
+      // Re-verify inside the transaction: this is what makes the claim
+      // race-free between two joiners.
+      if (!canClaimMatchData(data, userId)) return false;
 
-        transaction.update(matchRef, {
-          'player2Id': userId,
-          'player2Name': userProfile['username'] ?? 'Warrior',
-          'player2Avatar': userProfile['avatar'] ?? '👤',
-          'status': DuelStatus.active.name,
-          'battleStartedAt': FieldValue.serverTimestamp(),
-          'lastSeen.$userId': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-        claimed = true;
+      transaction.update(matchRef, {
+        'player2Id': userId,
+        'player2Name': userProfile['username'] ?? 'Warrior',
+        'player2Avatar': userProfile['avatar'] ?? '👤',
+        'status': DuelStatus.active.name,
+        'battleStartedAt': FieldValue.serverTimestamp(),
+        'lastSeen.$userId': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
       });
-      return claimed;
-    } on FirebaseException {
-      return false;
-    }
+      return true;
+    });
   }
 
   Future<List<DuelQuestion>> _generateQuestions() async {
@@ -275,7 +297,12 @@ class DuelService {
       return [
         DuelQuestion(
           question: 'How do you say "Good Morning" in Mansaka?',
-          options: ['Madyaw na gabi', 'Madyaw na allaw', 'Madyaw na amase', 'Madyaw na hapon'],
+          options: [
+            'Madyaw na gabi',
+            'Madyaw na allaw',
+            'Madyaw na amase',
+            'Madyaw na hapon'
+          ],
           correctIndex: 2,
         ),
       ];
@@ -293,7 +320,8 @@ class DuelService {
       var attempts = 0;
       while (options.length < 4 && attempts < 60) {
         attempts++;
-        final distractor = allWords[random.nextInt(allWords.length)].translation;
+        final distractor =
+            allWords[random.nextInt(allWords.length)].translation;
         if (!options.contains(distractor)) {
           options.add(distractor);
         }
@@ -319,7 +347,12 @@ class DuelService {
       return [
         DuelQuestion(
           question: 'How do you say "Good Morning" in Mansaka?',
-          options: ['Madyaw na gabi', 'Madyaw na allaw', 'Madyaw na amase', 'Madyaw na hapon'],
+          options: [
+            'Madyaw na gabi',
+            'Madyaw na allaw',
+            'Madyaw na amase',
+            'Madyaw na hapon'
+          ],
           correctIndex: 2,
         ),
       ];
@@ -334,7 +367,8 @@ class DuelService {
   /// deltas — never absolute values — so simultaneous round answers cannot
   /// clobber each other, and this transaction — not the UI — decides the
   /// winner the moment a player's HP reaches zero.
-  Future<void> applyDamage(String matchId, String targetPlayerId, double damage) async {
+  Future<void> applyDamage(
+      String matchId, String targetPlayerId, double damage) async {
     final matchRef = _matches.doc(matchId);
 
     await _db.runTransaction((transaction) async {
@@ -420,7 +454,8 @@ class DuelService {
       final currentRound = (data['currentRound'] as num? ?? 0).toInt();
       final roundStartedAt = DuelMatch.parseTimestamp(data['roundStartedAt']);
 
-      if (data['status'] != DuelStatus.active.name || currentRound != fromRound) {
+      if (data['status'] != DuelStatus.active.name ||
+          currentRound != fromRound) {
         // Someone else already opened the next round (or the duel ended):
         // adopt their clock instead of writing ours.
         result = (round: currentRound, roundStartedAt: roundStartedAt);
@@ -530,9 +565,12 @@ class DuelService {
         });
 
         final isPlayer1 = match.player1Id == userId;
-        final opponentId = (isPlayer1 ? match.player2Id : match.player1Id) ?? '';
-        final opponentName = (isPlayer1 ? match.player2Name : match.player1Name) ?? 'Warrior';
-        final opponentAvatar = (isPlayer1 ? match.player2Avatar : match.player1Avatar) ?? '👤';
+        final opponentId =
+            (isPlayer1 ? match.player2Id : match.player1Id) ?? '';
+        final opponentName =
+            (isPlayer1 ? match.player2Name : match.player1Name) ?? 'Warrior';
+        final opponentAvatar =
+            (isPlayer1 ? match.player2Avatar : match.player1Avatar) ?? '👤';
 
         final historyItem = DuelHistoryItem(
           id: match.id,
