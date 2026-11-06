@@ -41,6 +41,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
   bool _isThrowingAway = false;
   String? _lastGuessStatusText;
   bool? _isLastGuessCorrect;
+  int _selectedCardCount = 10;
 
   void _toggleTranslation(String postId) {
     setState(() {
@@ -92,8 +93,11 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
 
   void _startQuest(List<SentimentPost> posts) {
     if (posts.isEmpty) return;
+    final sliced = _selectedCardCount == -1
+        ? List<SentimentPost>.from(posts)
+        : posts.take(_selectedCardCount).toList();
     setState(() {
-      _shuffledPosts = List.from(posts)..shuffle();
+      _shuffledPosts = sliced..shuffle();
       _currentIndex = 0;
       _roundCorrectCount = 0;
       _roundTotalXp = 0;
@@ -130,6 +134,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
       ref.read(studentProvider.notifier).addXp(25);
       ref.read(studentProvider.notifier).addMistCrystals(15);
       HapticService.celebration();
+      if (!mounted) return;
       showSpiritParticles(context, duration: const Duration(seconds: 2));
     } else {
       HapticService.error();
@@ -303,6 +308,25 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
                     _buildStatBadge('Gems', '+15', Icons.diamond_outlined),
                   ],
                 ),
+                const SizedBox(height: 20),
+                Text(
+                  'Cards per Round:',
+                  style: AppTypography.label.copyWith(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _buildCardCountChip('10 Cards', 10),
+                    const SizedBox(width: 8),
+                    _buildCardCountChip('20 Cards', 20),
+                    const SizedBox(width: 8),
+                    _buildCardCountChip('All Cards', -1),
+                  ],
+                ),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
@@ -332,6 +356,39 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
             ),
           ).animate().fadeIn().scale(begin: const Offset(0.95, 0.95)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCardCountChip(String label, int count) {
+    final isSelected = _selectedCardCount == count;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() => _selectedCardCount = count);
+          HapticService.selection();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.gold500 : Colors.white.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected ? AppColors.gold500 : Colors.white.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? AppColors.forest900 : Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

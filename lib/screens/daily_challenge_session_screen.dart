@@ -9,7 +9,7 @@ import '../models/lesson_task.dart';
 import '../providers/learning_provider.dart';
 import '../providers/daily_challenge_provider.dart';
 import '../providers/student_provider.dart';
-import '../providers/user_preferences_provider.dart';
+
 import '../services/audio_service.dart';
 import '../services/firebase_service.dart';
 import '../services/haptic_service.dart';
@@ -88,9 +88,7 @@ class _DailyChallengeSessionScreenState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(quizSessionProvider.notifier).loadTasks(widget.challenge.tasks);
       _initTaskState();
-      if (ref.read(userPreferencesProvider).backgroundMusicEnabled) {
-        ref.read(audioServiceProvider).playAmbientMusic('Daily Challenge');
-      }
+
     });
   }
 

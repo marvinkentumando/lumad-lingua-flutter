@@ -29,7 +29,7 @@ import '../widgets/activity_views/true_false_view.dart';
 import '../widgets/activity_views/fill_blanks_view.dart';
 import '../providers/student_provider.dart';
 import '../providers/quest_provider.dart';
-import '../providers/user_preferences_provider.dart';
+
 import '../models/quest.dart';
 import '../models/assessment.dart';
 import '../services/haptic_service.dart';
@@ -161,9 +161,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
               ref.read(audioServiceProvider).preCacheAudio(audioUrls);
             }
 
-            if (ref.read(userPreferencesProvider).backgroundMusicEnabled) {
-              ref.read(audioServiceProvider).playAmbientMusic(lesson.title);
-            }
+
           }
         });
       }

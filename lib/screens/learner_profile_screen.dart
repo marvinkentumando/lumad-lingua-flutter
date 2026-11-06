@@ -117,7 +117,34 @@ class LearnerProfileScreen extends ConsumerWidget {
       case UserRole.educator:
         return '${l10n.translate('wisdom_guide')}  \u2022  $location';
       case UserRole.learner:
-        return '${l10n.translate('elder_pathfinder')}  \u2022  $location';
+        final studentState = ref.watch(studentProvider);
+        final equippedTitle = studentState.equippedTitle ?? profile?['equippedTitle'];
+        if (equippedTitle != null && equippedTitle.toString().trim().isNotEmpty) {
+          return '${equippedTitle.toString().trim()}  \u2022  $location';
+        }
+
+        final config = ref.watch(appConfigProvider).value;
+        final xp = studentState.xp;
+        String rankTitle = 'Novice';
+        if (config != null) {
+          final sortedThresholds = config.spiritThresholds.entries.toList()
+            ..sort((a, b) => b.value.compareTo(a.value));
+          for (var entry in sortedThresholds) {
+            if (xp >= entry.value) {
+              rankTitle = entry.key;
+              break;
+            }
+          }
+        } else {
+          if (xp >= 1000) {
+            rankTitle = 'Elder';
+          } else if (xp >= 400) {
+            rankTitle = 'Warrior';
+          } else {
+            rankTitle = 'Novice';
+          }
+        }
+        return '$rankTitle  \u2022  $location';
     }
   }
 
