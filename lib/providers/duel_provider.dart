@@ -322,8 +322,21 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
               return;
             }
             debugPrint('Matchmaking lobby watcher failed: $error');
+            _subscription?.cancel();
+            _subscription = null;
+            _candidateSubscription?.cancel();
+            _candidateSubscription = null;
             _matchmakingTimer?.cancel();
             _matchmakingTimer = null;
+            final waitingId = _matchmakingMatchId;
+            if (waitingId != null) {
+              ref
+                  .read(duelServiceProvider)
+                  .cancelMatch(waitingId)
+                  .catchError((e) {
+                debugPrint('Could not cancel failed matchmaking lobby: $e');
+              });
+            }
             state = state.copyWith(
               phase: DuelPhase.idle,
               isLoading: false,
