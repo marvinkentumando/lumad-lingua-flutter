@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'supabase_dataset_service.dart';
 import 'dart:math' as math;
 import '../models/dictionary_entry.dart';
 import '../models/geo_recording.dart';
@@ -4783,8 +4784,19 @@ final pendingWordsCountProvider = StreamProvider.family<int, String?>((ref, dial
   return ref.watch(firebaseServiceProvider).getPendingWordsCount(dialect: dialect);
 });
 
-final totalAudioClipsCountProvider = StreamProvider<int>((ref) {
-  return ref.watch(firebaseServiceProvider).getTotalAudioClipsCount();
+final totalAudioClipsCountProvider = FutureProvider<int>((ref) async {
+  try {
+    final service = SupabaseDatasetService();
+    final entries = await service.discoverDatasetEntries();
+    int totalTakes = 0;
+    for (final entry in entries) {
+      totalTakes += entry.takes.length;
+    }
+    return totalTakes;
+  } catch (e) {
+    debugPrint('Error counting Supabase dataset audio clips: $e');
+    return 0;
+  }
 });
 
 final validatorActivityCountProvider = StreamProvider.family<int, String>((

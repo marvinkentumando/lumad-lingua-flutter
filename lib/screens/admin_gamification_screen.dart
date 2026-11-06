@@ -85,23 +85,6 @@ class _AdminGamificationScreenState extends ConsumerState<AdminGamificationScree
       data: (config) => ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _buildRewardCategory(l10n.translate('contributions_caps'), [
-            _rewardTile(
-              l10n.translate('word_approval'), 
-              config.wordApprovalXp, 
-              (val) => _updateConfig('wordApprovalXp', val, l10n.translate('word_approval'), l10n), 
-              isDark, 
-              l10n,
-            ),
-            _rewardTile(
-              l10n.translate('lesson_approval'), 
-              config.lessonApprovalXp, 
-              (val) => _updateConfig('lessonApprovalXp', val, l10n.translate('lesson_approval'), l10n), 
-              isDark, 
-              l10n,
-            ),
-          ], isDark),
-          const SizedBox(height: 24),
           _buildRewardCategory(l10n.translate('learning_path_caps'), [
             _rewardTile(
               l10n.translate('lesson_completion_base'), 

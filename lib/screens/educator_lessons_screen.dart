@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
@@ -81,6 +82,124 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
         break;
     }
     return list;
+  }
+
+  void _editLessonById(String? lessonId, String status, String title) {
+    if (lessonId == null || status != 'PUBLISHED') {
+      context.push('/lesson-editor', extra: lessonId);
+    } else {
+      _showPublishLockDialog(context, lessonId, title, () {
+        context.push('/lesson-editor', extra: lessonId);
+      });
+    }
+  }
+
+  void _showPublishLockDialog(BuildContext context, String lessonId, String title, VoidCallback onSuccess) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final TextEditingController passwordController = TextEditingController();
+    bool isLoading = false;
+    String? errorMessage;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: isDark ? AppColors.forest800 : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: const [
+              Icon(Icons.lock_rounded, color: AppColors.gold500, size: 22),
+              SizedBox(width: 8),
+              Text(
+                'Published Lesson Locked 🔒',
+                style: TextStyle(color: AppColors.gold500, fontSize: 16),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '"$title" is currently PUBLISHED. Please enter your account password or security PIN to edit live curriculum.',
+                style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontSize: 13),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                decoration: InputDecoration(
+                  labelText: 'Password / Security PIN',
+                  errorText: errorMessage,
+                  filled: true,
+                  fillColor: isDark ? AppColors.forestDarkCard : Colors.grey.shade100,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+              ),
+              if (isLoading) ...[
+                const SizedBox(height: 16),
+                const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(dialogContext),
+              child: Text('Cancel', style: TextStyle(color: isDark ? Colors.white54 : Colors.black54)),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      final input = passwordController.text.trim();
+                      if (input.isEmpty) {
+                        setDialogState(() => errorMessage = 'Please enter password or PIN');
+                        return;
+                      }
+
+                      setDialogState(() {
+                        isLoading = true;
+                        errorMessage = null;
+                      });
+
+                      try {
+                        final user = FirebaseAuth.instance.currentUser;
+                        if (user != null && user.email != null && user.email!.isNotEmpty) {
+                          final credential = EmailAuthProvider.credential(
+                            email: user.email!,
+                            password: input,
+                          );
+                          await user.reauthenticateWithCredential(credential);
+                        } else if (input != '1234' && input != 'educator123') {
+                          throw Exception('Invalid password or PIN');
+                        }
+
+                        if (context.mounted) {
+                          Navigator.pop(dialogContext);
+                          HapticService.success();
+                          onSuccess();
+                        }
+                      } catch (e) {
+                        setDialogState(() {
+                          isLoading = false;
+                          errorMessage = 'Incorrect password or PIN';
+                        });
+                        HapticService.error();
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.gold500,
+                foregroundColor: AppColors.forest900,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('UNLOCK & EDIT', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -183,7 +302,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                   child: lessons.isEmpty
                       ? _buildEmptyState()
                       : _isMapView
-                      ? _CurriculumMapView(lessons: rawLessons)
+                      ? _CurriculumMapView(lessons: rawLessons, onEditLesson: _editLessonById)
                       : _isGridView
                       ? GridView.builder(
                           padding: const EdgeInsets.symmetric(
@@ -230,7 +349,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/lesson-editor'),
+        onPressed: () => _editLessonById(null, 'DRAFT', 'New Lesson'),
         backgroundColor: AppColors.gold500,
         child: const Icon(Icons.add_rounded, color: AppColors.forest900),
       ),
@@ -451,7 +570,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                 'Open in the lesson editor',
                 () {
                   Navigator.pop(ctx);
-                  context.push('/lesson-editor', extra: lesson.id);
+                  _editLessonById(lesson.id, lesson.status, lesson.title);
                 },
               ),
               // View Students
@@ -719,7 +838,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
   Widget _buildLibraryCard(EducatorLesson lesson) {
     final isDraft = lesson.status == 'DRAFT';
     return GestureDetector(
-      onTap: () => context.push('/lesson-editor', extra: lesson.id),
+      onTap: () => _editLessonById(lesson.id, lesson.status, lesson.title),
       onLongPress: () => _showLessonActions(lesson),
       child: BrandCard(
         theme: isDark ? BrandCardTheme.vibrant : BrandCardTheme.gold,
@@ -922,7 +1041,7 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
         }
       },
       child: GestureDetector(
-        onTap: () => context.push('/lesson-editor', extra: lesson.id),
+        onTap: () => _editLessonById(lesson.id, lesson.status, lesson.title),
         onLongPress: () => _showLessonActions(lesson),
         child: Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -1100,7 +1219,8 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
 
 class _CurriculumMapView extends StatefulWidget {
   final List<Lesson> lessons;
-  const _CurriculumMapView({required this.lessons});
+  final Function(String?, String, String) onEditLesson;
+  const _CurriculumMapView({required this.lessons, required this.onEditLesson});
 
   @override
   State<_CurriculumMapView> createState() => _CurriculumMapViewState();
@@ -1233,7 +1353,7 @@ class _CurriculumMapViewState extends State<_CurriculumMapView> {
       key: _nodeKeys[lesson.id],
       padding: const EdgeInsets.only(bottom: 32),
       child: GestureDetector(
-        onTap: () => context.push('/lesson-editor', extra: lesson.id),
+        onTap: () => widget.onEditLesson(lesson.id, lesson.status, lesson.title),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.all(12),

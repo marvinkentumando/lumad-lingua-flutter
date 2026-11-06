@@ -129,14 +129,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     required Color accentColor,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Padding(
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 40),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(height: 40),
+          const SizedBox(height: 60),
           if (image != null)
-            Image.asset(image, height: 280)
+            Image.asset(image, height: 260)
                 .animate()
                 .fadeIn(duration: 800.ms)
                 .scale(begin: const Offset(0.8, 0.8))
@@ -158,9 +159,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               child: Icon(icon, size: 100, color: accentColor),
             ).animate().fadeIn(duration: 800.ms).scale(begin: const Offset(0.5, 0.5)),
 
-          const SizedBox(height: 60),
+          const SizedBox(height: 40),
           Text(
             subtitle,
+            textAlign: TextAlign.center,
             style: AppTypography.label.copyWith(
               color: accentColor,
               letterSpacing: 4,
@@ -175,21 +177,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             textAlign: TextAlign.center,
             style: AppTypography.display.copyWith(
               color: isDark ? Colors.white : AppColors.forest900,
-              fontSize: 38,
+              fontSize: 36,
               height: 1.1,
             ),
           ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           Text(
             description,
             textAlign: TextAlign.center,
             style: AppTypography.bodyLarge.copyWith(
               color: isDark ? Colors.white70 : AppColors.creamText2,
-              fontSize: 18,
-              height: 1.6,
+              fontSize: 16,
+              height: 1.5,
             ),
           ).animate().fadeIn(delay: 600.ms).slideY(begin: 0.2),
+          const SizedBox(height: 140),
         ],
       ),
     );
