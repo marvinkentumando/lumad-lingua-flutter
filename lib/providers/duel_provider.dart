@@ -123,6 +123,8 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
   Timer? _roundTimer;
   Timer? _heartbeatTimer;
   Timer? _matchmakingTimer;
+  String? _matchmakingMatchId;
+  int _matchmakingAttempt = 0;
 
   @override
   DuelSessionState build() {
@@ -174,6 +176,8 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
     List<DuelQuestion>? questions,
   }) async {
     _cancelTimersAndSubscriptions();
+    final attempt = ++_matchmakingAttempt;
+    _matchmakingMatchId = null;
 
     state = DuelSessionState(
       phase: DuelPhase.searching,
@@ -181,6 +185,8 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
       matchmakingSecondsLeft: DuelSyncConfig.matchmakingTimeoutSeconds,
       matchmakingTimedOut: false,
     );
+    // Start at arena entry, not after the Firestore lookup/create request.
+    _startMatchmakingTimer(attempt);
 
     final user = ref.read(authServiceProvider).currentUser;
     if (user == null) {
@@ -198,22 +204,24 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
         questions: questions,
       );
 
+      if (attempt != _matchmakingAttempt || state.matchmakingTimedOut) {
+        // The lookup finished after the deadline; don't revive the search.
+        await duelService.cancelMatch(matchId);
+        return;
+      }
+      _matchmakingMatchId = matchId;
       state = state.copyWith(matchId: matchId, isLoading: false);
       _listenToMatch(matchId);
-      _startMatchmakingTimer(matchId);
     } catch (e) {
       debugPrint('Matchmaking error in provider: $e');
       state = state.copyWith(phase: DuelPhase.idle, isLoading: false, error: e.toString());
     }
   }
 
-  void _startMatchmakingTimer(String matchId) {
+  void _startMatchmakingTimer(int attempt) {
     _matchmakingTimer?.cancel();
-    state = state.copyWith(
-      matchmakingSecondsLeft: DuelSyncConfig.matchmakingTimeoutSeconds,
-    );
     _matchmakingTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
-      if (state.phase != DuelPhase.searching) {
+      if (attempt != _matchmakingAttempt || state.phase != DuelPhase.searching) {
         timer.cancel();
         return;
       }
@@ -224,20 +232,23 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
       }
       timer.cancel();
       _matchmakingTimer = null;
-      await _onMatchmakingTimeout(matchId);
+      await _onMatchmakingTimeout(attempt);
     });
   }
 
-  Future<void> _onMatchmakingTimeout(String matchId) async {
-    if (state.phase != DuelPhase.searching) return;
+  Future<void> _onMatchmakingTimeout(int attempt) async {
+    if (attempt != _matchmakingAttempt || state.phase != DuelPhase.searching) return;
     _subscription?.cancel();
     _subscription = null;
-    // Cancel our waiting lobby so it doesn't linger as a stale match.
-    try {
-      await ref.read(duelServiceProvider).cancelMatch(matchId);
-    } catch (e) {
-      debugPrint('Timeout cancelMatch failed: $e');
+    final matchId = _matchmakingMatchId;
+    if (matchId != null) {
+      try {
+        await ref.read(duelServiceProvider).cancelMatch(matchId);
+      } catch (e) {
+        debugPrint('Timeout cancelMatch failed: $e');
+      }
     }
+    if (attempt != _matchmakingAttempt) return;
     state = DuelSessionState(
       phase: DuelPhase.idle,
       matchmakingTimedOut: true,
@@ -573,6 +584,8 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
   }
 
   void reset() {
+    ++_matchmakingAttempt;
+    _matchmakingMatchId = null;
     _cancelTimersAndSubscriptions();
     final timedOut = state.matchmakingTimedOut;
     state = DuelSessionState(matchmakingTimedOut: timedOut);
