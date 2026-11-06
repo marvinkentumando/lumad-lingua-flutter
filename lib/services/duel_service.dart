@@ -188,7 +188,6 @@ class DuelService {
           final data = candidate.data();
           if (data['player1Id'] == userId ||
               !canClaimMatchData(data, userId) ||
-              _compareLobbyAge(candidate, ownMatch) >= 0 ||
               attemptedIds.contains(candidate.id)) {
             continue;
           }
