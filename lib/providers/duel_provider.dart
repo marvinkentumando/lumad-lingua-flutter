@@ -213,7 +213,10 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
       state = state.copyWith(matchId: matchId, isLoading: false);
       _listenToMatch(matchId);
     } catch (e) {
+      if (attempt != _matchmakingAttempt || state.matchmakingTimedOut) return;
       debugPrint('Matchmaking error in provider: $e');
+      _matchmakingTimer?.cancel();
+      _matchmakingTimer = null;
       state = state.copyWith(phase: DuelPhase.idle, isLoading: false, error: e.toString());
     }
   }
@@ -249,11 +252,13 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
       }
     }
     if (attempt != _matchmakingAttempt) return;
+    final stateToShow = state;
     state = DuelSessionState(
       phase: DuelPhase.idle,
       matchmakingTimedOut: true,
-      error: 'No opponent found. Please try again.',
+      error: 'No opponent found within ${DuelSyncConfig.matchmakingTimeoutSeconds}s. Try again when another learner is online.',
     );
+    debugPrint('Matchmaking attempt timed out; match=${stateToShow.matchId ?? matchId ?? "pending"}');
   }
 
   void _listenToMatch(String matchId) {
@@ -278,6 +283,7 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
 
     switch (match.status) {
       case DuelStatus.waiting:
+        _matchmakingMatchId = match.id;
         if (state.phase != DuelPhase.searching) {
           state = state.copyWith(phase: DuelPhase.searching);
         }

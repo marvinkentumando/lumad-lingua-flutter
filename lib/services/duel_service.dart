@@ -120,8 +120,11 @@ class DuelService {
         final claimed = await _tryClaimWaitingMatch(matchDoc.reference, userId, userProfile);
         if (claimed) return matchDoc.id;
       }
-    } on FirebaseException {
-      // Composite index or rules issue: fall through to creating a match.
+    } on FirebaseException catch (e) {
+      // Do not silently create a separate lobby when the matchmaking query
+      // fails (for example, because its composite index is missing).
+      debugPrint('Firestore matchmaking query failed: ${e.code}: ${e.message}');
+      rethrow;
     }
 
     return _createMatch(userId, userProfile, questions);
