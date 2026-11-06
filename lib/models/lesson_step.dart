@@ -1,5 +1,6 @@
 enum ActivityType {
   configuration,
+  overview,
   vocabulary,
   mcq,
   pronunciation,
@@ -29,6 +30,9 @@ class LessonStep {
     switch (type) {
       case ActivityType.configuration:
         return true; // Config is handled by the overall lesson model
+      case ActivityType.overview:
+        return (title).trim().isNotEmpty &&
+            (data['content'] ?? data['overviewText'] ?? '').toString().trim().isNotEmpty;
       case ActivityType.vocabulary:
         return (data['word'] ?? '').isNotEmpty &&
             (data['translation'] ?? '').isNotEmpty;

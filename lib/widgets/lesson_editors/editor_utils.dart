@@ -12,6 +12,9 @@ import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import '../../utils/audio_validator.dart';
+import '../../services/supabase_dataset_service.dart';
+import '../../models/supabase_dataset_entry.dart';
+import '../preview_audio_player.dart';
 
 class EditorUtils {
   static Widget buildTextField({
@@ -280,8 +283,45 @@ class EditorUtils {
                 );
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.record_voice_over_rounded, color: AppColors.gold500),
+              title: Text(
+                'Select Native Audio Reference',
+                style: TextStyle(
+                  color: isDark ? Colors.white : AppColors.creamText,
+                ),
+              ),
+              subtitle: Text(
+                'Browse verified native speaker dataset vault',
+                style: TextStyle(
+                  color: isDark ? Colors.white60 : AppColors.creamText3,
+                  fontSize: 11,
+                ),
+              ),
+              onTap: () {
+                context.pop();
+                showNativeAudioVaultPicker(
+                  context: context,
+                  onComplete: onComplete,
+                );
+              },
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  static void showNativeAudioVaultPicker({
+    required BuildContext context,
+    required Function(String audioUrl) onComplete,
+    Function(SupabaseDatasetEntry entry)? onEntrySelected,
+  }) {
+    showDialog(
+      context: context,
+      builder: (context) => NativeAudioVaultPickerModal(
+        onComplete: onComplete,
+        onEntrySelected: onEntrySelected,
       ),
     );
   }
@@ -649,6 +689,221 @@ class _AudioRecorderDialogState extends State<AudioRecorderDialog> {
     );
   }
 }
+
+class NativeAudioVaultPickerModal extends StatefulWidget {
+  final Function(String) onComplete;
+  final Function(SupabaseDatasetEntry)? onEntrySelected;
+
+  const NativeAudioVaultPickerModal({
+    super.key,
+    required this.onComplete,
+    this.onEntrySelected,
+  });
+
+  @override
+  State<NativeAudioVaultPickerModal> createState() => _NativeAudioVaultPickerModalState();
+}
+
+class _NativeAudioVaultPickerModalState extends State<NativeAudioVaultPickerModal> {
+  final TextEditingController _searchController = TextEditingController();
+  List<SupabaseDatasetEntry> _allEntries = [];
+  List<SupabaseDatasetEntry> _filteredEntries = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDatasetEntries();
+  }
+
+  Future<void> _loadDatasetEntries() async {
+    try {
+      final service = SupabaseDatasetService();
+      final entries = await service.discoverDatasetEntries();
+      if (mounted) {
+        setState(() {
+          _allEntries = entries;
+          _filteredEntries = entries;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Failed to load native dataset entries: $e';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _filterEntries(String query) {
+    final q = query.toLowerCase().trim();
+    setState(() {
+      if (q.isEmpty) {
+        _filteredEntries = _allEntries;
+      } else {
+        _filteredEntries = _allEntries.where((e) {
+          return e.title.toLowerCase().contains(q) ||
+              e.folderName.toLowerCase().contains(q);
+        }).toList();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Dialog(
+      backgroundColor: isDark ? AppColors.forestDarkCard : Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        width: 500,
+        height: 600,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.record_voice_over_rounded,
+                  color: AppColors.gold500,
+                  size: 24,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Select Native Audio Reference',
+                    style: TextStyle(
+                      color: isDark ? Colors.white : AppColors.creamText,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, color: Colors.white54),
+                  onPressed: () => context.pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _searchController,
+              onChanged: _filterEntries,
+              style: TextStyle(color: isDark ? Colors.white : AppColors.creamText),
+              decoration: InputDecoration(
+                hintText: 'Search native phrase or word...',
+                hintStyle: TextStyle(
+                  color: isDark ? Colors.white38 : AppColors.creamText3,
+                ),
+                prefixIcon: const Icon(Icons.search_rounded, color: AppColors.gold500),
+                filled: true,
+                fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(color: AppColors.gold500),
+                    )
+                  : _errorMessage != null
+                      ? Center(
+                          child: Text(
+                            _errorMessage!,
+                            style: const TextStyle(color: AppColors.semanticRed),
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                      : _filteredEntries.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'No matching native audio references found.',
+                                style: TextStyle(color: Colors.white54),
+                              ),
+                            )
+                          : ListView.separated(
+                              itemCount: _filteredEntries.length,
+                              separatorBuilder: (_, __) => const Divider(height: 1),
+                              itemBuilder: (context, index) {
+                                final item = _filteredEntries[index];
+                                final primary = item.primaryTake;
+                                final audioUrl = primary?.audioUrl ?? '';
+
+                                return ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  title: Text(
+                                    item.title,
+                                    style: TextStyle(
+                                      color: isDark ? Colors.white : AppColors.creamText,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    '${item.sourceRoot} • Take ${primary?.takeNumber ?? 1}',
+                                    style: TextStyle(
+                                      color: isDark ? Colors.white54 : AppColors.creamText3,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                  leading: audioUrl.isNotEmpty
+                                      ? PreviewAudioPlayer(
+                                          audioUrl: audioUrl,
+                                          size: 40,
+                                        )
+                                      : const Icon(Icons.audiotrack, color: Colors.white38),
+                                  trailing: ElevatedButton(
+                                    onPressed: audioUrl.isNotEmpty
+                                        ? () {
+                                            widget.onComplete(audioUrl);
+                                            if (widget.onEntrySelected != null) {
+                                              widget.onEntrySelected!(item);
+                                            }
+                                            context.pop();
+                                          }
+                                        : null,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.gold500,
+                                      foregroundColor: AppColors.forest900,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'SELECT',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 
 
 

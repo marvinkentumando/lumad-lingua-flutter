@@ -96,6 +96,11 @@ class TaskEvaluator {
         }
         feedbackSubtitle = isCorrect ? "Sentence complete and accurate!" : "Some words don't quite fit there.";
         break;
+
+      case TaskType.overview:
+        isCorrect = true;
+        feedbackSubtitle = "Lesson section completed!";
+        break;
     }
 
     return TaskEvaluationResult(isCorrect: isCorrect, feedbackSubtitle: feedbackSubtitle);
