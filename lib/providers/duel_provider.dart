@@ -24,6 +24,8 @@ class DuelSessionState {
   final double opponentHp;
   final int currentQuestionIndex;
   final int secondsLeft;
+  final int matchmakingSecondsLeft;
+  final bool matchmakingTimedOut;
   final bool isPlayerWinning;
   final bool showPlayerDamageEffect;
   final bool showOpponentDamageEffect;
@@ -48,6 +50,8 @@ class DuelSessionState {
     this.opponentHp = 1.0,
     this.currentQuestionIndex = 0,
     this.secondsLeft = DuelSyncConfig.secondsPerRound,
+    this.matchmakingSecondsLeft = DuelSyncConfig.matchmakingTimeoutSeconds,
+    this.matchmakingTimedOut = false,
     this.isPlayerWinning = true,
     this.showPlayerDamageEffect = false,
     this.showOpponentDamageEffect = false,
@@ -73,6 +77,8 @@ class DuelSessionState {
     double? opponentHp,
     int? currentQuestionIndex,
     int? secondsLeft,
+    int? matchmakingSecondsLeft,
+    bool? matchmakingTimedOut,
     bool? isPlayerWinning,
     bool? showPlayerDamageEffect,
     bool? showOpponentDamageEffect,
@@ -97,6 +103,8 @@ class DuelSessionState {
       opponentHp: opponentHp ?? this.opponentHp,
       currentQuestionIndex: currentQuestionIndex ?? this.currentQuestionIndex,
       secondsLeft: secondsLeft ?? this.secondsLeft,
+      matchmakingSecondsLeft: matchmakingSecondsLeft ?? this.matchmakingSecondsLeft,
+      matchmakingTimedOut: matchmakingTimedOut ?? this.matchmakingTimedOut,
       isPlayerWinning: isPlayerWinning ?? this.isPlayerWinning,
       showPlayerDamageEffect: showPlayerDamageEffect ?? this.showPlayerDamageEffect,
       showOpponentDamageEffect: showOpponentDamageEffect ?? this.showOpponentDamageEffect,
@@ -114,6 +122,7 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
   StreamSubscription<DuelMatch?>? _subscription;
   Timer? _roundTimer;
   Timer? _heartbeatTimer;
+  Timer? _matchmakingTimer;
 
   @override
   DuelSessionState build() {
@@ -130,6 +139,8 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
     _roundTimer = null;
     _heartbeatTimer?.cancel();
     _heartbeatTimer = null;
+    _matchmakingTimer?.cancel();
+    _matchmakingTimer = null;
   }
 
   /// Re-attaches to an existing active or waiting match for the user if present.
@@ -167,6 +178,8 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
     state = DuelSessionState(
       phase: DuelPhase.searching,
       isLoading: true,
+      matchmakingSecondsLeft: DuelSyncConfig.matchmakingTimeoutSeconds,
+      matchmakingTimedOut: false,
     );
 
     final user = ref.read(authServiceProvider).currentUser;
@@ -187,10 +200,49 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
 
       state = state.copyWith(matchId: matchId, isLoading: false);
       _listenToMatch(matchId);
+      _startMatchmakingTimer(matchId);
     } catch (e) {
       debugPrint('Matchmaking error in provider: $e');
       state = state.copyWith(phase: DuelPhase.idle, isLoading: false, error: e.toString());
     }
+  }
+
+  void _startMatchmakingTimer(String matchId) {
+    _matchmakingTimer?.cancel();
+    state = state.copyWith(
+      matchmakingSecondsLeft: DuelSyncConfig.matchmakingTimeoutSeconds,
+    );
+    _matchmakingTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+      if (state.phase != DuelPhase.searching) {
+        timer.cancel();
+        return;
+      }
+      final next = state.matchmakingSecondsLeft - 1;
+      if (next > 0) {
+        state = state.copyWith(matchmakingSecondsLeft: next);
+        return;
+      }
+      timer.cancel();
+      _matchmakingTimer = null;
+      await _onMatchmakingTimeout(matchId);
+    });
+  }
+
+  Future<void> _onMatchmakingTimeout(String matchId) async {
+    if (state.phase != DuelPhase.searching) return;
+    _subscription?.cancel();
+    _subscription = null;
+    // Cancel our waiting lobby so it doesn't linger as a stale match.
+    try {
+      await ref.read(duelServiceProvider).cancelMatch(matchId);
+    } catch (e) {
+      debugPrint('Timeout cancelMatch failed: $e');
+    }
+    state = DuelSessionState(
+      phase: DuelPhase.idle,
+      matchmakingTimedOut: true,
+      error: 'No opponent found. Please try again.',
+    );
   }
 
   void _listenToMatch(String matchId) {
@@ -221,6 +273,8 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
         break;
 
       case DuelStatus.active:
+        _matchmakingTimer?.cancel();
+        _matchmakingTimer = null;
         if (state.phase == DuelPhase.searching || state.phase == DuelPhase.idle) {
           _onBattleStart(match);
         } else if (state.phase == DuelPhase.battling || state.phase == DuelPhase.matchFound) {
@@ -242,6 +296,8 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
   }
 
   void _onBattleStart(DuelMatch match) {
+    _matchmakingTimer?.cancel();
+    _matchmakingTimer = null;
     final myId = state.myId ?? ref.read(authServiceProvider).currentUser?.uid ?? '';
     final isPlayer1 = match.player1Id == myId;
     final opponentId = isPlayer1 ? match.player2Id : match.player1Id;
@@ -518,7 +574,8 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
 
   void reset() {
     _cancelTimersAndSubscriptions();
-    state = DuelSessionState();
+    final timedOut = state.matchmakingTimedOut;
+    state = DuelSessionState(matchmakingTimedOut: timedOut);
   }
 }
 

@@ -13,6 +13,7 @@ import 'package:lumad_lingua/services/haptic_service.dart';
 import 'package:lumad_lingua/services/firebase_service.dart';
 import 'package:lumad_lingua/models/duel_models.dart';
 import 'package:lumad_lingua/services/auth_service.dart';
+import 'package:lumad_lingua/services/duel_service.dart';
 import 'package:lumad_lingua/providers/duel_provider.dart';
 import 'package:lumad_lingua/models/dictionary_entry.dart';
 import 'package:lumad_lingua/utils/app_localization.dart';
@@ -193,6 +194,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
 
   Widget _buildIdle(AppLocalization l10n) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sessionState = ref.watch(duelSessionProvider);
     return Center(
       key: const ValueKey('idle'),
       child: Padding(
@@ -222,6 +224,33 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
                   color: isDark ? Colors.white70 : AppColors.forest700,
                 ),
               ),
+              if (sessionState.matchmakingTimedOut) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.semanticRed.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.semanticRed.withValues(alpha: 0.35)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.hourglass_bottom_rounded,
+                          color: AppColors.semanticRed, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'No opponent found within ${DuelSyncConfig.matchmakingTimeoutSeconds}s. Try again when another learner is online.',
+                          style: AppTypography.body.copyWith(
+                            color: isDark ? Colors.white70 : AppColors.forest800,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 32),
               BrandButton(
                 text: l10n.translate('enter_arena'),
@@ -241,67 +270,60 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
   }
 
   Widget _buildSearching(AppLocalization l10n) {
-    return Stack(
+    final sessionState = ref.watch(duelSessionProvider);
+    return Center(
       key: const ValueKey('searching'),
-      children: [
-        Positioned(
-          top: 16,
-          left: 16,
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 28),
-            onPressed: () {
-              HapticService.light();
-              ref.read(duelSessionProvider.notifier).reset();
-            },
-            tooltip: l10n.translate('retreat'),
-          ),
-        ),
-        Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const CircularProgressIndicator(color: AppColors.gold500)
-                    .animate(onPlay: (c) => c.repeat())
-                    .scale(begin: const Offset(1, 1), end: const Offset(1.3, 1.3), duration: 1.seconds, curve: Curves.easeInOut),
-                const SizedBox(height: 32),
-                Text(
-                  l10n.translate('seeking_opponent'),
-                  style: AppTypography.label.copyWith(color: AppColors.gold500, letterSpacing: 4),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  l10n.translate('stirring_spirits'),
-                  style: AppTypography.body.copyWith(color: Colors.white60),
-                ),
-                const SizedBox(height: 40),
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white70,
-                    side: const BorderSide(color: Colors.white30),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  ),
-                  onPressed: () {
-                    HapticService.light();
-                    ref.read(duelSessionProvider.notifier).reset();
-                  },
-                  icon: const Icon(Icons.close_rounded, size: 18),
-                  label: Text(
-                    'CANCEL MATCHMAKING',
-                    style: AppTypography.label.copyWith(
-                      color: Colors.white70,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                ),
-              ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(color: AppColors.gold500)
+                .animate(onPlay: (c) => c.repeat())
+                .scale(begin: const Offset(1, 1), end: const Offset(1.3, 1.3), duration: 1.seconds, curve: Curves.easeInOut),
+            const SizedBox(height: 32),
+            Text(
+              l10n.translate('seeking_opponent'),
+              style: AppTypography.label.copyWith(color: AppColors.gold500, letterSpacing: 4),
             ),
-          ),
+            const SizedBox(height: 12),
+            Text(
+              l10n.translate('stirring_spirits'),
+              style: AppTypography.body.copyWith(color: Colors.white60),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Searching… ${sessionState.matchmakingSecondsLeft}s remaining',
+              style: AppTypography.label.copyWith(
+                color: Colors.white54,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 40),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white70,
+                side: const BorderSide(color: Colors.white30),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              ),
+              onPressed: () {
+                HapticService.light();
+                ref.read(duelSessionProvider.notifier).reset();
+              },
+              icon: const Icon(Icons.close_rounded, size: 18),
+              label: Text(
+                'CANCEL (${sessionState.matchmakingSecondsLeft}s)',
+                style: AppTypography.label.copyWith(
+                  color: Colors.white70,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
