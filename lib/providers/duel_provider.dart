@@ -243,7 +243,7 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
       _watchForOpponent(matchId, myId, userProfile, attempt);
     } catch (e) {
       if (attempt != _matchmakingAttempt || state.matchmakingTimedOut) return;
-      debugPrint('Matchmaking error in provider: $e');
+      debugPrint('[DuelMatchmaking] stage=provider_start_failed error=$e');
       _matchmakingTimer?.cancel();
       _matchmakingTimer = null;
       state = state.copyWith(
@@ -322,7 +322,7 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
                 state.phase != DuelPhase.searching) {
               return;
             }
-            debugPrint('Matchmaking lobby watcher failed: $error');
+            debugPrint('[DuelMatchmaking] stage=watch_lobbies_failed error=$error');
             _subscription?.cancel();
             _subscription = null;
             _candidateSubscription?.cancel();
@@ -359,7 +359,7 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
           state.phase != DuelPhase.searching) {
         return;
       }
-      debugPrint('Could not watch matchmaking lobbies: $error');
+      debugPrint('[DuelMatchmaking] stage=watch_lobbies_setup_failed error=$error');
       _matchmakingTimer?.cancel();
       _matchmakingTimer = null;
       state = state.copyWith(
@@ -421,6 +421,13 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
       return _extractErrorCode(unboxedError);
     }
     if (error is FirebaseException) return error.code;
+    final javascriptDetails = javascriptErrorDetails(error)?.toLowerCase();
+    if (javascriptDetails != null) {
+      if (javascriptDetails.contains('permission-denied')) return 'permission-denied';
+      if (javascriptDetails.contains('failed-precondition')) return 'failed-precondition';
+      if (javascriptDetails.contains('unavailable')) return 'unavailable';
+      if (javascriptDetails.contains('deadline-exceeded')) return 'deadline-exceeded';
+    }
     try {
       final dynamic e = error;
       final boxed = e.error;
@@ -467,9 +474,14 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
       }
     } catch (_) {}
 
+    final browserDetails = javascriptErrorDetails(error);
+    if (browserDetails != null && browserDetails.trim().isNotEmpty) {
+      return browserDetails;
+    }
+
     final str = error.toString();
     if (str.contains('converted Future')) {
-      return 'The browser hid the Firestore error details. Check Firebase sign-in, Firestore rules, and the network, then reload and try again.';
+      return 'Browser interop hid the Firestore error. Open the browser developer console and filter for [DuelMatchmaking] to find the failed stage and Firebase error code.';
     }
     return str;
   }

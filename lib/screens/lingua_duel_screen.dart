@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import 'package:lumad_lingua/theme/app_colors.dart';
 import 'package:lumad_lingua/theme/app_typography.dart';
@@ -27,18 +30,43 @@ class LinguaDuelScreen extends ConsumerStatefulWidget {
 
 class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
     with WidgetsBindingObserver {
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  bool _isOnline = true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _checkConnectivity();
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen(
+      _updateConnectivity,
+      onError: (Object error) => debugPrint('Duel connectivity listener error: $error'),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(duelSessionProvider.notifier).checkAndRestoreActiveSession();
     });
   }
 
+  Future<void> _checkConnectivity() async {
+    try {
+      _updateConnectivity(await Connectivity().checkConnectivity());
+    } catch (error) {
+      debugPrint('Duel connectivity check failed: $error');
+    }
+  }
+
+  void _updateConnectivity(List<ConnectivityResult> results) {
+    final online = results.any((result) => result != ConnectivityResult.none);
+    if (!mounted || online == _isOnline) return;
+    setState(() => _isOnline = online);
+    if (!online && ref.read(duelSessionProvider).phase == DuelPhase.searching) {
+      ref.read(duelSessionProvider.notifier).reset();
+    }
+  }
+
   @override
   void dispose() {
+    _connectivitySubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -95,6 +123,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
   }
 
   void _startMatchmaking() {
+    if (!_isOnline) return;
     HapticService.light();
     final user = ref.read(authServiceProvider).currentUser;
 
@@ -277,10 +306,44 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
                   ),
                 ),
               ],
-              const SizedBox(height: 32),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: (isDark ? AppColors.gold500 : AppColors.forest500)
+                      .withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: (isDark ? AppColors.gold500 : AppColors.forest500)
+                        .withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _isOnline ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+                      color: _isOnline ? AppColors.semanticGreen : AppColors.semanticRed,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _isOnline
+                            ? 'Lingua Duel requires an internet connection to find and play against other learners.'
+                            : 'You are offline. Connect to the internet to use Lingua Duel.',
+                        style: AppTypography.body.copyWith(
+                          color: isDark ? Colors.white70 : AppColors.forest800,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
               BrandButton(
                 text: l10n.translate('enter_arena'),
-                onTap: _startMatchmaking,
+                onTap: _isOnline ? _startMatchmaking : null,
                 type: BrandButtonType.primary,
               ),
               const SizedBox(height: 12),

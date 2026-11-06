@@ -100,10 +100,12 @@ class DuelService {
     if (userId == null) throw Exception("User not authenticated");
 
     try {
+      debugPrint('[DuelMatchmaking] stage=query_waiting user=$userId');
       final waitingMatches = await _matches
           .where('status', isEqualTo: DuelStatus.waiting.name)
           .limit(25)
           .get();
+      debugPrint('[DuelMatchmaking] stage=query_waiting_complete count=${waitingMatches.docs.length}');
 
       final now = DateTime.now();
       final candidates = waitingMatches.docs.toList()
@@ -133,11 +135,19 @@ class DuelService {
     } on FirebaseException catch (e) {
       // Do not silently create a separate lobby when the matchmaking query
       // fails (for example, because its composite index is missing).
-      debugPrint('Firestore matchmaking query failed: ${e.code}: ${e.message}');
+      debugPrint('[DuelMatchmaking] stage=query_waiting_failed code=${e.code} message=${e.message}');
       rethrow;
     }
 
-    return _createMatch(userId, userProfile, questions);
+    debugPrint('[DuelMatchmaking] stage=create_waiting user=$userId');
+    try {
+      final matchId = await _createMatch(userId, userProfile, questions);
+      debugPrint('[DuelMatchmaking] stage=create_waiting_complete matchId=$matchId');
+      return matchId;
+    } on FirebaseException catch (e) {
+      debugPrint('[DuelMatchmaking] stage=create_waiting_failed code=${e.code} message=${e.message}');
+      rethrow;
+    }
   }
 
   /// Watches waiting lobbies while this player waits. If two clients both
@@ -152,6 +162,7 @@ class DuelService {
     required void Function(String matchId) onMatchFound,
     required void Function(Object error) onError,
   }) async {
+    debugPrint('[DuelMatchmaking] stage=watch_prepare matchId=$waitingMatchId');
     final ownMatch = await _matches.doc(waitingMatchId).get();
     if (!ownMatch.exists ||
         ownMatch.data()?['status'] != DuelStatus.waiting.name) {
@@ -262,10 +273,9 @@ class DuelService {
       final data = snapshot.data()!;
       // Re-verify inside the transaction: this is what makes the claim
       // race-free between two joiners.
-      if (!canClaimMatchData(data, userId)) return false;
-
-      transaction.update(matchRef, {
-        'player2Id': userId,
+      if (!canClaimMatchData(data, userId)) return false;        debugPrint('[DuelMatchmaking] stage=claim_match user=$userId matchId=${matchRef.id}');
+        transaction.update(matchRef, {
+          'player2Id': userId,
         'player2Name': userProfile['username'] ?? 'Warrior',
         'player2Avatar': userProfile['avatar'] ?? '👤',
         'status': DuelStatus.active.name,
@@ -274,6 +284,9 @@ class DuelService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
       return true;
+    }).catchError((Object error) {
+      debugPrint('[DuelMatchmaking] stage=claim_match_failed matchId=${matchRef.id} error=$error');
+      throw error;
     });
   }
 

@@ -6,3 +6,6 @@ Object? unboxJavaScriptError(Object error) =>
 
 String? javascriptErrorStack(Object error) =>
     platform.javascriptErrorStack(error);
+
+String? javascriptErrorDetails(Object error) =>
+    platform.javascriptErrorDetails(error);
