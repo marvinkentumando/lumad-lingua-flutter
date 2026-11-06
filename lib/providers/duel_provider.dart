@@ -159,11 +159,23 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
       final duelService = ref.read(duelServiceProvider);
       final activeMatch = await duelService.findActiveMatchForUser(user.uid);
       if (activeMatch != null && activeMatch.status != DuelStatus.finished && activeMatch.status != DuelStatus.cancelled) {
+        final isWaiting = activeMatch.status == DuelStatus.waiting;
+        final elapsed = DateTime.now().difference(activeMatch.createdAt).inSeconds;
+        final secondsLeft = (DuelSyncConfig.matchmakingTimeoutSeconds - elapsed)
+            .clamp(0, DuelSyncConfig.matchmakingTimeoutSeconds);
+        final attempt = isWaiting ? ++_matchmakingAttempt : _matchmakingAttempt;
         state = state.copyWith(
           myId: user.uid,
           matchId: activeMatch.id,
           match: activeMatch,
+          phase: isWaiting ? DuelPhase.searching : state.phase,
+          matchmakingSecondsLeft: secondsLeft,
+          isLoading: false,
         );
+        if (isWaiting) {
+          _matchmakingMatchId = activeMatch.id;
+          _startMatchmakingTimer(attempt);
+        }
         _listenToMatch(activeMatch.id);
       }
     } catch (e) {
@@ -286,6 +298,8 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
         _matchmakingMatchId = match.id;
         if (state.phase != DuelPhase.searching) {
           state = state.copyWith(phase: DuelPhase.searching);
+          final attempt = ++_matchmakingAttempt;
+          _startMatchmakingTimer(attempt);
         }
         break;
 
