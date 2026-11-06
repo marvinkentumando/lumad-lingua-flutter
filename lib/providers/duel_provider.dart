@@ -397,20 +397,18 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
   }
 
   static String matchmakingFailureMessage(Object error) {
-    final code = _extractErrorCode(error);
-    switch (code) {
-      case 'permission-denied':
-        return 'Matchmaking was blocked by Firestore permissions. Deploy the latest Firestore rules and try again.';
-      case 'failed-precondition':
-        return 'Matchmaking needs a Firestore index or it is still building. If you deployed indexes recently, please wait 2–3 minutes for Firestore to finish building.';
-      case 'resource-exhausted':
-        return 'Firebase daily quota exceeded (resource-exhausted). Please check Firebase Console usage or wait for the daily quota to reset.';
-      case 'unavailable':
-      case 'deadline-exceeded':
-        return 'Could not reach the matchmaking service. Check your connection and try again.';
+    final str = error.toString().toLowerCase();
+    if (str.contains('network') || str.contains('connection') || str.contains('offline') || str.contains('socket')) {
+      return 'Could not reach Supabase Realtime service. Please check your connection and try again.';
+    }
+    if (str.contains('permission') || str.contains('rls') || str.contains('policy')) {
+      return 'Matchmaking was blocked by database policies. Please make sure you are signed in.';
     }
 
     final message = _cleanErrorMessage(error);
+    if (message.contains('converted Future') || message.contains('Browser interop')) {
+      return 'Unable to start matchmaking. Please check your connection and try again.';
+    }
     return 'Matchmaking could not start: $message';
   }
 

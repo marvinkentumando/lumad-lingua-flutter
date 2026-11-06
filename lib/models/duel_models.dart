@@ -66,39 +66,52 @@ class DuelMatch {
   bool isActiveAndStarted(DuelStatus status) =>
       status == DuelStatus.active && battleStartedAt != null;
 
-  factory DuelMatch.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory DuelMatch.fromMap(Map<String, dynamic> data, {String? docId}) {
+    final rawQuestions = data['questions'];
+    List<DuelQuestion> parsedQuestions = [];
+    if (rawQuestions is List) {
+      parsedQuestions = rawQuestions.map((q) {
+        if (q is Map) return DuelQuestion.fromMap(Map<String, dynamic>.from(q));
+        return DuelQuestion(question: '', options: [], correctIndex: 0);
+      }).toList();
+    }
+
     return DuelMatch(
-      hasPendingWrites: doc.metadata.hasPendingWrites,
-      id: doc.id,
-      player1Id: data['player1Id'] ?? '',
-      player2Id: data['player2Id'],
-      player1Name: data['player1Name'] ?? 'Warrior',
-      player2Name: data['player2Name'],
-      player1Avatar: data['player1Avatar'] ?? '👤',
-      player2Avatar: data['player2Avatar'],
+      hasPendingWrites: false,
+      id: docId ?? data['id']?.toString() ?? '',
+      player1Id: data['player1_id'] ?? data['player1Id'] ?? '',
+      player2Id: data['player2_id'] ?? data['player2Id'],
+      player1Name: data['player1_name'] ?? data['player1Name'] ?? 'Warrior',
+      player2Name: data['player2_name'] ?? data['player2Name'],
+      player1Avatar: data['player1_avatar'] ?? data['player1Avatar'] ?? '👤',
+      player2Avatar: data['player2_avatar'] ?? data['player2Avatar'],
       status: DuelStatus.values.firstWhere(
         (e) => e.name == (data['status'] ?? 'waiting'),
         orElse: () => DuelStatus.waiting,
       ),
-      questions: (data['questions'] as List? ?? [])
-          .map((q) => DuelQuestion.fromMap(q as Map<String, dynamic>))
-          .toList(),
-      player1Hp: (data['player1Hp'] as num? ?? 1.0).toDouble(),
-      player2Hp: (data['player2Hp'] as num? ?? 1.0).toDouble(),
-      currentRound: data['currentRound'] ?? 0,
-      winnerId: data['winnerId'],
-      createdAt: DuelMatch.parseTimestamp(data['createdAt']) ?? DateTime.now(),
-      battleStartedAt: DuelMatch.parseTimestamp(data['battleStartedAt']),
-      lastSeen: DuelMatch.parseLastSeen(data['lastSeen']),
-      roundStartedAt: DuelMatch.parseTimestamp(data['roundStartedAt']),
-      finishedAt: DuelMatch.parseTimestamp(data['finishedAt']),
+      questions: parsedQuestions,
+      player1Hp: (data['player1_hp'] ?? data['player1Hp'] ?? 1.0 as num).toDouble(),
+      player2Hp: (data['player2_hp'] ?? data['player2Hp'] ?? 1.0 as num).toDouble(),
+      currentRound: (data['current_round'] ?? data['currentRound'] ?? 0 as num).toInt(),
+      winnerId: data['winner_id'] ?? data['winnerId'],
+      createdAt: DuelMatch.parseTimestamp(data['created_at'] ?? data['createdAt']) ?? DateTime.now(),
+      battleStartedAt: DuelMatch.parseTimestamp(data['battle_started_at'] ?? data['battleStartedAt']),
+      lastSeen: DuelMatch.parseLastSeen(data['last_seen'] ?? data['lastSeen']),
+      roundStartedAt: DuelMatch.parseTimestamp(data['round_started_at'] ?? data['roundStartedAt']),
+      finishedAt: DuelMatch.parseTimestamp(data['finished_at'] ?? data['finishedAt']),
     );
+  }
+
+  factory DuelMatch.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    return DuelMatch.fromMap(data, docId: doc.id);
   }
 
   static DateTime? parseTimestamp(dynamic value) {
     if (value is Timestamp) return value.toDate();
     if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value);
+    if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
     return null;
   }
 
@@ -129,6 +142,29 @@ class DuelMatch {
       'createdAt': FieldValue.serverTimestamp(),
     };
   }
+
+  Map<String, dynamic> toSupabase() {
+    final lastSeenMap = <String, String>{};
+    lastSeen.forEach((key, val) {
+      lastSeenMap[key] = val.toIso8601String();
+    });
+
+    return {
+      'player1_id': player1Id,
+      'player2_id': player2Id,
+      'player1_name': player1Name,
+      'player2_name': player2Name,
+      'player1_avatar': player1Avatar,
+      'player2_avatar': player2Avatar,
+      'status': status.name,
+      'questions': questions.map((q) => q.toMap()).toList(),
+      'player1_hp': player1Hp,
+      'player2_hp': player2Hp,
+      'current_round': currentRound,
+      'winner_id': winnerId,
+      'last_seen': lastSeenMap,
+    };
+  }
 }
 
 class DuelQuestion {
@@ -146,7 +182,7 @@ class DuelQuestion {
     return DuelQuestion(
       question: map['question'] ?? '',
       options: List<String>.from(map['options'] ?? []),
-      correctIndex: map['correctIndex'] ?? 0,
+      correctIndex: (map['correctIndex'] ?? map['correct_index'] ?? 0 as num).toInt(),
     );
   }
 
@@ -189,16 +225,16 @@ class DuelHistoryItem {
   factory DuelHistoryItem.fromMap(Map<String, dynamic> map, String id) {
     return DuelHistoryItem(
       id: id,
-      opponentId: map['opponentId'] ?? '',
-      opponentName: map['opponentName'] ?? 'Warrior',
-      opponentAvatar: map['opponentAvatar'] ?? '👤',
-      isWinner: map['isWinner'] ?? false,
-      finalPlayerHp: (map['finalPlayerHp'] as num? ?? 0.0).toDouble(),
-      finalOpponentHp: (map['finalOpponentHp'] as num? ?? 0.0).toDouble(),
-      roundsPlayed: (map['roundsPlayed'] as num? ?? 0).toInt(),
-      xpEarned: (map['xpEarned'] as num? ?? 0).toInt(),
-      mistCrystalsEarned: (map['mistCrystalsEarned'] as num? ?? 0).toInt(),
-      timestamp: DuelMatch.parseTimestamp(map['timestamp']) ?? DateTime.now(),
+      opponentId: map['opponentId'] ?? map['opponent_id'] ?? '',
+      opponentName: map['opponentName'] ?? map['opponent_name'] ?? 'Warrior',
+      opponentAvatar: map['opponentAvatar'] ?? map['opponent_avatar'] ?? '👤',
+      isWinner: map['isWinner'] ?? map['is_winner'] ?? false,
+      finalPlayerHp: (map['finalPlayerHp'] ?? map['final_player_hp'] ?? 0.0 as num).toDouble(),
+      finalOpponentHp: (map['finalOpponentHp'] ?? map['final_opponent_hp'] ?? 0.0 as num).toDouble(),
+      roundsPlayed: (map['roundsPlayed'] ?? map['rounds_played'] ?? 0 as num).toInt(),
+      xpEarned: (map['xpEarned'] ?? map['xp_earned'] ?? 0 as num).toInt(),
+      mistCrystalsEarned: (map['mistCrystalsEarned'] ?? map['mist_crystals_earned'] ?? 0 as num).toInt(),
+      timestamp: DuelMatch.parseTimestamp(map['timestamp'] ?? map['created_at']) ?? DateTime.now(),
     );
   }
 
@@ -214,6 +250,21 @@ class DuelHistoryItem {
       'xpEarned': xpEarned,
       'mistCrystalsEarned': mistCrystalsEarned,
       'timestamp': FieldValue.serverTimestamp(),
+    };
+  }
+
+  Map<String, dynamic> toSupabase() {
+    return {
+      'opponent_id': opponentId,
+      'opponent_name': opponentName,
+      'opponent_avatar': opponentAvatar,
+      'is_winner': isWinner,
+      'final_player_hp': finalPlayerHp,
+      'final_opponent_hp': finalOpponentHp,
+      'rounds_played': roundsPlayed,
+      'xp_earned': xpEarned,
+      'mist_crystals_earned': mistCrystalsEarned,
+      'created_at': timestamp.toIso8601String(),
     };
   }
 }

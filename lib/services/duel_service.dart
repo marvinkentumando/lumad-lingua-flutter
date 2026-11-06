@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/duel_models.dart';
 import '../models/dictionary_entry.dart';
 import 'auth_service.dart';
@@ -11,7 +11,7 @@ import 'auth_service.dart';
 final duelServiceProvider = Provider((ref) => DuelService(ref));
 
 /// Tunables for real-time duel sync. Kept as constants so tests can exercise
-/// the math without touching Firestore.
+/// the math without network calls.
 abstract final class DuelSyncConfig {
   /// Seconds each round allows before an auto-timeout answer is submitted.
   static const int secondsPerRound = 15;
@@ -34,12 +34,10 @@ abstract final class DuelSyncConfig {
 
 class DuelService {
   final Ref _ref;
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   DuelService(this._ref);
 
-  CollectionReference<Map<String, dynamic>> get _matches =>
-      _db.collection('duel_matches');
+  SupabaseClient get _supabase => Supabase.instance.client;
 
   // ── Pure helpers (used by the screen + unit tests) ────────────────────────
 
@@ -78,155 +76,203 @@ class DuelService {
     return null;
   }
 
-  // ── Real-time sync ────────────────────────────────────────────────────────
+  // ── Real-time sync via Supabase WebSockets ────────────────────────────────
 
   Stream<DuelMatch?> streamMatch(String matchId) {
-    return _matches.doc(matchId).snapshots().map(
-          (doc) => doc.exists ? DuelMatch.fromFirestore(doc) : null,
-        );
+    final controller = StreamController<DuelMatch?>.broadcast();
+
+    // 1. Fetch initial match state
+    _supabase
+        .from('duel_matches')
+        .select()
+        .eq('id', matchId)
+        .maybeSingle()
+        .then((data) {
+      if (data != null && !controller.isClosed) {
+        controller.add(DuelMatch.fromMap(data));
+      }
+    }).catchError((e) {
+      debugPrint('[SupabaseDuel] Stream initial fetch error: $e');
+    });
+
+    // 2. Subscribe to real-time Postgres changes over WebSockets
+    final channel = _supabase.channel('public:duel_matches:id=$matchId');
+    channel
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'duel_matches',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: matchId,
+          ),
+          callback: (payload) {
+            if (controller.isClosed) return;
+            final record = payload.newRecord;
+            if (record.isNotEmpty) {
+              controller.add(DuelMatch.fromMap(record));
+            } else if (payload.eventType == PostgresChangeEvent.delete) {
+              controller.add(null);
+            }
+          },
+        )
+        .subscribe();
+
+    controller.onCancel = () {
+      channel.unsubscribe();
+      controller.close();
+    };
+
+    return controller.stream;
   }
 
   // ── Matchmaking ───────────────────────────────────────────────────────────
 
   /// Joins the first fresh, waiting match that is not our own, or creates a
-  /// new one. The claim runs inside a transaction so two simultaneous
-  /// joiners can never take the same lobby: the transaction re-verifies
-  /// `status == waiting` at commit time.
+  /// new one. Uses atomic Supabase Postgres updates to guarantee race-free claims.
   Future<String> findOrCreateMatch({
     required Map<String, dynamic> userProfile,
     List<DuelQuestion>? questions,
   }) async {
-    final userId = _ref.read(authServiceProvider).currentUser?.uid;
+    final userId = _ref.read(authServiceProvider).currentUser?.uid ??
+        _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception("User not authenticated");
 
     try {
-      debugPrint('[DuelMatchmaking] stage=query_waiting user=$userId');
-      final waitingMatches = await _matches
-          .where('status', isEqualTo: DuelStatus.waiting.name)
-          .limit(25)
-          .get();
-      debugPrint('[DuelMatchmaking] stage=query_waiting_complete count=${waitingMatches.docs.length}');
+      debugPrint('[SupabaseDuelMatchmaking] stage=query_waiting user=$userId');
+      final response = await _supabase
+          .from('duel_matches')
+          .select()
+          .eq('status', DuelStatus.waiting.name)
+          .order('created_at', ascending: true)
+          .limit(25);
+
+      final candidates = (response as List)
+          .map((data) => DuelMatch.fromMap(data as Map<String, dynamic>))
+          .toList();
+      debugPrint('[SupabaseDuelMatchmaking] stage=query_waiting_complete count=${candidates.length}');
 
       final now = DateTime.now();
-      final candidates = waitingMatches.docs.toList()
-        ..sort((a, b) {
-          final aCreated = DuelMatch.parseTimestamp(a.data()['createdAt']);
-          final bCreated = DuelMatch.parseTimestamp(b.data()['createdAt']);
-          return (aCreated ?? DateTime.fromMillisecondsSinceEpoch(0))
-              .compareTo(bCreated ?? DateTime.fromMillisecondsSinceEpoch(0));
-        });
       for (final matchDoc in candidates) {
-        final data = matchDoc.data();
-        if (data['player1Id'] == userId) continue; // never match ourselves
+        if (matchDoc.player1Id == userId) continue; // never match ourselves
 
         // Sweep abandoned lobbies instead of joining them.
-        final createdAt = DuelMatch.parseTimestamp(data['createdAt']);
-        if (createdAt != null &&
-            now.difference(createdAt) > DuelSyncConfig.waitingMatchTtl) {
-          await matchDoc.reference
-              .update({'status': DuelStatus.cancelled.name}).catchError((_) {});
+        if (now.difference(matchDoc.createdAt) > DuelSyncConfig.waitingMatchTtl) {
+          await _supabase
+              .from('duel_matches')
+              .update({'status': DuelStatus.cancelled.name})
+              .eq('id', matchDoc.id)
+              .catchError((_) {});
           continue;
         }
 
-        final claimed = await _tryClaimWaitingMatch(
-            matchDoc.reference, userId, userProfile);
+        final claimed = await _tryClaimWaitingMatch(matchDoc.id, userId, userProfile);
         if (claimed) return matchDoc.id;
       }
-    } on FirebaseException catch (e) {
-      // Do not silently create a separate lobby when the matchmaking query
-      // fails (for example, because its composite index is missing).
-      debugPrint('[DuelMatchmaking] stage=query_waiting_failed code=${e.code} message=${e.message}');
+    } catch (e) {
+      debugPrint('[SupabaseDuelMatchmaking] stage=query_waiting_failed error=$e');
       rethrow;
     }
 
-    debugPrint('[DuelMatchmaking] stage=create_waiting user=$userId');
+    debugPrint('[SupabaseDuelMatchmaking] stage=create_waiting user=$userId');
     try {
       final matchId = await _createMatch(userId, userProfile, questions);
-      debugPrint('[DuelMatchmaking] stage=create_waiting_complete matchId=$matchId');
+      debugPrint('[SupabaseDuelMatchmaking] stage=create_waiting_complete matchId=$matchId');
       return matchId;
-    } on FirebaseException catch (e) {
-      debugPrint('[DuelMatchmaking] stage=create_waiting_failed code=${e.code} message=${e.message}');
+    } catch (e) {
+      debugPrint('[SupabaseDuelMatchmaking] stage=create_waiting_failed error=$e');
       rethrow;
     }
   }
 
-  /// Watches waiting lobbies while this player waits. If two clients both
-  /// create a lobby before seeing the other's, only the client whose lobby is
-  /// newer claims the older lobby. This deterministic rule prevents both
-  /// clients from claiming each other's lobby and needs no extra queue rules.
-  Future<StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?>
-      watchForOpponent({
+  /// Watches waiting lobbies in real-time via Supabase WebSockets while this player waits.
+  Future<StreamSubscription?> watchForOpponent({
     required String waitingMatchId,
     required String userId,
     required Map<String, dynamic> userProfile,
     required void Function(String matchId) onMatchFound,
     required void Function(Object error) onError,
   }) async {
-    debugPrint('[DuelMatchmaking] stage=watch_prepare matchId=$waitingMatchId');
-    final ownMatch = await _matches.doc(waitingMatchId).get();
-    if (!ownMatch.exists ||
-        ownMatch.data()?['status'] != DuelStatus.waiting.name) {
+    debugPrint('[SupabaseDuelMatchmaking] stage=watch_prepare matchId=$waitingMatchId');
+    try {
+      final ownMatchData = await _supabase
+          .from('duel_matches')
+          .select()
+          .eq('id', waitingMatchId)
+          .maybeSingle();
+
+      if (ownMatchData == null ||
+          ownMatchData['status'] != DuelStatus.waiting.name) {
+        return null;
+      }
+    } catch (e) {
+      debugPrint('[SupabaseDuelMatchmaking] stage=watch_prepare_failed error=$e');
       return null;
     }
 
     var processing = false;
     var finished = false;
     final attemptedIds = <String>{};
-    return _matches
-        .where('status', isEqualTo: DuelStatus.waiting.name)
-        .limit(25)
-        .snapshots()
-        .listen((snapshot) async {
-      if (processing || finished) return;
-      processing = true;
-      try {
-        final candidates = snapshot.docs
-            .where((doc) => doc.id != waitingMatchId)
-            .toList()
-          ..sort(_compareLobbyAge);
-        for (final candidate in candidates) {
-          final data = candidate.data();
-          if (data['player1Id'] == userId ||
-              !canClaimMatchData(data, userId) ||
-              attemptedIds.contains(candidate.id)) {
-            continue;
-          }
-          final createdAt = DuelMatch.parseTimestamp(data['createdAt']);
-          if (createdAt != null &&
-              DateTime.now().difference(createdAt) >
-                  DuelSyncConfig.waitingMatchTtl) {
-            attemptedIds.add(candidate.id);
-            continue;
-          }
 
-          attemptedIds.add(candidate.id);
-          if (await _tryClaimWaitingMatch(
-              candidate.reference, userId, userProfile)) {
-            finished = true;
-            onMatchFound(candidate.id);
-            return;
-          }
-        }
-      } catch (error) {
-        onError(error);
-      } finally {
-        processing = false;
-      }
-    }, onError: (Object error) {
-      if (!finished) onError(error);
-    });
-  }
+    final channel = _supabase.channel('public:duel_matches:searching_$waitingMatchId');
+    channel
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'duel_matches',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'status',
+            value: DuelStatus.waiting.name,
+          ),
+          callback: (payload) async {
+            if (processing || finished) return;
+            processing = true;
+            try {
+              final data = payload.newRecord;
+              if (data.isEmpty) return;
 
-  static int _compareLobbyAge(
-    DocumentSnapshot<Map<String, dynamic>> a,
-    DocumentSnapshot<Map<String, dynamic>> b,
-  ) {
-    final aCreated = DuelMatch.parseTimestamp(a.data()?['createdAt']) ??
-        DateTime.fromMillisecondsSinceEpoch(0);
-    final bCreated = DuelMatch.parseTimestamp(b.data()?['createdAt']) ??
-        DateTime.fromMillisecondsSinceEpoch(0);
-    final ageOrder = aCreated.compareTo(bCreated);
-    return ageOrder != 0 ? ageOrder : a.id.compareTo(b.id);
+              final candidateId = data['id']?.toString() ?? '';
+              if (candidateId.isEmpty ||
+                  candidateId == waitingMatchId ||
+                  attemptedIds.contains(candidateId)) {
+                return;
+              }
+
+              final candidatePlayer1 = data['player1_id'] ?? data['player1Id'];
+              if (candidatePlayer1 == userId || !canClaimMatchData(data, userId)) {
+                return;
+              }
+
+              final createdAt = DuelMatch.parseTimestamp(data['created_at'] ?? data['createdAt']);
+              if (createdAt != null &&
+                  DateTime.now().difference(createdAt) >
+                      DuelSyncConfig.waitingMatchTtl) {
+                attemptedIds.add(candidateId);
+                return;
+              }
+
+              attemptedIds.add(candidateId);
+              if (await _tryClaimWaitingMatch(candidateId, userId, userProfile)) {
+                finished = true;
+                onMatchFound(candidateId);
+              }
+            } catch (error) {
+              onError(error);
+            } finally {
+              processing = false;
+            }
+          },
+        )
+        .subscribe();
+
+    final controller = StreamController<void>();
+    controller.onCancel = () {
+      channel.unsubscribe();
+    };
+
+    return controller.stream.listen(null);
   }
 
   Future<String> _createMatch(
@@ -244,307 +290,320 @@ class DuelService {
       questions: generated,
       createdAt: DateTime.now(),
     );
-    final docRef = await _matches.add({
-      ...newMatch.toFirestore(),
-      'lastSeen': {
-        userId: FieldValue.serverTimestamp(),
+
+    final payload = {
+      ...newMatch.toSupabase(),
+      'last_seen': {
+        userId: DateTime.now().toIso8601String(),
       },
-    });
-    return docRef.id;
+      'created_at': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+
+    final response = await _supabase.from('duel_matches').insert(payload).select().single();
+    return response['id'].toString();
   }
 
-  /// Returns true if a waiting match document can be atomically claimed by [userId].
-  /// Requires status to be 'waiting', player1Id != userId, and player2Id to be null/empty.
+  /// Returns true if a waiting match document can be claimed by [userId].
   static bool canClaimMatchData(Map<String, dynamic> data, String userId) {
-    if (data['status'] != DuelStatus.waiting.name) return false;
-    if (data['player1Id'] == userId) return false;
-    final player2Id = data['player2Id'] as String?;
+    final status = data['status'];
+    if (status != DuelStatus.waiting.name) return false;
+
+    final player1Id = data['player1_id'] ?? data['player1Id'];
+    if (player1Id == userId) return false;
+
+    final player2Id = (data['player2_id'] ?? data['player2Id']) as String?;
     if (player2Id != null && player2Id.isNotEmpty) return false;
     return true;
   }
 
+  /// Atomically claims a waiting match in Supabase Postgres.
   Future<bool> _tryClaimWaitingMatch(
-    DocumentReference<Map<String, dynamic>> matchRef,
+    String matchId,
     String userId,
     Map<String, dynamic> userProfile,
   ) async {
-    return _db.runTransaction<bool>((transaction) async {
-      final snapshot = await transaction.get(matchRef);
-      if (!snapshot.exists) return false;
-      final data = snapshot.data()!;
-      // Re-verify inside the transaction: this is what makes the claim
-      // race-free between two joiners.
-      if (!canClaimMatchData(data, userId)) return false;        debugPrint('[DuelMatchmaking] stage=claim_match user=$userId matchId=${matchRef.id}');
-        transaction.update(matchRef, {
-          'player2Id': userId,
-        'player2Name': userProfile['username'] ?? 'Warrior',
-        'player2Avatar': userProfile['avatar'] ?? '👤',
-        'status': DuelStatus.active.name,
-        'battleStartedAt': FieldValue.serverTimestamp(),
-        'lastSeen.$userId': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-      return true;
-    }).catchError((Object error) {
-      debugPrint('[DuelMatchmaking] stage=claim_match_failed matchId=${matchRef.id} error=$error');
-      throw error;
-    });
+    try {
+      debugPrint('[SupabaseDuelMatchmaking] stage=claim_match user=$userId matchId=$matchId');
+      final now = DateTime.now().toIso8601String();
+
+      final response = await _supabase
+          .from('duel_matches')
+          .update({
+            'player2_id': userId,
+            'player2_name': userProfile['username'] ?? 'Warrior',
+            'player2_avatar': userProfile['avatar'] ?? '👤',
+            'status': DuelStatus.active.name,
+            'battle_started_at': now,
+            'updated_at': now,
+          })
+          .eq('id', matchId)
+          .eq('status', DuelStatus.waiting.name)
+          .select()
+          .maybeSingle();
+
+      return response != null;
+    } catch (e) {
+      debugPrint('[SupabaseDuelMatchmaking] stage=claim_match_failed matchId=$matchId error=$e');
+      return false;
+    }
   }
 
   Future<List<DuelQuestion>> _generateQuestions() async {
-    // Fetch approved words to build questions. Keep the server filter simple
-    // (status only) to avoid a composite-index requirement.
-    final wordsSnap = await _db
-        .collection('words')
-        .where('status', isEqualTo: 'approved')
-        .limit(20)
-        .get();
+    try {
+      final response = await _supabase
+          .from('words')
+          .select()
+          .eq('status', 'approved')
+          .limit(20);
 
-    final allWords = wordsSnap.docs
-        .map((d) => DictionaryEntry.fromFirestore(d.data(), d.id))
-        .toList();
+      final allWords = (response as List)
+          .map((d) => DictionaryEntry.fromFirestore(d as Map<String, dynamic>, d['id']?.toString() ?? ''))
+          .toList();
 
-    // Need at least 4 distinct translations to build 1 correct + 3 distractors.
-    final distinctTranslations = allWords.map((w) => w.translation).toSet();
-    if (allWords.length < 4 || distinctTranslations.length < 4) {
-      // Fallback hardcoded if not enough words / variety
-      return [
-        DuelQuestion(
-          question: 'How do you say "Good Morning" in Mansaka?',
-          options: [
-            'Madyaw na gabi',
-            'Madyaw na allaw',
-            'Madyaw na amase',
-            'Madyaw na hapon'
-          ],
-          correctIndex: 2,
-        ),
-      ];
-    }
+      final distinctTranslations = allWords.map((w) => w.translation).toSet();
+      if (allWords.length >= 4 && distinctTranslations.length >= 4) {
+        final random = Random();
+        final List<DuelQuestion> generated = [];
+        final questionCount = allWords.length >= 5 ? 5 : allWords.length;
 
-    final random = Random();
-    final List<DuelQuestion> generated = [];
-    final questionCount = allWords.length >= 5 ? 5 : allWords.length;
+        for (int i = 0; i < questionCount; i++) {
+          final correctWord = allWords[random.nextInt(allWords.length)];
+          final List<String> options = [correctWord.translation];
 
-    for (int i = 0; i < questionCount; i++) {
-      final correctWord = allWords[random.nextInt(allWords.length)];
-      final List<String> options = [correctWord.translation];
+          var attempts = 0;
+          while (options.length < 4 && attempts < 60) {
+            attempts++;
+            final distractor =
+                allWords[random.nextInt(allWords.length)].translation;
+            if (!options.contains(distractor)) {
+              options.add(distractor);
+            }
+          }
 
-      // Add 3 unique distractors (bounded attempts to avoid infinite loops)
-      var attempts = 0;
-      while (options.length < 4 && attempts < 60) {
-        attempts++;
-        final distractor =
-            allWords[random.nextInt(allWords.length)].translation;
-        if (!options.contains(distractor)) {
-          options.add(distractor);
+          if (options.length < 4) {
+            for (final t in distinctTranslations) {
+              if (!options.contains(t)) options.add(t);
+              if (options.length >= 4) break;
+            }
+          }
+          if (options.length < 4) continue;
+
+          options.shuffle();
+          generated.add(DuelQuestion(
+            question: 'What is the meaning of "${correctWord.indigenousWord}"?',
+            options: options,
+            correctIndex: options.indexOf(correctWord.translation),
+          ));
         }
-      }
-      // If we somehow still lack distractors, pad from the distinct pool.
-      if (options.length < 4) {
-        for (final t in distinctTranslations) {
-          if (!options.contains(t)) options.add(t);
-          if (options.length >= 4) break;
-        }
-      }
-      if (options.length < 4) continue;
 
-      options.shuffle();
-      generated.add(DuelQuestion(
-        question: 'What is the meaning of "${correctWord.indigenousWord}"?',
-        options: options,
-        correctIndex: options.indexOf(correctWord.translation),
-      ));
+        if (generated.isNotEmpty) return generated;
+      }
+    } catch (e) {
+      debugPrint('Error generating questions from Supabase words: $e');
     }
 
-    if (generated.isEmpty) {
-      return [
-        DuelQuestion(
-          question: 'How do you say "Good Morning" in Mansaka?',
-          options: [
-            'Madyaw na gabi',
-            'Madyaw na allaw',
-            'Madyaw na amase',
-            'Madyaw na hapon'
-          ],
-          correctIndex: 2,
-        ),
-      ];
-    }
-
-    return generated;
+    // Fallback hardcoded if not enough words / network issue
+    return [
+      DuelQuestion(
+        question: 'How do you say "Good Morning" in Mansaka?',
+        options: [
+          'Madyaw na gabi',
+          'Madyaw na allaw',
+          'Madyaw na amase',
+          'Madyaw na hapon'
+        ],
+        correctIndex: 2,
+      ),
+      DuelQuestion(
+        question: 'What is the meaning of "Duta"?',
+        options: ['Land / Earth', 'Lake / River', 'Sun / Day', 'Night / Sky'],
+        correctIndex: 0,
+      ),
+    ];
   }
 
   // ── Battle state transitions ──────────────────────────────────────────────
 
-  /// Applies [damage] to [targetPlayerId]'s own HP atomically. Clients send
-  /// deltas — never absolute values — so simultaneous round answers cannot
-  /// clobber each other, and this transaction — not the UI — decides the
-  /// winner the moment a player's HP reaches zero.
+  /// Applies [damage] to [targetPlayerId]'s own HP atomically.
   Future<void> applyDamage(
       String matchId, String targetPlayerId, double damage) async {
-    final matchRef = _matches.doc(matchId);
+    try {
+      final matchData = await _supabase
+          .from('duel_matches')
+          .select()
+          .eq('id', matchId)
+          .maybeSingle();
 
-    await _db.runTransaction((transaction) async {
-      final snapshot = await transaction.get(matchRef);
-      if (!snapshot.exists) return;
+      if (matchData == null || matchData['status'] != DuelStatus.active.name) return;
 
-      final data = snapshot.data()!;
-      // Only live duels can take damage; finished/cancelled docs are frozen.
-      if (data['status'] != DuelStatus.active.name) return;
-
-      final targetIsPlayer1 = data['player1Id'] == targetPlayerId;
-      final hpField = targetIsPlayer1 ? 'player1Hp' : 'player2Hp';
-      final currentHp = (data[hpField] as num? ?? 1.0).toDouble();
+      final match = DuelMatch.fromMap(matchData);
+      final targetIsPlayer1 = match.player1Id == targetPlayerId;
+      final currentHp = targetIsPlayer1 ? match.player1Hp : match.player2Hp;
       final newHp = (currentHp - damage).clamp(0.0, 1.0);
 
-      final updates = <String, dynamic>{hpField: newHp};
+      final updates = <String, dynamic>{
+        targetIsPlayer1 ? 'player1_hp' : 'player2_hp': newHp,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
 
       final winnerId = DuelService.winnerFromHp(
-        (data['player1Id'] ?? '') as String,
-        (data['player2Id'] ?? '') as String,
-        targetIsPlayer1 ? newHp : (data['player1Hp'] as num? ?? 1.0).toDouble(),
-        targetIsPlayer1 ? (data['player2Hp'] as num? ?? 1.0).toDouble() : newHp,
+        match.player1Id,
+        match.player2Id ?? '',
+        targetIsPlayer1 ? newHp : match.player1Hp,
+        targetIsPlayer1 ? match.player2Hp : newHp,
       );
+
       if (winnerId != null && winnerId.isNotEmpty) {
-        updates.addAll({
-          'status': DuelStatus.finished.name,
-          'winnerId': winnerId,
-          'finishedAt': FieldValue.serverTimestamp(),
-        });
+        updates['status'] = DuelStatus.finished.name;
+        updates['winner_id'] = winnerId;
+        updates['finished_at'] = DateTime.now().toIso8601String();
       }
 
-      transaction.update(matchRef, updates);
-    });
+      await _supabase.from('duel_matches').update(updates).eq('id', matchId);
+    } catch (e) {
+      debugPrint('Error applying damage in Supabase: $e');
+    }
   }
 
-  /// Marks the match finished with the given loser forfeiting. No-op unless
-  /// the duel is still active, so a forfeit can never overturn a real result.
+  /// Marks the match finished with the given loser forfeiting.
   Future<void> forfeitMatch(String matchId, String loserId) async {
-    final matchRef = _matches.doc(matchId);
+    try {
+      final matchData = await _supabase
+          .from('duel_matches')
+          .select()
+          .eq('id', matchId)
+          .maybeSingle();
 
-    await _db.runTransaction((transaction) async {
-      final snapshot = await transaction.get(matchRef);
-      if (!snapshot.exists) return;
-      final data = snapshot.data()!;
-      if (data['status'] != DuelStatus.active.name) return;
+      if (matchData == null || matchData['status'] != DuelStatus.active.name) return;
 
-      final loserIsPlayer1 = data['player1Id'] == loserId;
-      final winnerId =
-          (loserIsPlayer1 ? data['player2Id'] : data['player1Id']) as String?;
+      final match = DuelMatch.fromMap(matchData);
+      final loserIsPlayer1 = match.player1Id == loserId;
+      final winnerId = loserIsPlayer1 ? match.player2Id : match.player1Id;
 
-      transaction.update(matchRef, {
+      await _supabase.from('duel_matches').update({
         'status': DuelStatus.finished.name,
-        if (winnerId != null) 'winnerId': winnerId,
-        'finishedAt': FieldValue.serverTimestamp(),
-      });
-    });
+        if (winnerId != null) 'winner_id': winnerId,
+        'finished_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', matchId);
+    } catch (e) {
+      debugPrint('Error forfeiting match in Supabase: $e');
+    }
   }
 
   /// Refreshes this player's heartbeat so the opponent can detect a quit.
-  Future<void> heartbeat(String matchId, String playerId) {
-    return _matches.doc(matchId).update({
-      'lastSeen.$playerId': FieldValue.serverTimestamp(),
-    }).catchError((_) {});
+  Future<void> heartbeat(String matchId, String playerId) async {
+    try {
+      final matchData = await _supabase
+          .from('duel_matches')
+          .select('last_seen')
+          .eq('id', matchId)
+          .maybeSingle();
+
+      final lastSeenMap = Map<String, dynamic>.from(matchData?['last_seen'] ?? {});
+      lastSeenMap[playerId] = DateTime.now().toIso8601String();
+
+      await _supabase
+          .from('duel_matches')
+          .update({'last_seen': lastSeenMap})
+          .eq('id', matchId);
+    } catch (_) {}
   }
 
-  /// Advances the round counter exactly once per round and returns the
-  /// authoritative (round, roundStartedAt) pair. When both clients try to
-  /// advance simultaneously the transaction guarantees a single increment;
-  /// the losing client reads back the winner's server timestamp, so both
-  /// converge on the same round clock.
+  /// Advances the round counter.
   Future<({int round, DateTime? roundStartedAt})> advanceRound(
     String matchId,
     int fromRound,
   ) async {
-    final matchRef = _matches.doc(matchId);
-    var result = (round: fromRound, roundStartedAt: null as DateTime?);
-
-    await _db.runTransaction((transaction) async {
-      final snapshot = await transaction.get(matchRef);
-      if (!snapshot.exists) return;
-      final data = snapshot.data()!;
-
-      final currentRound = (data['currentRound'] as num? ?? 0).toInt();
-      final roundStartedAt = DuelMatch.parseTimestamp(data['roundStartedAt']);
-
-      if (data['status'] != DuelStatus.active.name ||
-          currentRound != fromRound) {
-        // Someone else already opened the next round (or the duel ended):
-        // adopt their clock instead of writing ours.
-        result = (round: currentRound, roundStartedAt: roundStartedAt);
-        return;
-      }
-
-      transaction.update(matchRef, {
-        'currentRound': fromRound + 1,
-        'roundStartedAt': FieldValue.serverTimestamp(),
-      });
-      // Local approximation until the authoritative snapshot arrives.
-      result = (round: fromRound + 1, roundStartedAt: DateTime.now());
-    });
-
-    return result;
-  }
-
-  /// Removes the match document once both clients have had time to observe
-  /// the final result, so finished duels don't accumulate forever.
-  Future<void> deleteMatch(String matchId) async {
     try {
-      await _matches.doc(matchId).delete();
-    } on FirebaseException {
-      // Already gone or denied; nothing to clean up.
-    }
-  }
+      final now = DateTime.now();
+      final response = await _supabase
+          .from('duel_matches')
+          .update({
+            'current_round': fromRound + 1,
+            'round_started_at': now.toIso8601String(),
+            'updated_at': now.toIso8601String(),
+          })
+          .eq('id', matchId)
+          .eq('current_round', fromRound)
+          .eq('status', DuelStatus.active.name)
+          .select()
+          .maybeSingle();
 
-  /// Finds an active battle for [userId]. Waiting lobbies are not restored on
-  /// page entry: users should explicitly press Enter Arena to start searching.
-  Future<DuelMatch?> findActiveMatchForUser(String userId) async {
-    try {
-      // 1. Check if user is player1 in an active match
-      final p1Snap = await _matches
-          .where('player1Id', isEqualTo: userId)
-          .where('status', isEqualTo: DuelStatus.active.name)
-          .limit(1)
-          .get();
-
-      if (p1Snap.docs.isNotEmpty) {
-        return DuelMatch.fromFirestore(p1Snap.docs.first);
-      }
-
-      // 2. Check if user is player2 in an active match
-      final p2Snap = await _matches
-          .where('player2Id', isEqualTo: userId)
-          .where('status', isEqualTo: DuelStatus.active.name)
-          .limit(1)
-          .get();
-
-      if (p2Snap.docs.isNotEmpty) {
-        return DuelMatch.fromFirestore(p2Snap.docs.first);
+      if (response != null) {
+        return (round: fromRound + 1, roundStartedAt: now);
+      } else {
+        final current = await _supabase
+            .from('duel_matches')
+            .select()
+            .eq('id', matchId)
+            .maybeSingle();
+        if (current != null) {
+          final m = DuelMatch.fromMap(current);
+          return (round: m.currentRound, roundStartedAt: m.roundStartedAt);
+        }
       }
     } catch (e) {
-      debugPrint('Error searching active match for user: $e');
+      debugPrint('Error advancing round in Supabase: $e');
+    }
+    return (round: fromRound, roundStartedAt: null);
+  }
+
+  /// Removes the match document once both clients have finished observing the result.
+  Future<void> deleteMatch(String matchId) async {
+    try {
+      await _supabase.from('duel_matches').delete().eq('id', matchId);
+    } catch (_) {}
+  }
+
+  /// Finds an active battle for [userId].
+  Future<DuelMatch?> findActiveMatchForUser(String userId) async {
+    try {
+      final p1Response = await _supabase
+          .from('duel_matches')
+          .select()
+          .eq('player1_id', userId)
+          .eq('status', DuelStatus.active.name)
+          .limit(1);
+
+      if ((p1Response as List).isNotEmpty) {
+        return DuelMatch.fromMap(p1Response.first as Map<String, dynamic>);
+      }
+
+      final p2Response = await _supabase
+          .from('duel_matches')
+          .select()
+          .eq('player2_id', userId)
+          .eq('status', DuelStatus.active.name)
+          .limit(1);
+
+      if ((p2Response as List).isNotEmpty) {
+        return DuelMatch.fromMap(p2Response.first as Map<String, dynamic>);
+      }
+    } catch (e) {
+      debugPrint('Error searching active match for user in Supabase: $e');
     }
     return null;
   }
 
-  /// Only a still-waiting lobby can be cancelled; active duels must finish
-  /// through damage/forfeit so the opponent always sees a final state.
+  /// Only a still-waiting lobby can be cancelled.
   Future<void> cancelMatch(String matchId) async {
-    final matchRef = _matches.doc(matchId);
-    await _db.runTransaction((transaction) async {
-      final snapshot = await transaction.get(matchRef);
-      if (!snapshot.exists) return;
-      if (snapshot.data()!['status'] != DuelStatus.waiting.name) return;
-      transaction.update(matchRef, {
-        'status': DuelStatus.cancelled.name,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    });
+    try {
+      await _supabase
+          .from('duel_matches')
+          .update({
+            'status': DuelStatus.cancelled.name,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', matchId)
+          .eq('status', DuelStatus.waiting.name);
+    } catch (e) {
+      debugPrint('Error cancelling match $matchId in Supabase: $e');
+    }
   }
 
-  /// Records persistent duel win/loss history and saves a history document.
-  /// Uses a transaction to guarantee idempotent execution.
+  /// Records persistent duel win/loss history.
   Future<void> recordDuelResultAndHistory({
     required String userId,
     required bool isWinner,
@@ -553,57 +612,32 @@ class DuelService {
     int mistCrystalsEarned = 0,
   }) async {
     try {
-      final historyRef = _db
-          .collection('users')
-          .doc(userId)
-          .collection('duel_history')
-          .doc(match.id);
+      final isPlayer1 = match.player1Id == userId;
+      final opponentId = (isPlayer1 ? match.player2Id : match.player1Id) ?? '';
+      final opponentName = (isPlayer1 ? match.player2Name : match.player1Name) ?? 'Warrior';
+      final opponentAvatar = (isPlayer1 ? match.player2Avatar : match.player1Avatar) ?? '👤';
 
-      final userRef = _db.collection('users').doc(userId);
+      final historyItem = DuelHistoryItem(
+        id: match.id,
+        opponentId: opponentId,
+        opponentName: opponentName,
+        opponentAvatar: opponentAvatar,
+        isWinner: isWinner,
+        finalPlayerHp: isPlayer1 ? match.player1Hp : match.player2Hp,
+        finalOpponentHp: isPlayer1 ? match.player2Hp : match.player1Hp,
+        roundsPlayed: match.currentRound,
+        xpEarned: xpEarned,
+        mistCrystalsEarned: mistCrystalsEarned,
+        timestamp: DateTime.now(),
+      );
 
-      await _db.runTransaction((tx) async {
-        final historySnap = await tx.get(historyRef);
-        // Idempotency check: if this match history already exists, skip
-        if (historySnap.exists) return;
-
-        final userSnap = await tx.get(userRef);
-        final userData = userSnap.data() ?? {};
-        final wins = (userData['duelWins'] ?? 0) as int;
-        final losses = (userData['duelLosses'] ?? 0) as int;
-        final streak = (userData['duelStreak'] ?? 0) as int;
-
-        tx.update(userRef, {
-          'duelWins': isWinner ? wins + 1 : wins,
-          'duelLosses': isWinner ? losses : losses + 1,
-          'duelStreak': isWinner ? streak + 1 : 0,
-        });
-
-        final isPlayer1 = match.player1Id == userId;
-        final opponentId =
-            (isPlayer1 ? match.player2Id : match.player1Id) ?? '';
-        final opponentName =
-            (isPlayer1 ? match.player2Name : match.player1Name) ?? 'Warrior';
-        final opponentAvatar =
-            (isPlayer1 ? match.player2Avatar : match.player1Avatar) ?? '👤';
-
-        final historyItem = DuelHistoryItem(
-          id: match.id,
-          opponentId: opponentId,
-          opponentName: opponentName,
-          opponentAvatar: opponentAvatar,
-          isWinner: isWinner,
-          finalPlayerHp: isPlayer1 ? match.player1Hp : match.player2Hp,
-          finalOpponentHp: isPlayer1 ? match.player2Hp : match.player1Hp,
-          roundsPlayed: match.currentRound,
-          xpEarned: xpEarned,
-          mistCrystalsEarned: mistCrystalsEarned,
-          timestamp: DateTime.now(),
-        );
-
-        tx.set(historyRef, historyItem.toMap());
+      await _supabase.from('duel_history').upsert({
+        'id': match.id,
+        'user_id': userId,
+        ...historyItem.toSupabase(),
       });
     } catch (e) {
-      debugPrint('Error recording duel result and history: $e');
+      debugPrint('Error recording duel result and history in Supabase: $e');
     }
   }
 
@@ -612,20 +646,20 @@ class DuelService {
     required String userId,
     required bool isWinner,
   }) async {
-    final userRef = _db.collection('users').doc(userId);
-    await _db.runTransaction((tx) async {
-      final snap = await tx.get(userRef);
-      if (!snap.exists) return;
-      final data = snap.data() ?? {};
-      final wins = (data['duelWins'] ?? 0) as int;
-      final losses = (data['duelLosses'] ?? 0) as int;
-      final streak = (data['duelStreak'] ?? 0) as int;
-
-      tx.update(userRef, {
-        'duelWins': isWinner ? wins + 1 : wins,
-        'duelLosses': isWinner ? losses : losses + 1,
-        'duelStreak': isWinner ? streak + 1 : 0,
-      });
-    });
+    try {
+      await recordDuelResultAndHistory(
+        userId: userId,
+        isWinner: isWinner,
+        match: DuelMatch(
+          id: 'legacy_${DateTime.now().millisecondsSinceEpoch}',
+          player1Id: userId,
+          player1Name: 'Warrior',
+          player1Avatar: '👤',
+          status: DuelStatus.finished,
+          questions: [],
+          createdAt: DateTime.now(),
+        ),
+      );
+    } catch (_) {}
   }
 }
