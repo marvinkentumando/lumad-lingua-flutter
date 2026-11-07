@@ -109,7 +109,8 @@ class LumadLinguaApp extends ConsumerWidget {
     final themeMode = ref.watch(themeProvider);
     final brightness =
         themeMode == ThemeMode.system
-            ? MediaQuery.platformBrightnessOf(context)
+            ? (MediaQuery.maybePlatformBrightnessOf(context) ??
+                WidgetsBinding.instance.platformDispatcher.platformBrightness)
             : (themeMode == ThemeMode.dark ? Brightness.dark : Brightness.light);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -129,6 +130,7 @@ class LumadLinguaApp extends ConsumerWidget {
         routerConfig: router,
         debugShowCheckedModeBanner: false,
         builder: (context, child) {
+          if (child == null) return const SizedBox.shrink();
           final data = MediaQuery.of(context);
           return MediaQuery(
             data: data.copyWith(
@@ -143,7 +145,7 @@ class LumadLinguaApp extends ConsumerWidget {
                   : AppTheme.lightTheme,
               duration: const Duration(milliseconds: 500),
               curve: Curves.easeInOut,
-              child: child!,
+              child: child,
             ),
           );
         },
