@@ -57,11 +57,11 @@ class WavDecoder {
   static const double peakCeilingLinear = 0.8912509; // -1 dBFS
   static const double maxGainLinear = 31.6227766; // 30 dB
 
-  /// Candidate silent peak threshold (-40 dBFS linear = 0.010)
-  static const double candidateSilentPeakThreshold = 0.010;
+  /// Candidate silent peak threshold (-40 dBFS linear = 0.008)
+  static const double candidateSilentPeakThreshold = 0.008;
 
-  /// Candidate silent RMS threshold (-54 dBFS linear = 0.002)
-  static const double candidateSilentRmsThreshold = 0.002;
+  /// Candidate silent RMS threshold (-52 dBFS linear = 0.0025)
+  static const double candidateSilentRmsThreshold = 0.0025;
 
   /// Candidate quiet peak threshold (-26 dBFS linear = 0.050)
   static const double candidateQuietPeakThreshold = 0.050;
@@ -221,7 +221,7 @@ class WavDecoder {
         // A frame is speech-like if it is not broadband-flat noise. Unvoiced
         // fricatives can be flatter, so the threshold is permissive and we
         // require evidence in aggregate, not on every frame.
-        final speechLike = frameRms >= speechThreshold * 0.75 && flatness < 0.62;
+        final speechLike = frameRms >= speechThreshold * 0.60 && flatness < 0.72;
         if (speechLike) {
           speechLikeFrames++;
           speechLikeFlatnessSum += flatness;
@@ -241,7 +241,7 @@ class WavDecoder {
       );
       final activeRmsCv = meanActiveRms > 0 ? math.sqrt(activeRmsVariance) / meanActiveRms : 0.0;
       final meanActiveZcr = activeZeroCrossings / math.max(1, activeZeroCrossingFrames);
-      final likelyStationaryNoise = activeSpeechSec > 0.3 && activeRmsCv < 0.12 && meanActiveZcr > 0.18;
+      final likelyStationaryNoise = activeSpeechSec > 0.4 && activeRmsCv < 0.08 && meanActiveZcr > 0.22;
 
       final speechLikeSec = (speechLikeFrames * frameSize) / targetSampleRate;
       final maxContiguousSpeechLikeSec = (maxContiguousSpeechLike * frameSize) / targetSampleRate;
@@ -249,14 +249,14 @@ class WavDecoder {
       // Modulated noise: enough energy overall but too few/too scattered
       // speech-like frames, or the "speech-like" frames are still rather flat.
       final likelyModulatedNoise = activeFrameCount >= 10 &&
-          speechLikeSec < 0.18 &&
+          speechLikeSec < 0.10 &&
           activeSpeechSec > 0.18;
       final weakSpeechEvidence = activeFrameCount >= 15 &&
-          maxContiguousSpeechLikeSec < 0.12 &&
-          meanSpeechLikeFlatness > 0.48;
+          maxContiguousSpeechLikeSec < 0.08 &&
+          meanSpeechLikeFlatness > 0.58;
 
-      if (activeSpeechSec < 0.20 ||
-          peakToNoiseRatio < 2.5 ||
+      if (activeSpeechSec < 0.12 ||
+          peakToNoiseRatio < 2.0 ||
           likelyStationaryNoise ||
           likelyModulatedNoise ||
           weakSpeechEvidence) {

@@ -347,7 +347,7 @@ class PronunciationService implements IPronunciationComparer {
       final alignment = MFCCService.align(referenceFeatures, userFeatures);
       if (alignment.isUsable) {
         if (alignment.meanLocalCost.isFinite) distances.add(alignment.meanLocalCost);
-        if (alignment.maxLocalCost > 18.0) {
+        if (alignment.maxLocalCost > 26.0) {
           maxFrameMismatch = true;
         }
       }
@@ -360,7 +360,7 @@ class PronunciationService implements IPronunciationComparer {
     final distance = distances.take(bestCount).reduce((a, b) => a + b) / bestCount;
 
     // Acoustic target & phoneme-level frame validation:
-    // Rejects overall mismatch or severe local phonetic substitution (max frame distance > 18.0).
+    // Rejects overall mismatch or severe local phonetic substitution (max frame distance > 26.0).
     if (distance > _mismatchThreshold(referenceSet.baseline) || maxFrameMismatch) {
       return PronunciationScore(
         overallScore: 0,
