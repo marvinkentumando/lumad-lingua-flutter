@@ -465,6 +465,48 @@ class _AncestralVaultShopScreenState
       ),
     );
 
+    final Widget shopCardContent = Stack(
+      children: [
+        content,
+        if (artifact.isEarned)
+          Positioned(
+            top: 12,
+            right: 12,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.semanticGreen.withValues(alpha: 0.9),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(
+                    Icons.check_circle_rounded,
+                    size: 12,
+                    color: Colors.white,
+                  ),
+                  SizedBox(width: 3),
+                  Text(
+                    'OWNED',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+
     if (isHighTier) {
       return Container(
         decoration: BoxDecoration(
@@ -481,7 +523,7 @@ class _AncestralVaultShopScreenState
             width: 1.5,
           ),
         ),
-        child: content,
+        child: shopCardContent,
       )
           .animate(onPlay: (c) => c.repeat(reverse: true))
           .boxShadow(
@@ -502,11 +544,11 @@ class _AncestralVaultShopScreenState
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: tierColor.withValues(alpha: 0.3), width: 1),
         ),
-        child: content,
+        child: shopCardContent,
       );
     }
 
-    return content;
+    return shopCardContent;
   }
 
   void _showExchangeDialog(

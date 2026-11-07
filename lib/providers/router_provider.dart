@@ -67,10 +67,12 @@ class RouterNotifier extends ChangeNotifier {
 
   RouterNotifier(this._ref) {
     _ref.listen(authStateProvider, (prev, next) => notifyListeners());
+    _ref.listen(userProfileProvider, (prev, next) => notifyListeners());
     _ref.listen(roleProvider, (prev, next) => notifyListeners());
   }
 
   String? redirect(BuildContext context, GoRouterState state) {
+    final isRoleLoading = _ref.read(isRoleLoadingProvider);
     final role = _ref.read(roleProvider);
     final loc = state.uri.toString();
     final user = FirebaseAuth.instance.currentUser;
@@ -84,6 +86,11 @@ class RouterNotifier extends ChangeNotifier {
         if (loc != '/verify-email') {
           return '/verify-email';
         }
+        return null;
+      }
+
+      // If user role is still resolving initial async data, hold off on redirecting
+      if (isRoleLoading) {
         return null;
       }
 

@@ -104,8 +104,6 @@ class VillageDashboardScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildVillageHeaderBanner(context, educatorProfileAsync, leaderboardAsync, l10n, isDark),
-                        const SizedBox(height: 16),
-                        _buildMessageEducatorCard(context, ref, userProfile, l10n, isDark),
                         const SizedBox(height: 24),
                         _buildAnnouncementsSection(context, broadcastsAsync, l10n, isDark),
                         const SizedBox(height: 24),
@@ -155,7 +153,7 @@ class VillageDashboardScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.forum_rounded, color: AppColors.gold500),
             tooltip: l10n.translate('send_feedback'),
-            onPressed: () => _showFeedbackDialog(context, ref, ref.read(userProfileProvider).value, l10n, isDark),
+            onPressed: () => _showFeedbackDialog(context, ref, ref.read(userProfileProvider).value, ref.read(userProfileProvider).value?['educatorId'] as String?, l10n, isDark),
           ),
           const SizedBox(width: 4),
           PopupMenuButton<String>(
@@ -1040,65 +1038,13 @@ class VillageDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMessageEducatorCard(
-    BuildContext context,
-    WidgetRef ref,
-    Map<String, dynamic>? userProfile,
-    AppLocalization l10n,
-    bool isDark,
-  ) {
-    return BrandCard(
-      onTap: () {
-        HapticService.light();
-        _showFeedbackDialog(context, ref, userProfile, l10n, isDark);
-      },
-      theme: BrandCardTheme.cream,
-      padding: const EdgeInsets.all(18),
-      borderRadius: 20,
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.gold500.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.forum_rounded, color: AppColors.gold500, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.translate('send_feedback'),
-                  style: AppTypography.h3.copyWith(
-                    color: isDark ? Colors.white : AppColors.forest900,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  l10n.translate('feedback_desc'),
-                  style: AppTypography.body.copyWith(
-                    color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.7),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Icon(Icons.chevron_right_rounded, color: AppColors.gold500),
-        ],
-      ),
-    );
-  }
+
 
   void _showFeedbackDialog(
     BuildContext context,
     WidgetRef ref,
     Map<String, dynamic>? profile,
+    String? educatorId,
     AppLocalization l10n,
     bool isDark,
   ) {
@@ -1169,6 +1115,7 @@ class VillageDashboardScreen extends ConsumerWidget {
                       studentName: profile?['username'] ?? profile?['fullName'] ?? 'Tribe Member',
                       studentPhotoUrl: profile?['photoURL'],
                       message: controller.text.trim(),
+                      educatorId: educatorId ?? '',
                     );
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (context.mounted) {

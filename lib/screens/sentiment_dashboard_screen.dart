@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import '../theme/app_typography.dart';
 import '../theme/app_colors.dart';
@@ -31,8 +30,6 @@ class SentimentDashboardScreen extends ConsumerStatefulWidget {
 class _SentimentDashboardScreenState
     extends ConsumerState<SentimentDashboardScreen> {
   final ScrollController _scrollController = ScrollController();
-  final Set<String> _savedPostIds = {};
-  final Set<String> _sparkedPostIds = {};
   String _polarityFilter = 'all';
   String _searchQuery = '';
 
@@ -344,8 +341,6 @@ class _SentimentDashboardScreenState
     final negCount =
         posts.where((p) => p.sentimentCategory == 'negative').length;
 
-    final overallIndex = !hasData ? 0 : ((posCount / totalPosts) * 100).toInt();
-
     return CustomScrollView(
       controller: _scrollController,
       physics: const BouncingScrollPhysics(),
@@ -370,16 +365,6 @@ class _SentimentDashboardScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSentimentSummaryCard(
-                  overallIndex: overallIndex,
-                  hasData: hasData,
-                  totalPosts: totalPosts,
-                  posCount: posCount,
-                  neuCount: neuCount,
-                  negCount: negCount,
-                  isDark: isDark,
-                ),
-                const SizedBox(height: 28),
                 _buildSectionHeader('Sentiment Distribution', isDark),
                 const SizedBox(height: 12),
                 _buildSentimentDistributionSection(
@@ -516,111 +501,7 @@ class _SentimentDashboardScreenState
     );
   }
 
-  Widget _buildSentimentSummaryCard({
-    required int overallIndex,
-    required bool hasData,
-    required int totalPosts,
-    required int posCount,
-    required int neuCount,
-    required int negCount,
-    required bool isDark,
-  }) {
-    final statusColor = !hasData
-        ? Colors.white24
-        : (overallIndex >= 60
-            ? AppColors.semanticGreen
-            : (overallIndex >= 40 ? AppColors.gold500 : AppColors.semanticRed));
 
-    return Theme(
-      data: Theme.of(context).copyWith(brightness: Brightness.dark),
-      child: BrandCard(
-        theme: BrandCardTheme.vibrant,
-        padding: const EdgeInsets.all(28),
-        borderRadius: 32,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'SENTIMENT OVERVIEW',
-                        style: AppTypography.label.copyWith(
-                          color: hasData
-                              ? statusColor.withValues(alpha: 0.8)
-                              : Colors.white24,
-                          letterSpacing: 2,
-                          fontSize: 11,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Overall Index',
-                        style: AppTypography.h2.copyWith(
-                          color: Colors.white,
-                          fontSize: 22,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        hasData
-                            ? 'Aggregated analysis based on human-validated community dataset.'
-                            : 'Community sentiment monitoring active. Awaiting validated sentiment dataset connection.',
-                        style: AppTypography.body.copyWith(
-                          color: Colors.white60,
-                          fontSize: 12,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
-                      width: 84,
-                      height: 84,
-                      child: CircularProgressIndicator(
-                        value: hasData ? overallIndex / 100 : 0,
-                        strokeWidth: 10,
-                        backgroundColor: Colors.white10,
-                        color: statusColor,
-                        strokeCap: StrokeCap.round,
-                      ),
-                    ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          hasData ? '$overallIndex%' : '--',
-                          style: AppTypography.h3.copyWith(
-                            color: Colors.white,
-                            fontSize: 18,
-                          ),
-                        ),
-                        Text(
-                          'INDEX',
-                          style: AppTypography.label.copyWith(
-                            color: Colors.white24,
-                            fontSize: 8,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildSentimentDistributionSection({
     required bool hasData,
@@ -843,10 +724,7 @@ class _SentimentDashboardScreenState
       runSpacing: 10,
       children: sorted.take(12).map((entry) {
         final isPopular = entry.value > 1;
-        return ActionChip(
-          onPressed: () {
-            context.push('/dictionary?q=${Uri.encodeComponent(entry.key)}');
-          },
+        return Chip(
           avatar: const Icon(
             Icons.menu_book_rounded,
             size: 14,
@@ -881,11 +759,7 @@ class _SentimentDashboardScreenState
     int index,
     bool isDark,
   ) {
-    final isSaved = _savedPostIds.contains(post.id);
-    final isSparked = _sparkedPostIds.contains(post.id);
-
     final displayText = post.redactedOriginalText;
-    final displayFilipino = post.redactedFilipinoTranslation;
     final displayEnglish = post.redactedEnglishTranslation;
     final displayKeywords = post.redactedKeywords;
     final bool isNamesRedacted = post.originalText != post.redactedOriginalText;
@@ -991,17 +865,7 @@ class _SentimentDashboardScreenState
               height: 1.4,
             ),
           ),
-          if (displayFilipino.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Filipino: $displayFilipino',
-              style: AppTypography.body.copyWith(
-                color: isDark ? Colors.white70 : AppColors.forest700,
-                fontSize: 13,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
+
           if (displayEnglish.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
@@ -1019,135 +883,18 @@ class _SentimentDashboardScreenState
               runSpacing: 6,
               children: displayKeywords
                   .map(
-                    (k) => InkWell(
-                      onTap: () => context.push('/dictionary?q=${Uri.encodeComponent(k)}'),
-                      child: Text(
-                        '#$k',
-                        style: TextStyle(
-                          color: AppColors.gold500.withValues(alpha: 0.8),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    (k) => Text(
+                      '#$k',
+                      style: TextStyle(
+                        color: AppColors.gold500.withValues(alpha: 0.8),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   )
                   .toList(),
             ),
           ],
-          const SizedBox(height: 16),
-          Divider(
-            color: isDark ? Colors.white10 : AppColors.forest900.withValues(alpha: 0.1),
-            height: 1,
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              // Learn this word / dictionary link
-              InkWell(
-                onTap: () {
-                  final query = post.keywords.isNotEmpty
-                      ? post.keywords.first
-                      : (post.linkedDictionaryEntryIds.isNotEmpty
-                          ? post.linkedDictionaryEntryIds.first
-                          : '');
-                  if (query.isNotEmpty) {
-                    context.push('/dictionary?q=${Uri.encodeComponent(query)}');
-                  } else {
-                    context.push('/dictionary');
-                  }
-                },
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.menu_book_rounded,
-                        color: AppColors.gold500,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Learn this word',
-                        style: AppTypography.label.copyWith(
-                          color: AppColors.gold500,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const Spacer(),
-              // Spark / Appreciate
-              IconButton(
-                onPressed: () {
-                  setState(() {
-                    if (isSparked) {
-                      _sparkedPostIds.remove(post.id);
-                    } else {
-                      _sparkedPostIds.add(post.id);
-                    }
-                  });
-                },
-                icon: Icon(
-                  isSparked
-                      ? Icons.bolt_rounded
-                      : Icons.bolt_outlined,
-                  color: isSparked
-                      ? AppColors.gold500
-                      : (isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.4)),
-                  size: 20,
-                ),
-                tooltip: 'Spark',
-              ),
-              // Save
-              IconButton(
-                onPressed: () {
-                  setState(() {
-                    if (isSaved) {
-                      _savedPostIds.remove(post.id);
-                    } else {
-                      _savedPostIds.add(post.id);
-                    }
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        isSaved ? 'Post removed from saved' : 'Post saved to profile 🌿',
-                      ),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                },
-                icon: Icon(
-                  isSaved
-                      ? Icons.bookmark_rounded
-                      : Icons.bookmark_outline_rounded,
-                  color: isSaved
-                      ? AppColors.gold500
-                      : (isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.4)),
-                  size: 20,
-                ),
-                tooltip: 'Save',
-              ),
-              // Share
-              IconButton(
-                onPressed: () {
-                  final shareText =
-                      '${post.originalText}\n${post.englishTranslation.isNotEmpty ? "(${post.englishTranslation})" : ""}\n\nVia LUMAD Lingua';
-                  SharePlus.instance.share(ShareParams(text: shareText));
-                },
-                icon: Icon(
-                  Icons.share_outlined,
-                  color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.4),
-                  size: 18,
-                ),
-                tooltip: 'Share',
-              ),
-            ],
-          ),
         ],
       ),
     );

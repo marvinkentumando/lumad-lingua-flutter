@@ -368,6 +368,14 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                     isDark,
                     color: AppColors.semanticRed,
                   ),
+                  const PopupMenuDivider(height: 1),
+                  _buildPopupItem(
+                    'delete',
+                    'Delete Account',
+                    Icons.delete_outline_rounded,
+                    isDark,
+                    color: AppColors.semanticRed,
+                  ),
                 ],
               ),
             ],
@@ -651,9 +659,42 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
       case 'reset_password':
         _handleResetPassword(user);
         break;
+      case 'delete':
+        _confirmDeleteUser(user);
+        break;
       default:
         _showEditUserDialog(user);
     }
+  }
+
+  void _confirmDeleteUser(AdminUser user) {
+    _showConfirmAction(
+      'Delete Account?',
+      'Are you sure you want to delete ${user.name}\'s account? This action cannot be undone.',
+      () async {
+        try {
+          await ref.read(firebaseServiceProvider).deleteUser(user.id);
+          ref.read(adminUsersProvider.notifier).loadUsers();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('User account deleted successfully'),
+                backgroundColor: AppColors.semanticRed,
+              ),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to delete user: $e'),
+                backgroundColor: AppColors.semanticRed,
+              ),
+            );
+          }
+        }
+      },
+    );
   }
 
   void _handleResetPassword(AdminUser user) async {

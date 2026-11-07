@@ -114,7 +114,11 @@ class Artifact {
 
     return Artifact(
       id: id,
-      title: data['title'] ?? '',
+      title: (data['title'] != null && data['title'].toString().isNotEmpty)
+          ? data['title']
+          : (data['name'] != null && data['name'].toString().isNotEmpty
+              ? data['name']
+              : id),
       description: data['description'] ?? '',
       emoji: data['emoji'] ?? '📜',
       imageUrl: data['imageUrl'] ?? '',
@@ -159,29 +163,43 @@ class Artifact {
   }
 
   Artifact copyWith({
+    String? title,
+    String? description,
+    String? emoji,
+    String? imageUrl,
+    String? type,
+    String? culturalNote,
+    ArtifactTier? tier,
+    int? rarity,
+    ArtifactRequirementType? requirementType,
     int? currentProgress,
+    int? targetValue,
     bool? isEarned,
+    int? crystalCost,
+    String? passiveBonus,
+    bool? isAvailableInShop,
     DateTime? earnedAt,
+    String? legend,
   }) {
     return Artifact(
       id: id,
-      title: title,
-      description: description,
-      emoji: emoji,
-      imageUrl: imageUrl,
-      type: type,
-      culturalNote: culturalNote,
-      tier: tier,
-      rarity: rarity,
-      requirementType: requirementType,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      emoji: emoji ?? this.emoji,
+      imageUrl: imageUrl ?? this.imageUrl,
+      type: type ?? this.type,
+      culturalNote: culturalNote ?? this.culturalNote,
+      tier: tier ?? this.tier,
+      rarity: rarity ?? this.rarity,
+      requirementType: requirementType ?? this.requirementType,
       currentProgress: currentProgress ?? this.currentProgress,
-      targetValue: targetValue,
+      targetValue: targetValue ?? this.targetValue,
       isEarned: isEarned ?? this.isEarned,
-      crystalCost: crystalCost,
-      passiveBonus: passiveBonus,
-      isAvailableInShop: isAvailableInShop,
+      crystalCost: crystalCost ?? this.crystalCost,
+      passiveBonus: passiveBonus ?? this.passiveBonus,
+      isAvailableInShop: isAvailableInShop ?? this.isAvailableInShop,
       earnedAt: earnedAt ?? this.earnedAt,
-      legend: legend,
+      legend: legend ?? this.legend,
     );
   }
 

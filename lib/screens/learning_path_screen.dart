@@ -662,8 +662,20 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
 
         LessonStepStatus status = LessonStepStatus.locked;
         bool isLocked = false;
-        if (lesson.prerequisiteId != null && lesson.prerequisiteId!.isNotEmpty) {
-          isLocked = studentState.lessonProgress[lesson.prerequisiteId]?['completed'] != true;
+        final prereqId = lesson.prerequisiteId?.trim();
+        if (prereqId != null && prereqId.isNotEmpty) {
+          final prereqProgress = studentState.lessonProgress[prereqId] ??
+              studentState.lessonProgress[prereqId.toLowerCase()];
+          final isPrereqCompleted = prereqProgress?['completed'] == true;
+
+          // Fallback to sequential previous lesson if prerequisiteId format is mismatched
+          if (!isPrereqCompleted && i > 0) {
+            final prevLesson = lessons[i - 1];
+            final prevProgress = studentState.lessonProgress[prevLesson.id];
+            isLocked = prevProgress?['completed'] != true;
+          } else {
+            isLocked = !isPrereqCompleted;
+          }
         }
 
         if (isCompleted) {
