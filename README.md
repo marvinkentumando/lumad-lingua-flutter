@@ -39,7 +39,7 @@ By combining sentiment analysis algorithms, gamified interactive learning, audio
 * **Learner Portal**: Personal learning statistics, wisdom progression trees, and offline content management.
 * **Staff & Researcher Portal**: Integrated console for community researchers and staff to perform content moderation, validate submissions, and manage cultural archives without administrative bottlenecks.
 * **Educator Console**:
-  * Classroom management and individual student performance tracking.
+  * Classroom management and individual student performance tracking. 
   * Lesson/Unit authoring and dynamic feedback delivery.
   * Broadcast history and announcement dispatching
 * **Admin Console**:
