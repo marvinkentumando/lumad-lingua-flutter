@@ -167,7 +167,7 @@ class _EducatorAnalyticsScreenState
                                   h['topic'] ?? l10n.translate('unknown_topic'),
                                   h['stat'] ?? l10n.translate('no_stats'),
                                   h['lessonName'] ?? l10n.translate('unknown_lesson'),
-                                  l10n,
+                                  List<Map<String, dynamic>>.from(h['students'] ?? []),
                                 )),
                         ],
                       );
@@ -295,13 +295,14 @@ class _EducatorAnalyticsScreenState
 
   Widget _buildActivityChart(List<AdminUser> users, AppLocalization l10n) {
     final now = DateTime.now();
+    final todayMidnight = DateTime(now.year, now.month, now.day);
     final List<Map<String, dynamic>> bars = [];
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (_timeRange == 'Daily') {
       // Last 7 days of Daily Active Users (DAU)
       for (int i = 6; i >= 0; i--) {
-        final day = now.subtract(Duration(days: i));
+        final day = todayMidnight.subtract(Duration(days: i));
         final dateKey =
             "${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}";
 
@@ -315,15 +316,18 @@ class _EducatorAnalyticsScreenState
     } else if (_timeRange == 'Weekly') {
       // Weekly Active Users (WAU) - last 4 weeks
       for (int i = 3; i >= 0; i--) {
-        final weekEnd = now.subtract(Duration(days: i * 7));
+        final weekEnd = todayMidnight.subtract(Duration(days: i * 7));
         final weekStart = weekEnd.subtract(const Duration(days: 6));
 
         final count = users.where((u) {
           return u.activityMap.keys.any((k) {
             final date = DateTime.tryParse(k);
             if (date == null) return false;
-            return date.isAfter(weekStart.subtract(const Duration(seconds: 1))) &&
-                date.isBefore(weekEnd.add(const Duration(seconds: 1)));
+            final dateMidnight = DateTime(date.year, date.month, date.day);
+            return (dateMidnight.isAfter(weekStart.subtract(const Duration(days: 1))) ||
+                    dateMidnight.isAtSameMomentAs(weekStart)) &&
+                (dateMidnight.isBefore(weekEnd.add(const Duration(days: 1))) ||
+                    dateMidnight.isAtSameMomentAs(weekEnd));
           });
         }).length;
 
@@ -1168,6 +1172,8 @@ class _EducatorAnalyticsScreenState
   void _showQuizStudentBreakdown(BuildContext context, Map<String, dynamic> quiz, bool isDark, AppLocalization l10n) {
     final passRate = quiz['pass'] as int;
     final lessonName = quiz['name'] as String;
+    final passedStudents = List<Map<String, dynamic>>.from(quiz['passedStudents'] ?? []);
+    final failedStudents = List<Map<String, dynamic>>.from(quiz['failedStudents'] ?? []);
 
     showModalBottomSheet(
       context: context,
@@ -1221,25 +1227,58 @@ class _EducatorAnalyticsScreenState
                       controller: scrollController,
                       children: [
                         Text(
-                          'Passed Students',
+                          'Passed Students (${passedStudents.length})',
                           style: AppTypography.h3.copyWith(
                             color: AppColors.semanticGreen,
                             fontSize: 14,
                           ),
                         ),
                         const SizedBox(height: 8),
-                        _buildStudentRow('Apo Bago', 'Completed with distinction', true, isDark),
-                        _buildStudentRow('Mansaka Youth Lead', 'Passed on first attempt', true, isDark),
+                        if (passedStudents.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Text(
+                              'No students passed yet.',
+                              style: AppTypography.body.copyWith(
+                                color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.6),
+                                fontSize: 12,
+                              ),
+                            ),
+                          )
+                        else
+                          ...passedStudents.map((s) => _buildStudentRow(
+                                s['name'] as String? ?? 'Learner',
+                                s['detail'] as String? ?? 'Passed',
+                                true,
+                                isDark,
+                              )),
                         const SizedBox(height: 24),
                         Text(
-                          'Needs Review / Failed',
+                          'Needs Review / Failed (${failedStudents.length})',
                           style: AppTypography.h3.copyWith(
                             color: AppColors.semanticRed,
                             fontSize: 14,
                           ),
                         ),
                         const SizedBox(height: 8),
-                        _buildStudentRow('Lumad Apprentice', 'Struggling with vocabulary matching', false, isDark),
+                        if (failedStudents.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Text(
+                              'No students requiring review.',
+                              style: AppTypography.body.copyWith(
+                                color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.6),
+                                fontSize: 12,
+                              ),
+                            ),
+                          )
+                        else
+                          ...failedStudents.map((s) => _buildStudentRow(
+                                s['name'] as String? ?? 'Learner',
+                                s['detail'] as String? ?? 'Needs Review',
+                                false,
+                                isDark,
+                              )),
                       ],
                     ),
                   ),
@@ -1304,13 +1343,14 @@ class _EducatorAnalyticsScreenState
     String topic,
     String stat,
     String lessonName,
-    AppLocalization l10n,
+    List<Map<String, dynamic>> students,
   ) {
+    final l10n = ref.watch(localizationProvider);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       onTap: () {
         HapticService.selection();
-        _showHurdleStudentBreakdown(context, topic, stat, lessonName, isDark, l10n);
+        _showHurdleStudentBreakdown(context, topic, stat, lessonName, students, isDark, l10n);
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -1365,7 +1405,15 @@ class _EducatorAnalyticsScreenState
     );
   }
 
-  void _showHurdleStudentBreakdown(BuildContext context, String topic, String stat, String lessonName, bool isDark, AppLocalization l10n) {
+  void _showHurdleStudentBreakdown(
+    BuildContext context,
+    String topic,
+    String stat,
+    String lessonName,
+    List<Map<String, dynamic>> students,
+    bool isDark,
+    AppLocalization l10n,
+  ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: isDark ? AppColors.forest800 : Colors.white,
@@ -1426,15 +1474,31 @@ class _EducatorAnalyticsScreenState
                       controller: scrollController,
                       children: [
                         Text(
-                          'Students Requiring Review',
+                          'Students Requiring Review (${students.length})',
                           style: AppTypography.h3.copyWith(
                             color: AppColors.semanticRed,
                             fontSize: 14,
                           ),
                         ),
                         const SizedBox(height: 8),
-                        _buildStudentRow('Lumad Apprentice', 'Repeated 3 slips on this concept', false, isDark),
-                        _buildStudentRow('Student Learner', 'Struggled with audio tone matching', false, isDark),
+                        if (students.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Text(
+                              'No registered slips for this hurdle.',
+                              style: AppTypography.body.copyWith(
+                                color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.6),
+                                fontSize: 12,
+                              ),
+                            ),
+                          )
+                        else
+                          ...students.map((s) => _buildStudentRow(
+                                s['name'] as String? ?? 'Learner',
+                                s['detail'] as String? ?? 'Slips detected',
+                                false,
+                                isDark,
+                              )),
                         const SizedBox(height: 24),
                         Container(
                           padding: const EdgeInsets.all(16),

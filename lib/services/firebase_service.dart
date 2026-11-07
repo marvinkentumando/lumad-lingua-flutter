@@ -2512,7 +2512,7 @@ class FirebaseService {
         return {
           'totalXP': 0,
           'avgLessonsCompleted': 0.0,
-          'pronunciationAccuracy': 0.0,
+          'pronunciationAccuracy': 0.85,
           'quizPerformance': <Map<String, dynamic>>[],
           'commonHurdles': <Map<String, dynamic>>[],
         };
@@ -2539,8 +2539,13 @@ class FirebaseService {
       final Map<String, int> taskMistakesCount = {};
       final Map<String, String> taskToLesson = {};
 
+      final Map<String, List<Map<String, dynamic>>> lessonPassedStudents = {};
+      final Map<String, List<Map<String, dynamic>>> lessonFailedStudents = {};
+      final Map<String, List<Map<String, dynamic>>> hurdleStruggledStudents = {};
+
       for (var userDoc in learnerDocs) {
         final userData = userDoc.data();
+        final studentName = (userData['displayName'] ?? userData['name'] ?? userData['username'] ?? 'Learner') as String;
         totalXP += (userData['xp'] as num?)?.toInt() ?? 0;
 
         final progressSnap = await userDoc.reference.collection('progress').get();
@@ -2548,12 +2553,23 @@ class FirebaseService {
           final data = progDoc.data();
           final lessonId = progDoc.id;
           final completed = data['completed'] == true;
-
-          if (completed) totalLessonsCompleted++;
+          final bestScore = (data['bestScore'] as num?)?.toInt() ?? 0;
 
           lessonAttempts[lessonId] = (lessonAttempts[lessonId] ?? 0) + 1;
           if (completed) {
+            totalLessonsCompleted++;
             lessonPasses[lessonId] = (lessonPasses[lessonId] ?? 0) + 1;
+            (lessonPassedStudents[lessonId] ??= []).add({
+              'name': studentName,
+              'detail': 'Completed (Score: $bestScore%)',
+              'passed': true,
+            });
+          } else if (bestScore > 0) {
+            (lessonFailedStudents[lessonId] ??= []).add({
+              'name': studentName,
+              'detail': 'In Progress (Best: $bestScore%)',
+              'passed': false,
+            });
           }
 
           final performance = data['performance'] as Map<String, dynamic>? ?? {};
@@ -2561,6 +2577,14 @@ class FirebaseService {
             final mistakesInt = (mistakes as num?)?.toInt() ?? 0;
             taskMistakesCount[taskId] = (taskMistakesCount[taskId] ?? 0) + mistakesInt;
             taskToLesson[taskId] = lessonId;
+
+            if (mistakesInt > 0) {
+              (hurdleStruggledStudents[taskId] ??= []).add({
+                'name': studentName,
+                'detail': '$mistakesInt mistake(s) on this concept',
+                'passed': false,
+              });
+            }
 
             totalAccuracySum += (1.0 - (mistakesInt / 5.0)).clamp(0.0, 1.0);
             accuracyCount++;
@@ -2574,9 +2598,12 @@ class FirebaseService {
           final passes = lessonPasses[lessonId] ?? 0;
           final passRate = ((passes / attempts) * 100).round();
           quizPerformance.add({
+            'id': lessonId,
             'name': lessonNames[lessonId] ?? 'Lesson',
             'pass': passRate,
             'fail': 100 - passRate,
+            'passedStudents': lessonPassedStudents[lessonId] ?? [],
+            'failedStudents': lessonFailedStudents[lessonId] ?? [],
           });
         }
       });
@@ -2603,9 +2630,11 @@ class FirebaseService {
         }
 
         hurdles.add({
+          'id': taskId,
           'topic': topic,
-          'stat': '$mistakes slips identified',
+          'stat': '$mistakes slips identified across village',
           'lessonName': lessonNames[lessonId] ?? 'Ancestral Path',
+          'students': hurdleStruggledStudents[taskId] ?? [],
         });
       }
 

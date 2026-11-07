@@ -89,12 +89,18 @@ class StudentLessonProgress {
   final double progress;
   final double accuracy;
   final String status; // 'Completed', 'In Progress', 'Not Started'
+  final double audioComparisonScore;
+  final String audioFeedback;
+  final bool hasAudioRecording;
 
   const StudentLessonProgress({
     required this.lessonTitle,
     required this.progress,
     required this.status,
     this.accuracy = 0.8,
+    this.audioComparisonScore = 0.85,
+    this.audioFeedback = 'Good pronunciation alignment',
+    this.hasAudioRecording = true,
   });
 }
 

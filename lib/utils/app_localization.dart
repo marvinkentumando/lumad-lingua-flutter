@@ -216,6 +216,19 @@ class AppLocalization {
       'no_artifacts_desc': 'No artifacts discovered by this member yet.',
       'error_artifacts': 'Error loading artifacts',
 
+      // Educator Screens
+      'no_broadcasts_found': 'No Broadcasts Found',
+      'no_broadcasts_message': 'You haven\'t sent any village announcements yet.',
+      'no_broadcasts_advice': 'Use the educator dashboard to send announcements to all enrolled students.',
+      'no_feedback_title': 'No Feedback Yet',
+      'no_feedback_message': 'Messages and suggestions from your students will appear here.',
+      'no_feedback_advice': 'Encourage students to send thoughts during or after completed lessons.',
+      'your_reply': 'YOUR REPLY',
+      'reply': 'REPLY',
+      'reply_hint': 'Type your reply...',
+      'send_reply': 'SEND REPLY',
+      'mark_as_read': 'MARK AS READ',
+
       // Village Sanctuary Dashboard
       'not_in_village': 'Not in a Village',
       'join_village_instructions': 'Join a community village using a code provided by your educator.',
@@ -699,7 +712,7 @@ class AppLocalization {
       'force_rotation': 'FORCE ROTATION',
       'resume_auto': 'RESUME AUTO',
       'pick_manually': 'PICK MANUALLY',
-      'good_morning_name': 'Maayong\nAdlaw,\n{name}!',
+      'good_morning_name': 'Madyaw na\nAllaw,\n{name}!',
       'ai_models': 'AI MODELS',
       'deployment': 'DEPLOYMENT',
       'view_test_assessments': 'VIEW TEST ASSESSMENTS',
@@ -2571,7 +2584,7 @@ class AppLocalization {
       'force_rotation': 'PUGSA PAGBALHIN',
       'resume_auto': 'BALIK SA AUTO',
       'pick_manually': 'PILI OG MANWAL',
-      'good_morning_name': 'Maayong\nAdlaw,\n{name}!',
+      'good_morning_name': 'Madyaw na\nAllaw,\n{name}!',
       'ai_models': 'MGA MODELO SA AI',
       'deployment': 'PAG-DEPLOY',
       'view_test_assessments': 'TAN-AWA ANG MGA PAGSUWAY',

@@ -401,6 +401,24 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
 
   Widget _buildArtifactCard(BuildContext context, Artifact artifact, bool isDark) {
     final tierColor = _getTierColor(artifact.tier);
+    final artworkWidget = artifact.imageUrl.isNotEmpty
+        ? GracefulImage(
+            imageUrl: artifact.imageUrl,
+            width: double.infinity,
+            height: double.infinity,
+          )
+        : Container(
+            decoration: BoxDecoration(
+              color: artifact.isEarned
+                  ? tierColor.withValues(alpha: 0.1)
+                  : (isDark ? Colors.white10 : Colors.black12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: Text(artifact.emoji, style: const TextStyle(fontSize: 36)),
+            ),
+          );
+
     return GestureDetector(
       onTap: () {
         HapticService.selection();
@@ -410,7 +428,9 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: artifact.isEarned ? tierColor.withValues(alpha: 0.8) : Colors.transparent,
+            color: artifact.isEarned
+                ? tierColor.withValues(alpha: 0.8)
+                : (isDark ? Colors.white12 : Colors.black12),
             width: 2,
           ),
           boxShadow: artifact.isEarned
@@ -435,20 +455,16 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: artifact.imageUrl.isNotEmpty
-                          ? GracefulImage(
-                              imageUrl: artifact.imageUrl,
-                              width: double.infinity,
-                              height: double.infinity,
-                            )
-                          : Container(
-                              decoration: BoxDecoration(
-                                color: tierColor.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Center(
-                                child: Text(artifact.emoji, style: const TextStyle(fontSize: 36)),
-                              ),
+                      child: artifact.isEarned
+                          ? artworkWidget
+                          : ColorFiltered(
+                              colorFilter: const ColorFilter.matrix(<double>[
+                                0.2126, 0.7152, 0.0722, 0, 0,
+                                0.2126, 0.7152, 0.0722, 0, 0,
+                                0.2126, 0.7152, 0.0722, 0, 0,
+                                0,      0,      0,      1, 0,
+                              ]),
+                              child: artworkWidget,
                             ),
                     ),
                     if (!artifact.isEarned)
@@ -457,8 +473,23 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                           color: Colors.black.withValues(alpha: 0.45),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Center(
-                          child: Icon(Icons.lock_rounded, color: Colors.white70, size: 28),
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.55),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.3),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.lock_rounded,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                          ),
                         ),
                       ),
                   ],
@@ -468,7 +499,9 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
               Text(
                 artifact.title.isNotEmpty ? artifact.title : artifact.id,
                 style: AppTypography.h3.copyWith(
-                  color: isDark ? Colors.white : AppColors.forest900,
+                  color: artifact.isEarned
+                      ? (isDark ? Colors.white : AppColors.forest900)
+                      : (isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.6)),
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
@@ -481,7 +514,11 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                 children: [
                   Text(
                     artifact.tier.name.toUpperCase(),
-                    style: AppTypography.label.copyWith(color: tierColor, fontSize: 8, fontWeight: FontWeight.bold),
+                    style: AppTypography.label.copyWith(
+                      color: artifact.isEarned ? tierColor : (isDark ? Colors.white38 : Colors.black38),
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   if (artifact.isEarned)
                     Icon(Icons.check_circle_rounded, color: AppColors.semanticGreen, size: 10),
