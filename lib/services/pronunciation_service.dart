@@ -343,14 +343,12 @@ class PronunciationService implements IPronunciationComparer {
     // similar but non-target speech and previously bypassed mismatch rejection.
     final distances = <double>[];
     double bestMeanCost = double.infinity;
-    double bestMaxCost = 0.0;
     for (final referenceFeatures in referenceSet.referenceFeatures) {
       final alignment = MFCCService.align(referenceFeatures, userFeatures);
       if (alignment.isUsable && alignment.meanLocalCost.isFinite) {
         distances.add(alignment.meanLocalCost);
         if (alignment.meanLocalCost < bestMeanCost) {
           bestMeanCost = alignment.meanLocalCost;
-          bestMaxCost = alignment.maxLocalCost;
         }
       }
     }
@@ -361,10 +359,10 @@ class PronunciationService implements IPronunciationComparer {
     final bestCount = distances.length >= 2 ? 2 : 1;
     final distance = distances.take(bestCount).reduce((a, b) => a + b) / bestCount;
 
-    // Acoustic target & phoneme-level frame validation:
-    // Rejects overall mismatch or severe local phonetic substitution on the closest reference take (max frame distance > 35.0).
-    final bool maxFrameMismatch = bestMaxCost > 35.0;
-    if (distance > _mismatchThreshold(referenceSet.baseline) || maxFrameMismatch) {
+    // Acoustic target validation uses the aggregate distance across the two
+    // closest reference takes. A single aligned frame can differ because of an
+    // accent, timing, or recording artifact, so it must not reject the whole word.
+    if (distance > _mismatchThreshold(referenceSet.baseline)) {
       return PronunciationScore(
         overallScore: 0,
         accuracy: 0,
