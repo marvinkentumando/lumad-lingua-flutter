@@ -567,8 +567,8 @@ class DuelService {
           .eq('status', DuelStatus.active.name)
           .limit(1);
 
-      if ((p1Response as List).isNotEmpty) {
-        return DuelMatch.fromMap(p1Response.first as Map<String, dynamic>);
+      if (p1Response.isNotEmpty) {
+        return DuelMatch.fromMap(p1Response[0]);
       }
 
       final p2Response = await _supabase
@@ -578,8 +578,8 @@ class DuelService {
           .eq('status', DuelStatus.active.name)
           .limit(1);
 
-      if ((p2Response as List).isNotEmpty) {
-        return DuelMatch.fromMap(p2Response.first as Map<String, dynamic>);
+      if (p2Response.isNotEmpty) {
+        return DuelMatch.fromMap(p2Response[0]);
       }
     } catch (e) {
       debugPrint('Error searching active match for user in Supabase: $e');

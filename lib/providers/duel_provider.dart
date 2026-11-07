@@ -125,8 +125,7 @@ class DuelSessionState {
 
 class DuelSessionNotifier extends Notifier<DuelSessionState> {
   StreamSubscription<DuelMatch?>? _subscription;
-  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
-      _candidateSubscription;
+  StreamSubscription? _candidateSubscription;
   Timer? _roundTimer;
   Timer? _heartbeatTimer;
   Timer? _matchmakingTimer;
@@ -397,6 +396,19 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
   }
 
   static String matchmakingFailureMessage(Object error) {
+    final code = _extractErrorCode(error);
+    switch (code) {
+      case 'permission-denied':
+        return 'Matchmaking was blocked by database policies. Please make sure you are signed in.';
+      case 'failed-precondition':
+        return 'Matchmaking needs a database index or it is still building. Please wait a moment.';
+      case 'resource-exhausted':
+        return 'Firebase daily quota exceeded (resource-exhausted). Please check Firebase Console usage or wait for the daily quota to reset.';
+      case 'unavailable':
+      case 'deadline-exceeded':
+        return 'Could not reach Supabase Realtime service. Please check your connection and try again.';
+    }
+
     final str = error.toString().toLowerCase();
     if (str.contains('network') || str.contains('connection') || str.contains('offline') || str.contains('socket')) {
       return 'Could not reach Supabase Realtime service. Please check your connection and try again.';
