@@ -360,9 +360,25 @@ class PronunciationService implements IPronunciationComparer {
     final distance = distances.take(bestCount).reduce((a, b) => a + b) / bestCount;
 
     // Acoustic target validation uses the aggregate distance across the two
-    // closest reference takes. A single aligned frame can differ because of an
-    // accent, timing, or recording artifact, so it must not reject the whole word.
-    if (distance > _mismatchThreshold(referenceSet.baseline)) {
+    // closest reference takes, so one slightly off frame cannot force a fresh
+    // take to zero. A neutral/empty learner signal can still read as phonetically
+    // close to the reference, so a distance-only match is not enough.
+    //
+    // In release builds this is a no-op. Turn on PronunciationService._debugPronunciation
+    // only while debugging the reported always-0% case; it must stay off in production.
+    _debugDiagnostics(
+      "comparison",
+      distance,
+      _mismatchThreshold(referenceSet.baseline),
+      referenceSet.referenceFeatures,
+      processedUser,
+    );
+
+    // A silent or near-silent learner clip can still DTW-align to a reference
+    // and pass the mismatch threshold, so a phonetic similarity match is not
+    // enough: the clip must also contain real spoken/energy frames.
+    final learnerHasSpokenEnergy = _learnerHasSpokenEnergy(processedUser);
+    if (!learnerHasSpokenEnergy) {
       return PronunciationScore(
         overallScore: 0,
         accuracy: 0,
@@ -370,7 +386,7 @@ class PronunciationService implements IPronunciationComparer {
         clarity: _speechClarity(processedUser),
         nativeWaveform: referenceSet.primaryPcm,
         studentWaveform: userSamples,
-        feedback: "That doesn't sound like the target phrase. Please listen to the native speaker and record the phrase shown.",
+        feedback: "We couldn't hear your voice clearly. Please speak louder and closer to the microphone, or record again.",
         algorithmUsed: algorithm,
         distance: distance,
         isCalibrated: referenceSet.baseline.isCalibrated,
@@ -425,6 +441,45 @@ class PronunciationService implements IPronunciationComparer {
     return math.max(calibrated, math.max(baseline.mean + 4.0 * sigma, 16.5));
   }
 
+  /// Tiny temporary diagnostic hook kept on the hot path only while this is being
+  /// debugged. It must stay off in release builds and is off by default.
+  static bool _debugPronunciation = false;
+
+  static void _debugDiagnostics(
+    String phrase,
+    double learnerDistance,
+    double threshold,
+    List<List<List<double>>> referenceSets,
+    List<double> learnerSamples,
+  ) {
+    if (!_debugPronunciation) return;
+
+    final bestMeans = <double>[];
+    double bestMean = double.infinity;
+    for (final rs in referenceSets) {
+      final a = MFCCService.align(rs, MFCCService.extractMFCC(learnerSamples));
+      if (a.isUsable && a.meanLocalCost.isFinite) {
+        bestMeans.add(a.meanLocalCost);
+        if (a.meanLocalCost < bestMean) bestMean = a.meanLocalCost;
+      }
+    }
+    final sampleLen = learnerSamples.length;
+    final hasEnergy = sampleLen > 0 && learnerSamples.any((s) => s.abs() > 1e-7);
+    final debugStats = {
+      'phrase': phrase,
+      'learnerSamples': sampleLen,
+      'learnerHasEnergy': hasEnergy,
+      'learnerDistance': _formatDistance(learnerDistance),
+      'threshold': _formatDistance(threshold),
+      'learnerAtThreshold': learnerDistance > threshold,
+      'bestMean': _formatDistance(bestMean == double.infinity ? 0.0 : bestMean),
+      'candidateMeans': bestMeans.map(_formatDistance).join(','),
+      'referenceCount': referenceSets.length,
+      'mfccFrames': MFCCService.extractMFCC(learnerSamples).length,
+    };
+    debugPrint('pronunciation_debug: $debugStats');
+  }
+
   /// Maps a path-normalized DTW distance to a 0-1 score.
   ///
   /// The logistic pivot sits one standard deviation above the mean
@@ -445,6 +500,32 @@ class PronunciationService implements IPronunciationComparer {
     final z = (distance - pivot) / sigma;
     final score = 1.0 / (1.0 + math.exp(slope * z));
     return score.isFinite ? score.clamp(0.0, 1.0) : 0.0;
+  }
+
+  /// Returns true when the comparison features contain meaningful voice energy.
+  /// This catches a silent/empty clip that can otherwise DTW-align to a
+  /// reference and score surprisingly high.
+  static bool _learnerHasSpokenEnergy(List<double> pcm) {
+    if (pcm.isEmpty) return false;
+    final frameSize = 256;
+    const minActiveFrames = 2;
+    final activeCount = <double>[];
+    for (int i = 0; i + frameSize <= pcm.length; i += frameSize) {
+      double sum = 0.0;
+      for (int j = i; j < i + frameSize; j++) {
+        sum += pcm[j] * pcm[j];
+      }
+      final rms = math.sqrt(sum / frameSize);
+      activeCount.add(rms);
+    }
+    if (activeCount.isEmpty) return false;
+
+    final peak = activeCount.reduce(math.max);
+    if (peak <= 1e-7) return false;
+    final activeAboveFloor = activeCount
+        .where((v) => v >= math.max(peak * 0.18, 1e-5))
+        .length;
+    return activeAboveFloor >= minActiveFrames;
   }
 
   static double compareWaveforms(
@@ -613,6 +694,28 @@ class PronunciationService implements IPronunciationComparer {
       studentWaveform: u,
       feedback: "Audio processing failed. Please check your recording and try again.",
     );
+  }
+
+  static String _mismatchFeedback(double distance, PronunciationReferenceSet referenceSet) {
+    final threshold = _mismatchThreshold(referenceSet.baseline);
+    if (!threshold.isFinite || threshold <= 0) {
+      return "That doesn't sound like the target phrase. Please listen to the native speaker and record the phrase shown.";
+    }
+    final distanceCloseness = distance / threshold;
+    if (distanceCloseness < 0.65) {
+      return "Your shape is getting close, but the timing and fullness aren't quite right yet. Slow it down, hold the vowel a bit longer, and record again.";
+    }
+    if (distanceCloseness < 0.85) {
+      return "This sounds a lot closer than a different word, so you're on the right track. Listen again for the stressed syllable and record it a little more clearly.";
+    }
+    return "That clearly doesn't match the target phrase. Please listen to the native speaker and record the phrase shown.";
+  }
+
+  static final RegExp _thousandSeperator = RegExp(r'(?<=\d)(?=(\d{3})+(?!\d))');
+
+  static String _formatDistance(double value) {
+    if (!value.isFinite) return 'N/A';
+    return value.toStringAsFixed(2);
   }
 
   static String _generateFeedback(double score) {
