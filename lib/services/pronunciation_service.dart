@@ -342,13 +342,15 @@ class PronunciationService implements IPronunciationComparer {
     // validation. HMM and cosine scores alone can be high for acoustically
     // similar but non-target speech and previously bypassed mismatch rejection.
     final distances = <double>[];
-    bool maxFrameMismatch = false;
+    double bestMeanCost = double.infinity;
+    double bestMaxCost = 0.0;
     for (final referenceFeatures in referenceSet.referenceFeatures) {
       final alignment = MFCCService.align(referenceFeatures, userFeatures);
-      if (alignment.isUsable) {
-        if (alignment.meanLocalCost.isFinite) distances.add(alignment.meanLocalCost);
-        if (alignment.maxLocalCost > 26.0) {
-          maxFrameMismatch = true;
+      if (alignment.isUsable && alignment.meanLocalCost.isFinite) {
+        distances.add(alignment.meanLocalCost);
+        if (alignment.meanLocalCost < bestMeanCost) {
+          bestMeanCost = alignment.meanLocalCost;
+          bestMaxCost = alignment.maxLocalCost;
         }
       }
     }
@@ -360,7 +362,8 @@ class PronunciationService implements IPronunciationComparer {
     final distance = distances.take(bestCount).reduce((a, b) => a + b) / bestCount;
 
     // Acoustic target & phoneme-level frame validation:
-    // Rejects overall mismatch or severe local phonetic substitution (max frame distance > 26.0).
+    // Rejects overall mismatch or severe local phonetic substitution on the closest reference take (max frame distance > 35.0).
+    final bool maxFrameMismatch = bestMaxCost > 35.0;
     if (distance > _mismatchThreshold(referenceSet.baseline) || maxFrameMismatch) {
       return PronunciationScore(
         overallScore: 0,
@@ -420,8 +423,8 @@ class PronunciationService implements IPronunciationComparer {
     final sigma = math.max(baseline.sigma, math.max(baseline.mean * 0.15, 1e-6));
     final calibrated = baseline.mean + 3.5 * sigma;
     if (baseline.isCalibrated) return math.max(calibrated, baseline.mean * 2.0);
-    // CMN-scale provisional: good ~6, different word ~24 => floor 13 rejects it.
-    return math.max(calibrated, math.max(baseline.mean + 4.0 * sigma, 13.0));
+    // CMN-scale provisional: good ~6, different word ~24 => floor 16.5 rejects it while allowing natural speaker variation.
+    return math.max(calibrated, math.max(baseline.mean + 4.0 * sigma, 16.5));
   }
 
   /// Maps a path-normalized DTW distance to a 0-1 score.
@@ -440,7 +443,7 @@ class PronunciationService implements IPronunciationComparer {
     if (distance <= 0) return 1.0;
     final sigma = math.max(baseline.sigma, 1e-6);
     final pivot = baseline.mean + sigma;
-    final slope = 1.1 * (strictness.sensitivity / 3.0);
+    final slope = 0.75 * (strictness.sensitivity / 3.0);
     final z = (distance - pivot) / sigma;
     final score = 1.0 / (1.0 + math.exp(slope * z));
     return score.isFinite ? score.clamp(0.0, 1.0) : 0.0;
