@@ -34,9 +34,9 @@ class EducatorFeedbackScreen extends ConsumerWidget {
           data: (feedbackList) {
             if (feedbackList.isEmpty) {
               return BrandedEmptyState.empty(
-                title: 'No Feedback Yet',
-                message: 'Messages and suggestions from your students will appear here.',
-                advice: 'Encourage students to send thoughts during or after completed lessons.',
+                title: l10n.translate('no_feedback_title'),
+                message: l10n.translate('no_feedback_message'),
+                advice: l10n.translate('no_feedback_advice'),
                 imagePath: 'assets/images/lumad_character (5).png',
                 icon: Icons.forum_outlined,
               );
@@ -86,6 +86,7 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = ref.watch(localizationProvider);
     final dateStr = DateFormat('MMM dd • hh:mm a').format(widget.feedback.timestamp);
     final hasReplied = widget.feedback.educatorReply != null;
 
@@ -180,7 +181,7 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'YOUR REPLY',
+                        l10n.translate('your_reply'),
                         style: AppTypography.label.copyWith(
                           color: isDark ? AppColors.gold500 : AppColors.gold700,
                           fontSize: 9,
@@ -210,7 +211,7 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
                   child: ElevatedButton.icon(
                     onPressed: () => setState(() => _isReplying = true),
                     icon: const Icon(Icons.reply_rounded, size: 18),
-                    label: const Text('REPLY'),
+                    label: Text(l10n.translate('reply')),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.gold500,
                       foregroundColor: AppColors.forest900,
@@ -225,7 +226,7 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
                     style: TextButton.styleFrom(
                       foregroundColor: isDark ? AppColors.gold500 : AppColors.gold700,
                     ),
-                    child: const Text('MARK AS READ'),
+                    child: Text(l10n.translate('mark_as_read')),
                   ),
               ],
             ),
@@ -240,7 +241,7 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
                     color: isDark ? Colors.white : AppColors.forest900,
                   ),
                   decoration: InputDecoration(
-                    hintText: 'Type your reply...',
+                    hintText: l10n.translate('reply_hint'),
                     hintStyle: TextStyle(
                       color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.4),
                     ),
@@ -267,7 +268,7 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
                       style: TextButton.styleFrom(
                         foregroundColor: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.6),
                       ),
-                      child: const Text('CANCEL'),
+                      child: Text(l10n.translate('cancel')),
                     ),
                     const SizedBox(width: 8),
                     ElevatedButton(
@@ -283,7 +284,7 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
                         backgroundColor: AppColors.gold500,
                         foregroundColor: AppColors.forest900,
                       ),
-                      child: const Text('SEND REPLY'),
+                      child: Text(l10n.translate('send_reply')),
                     ),
                   ],
                 ),

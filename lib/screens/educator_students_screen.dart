@@ -722,73 +722,119 @@ class _EducatorStudentsScreenState
             ),
           ],
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: statusColor,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    lp.lessonTitle,
-                    style: AppTypography.body.copyWith(
-                      color: isDark ? Colors.white : AppColors.forest900,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
+            Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(height: 6),
-                  Stack(
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        height: 3,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(2),
+                      Text(
+                        lp.lessonTitle,
+                        style: AppTypography.body.copyWith(
+                          color: isDark ? Colors.white : AppColors.forest900,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
                         ),
                       ),
-                      FractionallySizedBox(
-                        widthFactor: lp.progress.clamp(0.0, 1.0),
-                        child: Container(
-                          height: 3,
-                          decoration: BoxDecoration(
-                            color: statusColor,
-                            borderRadius: BorderRadius.circular(2),
+                      const SizedBox(height: 6),
+                      Stack(
+                        children: [
+                          Container(
+                            height: 3,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
-                        ),
+                          FractionallySizedBox(
+                            widthFactor: lp.progress.clamp(0.0, 1.0),
+                            child: Container(
+                              height: 3,
+                              decoration: BoxDecoration(
+                                color: statusColor,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      lp.status,
+                      style: AppTypography.label.copyWith(
+                        color: statusColor,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      'Accuracy: ${(lp.accuracy * 100).toInt()}%',
+                      style: AppTypography.label.copyWith(
+                        color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.75),
+                        fontSize: 8,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment: MainAxisAlignment.center,
+            const SizedBox(height: 10),
+            Divider(
+              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+              height: 1,
+            ),
+            const SizedBox(height: 8),
+            Row(
               children: [
-                Text(
-                  lp.status,
-                  style: AppTypography.label.copyWith(
-                    color: statusColor,
-                    fontSize: 8,
-                    fontWeight: FontWeight.w900,
+                const Icon(
+                  Icons.graphic_eq_rounded,
+                  size: 14,
+                  color: AppColors.gold500,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Audio Comparison: ${lp.audioFeedback} (${(lp.audioComparisonScore * 100).toInt()}% Match)',
+                    style: AppTypography.label.copyWith(
+                      color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.8),
+                      fontSize: 9,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-                Text(
-                  'Accuracy: ${(lp.accuracy * 100).toInt()}%',
-                  style: AppTypography.label.copyWith(
-                    color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.75),
-                    fontSize: 8,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: (lp.audioComparisonScore >= 0.8 ? AppColors.semanticGreen : AppColors.gold500).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    lp.hasAudioRecording ? 'RECORDED' : 'NO AUDIO',
+                    style: AppTypography.label.copyWith(
+                      color: lp.audioComparisonScore >= 0.8 ? AppColors.semanticGreen : AppColors.gold700,
+                      fontSize: 7,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
               ],

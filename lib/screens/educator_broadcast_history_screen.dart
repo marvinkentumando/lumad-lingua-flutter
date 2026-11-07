@@ -31,9 +31,9 @@ class EducatorBroadcastHistoryScreen extends ConsumerWidget {
           data: (broadcasts) {
             if (broadcasts.isEmpty) {
               return BrandedEmptyState.empty(
-                title: 'No Broadcasts Found',
-                message: 'You haven\'t sent any village announcements yet.',
-                advice: 'Use the educator dashboard to send announcements to all enrolled students.',
+                title: l10n.translate('no_broadcasts_found'),
+                message: l10n.translate('no_broadcasts_message'),
+                advice: l10n.translate('no_broadcasts_advice'),
                 imagePath: 'assets/images/lumad_character (4).png',
                 icon: Icons.campaign_outlined,
               );

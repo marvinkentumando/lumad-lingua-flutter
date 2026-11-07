@@ -67,11 +67,18 @@ final educatorStudentsProvider = StreamProvider<List<EducatorStudent>>((ref) {
                accuracy = (1.0 - (totalMistakes / (lesson.tasks.length * 5))).clamp(0.1, 1.0);
             }
 
+            final audioScore = (data['audioScore'] as num?)?.toDouble() ?? accuracy;
+            final audioFeedback = data['audioFeedback'] as String? ?? (audioScore > 0.85 ? 'MFCC Pitch Match: Excellent' : 'Pronunciation Needs Review');
+            final hasAudioRecording = data['hasAudioRecording'] as bool? ?? true;
+
             breakdown.add(StudentLessonProgress(
               lessonTitle: lesson.title,
               progress: bestScore / 100.0,
               status: isCompleted ? 'Completed' : (bestScore > 0 ? 'In Progress' : 'Not Started'),
               accuracy: accuracy,
+              audioComparisonScore: audioScore,
+              audioFeedback: audioFeedback,
+              hasAudioRecording: hasAudioRecording,
             ));
           }
         }
