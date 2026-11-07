@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import '../utils/wav_decoder.dart';
 import 'mfcc_service.dart';
 import 'pronunciation_comparer_interface.dart';
+import 'package:flutter/foundation.dart';
 
 enum PronunciationAlgorithm {
   dtw,
