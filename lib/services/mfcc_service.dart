@@ -347,10 +347,6 @@ class MFCCService {
 
   /// Banded, slope-constrained DTW alignment normalized by the path's total
   /// step weight (not by `n + m`).
-  ///
-  /// The previous `dtw[n][m] / (n + m)` divided by a path length that the real
-  /// alignment never reaches, so mean frame cost was under-estimated, and it was
-  /// under-estimated *more* for longer attempts - slow recordings were rewarded.
   static DtwAlignment align(
     List<List<double>> s,
     List<List<double>> t, {
@@ -368,11 +364,41 @@ class MFCCService {
       );
     }
 
+    // Adaptive band ratio: scale the band to accommodate length ratio differences
+    final effectiveBand = max(bandRatio, (1.0 - (min(n, m) / max(n, m))) + 0.15).clamp(0.25, 1.0);
+
+    var result = _performDtwAlign(s, t, effectiveBand, frameCost);
+
+    // Unbanded fallback pass if Sakoe-Chiba constraint produced double.infinity
+    if (!result.isUsable && effectiveBand < 1.0) {
+      result = _performDtwAlign(s, t, 1.0, frameCost);
+    }
+
+    return result;
+  }
+
+  static DtwAlignment _performDtwAlign(
+    List<List<double>> s,
+    List<List<double>> t,
+    double bandRatio,
+    FrameCostFunction? frameCost,
+  ) {
+    final n = s.length;
+    final m = t.length;
+
     final cost = List.generate(n + 1, (_) => List<double>.filled(m + 1, double.infinity));
     final weight = List.generate(n + 1, (_) => List<int>.filled(m + 1, 0));
     final pathLength = List.generate(n + 1, (_) => List<int>.filled(m + 1, 0));
     final maxFrameCost = List.generate(n + 1, (_) => List<double>.filled(m + 1, 0.0));
     cost[0][0] = 0.0;
+
+    // Steps to allow alignment across variable pacing & duration ratios up to 5:1
+    final steps = (n > 3 * m || m > 3 * n)
+        ? const [
+            [1, 1, 2], [1, 2, 3], [2, 1, 3], [1, 3, 4], [3, 1, 4],
+            [1, 4, 5], [4, 1, 5], [1, 5, 6], [5, 1, 6],
+          ]
+        : _dtwSteps;
 
     for (int i = 1; i <= n; i++) {
       final progress = i / n;
@@ -391,7 +417,7 @@ class MFCCService {
         var bestLength = 0;
         var bestMaxLocal = 0.0;
 
-        for (final step in _dtwSteps) {
+        for (final step in steps) {
           final di = step[0];
           final dj = step[1];
           final stepWeight = step[2];
