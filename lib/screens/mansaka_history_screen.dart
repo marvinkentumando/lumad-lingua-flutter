@@ -59,114 +59,7 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
     }
   }
 
-  void _playAudioSimulation(String title, String description) {
-    HapticService.light();
-    bool isPlaying = true;
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
 
-            return AlertDialog(
-              backgroundColor: isDark ? AppColors.forest900 : Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(color: AppColors.gold500, width: 1.5),
-              ),
-              title: Row(
-                children: [
-                  const Icon(Icons.volume_up_rounded, color: AppColors.gold500, size: 24),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Audio Archive: $title',
-                      style: AppTypography.h3.copyWith(
-                        color: isDark ? Colors.white : AppColors.forest900,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isPlaying ? 'Playing authentic Mansaka pronunciation...' : 'Paused audio archive',
-                    style: AppTypography.body.copyWith(
-                      color: isDark ? Colors.white70 : Colors.black87,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.gold500.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          onPressed: () {
-                            setStateDialog(() {
-                              isPlaying = !isPlaying;
-                            });
-                            HapticService.light();
-                          },
-                          icon: Icon(
-                            isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_filled_rounded,
-                            color: AppColors.gold500,
-                            size: 36,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                description,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: AppColors.gold500,
-                                  fontSize: 11,
-                                  fontStyle: FontStyle.italic,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              LinearProgressIndicator(
-                                value: isPlaying ? null : 0.4,
-                                backgroundColor: AppColors.gold500.withValues(alpha: 0.2),
-                                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold500),
-                                minHeight: 4,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('CLOSE', style: TextStyle(color: AppColors.gold500, fontWeight: FontWeight.bold)),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
 
   void _showTableOfContentsModal(bool isDark) {
     HapticService.light();
@@ -1130,25 +1023,7 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                           ),
                         ),
                       ],
-                      const SizedBox(height: 30),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _playAudioSimulation(title, subtitle),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.gold500,
-                                side: BorderSide(color: AppColors.gold500.withValues(alpha: 0.6)),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                              icon: const Icon(Icons.volume_up_rounded, size: 18),
-                              label: const Text('Listen Audio Archive', style: TextStyle(fontWeight: FontWeight.bold)),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
+
                       Row(
                         children: [
                           Expanded(

@@ -365,7 +365,16 @@ class FirebaseService {
           final list = Artifact.masterArtifactCatalog.map((master) {
             final userData = userMap[master.id];
             if (userData != null) {
-              return Artifact.fromFirestore(userData, master.id);
+              final progress = (userData['currentProgress'] as num?)?.toInt() ?? master.currentProgress;
+              final isEarned = (userData['isEarned'] as bool?) ?? (progress >= master.targetValue);
+              final DateTime? earnedAt = userData['earnedAt'] != null && userData['earnedAt'] is Timestamp
+                  ? (userData['earnedAt'] as Timestamp).toDate()
+                  : master.earnedAt;
+              return master.copyWith(
+                currentProgress: progress,
+                isEarned: isEarned,
+                earnedAt: earnedAt,
+              );
             } else {
               return master.copyWith(
                 currentProgress: 0,
@@ -1185,20 +1194,23 @@ class FirebaseService {
     required String studentName,
     String? studentPhotoUrl,
     required String message,
+    required String educatorId,
   }) async {
     await _db.collection('feedback').add({
       'studentId': studentId,
       'studentName': studentName,
       'studentPhotoUrl': studentPhotoUrl,
       'message': message,
+      'educatorId': educatorId,
       'timestamp': FieldValue.serverTimestamp(),
       'isRead': false,
     });
   }
 
-  Stream<List<StudentFeedback>> getStudentFeedback() {
+  Stream<List<StudentFeedback>> getStudentFeedback(String educatorId) {
     return _db
         .collection('feedback')
+        .where('educatorId', isEqualTo: educatorId)
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snap) => snap.docs
@@ -1229,8 +1241,9 @@ class FirebaseService {
   // Gamification Operations
   Future<void> addXp(String userId, int xpToAdd) async {
     final docRef = _db.collection('users').doc(userId);
-    final doc = await docRef.get();
-    if (doc.exists) {
+    return _db.runTransaction((transaction) async {
+      final doc = await transaction.get(docRef);
+      if (!doc.exists) return;
       final data = doc.data() ?? {};
       final lastReset = (data['lastWeeklyReset'] as Timestamp?)?.toDate();
       final now = DateTime.now();
@@ -1238,17 +1251,17 @@ class FirebaseService {
       final startOfWeek = DateTime(monday.year, monday.month, monday.day);
 
       if (lastReset == null || lastReset.isBefore(startOfWeek)) {
-        await docRef.update({
+        transaction.update(docRef, {
           'xp': FieldValue.increment(xpToAdd),
           'weeklyXp': xpToAdd,
           'lastWeeklyReset': FieldValue.serverTimestamp(),
         });
-        return;
+      } else {
+        transaction.update(docRef, {
+          'xp': FieldValue.increment(xpToAdd),
+          'weeklyXp': FieldValue.increment(xpToAdd),
+        });
       }
-    }
-    await docRef.update({
-      'xp': FieldValue.increment(xpToAdd),
-      'weeklyXp': FieldValue.increment(xpToAdd),
     });
   }
 
@@ -1626,6 +1639,10 @@ class FirebaseService {
     await _db.collection('users').doc(userId).update(data);
   }
 
+  Future<void> deleteUser(String userId) async {
+    await _db.collection('users').doc(userId).delete();
+  }
+
   Future<void> updatePrivacySettings(String userId, {bool? isPublic, bool? shareAnalytics}) async {
     final Map<String, dynamic> updates = {};
     if (isPublic != null) updates['isPublicProfile'] = isPublic;
@@ -1936,11 +1953,12 @@ class FirebaseService {
           int getWeeklyXp(Map<String, dynamic> u) {
             final reset = (u['lastWeeklyReset'] as Timestamp?)?.toDate();
             final totalXp = (u['xp'] as num?)?.toInt() ?? 0;
-            if (reset != null && reset.isBefore(startOfWeek)) return 0;
             if (u.containsKey('weeklyXp') && u['weeklyXp'] != null) {
-              return (u['weeklyXp'] as num).toInt();
+              final wXp = (u['weeklyXp'] as num).toInt();
+              if (reset != null && reset.isBefore(startOfWeek)) return 0;
+              return wXp;
             }
-            return (totalXp * 0.3).round();
+            return totalXp;
           }
 
           final aWeekly = getWeeklyXp(a);
@@ -2813,11 +2831,27 @@ class FirebaseService {
         crystalReward = stars == 3 ? 50 : (stars == 2 ? 25 : 15);
       }
 
-      // 4. Atomic reward update
-      transaction.update(userRef, {
-        'mistCrystals': FieldValue.increment(crystalReward),
-        'xp': FieldValue.increment(xpReward),
-      });
+      // 4. Atomic reward update (with weekly reset check)
+      final userData = userDoc.data() ?? {};
+      final lastReset = (userData['lastWeeklyReset'] as Timestamp?)?.toDate();
+      final now = DateTime.now();
+      final monday = now.subtract(Duration(days: now.weekday - 1));
+      final startOfWeek = DateTime(monday.year, monday.month, monday.day);
+
+      if (lastReset == null || lastReset.isBefore(startOfWeek)) {
+        transaction.update(userRef, {
+          'mistCrystals': FieldValue.increment(crystalReward),
+          'xp': FieldValue.increment(xpReward),
+          'weeklyXp': xpReward,
+          'lastWeeklyReset': FieldValue.serverTimestamp(),
+        });
+      } else {
+        transaction.update(userRef, {
+          'mistCrystals': FieldValue.increment(crystalReward),
+          'xp': FieldValue.increment(xpReward),
+          'weeklyXp': FieldValue.increment(xpReward),
+        });
+      }
 
       // Vocabulary Mastery Logic
       if (lesson != null && stars >= 2) {
@@ -5088,8 +5122,8 @@ final villageBroadcastsProvider =
   });
 });
 
-final studentFeedbackProvider = StreamProvider<List<StudentFeedback>>((ref) {
-  return ref.watch(firebaseServiceProvider).getStudentFeedback();
+final studentFeedbackProvider = StreamProvider.family<List<StudentFeedback>, String>((ref, educatorId) {
+  return ref.watch(firebaseServiceProvider).getStudentFeedback(educatorId);
 });
 
 final unreadFeedbackCountProvider = StreamProvider<int>((ref) {

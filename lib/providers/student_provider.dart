@@ -146,9 +146,11 @@ class StudentNotifier extends Notifier<StudentState> {
       final Timestamp? lastHeartTime = profile['lastHeartLossAt'] as Timestamp?;
       int resolvedHearts = storedHearts;
       if (lastHeartTime != null) {
-        final hoursSinceLoss = DateTime.now()
-            .difference(lastHeartTime.toDate())
-            .inHours;
+        final now = DateTime.now();
+        final lossDate = lastHeartTime.toDate();
+        final hoursSinceLoss = now.isAfter(lossDate)
+            ? now.difference(lossDate).inHours
+            : 0;
         if (hoursSinceLoss >= 8) {
           resolvedHearts = 5;
         }
@@ -611,6 +613,23 @@ class StudentNotifier extends Notifier<StudentState> {
       return true;
     }
     return false;
+  }
+
+  void recordLocalLessonCompletion(String lessonId, int stars, int score) {
+    final updatedProgress = Map<String, dynamic>.from(state.lessonProgress);
+    final existingData = (updatedProgress[lessonId] as Map?)?.cast<String, dynamic>() ?? {};
+    final existingBest = (existingData['bestScore'] as num?)?.toInt() ?? 0;
+    final existingStars = (existingData['stars'] as num?)?.toInt() ?? 0;
+
+    updatedProgress[lessonId] = {
+      ...existingData,
+      'completed': true,
+      'stars': stars > existingStars ? stars : existingStars,
+      'bestScore': score > existingBest ? score : existingBest,
+      'lastAttempt': DateTime.now().toIso8601String(),
+    };
+    state = state.copyWith(lessonProgress: updatedProgress);
+    _persistLocalState();
   }
 }
 

@@ -33,6 +33,7 @@ import '../providers/quest_provider.dart';
 import '../models/quest.dart';
 import '../models/assessment.dart';
 import '../services/haptic_service.dart';
+import '../widgets/artifact_unlock_overlay.dart';
 import '../services/pronunciation_service.dart';
 import 'package:path_provider/path_provider.dart';
 import '../widgets/assessment_overlay.dart';
@@ -484,6 +485,13 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
           _calculatedSessionXp = sessionXp;
         });
         ref.read(audioServiceProvider).playSFX('session_complete');
+
+        // Optimistically record local completion so Learning Path updates without stream delay
+        ref.read(studentProvider.notifier).recordLocalLessonCompletion(
+              lessonId,
+              stars,
+              state.completedCount * 10,
+            );
 
         ref
             .read(firebaseServiceProvider)
@@ -1230,125 +1238,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     ref.read(audioServiceProvider).playSFX('session_complete');
     _confettiController.play();
 
-
-    Color tierColor = Colors.white54;
-    switch (artifact.tier) {
-      case ArtifactTier.common:
-        tierColor = Colors.white54;
-        break;
-      case ArtifactTier.rare:
-        tierColor = Colors.blueAccent;
-        break;
-      case ArtifactTier.epic:
-        tierColor = Colors.purpleAccent;
-        break;
-      case ArtifactTier.sacred:
-        tierColor = Colors.cyanAccent;
-        break;
-      case ArtifactTier.ancient:
-        tierColor = AppColors.gold500;
-        break;
-      case ArtifactTier.legendary:
-        tierColor = Colors.orangeAccent;
-        break;
-    }
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.forest800,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: tierColor.withValues(alpha: 0.5), width: 2),
-        ),
-        title: Column(
-          children: [
-            Text(
-              l10n.translate('loot_drop'),
-              style: const TextStyle(
-                color: AppColors.gold500,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-              textAlign: TextAlign.center,
-            ).animate().slideY(begin: -0.5).fadeIn(),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.05),
-                boxShadow: [
-                  BoxShadow(
-                    color: tierColor.withValues(alpha: 0.2),
-                    blurRadius: 30,
-                    spreadRadius: 10,
-                  ),
-                ],
-              ),
-              child: Text(artifact.emoji, style: const TextStyle(fontSize: 64))
-                  .animate(onPlay: (c) => c.repeat(reverse: true))
-                  .scaleXY(begin: 1.0, end: 1.1, duration: 800.ms),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              artifact.title,
-              style: TextStyle(
-                color: tierColor,
-                fontWeight: FontWeight.w900,
-                fontSize: 22,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: tierColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                artifact.tier.name.toUpperCase(),
-                style: TextStyle(
-                  color: tierColor,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 2,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          artifact.description,
-          style: const TextStyle(color: Colors.white70),
-          textAlign: TextAlign.center,
-        ),
-        actions: [
-          Center(
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                if (alsoUnlockedBadge) {
-                  _showBadgeUnlockedDialog(l10n);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: tierColor,
-                foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                l10n.translate('add_vault'),
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    showArtifactUnlockOverlay(context, artifact);
   }
 
   Widget _buildTaskContent(LessonTask task) {

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../services/firebase_service.dart';
+import '../services/auth_service.dart';
 import '../models/feedback.dart';
 import '../widgets/brand_background.dart';
 import '../widgets/branded_empty_state.dart';
@@ -15,7 +16,8 @@ class EducatorFeedbackScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final feedbackAsync = ref.watch(studentFeedbackProvider);
+    final educatorId = ref.watch(authStateProvider).value?.uid ?? '';
+    final feedbackAsync = ref.watch(studentFeedbackProvider(educatorId));
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = ref.watch(localizationProvider);
 

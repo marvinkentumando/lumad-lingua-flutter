@@ -191,6 +191,7 @@ class _ArtifactInventoryCard extends StatelessWidget {
                     child: artifact.imageUrl.isNotEmpty
                         ? GracefulImage(
                             imageUrl: artifact.imageUrl,
+                            fallbackEmoji: artifact.emoji,
                             width: 52,
                             height: 52,
                             borderRadius: 26,

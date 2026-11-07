@@ -6,6 +6,7 @@ class StudentFeedback {
   final String studentName;
   final String? studentPhotoUrl;
   final String message;
+  final String educatorId;
   final DateTime timestamp;
   final bool isRead;
   final String? educatorReply;
@@ -17,6 +18,7 @@ class StudentFeedback {
     required this.studentName,
     this.studentPhotoUrl,
     required this.message,
+    required this.educatorId,
     required this.timestamp,
     this.isRead = false,
     this.educatorReply,
@@ -30,6 +32,7 @@ class StudentFeedback {
       studentName: data['studentName'] ?? 'Unknown Student',
       studentPhotoUrl: data['studentPhotoUrl'],
       message: data['message'] ?? '',
+      educatorId: data['educatorId'] ?? '',
       timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
       isRead: data['isRead'] ?? false,
       educatorReply: data['educatorReply'],
@@ -43,6 +46,7 @@ class StudentFeedback {
       'studentName': studentName,
       if (studentPhotoUrl != null) 'studentPhotoUrl': studentPhotoUrl,
       'message': message,
+      'educatorId': educatorId,
       'timestamp': FieldValue.serverTimestamp(),
       'isRead': isRead,
       'educatorReply': educatorReply,

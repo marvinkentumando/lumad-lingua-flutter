@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lumad_lingua/theme/app_colors.dart';
 import 'package:lumad_lingua/theme/app_typography.dart';
 import 'package:lumad_lingua/providers/artifact_provider.dart';
+import 'package:lumad_lingua/providers/student_provider.dart';
 import 'package:lumad_lingua/models/artifact.dart';
 import 'package:lumad_lingua/services/haptic_service.dart';
 import 'package:go_router/go_router.dart';
@@ -261,7 +262,7 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          artifact.title,
+                          artifact.title.isNotEmpty ? artifact.title : artifact.id,
                           style: AppTypography.h3.copyWith(
                             color: isDark ? Colors.white : AppColors.forest900,
                             fontSize: 18,
@@ -345,10 +346,17 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                       child: ElevatedButton(
                         onPressed: () {
                           HapticService.celebration();
+                          if (artifact.isTitle) {
+                            ref.read(studentProvider.notifier).equipCustomization(title: artifact.title);
+                          } else if (artifact.isFrame) {
+                            ref.read(studentProvider.notifier).equipCustomization(frame: artifact.title);
+                          } else if (artifact.isBadge) {
+                            ref.read(studentProvider.notifier).equipCustomization(emoji: artifact.emoji);
+                          }
                           context.pop();
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Equipped "${artifact.title}"! 🌿'),
+                              content: Text('Equipped "${artifact.title.isNotEmpty ? artifact.title : artifact.id}"! 🌿'),
                               backgroundColor: AppColors.semanticGreen,
                             ),
                           );
@@ -458,19 +466,47 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                artifact.title,
+                artifact.title.isNotEmpty ? artifact.title : artifact.id,
                 style: AppTypography.h3.copyWith(
                   color: isDark ? Colors.white : AppColors.forest900,
                   fontSize: 12,
+                  fontWeight: FontWeight.bold,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 2),
-              Text(
-                artifact.tier.name.toUpperCase(),
-                style: AppTypography.label.copyWith(color: tierColor, fontSize: 8, fontWeight: FontWeight.bold),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    artifact.tier.name.toUpperCase(),
+                    style: AppTypography.label.copyWith(color: tierColor, fontSize: 8, fontWeight: FontWeight.bold),
+                  ),
+                  if (artifact.isEarned)
+                    Icon(Icons.check_circle_rounded, color: AppColors.semanticGreen, size: 10),
+                ],
               ),
+              if (!artifact.isEarned) ...[
+                const SizedBox(height: 4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: artifact.progress,
+                    minHeight: 3,
+                    backgroundColor: isDark ? Colors.white10 : Colors.black12,
+                    valueColor: AlwaysStoppedAnimation<Color>(tierColor.withValues(alpha: 0.8)),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${artifact.currentProgress}/${artifact.targetValue}',
+                  style: AppTypography.label.copyWith(
+                    fontSize: 8,
+                    color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

@@ -110,12 +110,13 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
       int entryXp = totalXp;
       if (timeFilter == 'week') {
         final reset = (val['lastWeeklyReset'] as Timestamp?)?.toDate();
-        if (reset != null && reset.isBefore(startOfWeek)) {
-          entryXp = 0;
-        } else if (val.containsKey('weeklyXp') && val['weeklyXp'] != null) {
+        if (val.containsKey('weeklyXp') && val['weeklyXp'] != null) {
           entryXp = (val['weeklyXp'] as num).toInt();
+          if (reset != null && reset.isBefore(startOfWeek)) {
+            entryXp = 0;
+          }
         } else {
-          entryXp = (totalXp * 0.3).round();
+          entryXp = totalXp;
         }
       }
       return {

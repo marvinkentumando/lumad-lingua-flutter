@@ -264,6 +264,11 @@ class OfflineService {
 
   // Pending Sync Actions Queue
   Future<void> queuePendingSyncAction(Map<String, dynamic> action) async {
+    final payload = action['payload'] as Map<String, dynamic>?;
+    final uid = payload?['uid'] as String?;
+    if (uid == null || uid.isEmpty) {
+      debugPrint('[OfflineService] Warning: Queueing pending action without valid uid ($action)');
+    }
     final box = await _getBox<Map>(pendingSyncBoxName);
     final id = action['id'] ?? DateTime.now().millisecondsSinceEpoch.toString();
     action['id'] = id;

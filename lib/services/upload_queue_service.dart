@@ -198,24 +198,39 @@ class UploadQueueService extends Notifier<UploadQueueState> {
       }
     }
 
+    // Deduplicate conflicts to avoid memory leaks across retry cycles
+    final existingConflictIds = state.conflicts.map((c) => c.lessonId).toSet();
+    final uniqueNewConflicts = newConflicts
+        .where((c) => !existingConflictIds.contains(c.lessonId))
+        .toList();
+    final allConflicts = [...state.conflicts, ...uniqueNewConflicts];
+
     // Check remaining items to determine if retry is needed
     final remDrafts = await _offlineService.getDraftLessons();
     final remProgress = await _offlineService.getAllOfflineProgress();
     final remActions = await _offlineService.getPendingSyncActions();
 
-    final bool hasUnsyncedItems = remDrafts.isNotEmpty || remProgress.isNotEmpty || remActions.isNotEmpty;
+    // Exclude progress items that have active conflicts waiting for resolution
+    final activeConflictLessonIds = allConflicts.map((c) => c.lessonId).toSet();
+    final remainingNonConflictingProgress = remProgress
+        .where((p) => !activeConflictLessonIds.contains(p['lessonId']))
+        .toList();
+
+    final bool hasUnsyncedItems = remDrafts.isNotEmpty ||
+        remainingNonConflictingProgress.isNotEmpty ||
+        remActions.isNotEmpty;
 
     if (!hasUnsyncedItems && !hasErrors) {
       _retryAttempt = 0;
       state = state.copyWith(
         isSyncing: false,
-        conflicts: [...state.conflicts, ...newConflicts],
+        conflicts: allConflicts,
         retryAttempt: 0,
       );
     } else {
       state = state.copyWith(
         isSyncing: false,
-        conflicts: [...state.conflicts, ...newConflicts],
+        conflicts: allConflicts,
         retryAttempt: _retryAttempt + 1,
       );
       _scheduleRetry();
@@ -243,10 +258,14 @@ class UploadQueueService extends Notifier<UploadQueueState> {
     final payload = action['payload'] as Map<String, dynamic>? ?? {};
     final firebaseService = ref.read(firebaseServiceProvider);
 
-    if (type == null) return;
+    if (type == null) {
+      throw const FormatException('Pending sync action type is missing');
+    }
 
     final uid = payload['uid'] as String?;
-    if (uid == null || uid.isEmpty) return;
+    if (uid == null || uid.isEmpty) {
+      throw FormatException('Pending sync action ($type) is missing valid user ID (uid)');
+    }
 
     final rawActionId = action['id'] as String? ?? 'action_${DateTime.now().millisecondsSinceEpoch}';
 

@@ -36,5 +36,18 @@ class RoleNotifier extends Notifier<UserRole> {
 
 final roleProvider = NotifierProvider<RoleNotifier, UserRole>(RoleNotifier.new);
 
+final isRoleLoadingProvider = Provider<bool>((ref) {
+  final isSimulating = ref.watch(isSimulatingProvider);
+  if (isSimulating) return false;
+
+  final user = ref.watch(authStateProvider).valueOrNull;
+  if (user == null) return false;
+
+  final profileState = ref.watch(userProfileProvider);
+  final claimState = ref.watch(userRoleClaimProvider);
+
+  return profileState.isLoading && claimState.isLoading;
+});
+
 
 
