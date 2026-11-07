@@ -20,12 +20,11 @@ import 'providers/router_provider.dart';
 
 Future<void> main() async {
   // All startup work runs inside this zone so uncaught async errors are
-  // routed to Crashlytics instead of silently terminating the app.
+  // routed to Crashlytics on mobile platforms instead of silently terminating the app.
   runZonedGuarded(() {
     _runApp();
   }, (error, stackTrace) {
-    // Crashlytics may not exist yet during very early startup failures.
-    if (Firebase.apps.isNotEmpty) {
+    if (!kIsWeb && Firebase.apps.isNotEmpty) {
       FirebaseCrashlytics.instance.recordError(error, stackTrace,
           reason: 'Uncaught async error in root zone');
     }
@@ -59,16 +58,17 @@ Future<void> _runApp() async {
     debugPrint("Firebase Initialization Error: $e");
   }
 
-  // Crashlytics: pass uncaught Flutter framework errors to the crash
-  // reporter, satisfying the measurable ≥95% crash-free session target.
-  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+  // Crashlytics is only supported on mobile platforms (Android/iOS)
+  if (!kIsWeb) {
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
 
-  // Platform channel errors (missing plugins, malformed messages).
-  PlatformDispatcher.instance.onError = (error, stackTrace) {
-    FirebaseCrashlytics.instance.recordError(error, stackTrace,
-        reason: 'Platform dispatcher error');
-    return true;
-  };
+    // Platform channel errors (missing plugins, malformed messages).
+    PlatformDispatcher.instance.onError = (error, stackTrace) {
+      FirebaseCrashlytics.instance.recordError(error, stackTrace,
+          reason: 'Platform dispatcher error');
+      return true;
+    };
+  }
 
   try {
     await dotenv.load(fileName: ".env");
