@@ -63,6 +63,7 @@ class EducatorStudent {
   final double progress;
   final String avatar;
   final String municipality;
+  final String academicYear;
   final int lessonsCompleted;
   final int streakDays;
   final bool isStruggling;
@@ -76,6 +77,7 @@ class EducatorStudent {
     required this.progress,
     required this.avatar,
     this.municipality = 'All Municipalities',
+    this.academicYear = '2026-2027',
     this.lessonsCompleted = 0,
     this.streakDays = 0,
     this.isStruggling = false,

@@ -275,6 +275,7 @@ class AuthService {
             
             if (eduSnap.docs.isNotEmpty && eduSnap.docs.first.data()['role'] == 'educator') {
               profileData['educatorId'] = eduSnap.docs.first.id;
+              profileData['academicYear'] = '2026-2027';
             }
           }
 

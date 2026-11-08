@@ -18,6 +18,7 @@ import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import '../services/haptic_service.dart';
 import '../models/admin_models.dart';
+import '../providers/educator_provider.dart';
 import '../utils/app_localization.dart';
 import 'package:intl/intl.dart';
 
@@ -241,7 +242,7 @@ class _EducatorAnalyticsScreenState
           child: Text(
             l10n.translate('advanced_analytics'),
             style: GoogleFonts.outfit(
-              fontSize: 28,
+              fontSize: 26,
               fontWeight: FontWeight.w900,
               color: AppColors.gold500,
             ),
@@ -249,6 +250,8 @@ class _EducatorAnalyticsScreenState
         ),
         Row(
           children: [
+            _buildAcademicYearFilter(),
+            const SizedBox(width: 8),
             _buildExportButton(
               users,
               dialectDist,
@@ -262,6 +265,67 @@ class _EducatorAnalyticsScreenState
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildAcademicYearFilter() {
+    final selectedYear = ref.watch(selectedAcademicYearProvider);
+    final availableYears = ref.watch(availableAcademicYearsProvider);
+
+    return PopupMenuButton<String>(
+      onSelected: (year) {
+        HapticService.selection();
+        ref.read(selectedAcademicYearProvider.notifier).state = year;
+      },
+      color: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.gold500.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.calendar_today_rounded, color: AppColors.gold500, size: 14),
+            const SizedBox(width: 4),
+            Text(
+              selectedYear == 'All' ? 'ALL YEARS' : 'SY $selectedYear',
+              style: AppTypography.label.copyWith(
+                color: AppColors.gold500,
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(width: 2),
+            const Icon(Icons.arrow_drop_down_rounded, color: AppColors.gold500, size: 16),
+          ],
+        ),
+      ),
+      itemBuilder: (context) => availableYears.map((year) {
+        final isActive = selectedYear == year;
+        return PopupMenuItem<String>(
+          value: year,
+          child: Row(
+            children: [
+              if (isActive)
+                const Padding(
+                  padding: EdgeInsets.only(right: 8),
+                  child: Icon(Icons.check_rounded, color: AppColors.gold500, size: 16),
+                ),
+              Text(
+                year == 'All' ? 'All Academic Years' : 'SY $year',
+                style: TextStyle(
+                  color: isActive ? AppColors.gold500 : Theme.of(context).colorScheme.onSurface,
+                  fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 

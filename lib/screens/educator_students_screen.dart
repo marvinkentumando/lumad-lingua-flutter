@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:csv/csv.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -147,6 +148,8 @@ class _EducatorStudentsScreenState
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
+                      _buildAcademicYearDropdown(),
+                      const SizedBox(width: 8),
                       _buildExportButton(allStudents),
                       const SizedBox(width: 8),
                       _buildSortDropdown(),
@@ -211,6 +214,67 @@ class _EducatorStudentsScreenState
     );
   }
 
+  Widget _buildAcademicYearDropdown() {
+    final selectedYear = ref.watch(selectedAcademicYearProvider);
+    final availableYears = ref.watch(availableAcademicYearsProvider);
+
+    return PopupMenuButton<String>(
+      onSelected: (year) {
+        HapticService.selection();
+        ref.read(selectedAcademicYearProvider.notifier).state = year;
+      },
+      color: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.gold500.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.calendar_today_rounded, color: AppColors.gold500, size: 14),
+            const SizedBox(width: 6),
+            Text(
+              selectedYear == 'All' ? 'ALL YEARS' : 'SY $selectedYear',
+              style: AppTypography.label.copyWith(
+                color: AppColors.gold500,
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.arrow_drop_down_rounded, color: AppColors.gold500, size: 16),
+          ],
+        ),
+      ),
+      itemBuilder: (context) => availableYears.map((year) {
+        final isActive = selectedYear == year;
+        return PopupMenuItem<String>(
+          value: year,
+          child: Row(
+            children: [
+              if (isActive)
+                const Padding(
+                  padding: EdgeInsets.only(right: 8),
+                  child: Icon(Icons.check_rounded, color: AppColors.gold500, size: 16),
+                ),
+              Text(
+                year == 'All' ? 'All Academic Years' : 'SY $year',
+                style: TextStyle(
+                  color: isActive ? AppColors.gold500 : Theme.of(context).colorScheme.onSurface,
+                  fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
   Widget _buildExportButton(List<EducatorStudent> students) {
     return PopupMenuButton<String>(
       onSelected: (val) => _exportRosterData(val, students),
@@ -272,10 +336,11 @@ class _EducatorStudentsScreenState
       if (format == 'CSV') {
         final List<List<dynamic>> rows = [
           ['Student Roster Metrics'],
-          ['Name', 'Municipality', 'Level', 'Progress %', 'Active Streak (Days)', 'Lessons Completed', 'Needs Help'],
+          ['Name', 'Municipality', 'Academic Year', 'Level', 'Progress %', 'Active Streak (Days)', 'Lessons Completed', 'Needs Help'],
           ...students.map((s) => [
             s.name,
             s.municipality,
+            s.academicYear,
             s.level,
             '${(s.progress * 100).toInt()}%',
             s.streakDays,
@@ -323,10 +388,11 @@ class _EducatorStudentsScreenState
               pw.TableHelper.fromTextArray(
                 context: context,
                 data: [
-                  ['Name', 'Municipality', 'Level', 'Progress', 'Streak', 'Lessons', 'Struggling'],
+                  ['Name', 'Municipality', 'School Year', 'Level', 'Progress', 'Streak', 'Lessons', 'Struggling'],
                   ...students.map((s) => [
                     s.name,
                     s.municipality,
+                    s.academicYear,
                     s.level,
                     '${(s.progress * 100).toInt()}%',
                     '${s.streakDays}d',
@@ -624,7 +690,7 @@ class _EducatorStudentsScreenState
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          student.level.toUpperCase(),
+                          '${student.level.toUpperCase()} • SY ${student.academicYear}',
                           style: AppTypography.label.copyWith(
                             color: isDark ? AppColors.gold500 : AppColors.gold700,
                           ),
@@ -669,6 +735,28 @@ class _EducatorStudentsScreenState
               const SizedBox(height: 24),
               // Heatmap
               _buildAttendanceHeatmap(student),
+              const SizedBox(height: 20),
+              // Audio Metrics Button
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  context.push('/educator/audio-comparison', extra: student.id);
+                },
+                icon: const Icon(Icons.graphic_eq_rounded, size: 20),
+                label: const Text(
+                  'VIEW AUDIO COMPARISON METRICS',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.gold500,
+                  foregroundColor: AppColors.forest900,
+                  elevation: 0,
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
               const SizedBox(height: 24),
               // Lesson breakdown
               Text(

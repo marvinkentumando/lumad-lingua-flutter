@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lumad_lingua/theme/app_colors.dart';
 import 'package:lumad_lingua/theme/app_typography.dart';
 import 'package:lumad_lingua/providers/artifact_provider.dart';
+import 'package:lumad_lingua/providers/student_provider.dart';
 import 'package:lumad_lingua/models/artifact.dart';
 import 'package:lumad_lingua/services/haptic_service.dart';
 import 'package:go_router/go_router.dart';
@@ -69,54 +70,60 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
               // Default sorting by tier index descending
               filteredList.sort((a, b) => b.tier.index.compareTo(a.tier.index));
 
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.translate('your_legacy'),
-                      style: AppTypography.display.copyWith(
-                        color: isDark ? Colors.white : AppColors.forest900,
-                        fontSize: 32,
-                      ),
-                    ).animate().fadeIn().slideY(begin: -0.2),
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.translate('legacy_desc'),
-                      style: AppTypography.body.copyWith(
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.7)
-                            : AppColors.forest900.withValues(alpha: 0.75),
-                      ),
-                    ).animate().fadeIn(delay: 100.ms),
-                    const SizedBox(height: 24),
-                    _buildSectionHeader(l10n.translate('ancestral_vault')),
-                    const SizedBox(height: 12),
-                    _buildCategoryFilterRow(isDark),
-                    const SizedBox(height: 16),
-                    if (filteredList.isEmpty)
-                      BrandedEmptyState(
-                        title: l10n.translate('vault_locked'),
-                        message: l10n.translate('unlock_treasures'),
-                        icon: Icons.lock_outline,
-                      )
-                    else
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 16,
-                          crossAxisSpacing: 16,
-                          childAspectRatio: 0.72,
-                        ),
-                        itemCount: filteredList.length,
-                        itemBuilder: (context, index) => 
-                            _buildArtifactCard(context, filteredList[index], isDark),
-                      ),
-                    const SizedBox(height: 40),
-                  ],
+              return Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1200),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.translate('your_legacy'),
+                          style: AppTypography.display.copyWith(
+                            color: isDark ? Colors.white : AppColors.forest900,
+                            fontSize: 32,
+                          ),
+                        ).animate().fadeIn().slideY(begin: -0.2),
+                        const SizedBox(height: 8),
+                        Text(
+                          l10n.translate('legacy_desc'),
+                          style: AppTypography.body.copyWith(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.7)
+                                : AppColors.forest900.withValues(alpha: 0.75),
+                          ),
+                        ).animate().fadeIn(delay: 100.ms),
+                        const SizedBox(height: 24),
+                        _buildSectionHeader(l10n.translate('ancestral_vault')),
+                        const SizedBox(height: 12),
+                        _buildCategoryFilterRow(isDark),
+                        const SizedBox(height: 16),
+                        if (filteredList.isEmpty)
+                          BrandedEmptyState(
+                            title: l10n.translate('vault_locked'),
+                            message: l10n.translate('unlock_treasures'),
+                            icon: Icons.lock_outline,
+                          )
+                        else
+                          GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 220,
+                              mainAxisSpacing: 16,
+                              crossAxisSpacing: 16,
+                              childAspectRatio: 0.72,
+                            ),
+                            itemCount: filteredList.length,
+                            itemBuilder: (context, index) =>
+                                _buildArtifactCard(context, filteredList[index], isDark),
+                          ),
+                        const SizedBox(height: 40),
+                      ],
+                    ),
+                  ),
                 ),
               );
             },
@@ -183,189 +190,202 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: tierColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: tierColor.withValues(alpha: 0.5)),
-                    ),
-                    child: Center(
-                      child: Text(artifact.emoji, style: const TextStyle(fontSize: 32)),
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: tierColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: tierColor.withValues(alpha: 0.5)),
+                        ),
+                        child: Center(
+                          child: Text(artifact.emoji, style: const TextStyle(fontSize: 32)),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: tierColor.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                artifact.tier.name.toUpperCase(),
-                                style: TextStyle(color: tierColor, fontSize: 10, fontWeight: FontWeight.bold),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: tierColor.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    artifact.tier.name.toUpperCase(),
+                                    style: TextStyle(color: tierColor, fontSize: 10, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                if (artifact.isEarned)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.semanticGreen.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text(
+                                      'UNLOCKED',
+                                      style: TextStyle(color: AppColors.semanticGreen, fontSize: 10, fontWeight: FontWeight.bold),
+                                    ),
+                                  )
+                                else
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white12,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text(
+                                      'LOCKED',
+                                      style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              artifact.title.isNotEmpty ? artifact.title : artifact.id,
+                              style: AppTypography.h3.copyWith(
+                                color: isDark ? Colors.white : AppColors.forest900,
+                                fontSize: 18,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            if (artifact.isEarned)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: AppColors.semanticGreen.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Text(
-                                  'UNLOCKED',
-                                  style: TextStyle(color: AppColors.semanticGreen, fontSize: 10, fontWeight: FontWeight.bold),
-                                ),
-                              )
-                            else
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: Colors.white12,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Text(
-                                  'LOCKED',
-                                  style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
-                                ),
-                              ),
                           ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          artifact.title,
-                          style: AppTypography.h3.copyWith(
-                            color: isDark ? Colors.white : AppColors.forest900,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Text(
-                artifact.description,
-                style: AppTypography.body.copyWith(
-                  color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.8),
-                  fontSize: 14,
-                  height: 1.4,
-                ),
-              ),
-              if (artifact.legend != null && artifact.legend!.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Text(
-                  'LORE & LEGEND',
-                  style: AppTypography.label.copyWith(color: AppColors.gold500, fontSize: 10, letterSpacing: 1.5),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  artifact.legend!,
-                  style: TextStyle(
-                    color: isDark ? Colors.white60 : Colors.black54,
-                    fontSize: 13,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ],
-              if (artifact.passiveBonus != null && artifact.passiveBonus!.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.gold500.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.auto_awesome, color: AppColors.gold500, size: 18),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Passive Bonus: ${artifact.passiveBonus}',
-                        style: const TextStyle(
-                          color: AppColors.gold500,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        context.pop();
-                        context.push('/artifact-detail', extra: artifact);
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.gold500,
-                        side: const BorderSide(color: AppColors.gold500),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('VIEW FULL DETAILS'),
+                  const SizedBox(height: 20),
+                  Text(
+                    artifact.description,
+                    style: AppTypography.body.copyWith(
+                      color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.8),
+                      fontSize: 14,
+                      height: 1.4,
                     ),
                   ),
-                  if (artifact.isEarned && artifact.isCustomization) ...[
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          HapticService.celebration();
-                          context.pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Equipped "${artifact.title}"! 🌿'),
-                              backgroundColor: AppColors.semanticGreen,
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.gold500,
-                          foregroundColor: AppColors.forest900,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: const Text('EQUIP', style: TextStyle(fontWeight: FontWeight.bold)),
+                  if (artifact.legend != null && artifact.legend!.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      'LORE & LEGEND',
+                      style: AppTypography.label.copyWith(color: AppColors.gold500, fontSize: 10, letterSpacing: 1.5),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      artifact.legend!,
+                      style: TextStyle(
+                        color: isDark ? Colors.white60 : Colors.black54,
+                        fontSize: 13,
+                        fontStyle: FontStyle.italic,
                       ),
                     ),
                   ],
+                  if (artifact.passiveBonus != null && artifact.passiveBonus!.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold500.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.auto_awesome, color: AppColors.gold500, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Passive Bonus: ${artifact.passiveBonus}',
+                            style: const TextStyle(
+                              color: AppColors.gold500,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            context.pop();
+                            context.push('/artifact-detail', extra: artifact);
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.gold500,
+                            side: const BorderSide(color: AppColors.gold500),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('VIEW FULL DETAILS'),
+                        ),
+                      ),
+                      if (artifact.isEarned && artifact.isCustomization) ...[
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              HapticService.celebration();
+                              if (artifact.isTitle) {
+                                ref.read(studentProvider.notifier).equipCustomization(title: artifact.title);
+                              } else if (artifact.isFrame) {
+                                ref.read(studentProvider.notifier).equipCustomization(frame: artifact.title);
+                              } else if (artifact.isBadge) {
+                                ref.read(studentProvider.notifier).equipCustomization(emoji: artifact.emoji);
+                              }
+                              context.pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Equipped "${artifact.title.isNotEmpty ? artifact.title : artifact.id}"! 🌿'),
+                                  backgroundColor: AppColors.semanticGreen,
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.gold500,
+                              foregroundColor: AppColors.forest900,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text('EQUIP', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                 ],
               ),
-              const SizedBox(height: 12),
-            ],
+            ),
           ),
         ),
       ),
@@ -393,6 +413,24 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
 
   Widget _buildArtifactCard(BuildContext context, Artifact artifact, bool isDark) {
     final tierColor = _getTierColor(artifact.tier);
+    final artworkWidget = artifact.imageUrl.isNotEmpty
+        ? GracefulImage(
+      imageUrl: artifact.imageUrl,
+      width: double.infinity,
+      height: double.infinity,
+    )
+        : Container(
+      decoration: BoxDecoration(
+        color: artifact.isEarned
+            ? tierColor.withValues(alpha: 0.1)
+            : (isDark ? Colors.white10 : Colors.black12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Center(
+        child: Text(artifact.emoji, style: const TextStyle(fontSize: 36)),
+      ),
+    );
+
     return GestureDetector(
       onTap: () {
         HapticService.selection();
@@ -402,17 +440,19 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: artifact.isEarned ? tierColor.withValues(alpha: 0.8) : Colors.transparent,
+            color: artifact.isEarned
+                ? tierColor.withValues(alpha: 0.8)
+                : (isDark ? Colors.white12 : Colors.black12),
             width: 2,
           ),
           boxShadow: artifact.isEarned
               ? [
-                  BoxShadow(
-                    color: tierColor.withValues(alpha: 0.25),
-                    blurRadius: 8,
-                    spreadRadius: 1,
-                  )
-                ]
+            BoxShadow(
+              color: tierColor.withValues(alpha: 0.25),
+              blurRadius: 8,
+              spreadRadius: 1,
+            )
+          ]
               : null,
         ),
         child: BrandCard(
@@ -427,21 +467,17 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: artifact.imageUrl.isNotEmpty
-                          ? GracefulImage(
-                              imageUrl: artifact.imageUrl,
-                              width: double.infinity,
-                              height: double.infinity,
-                            )
-                          : Container(
-                              decoration: BoxDecoration(
-                                color: tierColor.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Center(
-                                child: Text(artifact.emoji, style: const TextStyle(fontSize: 36)),
-                              ),
-                            ),
+                      child: artifact.isEarned
+                          ? artworkWidget
+                          : ColorFiltered(
+                        colorFilter: const ColorFilter.matrix(<double>[
+                          0.2126, 0.7152, 0.0722, 0, 0,
+                          0.2126, 0.7152, 0.0722, 0, 0,
+                          0.2126, 0.7152, 0.0722, 0, 0,
+                          0,      0,      0,      1, 0,
+                        ]),
+                        child: artworkWidget,
+                      ),
                     ),
                     if (!artifact.isEarned)
                       Container(
@@ -449,8 +485,23 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                           color: Colors.black.withValues(alpha: 0.45),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Center(
-                          child: Icon(Icons.lock_rounded, color: Colors.white70, size: 28),
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.55),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.3),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.lock_rounded,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                          ),
                         ),
                       ),
                   ],
@@ -458,19 +509,53 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                artifact.title,
+                artifact.title.isNotEmpty ? artifact.title : artifact.id,
                 style: AppTypography.h3.copyWith(
-                  color: isDark ? Colors.white : AppColors.forest900,
+                  color: artifact.isEarned
+                      ? (isDark ? Colors.white : AppColors.forest900)
+                      : (isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.6)),
                   fontSize: 12,
+                  fontWeight: FontWeight.bold,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 2),
-              Text(
-                artifact.tier.name.toUpperCase(),
-                style: AppTypography.label.copyWith(color: tierColor, fontSize: 8, fontWeight: FontWeight.bold),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    artifact.tier.name.toUpperCase(),
+                    style: AppTypography.label.copyWith(
+                      color: artifact.isEarned ? tierColor : (isDark ? Colors.white38 : Colors.black38),
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (artifact.isEarned)
+                    Icon(Icons.check_circle_rounded, color: AppColors.semanticGreen, size: 10),
+                ],
               ),
+              if (!artifact.isEarned) ...[
+                const SizedBox(height: 4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: artifact.progress,
+                    minHeight: 3,
+                    backgroundColor: isDark ? Colors.white10 : Colors.black12,
+                    valueColor: AlwaysStoppedAnimation<Color>(tierColor.withValues(alpha: 0.8)),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${artifact.currentProgress}/${artifact.targetValue}',
+                  style: AppTypography.label.copyWith(
+                    fontSize: 8,
+                    color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

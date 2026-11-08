@@ -91,6 +91,8 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
                   const SizedBox(height: 32),
                   _buildStrugglingStudentsAlert(educatorStudentsAsync, l10n),
                   const SizedBox(height: 24),
+                  _buildAudioMetricsShortcutCard(l10n),
+                  const SizedBox(height: 24),
                   _buildMiniQuizManagementSection(userAuth?.uid ?? '', l10n),
                   const SizedBox(height: 24),
                   _buildCulturalMilestone(totalWordsAsync, l10n),
@@ -144,6 +146,15 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
                           decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                           child: Text(
                             l10n.translate('wisdom_guide_elder_educator'),
+                            style: AppTypography.label.copyWith(color: Colors.black87, fontWeight: FontWeight.w900, fontSize: 9, letterSpacing: 1),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)),
+                          child: Text(
+                            'SY ${ref.watch(selectedAcademicYearProvider)}',
                             style: AppTypography.label.copyWith(color: Colors.black87, fontWeight: FontWeight.w900, fontSize: 9, letterSpacing: 1),
                           ),
                         ),
@@ -286,6 +297,67 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAudioMetricsShortcutCard(AppLocalization l10n) {
+    return BrandCard(
+      theme: BrandCardTheme.vibrant,
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.gold500.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.graphic_eq_rounded,
+              color: AppColors.gold500,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Learner Audio Metrics',
+                  style: AppTypography.h3.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Acoustic waveform & pitch contour analysis',
+                  style: AppTypography.body.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: () {
+              HapticService.selection();
+              context.push('/educator/audio-comparison');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.gold500,
+              foregroundColor: AppColors.forest900,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            ),
+            child: const Text('INSPECT', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+          ),
+        ],
       ),
     );
   }

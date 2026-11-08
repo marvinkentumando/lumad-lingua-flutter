@@ -98,6 +98,7 @@ class FirebaseService {
 
     await _db.collection('users').doc(userId).update({
       'educatorId': educatorId,
+      'academicYear': '2026-2027',
     });
 
     // Notify educator
@@ -1620,6 +1621,10 @@ class FirebaseService {
       updates['indigenousGroup'] = indigenousGroup;
     }
     await _db.collection('users').doc(userId).update(updates);
+  }
+
+  Future<void> deleteUserByAdmin(String userId) async {
+    await _db.collection('users').doc(userId).delete();
   }
 
   Future<void> updateUserDetails(String userId, Map<String, dynamic> data) async {

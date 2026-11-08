@@ -70,6 +70,18 @@ class UserPaginationNotifier extends StateNotifier<UserPaginationState> {
     state = UserPaginationState(users: []);
     await loadUsers();
   }
+
+  Future<bool> deleteUser(String uid) async {
+    try {
+      await _firebaseService.deleteUserByAdmin(uid);
+      state = state.copyWith(
+        users: state.users.where((user) => user.id != uid).toList(),
+      );
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 }
 
 final adminUsersProvider =

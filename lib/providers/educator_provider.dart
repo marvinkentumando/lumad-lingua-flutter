@@ -4,9 +4,16 @@ import '../models/educator_models.dart';
 import '../models/admin_models.dart';
 import '../services/auth_service.dart';
 
+final selectedAcademicYearProvider = StateProvider<String>((ref) => '2026-2027');
+
+final availableAcademicYearsProvider = Provider<List<String>>((ref) {
+  return const ['All', '2026-2027', '2025-2026', '2024-2025'];
+});
+
 final educatorStudentsProvider = StreamProvider<List<EducatorStudent>>((ref) {
   final firebaseService = ref.watch(firebaseServiceProvider);
   final userAuth = ref.watch(authStateProvider).value;
+  final selectedYear = ref.watch(selectedAcademicYearProvider);
   
   if (userAuth == null) return Stream.value([]);
 
@@ -91,12 +98,17 @@ final educatorStudentsProvider = StreamProvider<List<EducatorStudent>>((ref) {
           progress: lessons.isEmpty ? 0 : (totalProgress / lessons.length).clamp(0.0, 1.0),
           avatar: user.photoURL ?? 'assets/images/user1.png',
           municipality: user.municipality ?? 'Unknown',
+          academicYear: user.academicYear ?? '2026-2027',
           lessonsCompleted: completedCount,
           streakDays: user.streak,
           isStruggling: user.xp < 50 && completedCount < 2,
           lessonBreakdown: breakdown,
           activityMap: user.activityMap,
         ));
+      }
+
+      if (selectedYear != 'All') {
+        return students.where((s) => s.academicYear == selectedYear).toList();
       }
 
       return students;

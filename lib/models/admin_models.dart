@@ -14,6 +14,7 @@ class AdminUser {
 
   String? photoURL;
   String? educatorId;
+  String? academicYear;
   int streak;
   Map<String, bool> activityMap;
 
@@ -32,6 +33,7 @@ class AdminUser {
     this.totalContributions = 0,
     this.photoURL,
     this.educatorId,
+    this.academicYear,
     this.streak = 0,
     this.activityMap = const {},
   }) : joinedAt = joinedAt ?? DateTime.now(),
@@ -57,6 +59,7 @@ class AdminUser {
       totalContributions: data['wordCount'] ?? 0,
       photoURL: data['photoURL'],
       educatorId: data['educatorId'],
+      academicYear: data['academicYear'],
       streak: data['streak'] ?? 0,
       activityMap: Map<String, bool>.from(data['activityMap'] ?? {}),
     );
