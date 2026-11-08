@@ -865,7 +865,7 @@ class WavDecoder {
 
     final peakFrameRms = frameRms.reduce(math.max);
     final noiseFloor = _percentile(frameRms, 0.15);
-    final threshold = math.max(peakFrameRms * 0.06, noiseFloor * 2.0);
+    final threshold = math.max(peakFrameRms * 0.12, noiseFloor * 2.2);
 
     int firstFrame = -1;
     int lastFrame = -1;

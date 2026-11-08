@@ -20,11 +20,6 @@ enum PronunciationStrictness {
 }
 
 /// Scale reference for the normalized DTW distance of one phrase.
-///
-/// [mean] and [sigma] describe the distance between two *native* recordings of
-/// the same phrase ("same word, different take/speaker"). Mapping the learner's
-/// distance relative to that distribution makes scores comparable across phrases
-/// and speakers, instead of using one global hand-tuned constant.
 class ReferenceBaseline {
   final double mean;
   final double sigma;
@@ -38,9 +33,6 @@ class ReferenceBaseline {
     required this.isCalibrated,
   });
 
-  /// Used when only one reference recording exists and no reference-to-reference
-  /// distance can be measured. Provisional (CMN feature scale) until fitted on a
-  /// labelled set; measured baselines replace it as soon as two takes exist.
   static const ReferenceBaseline provisional = ReferenceBaseline(
     mean: 6.0,
     sigma: 1.5,
@@ -49,8 +41,7 @@ class ReferenceBaseline {
   );
 }
 
-/// A phrase's reference recordings, pre-processed and featurized once so that
-/// every take and every cross-take pair can be compared without recomputation.
+/// A phrase's reference recordings, pre-processed and featurized once.
 class PronunciationReferenceSet {
   final List<List<List<double>>> referenceFeatures;
   final List<double> primaryPcm;
@@ -77,20 +68,9 @@ class PronunciationScore {
   final List<double> studentWaveform;
   final String feedback;
   final PronunciationAlgorithm algorithmUsed;
-
-  /// Path-normalized distance in the MFCC feature space (NaN for non-DTW paths).
   final double distance;
-
-  /// True when the score map was anchored on measured reference-to-reference
-  /// distances rather than the provisional baseline.
   final bool isCalibrated;
-
-  /// Number of reference takes used for this comparison.
   final int referenceCount;
-
-  /// True when the recording is very unlikely to be the target phrase (or is
-  /// non-speech that slipped past VAD). The score is forced to zero and the
-  /// learner should re-record the phrase shown.
   final bool isMismatch;
 
   PronunciationScore({
@@ -122,11 +102,20 @@ class PronunciationModelMetrics {
 }
 
 class PronunciationService implements IPronunciationComparer {
-  /// Creates a pitch-shifted copy for exploratory robustness checks.
-  ///
-  /// This deliberately changes the number of samples (as ordinary playback-rate
-  /// pitch shifting does). It must not be used as the learner-facing reference
-  /// or to replace the canonical comparison score.
+  /// One tunable mismatch gate instead of the previous fixed bands. When live
+  /// mismatch rejection is enabled, this is the main knob that controls how far
+  /// a spoken take has to be from the target phrase before it is rejected by the
+  /// mismatch branch. Tweak only this number, with [_liveMismatchEnabled] on,
+  /// until a correct loud take can pass while a wrong word still fails.
+  static const double _mismatchRejectionMultiplier = 4.5;
+
+  /// Should the live path still reject clearly wrong words by distance? When
+  /// false, the live path never returns the mismatch score; a non-empty spoken
+  /// take gets a real score even if it is phonetically far from the target. When
+  /// true, the mismatch branch stays active and uses
+  /// [_mismatchRejectionMultiplier] as its only tuning knob right now.
+  static const bool _liveMismatchEnabled = true;
+
   static List<double> pitchShiftReferenceForExploration(
     List<double> samples, {
     required double semitones,
@@ -143,8 +132,6 @@ class PronunciationService implements IPronunciationComparer {
     }, growable: false);
   }
 
-  /// Scores a learner recording against pitch-varied copies of a reference.
-  /// These metrics are diagnostic only and never feed the displayed score.
   static Map<double, double> exploratoryPitchRobustnessScores(
     List<double> referenceSamples,
     List<double> learnerSamples, {
@@ -189,10 +176,6 @@ class PronunciationService implements IPronunciationComparer {
     );
   }
 
-  /// Compares a learner recording against a single reference take.
-  ///
-  /// [referenceIsPreprocessed] keeps the reference out of the learner noise gate:
-  /// the Supabase dataset takes were already denoised/trimmed/normalized.
   static PronunciationScore analyzePronunciation(
     List<double> nativeSamples,
     List<double> userSamples, {
@@ -234,11 +217,6 @@ class PronunciationService implements IPronunciationComparer {
     );
   }
 
-  /// Builds a reference set from every verified take of one phrase.
-  ///
-  /// With two or more takes the baseline is measured from the native-vs-native
-  /// distances, which calibrates the score to "as close as another native
-  /// recording of this phrase" instead of a fixed global constant.
   static PronunciationReferenceSet buildReferenceSet(List<List<double>> referencePcmSamples) {
     final features = <List<List<double>>>[];
     final processedPcms = <List<double>>[];
@@ -252,26 +230,17 @@ class PronunciationService implements IPronunciationComparer {
         if (mfcc.isEmpty) continue;
         features.add(mfcc);
         processedPcms.add(processed);
-        // Lightweight pitch/timbre variation: resample the reference by small
-        // factors so the learner can match natural speaker-pitch differences.
-        // Only the MFCCs are added (not the PCM) to keep scoring memory bounded.
         for (final factor in const [0.94, 1.06]) {
           final variantRate = (WavDecoder.targetSampleRate * factor).round();
           final variantPcm = WavDecoder.resampleToTargetRate(processed, variantRate);
           if (variantPcm.length < 200) continue;
-          // Re-normalize to the same target loudness as the base reference.
           final variantReady = WavDecoder.prepareReferencePcm(variantPcm);
           final variantMfcc = MFCCService.extractMFCC(variantReady);
           if (variantMfcc.isNotEmpty) features.add(variantMfcc);
         }
-      } catch (_) {
-        // A single corrupt take must not discard the whole reference set.
-      }
+      } catch (_) {}
     }
 
-    // Baseline from original (non-augmented) inter-take distances only: augmented
-    // self-variants are closer than a different speaker and would under-estimate
-    // natural variation, making the score too strict.
     final baseFeatures = features.isEmpty
         ? <List<List<double>>>[]
         : [for (int i = 0; i < features.length && i < processedPcms.length * 3; i += 3) features[i]];
@@ -312,10 +281,6 @@ class PronunciationService implements IPronunciationComparer {
     );
   }
 
-  /// Compares a learner recording against every reference take.
-  ///
-  /// Distances are aggregated in *distance* space (mean of the two best takes)
-  /// and mapped once, instead of averaging percentages from a non-linear map.
   static PronunciationScore compareAgainstReferenceSet(
     PronunciationReferenceSet referenceSet,
     List<double> userSamples, {
@@ -338,18 +303,11 @@ class PronunciationService implements IPronunciationComparer {
       return _emptyScore(referenceSet.primaryPcm, userSamples);
     }
 
-    // Always calculate the independent DTW distance for target-utterance
-    // validation. HMM and cosine scores alone can be high for acoustically
-    // similar but non-target speech and previously bypassed mismatch rejection.
     final distances = <double>[];
-    bool maxFrameMismatch = false;
     for (final referenceFeatures in referenceSet.referenceFeatures) {
       final alignment = MFCCService.align(referenceFeatures, userFeatures);
-      if (alignment.isUsable) {
-        if (alignment.meanLocalCost.isFinite) distances.add(alignment.meanLocalCost);
-        if (alignment.maxLocalCost > 26.0) {
-          maxFrameMismatch = true;
-        }
+      if (alignment.isUsable && alignment.meanLocalCost.isFinite) {
+        distances.add(alignment.meanLocalCost);
       }
     }
     if (distances.isEmpty) {
@@ -359,9 +317,15 @@ class PronunciationService implements IPronunciationComparer {
     final bestCount = distances.length >= 2 ? 2 : 1;
     final distance = distances.take(bestCount).reduce((a, b) => a + b) / bestCount;
 
-    // Acoustic target & phoneme-level frame validation:
-    // Rejects overall mismatch or severe local phonetic substitution (max frame distance > 26.0).
-    if (distance > _mismatchThreshold(referenceSet.baseline) || maxFrameMismatch) {
+    // Rejection is decided by the aggregate distance and by whether the learner
+    // produced speech at all. A single-frame spike is deliberately NOT a rejection
+    // reason: one transient frame (breath, click, consonant burst) must never zero
+    // out an otherwise well-scored take.
+    final lacksSpokenEnergy = !_learnerHasSpokenEnergy(processedUser);
+    final exceedsDistanceGate =
+        _liveMismatchEnabled && distance > _mismatchThreshold(referenceSet.baseline);
+
+    if (exceedsDistanceGate || lacksSpokenEnergy) {
       return PronunciationScore(
         overallScore: 0,
         accuracy: 0,
@@ -369,7 +333,7 @@ class PronunciationService implements IPronunciationComparer {
         clarity: _speechClarity(processedUser),
         nativeWaveform: referenceSet.primaryPcm,
         studentWaveform: userSamples,
-        feedback: "That doesn't sound like the target phrase. Please listen to the native speaker and record the phrase shown.",
+        feedback: _mismatchFeedback(distance, referenceSet),
         algorithmUsed: algorithm,
         distance: distance,
         isCalibrated: referenceSet.baseline.isCalibrated,
@@ -385,8 +349,8 @@ class PronunciationService implements IPronunciationComparer {
       var best = 0.0;
       for (final referenceFeatures in referenceSet.referenceFeatures) {
         final candidate = algorithm == PronunciationAlgorithm.hmm
-            ? _calculateHMMScore(referenceFeatures, userFeatures, strictness)
-            : _calculateCosineScore(referenceFeatures, userFeatures, strictness);
+            ? _calculateHMMScore(userFeatures, referenceFeatures, strictness)
+            : _calculateCosineScore(userFeatures, referenceFeatures, strictness);
         if (candidate > best) best = candidate;
       }
       similarity = best;
@@ -412,25 +376,21 @@ class PronunciationService implements IPronunciationComparer {
     );
   }
 
-  /// Distance above which an utterance is treated as not matching the target
-  /// phrase (wrong word / non-target speech). Derived from the native-vs-native
-  /// baseline so it adapts per phrase; a conservative absolute floor keeps the
-  /// provisional (single-reference) case from accepting obvious mismatches.
   static double _mismatchThreshold(ReferenceBaseline baseline) {
     final sigma = math.max(baseline.sigma, math.max(baseline.mean * 0.15, 1e-6));
-    final calibrated = baseline.mean + 3.5 * sigma;
-    if (baseline.isCalibrated) return math.max(calibrated, baseline.mean * 2.0);
-    // CMN-scale provisional: good ~6, different word ~24 => floor 13 rejects it.
-    return math.max(calibrated, math.max(baseline.mean + 4.0 * sigma, 13.0));
+    final calibrated = baseline.mean + _mismatchRejectionMultiplier * sigma;
+    if (baseline.isCalibrated) return math.max(calibrated, baseline.mean * (_mismatchRejectionMultiplier - 1.0));
+    // Provisional CMN-scale band: keep the floor high enough that real speech
+    // passes, but let the multiplier control the wrong-word distance band.
+    return math.max(
+      calibrated,
+      math.max(
+        baseline.mean + (_mismatchRejectionMultiplier + 1.0) * sigma,
+        _mismatchRejectionMultiplier * 6.0,
+      ),
+    );
   }
 
-  /// Maps a path-normalized DTW distance to a 0-1 score.
-  ///
-  /// The logistic pivot sits one standard deviation above the mean
-  /// native-vs-native distance: matching a reference as closely as another
-  /// native take does lands near 75, a clear-but-accented attempt above that, and
-  /// a different word (2+ sigma) falls below 25. [PronunciationStrictness]
-  /// changes the slope, not the pivot, so the four feedback bands stay meaningful.
   static double scoreFromDistance(
     double distance,
     ReferenceBaseline baseline,
@@ -439,11 +399,24 @@ class PronunciationService implements IPronunciationComparer {
     if (!distance.isFinite) return 0.0;
     if (distance <= 0) return 1.0;
     final sigma = math.max(baseline.sigma, 1e-6);
-    final pivot = baseline.mean + sigma;
-    final slope = 1.1 * (strictness.sensitivity / 3.0);
+    final pivot = baseline.mean + 2.5 * sigma;
+    final slope = 0.35 * (strictness.sensitivity / 3.0);
     final z = (distance - pivot) / sigma;
     final score = 1.0 / (1.0 + math.exp(slope * z));
     return score.isFinite ? score.clamp(0.0, 1.0) : 0.0;
+  }
+
+  static bool _learnerHasSpokenEnergy(List<double> pcm) {
+    if (pcm.isEmpty) return false;
+    double sumSquares = 0.0;
+    double maxAbs = 0.0;
+    for (final s in pcm) {
+      final absVal = s.abs();
+      if (absVal > maxAbs) maxAbs = absVal;
+      sumSquares += absVal * absVal;
+    }
+    final rms = math.sqrt(sumSquares / pcm.length);
+    return maxAbs >= 0.005 && rms >= 0.001;
   }
 
   static double compareWaveforms(
@@ -583,8 +556,6 @@ class PronunciationService implements IPronunciationComparer {
     return math.sqrt(sum);
   }
 
-  /// Share of 10 ms frames carrying meaningful energy relative to the clip peak.
-  /// This is an activity measure, not a perceptual clarity judgement.
   static double _speechClarity(List<double> pcm) {
     if (pcm.length < 160) return 0.0;
     final frames = <double>[];
@@ -612,6 +583,21 @@ class PronunciationService implements IPronunciationComparer {
       studentWaveform: u,
       feedback: "Audio processing failed. Please check your recording and try again.",
     );
+  }
+
+  static String _mismatchFeedback(double distance, PronunciationReferenceSet referenceSet) {
+    final threshold = _mismatchThreshold(referenceSet.baseline);
+    if (!threshold.isFinite || threshold <= 0) {
+      return "That doesn't sound like the target phrase. Please listen to the native speaker and record the phrase shown.";
+    }
+    final distanceCloseness = distance / threshold;
+    if (distanceCloseness < 0.65) {
+      return "Your shape is getting close, but the timing and fullness aren't quite right yet. Slow it down, hold the vowel a bit longer, and record again.";
+    }
+    if (distanceCloseness < 0.85) {
+      return "This sounds a lot closer than a different word, so you're on the right track. Listen again for the stressed syllable and record it a little more clearly.";
+    }
+    return "That clearly doesn't match the target phrase. Please listen to the native speaker and record the phrase shown.";
   }
 
   static String _generateFeedback(double score) {
