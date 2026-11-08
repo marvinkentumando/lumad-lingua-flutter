@@ -11,7 +11,7 @@ void main() {
       expect(learning.mastery, equals(MasteryLevel.learning));
 
       final reviewing = SRSProgress(wordId: '3', level: 4, nextReview: DateTime.now());
-      expect(reviewing.mastery, equals(MasteryLevel.reviewing));
+      expect(reviewing.mastery, equals(MasteryLevel.proficient));
 
       final mastered = SRSProgress(wordId: '4', level: 5, nextReview: DateTime.now());
       expect(mastered.mastery, equals(MasteryLevel.mastered));

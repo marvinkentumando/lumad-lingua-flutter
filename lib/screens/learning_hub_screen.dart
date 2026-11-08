@@ -27,7 +27,6 @@ class LearningHubScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final studentState = ref.watch(studentProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = ref.watch(localizationProvider);
 
     return Scaffold(
@@ -93,117 +92,61 @@ class LearningHubScreen extends ConsumerWidget {
                       ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
                       const SizedBox(height: 32),
 
-                      // Mastery Trends Entry Card
+                      // Lesson Mastery & Unit Progress Entry Card
                       GestureDetector(
                         onTap: () {
                           HapticService.selection();
-                          final userId = ref.read(authServiceProvider).currentUser?.uid;
-                          final dueCount = userId != null
-                              ? ref.read(dueSRSCountProvider(userId)).value ?? 0
-                              : 0;
-
-                          if (dueCount > 0) {
-                            context.push('/flashcards?mode=review');
-                          } else {
-                            context.go('/mastery-dashboard');
-                          }
+                          context.go('/mastery-dashboard');
                         },
                         child: ref.watch(userProfileProvider).when(
                           data: (profile) {
-                            final userId = ref.watch(authServiceProvider).currentUser?.uid;
-                            final dueCount = userId != null
-                                ? ref.watch(dueSRSCountProvider(userId)).value ?? 0
-                                : 0;
-
-                            return Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                BrandCard(
-                                  theme: dueCount > 0 ? BrandCardTheme.vibrant : BrandCardTheme.gold,
-                                  padding: const EdgeInsets.all(24),
-                                  borderRadius: 32,
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: dueCount > 0 ? Colors.white10 : Colors.black12,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(
-                                        dueCount > 0 ? Icons.alarm_on_rounded : Icons.auto_graph_rounded,
-                                        color: dueCount > 0 
-                                            ? (isDark ? Colors.white : AppColors.gold700) 
-                                            : AppColors.forest900,
-                                        size: 28,
-                                      ),
+                            return BrandCard(
+                              theme: BrandCardTheme.gold,
+                              padding: const EdgeInsets.all(24),
+                              borderRadius: 32,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.black12,
+                                      shape: BoxShape.circle,
                                     ),
-                                    const SizedBox(width: 20),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            dueCount > 0 ? 'Review Ready' : 'Learning Progress',
-                                            style: AppTypography.h3.copyWith(
-                                              color: dueCount > 0 
-                                                  ? (isDark ? Colors.white : AppColors.forest900) 
-                                                  : AppColors.forest900,
-                                              fontWeight: FontWeight.w900,
-                                            ),
-                                          ),
-                                          Text(
-                                            dueCount > 0
-                                                ? '$dueCount terms need your attention'
-                                                : 'View your mastery trends and SRS analytics',
-                                            style: AppTypography.body.copyWith(
-                                              color: dueCount > 0 
-                                                  ? (isDark ? Colors.white60 : AppColors.forest700) 
-                                                  : AppColors.forest700,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                    child: const Icon(
+                                      Icons.stars_rounded,
+                                      color: AppColors.forest900,
+                                      size: 28,
                                     ),
-                                    Icon(
-                                      Icons.arrow_forward_ios_rounded,
-                                      color: dueCount > 0 
-                                          ? (isDark ? Colors.white : AppColors.forest900) 
-                                          : AppColors.forest900,
-                                      size: 16,
-                                    ),
-                                  ],
-                                ),
-                                ),
-                                if (dueCount > 0)
-                                  Positioned(
-                                    top: -8,
-                                    right: -8,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.semanticRed,
-                                        borderRadius: BorderRadius.circular(20),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: AppColors.semanticRed.withValues(alpha: 0.4),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Text(
-                                        'DUE',
-                                        style: AppTypography.label.copyWith(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ).animate(onPlay: (c) => c.repeat()).shimmer(duration: 2.seconds),
                                   ),
-                              ],
+                                  const SizedBox(width: 20),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Lesson Mastery Hub',
+                                          style: AppTypography.h3.copyWith(
+                                            color: AppColors.forest900,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                        Text(
+                                          'View unit progress and lesson session scores',
+                                          style: AppTypography.body.copyWith(
+                                            color: AppColors.forest700,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.arrow_forward_ios_rounded,
+                                    color: AppColors.forest900,
+                                    size: 16,
+                                  ),
+                                ],
+                              ),
                             );
                           },
                           loading: () => const HubCardSkeleton(),

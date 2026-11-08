@@ -343,7 +343,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen>
   Color _getMasteryColor(MasteryLevel? level, bool isDark) {
     switch (level) {
       case MasteryLevel.mastered: return AppColors.semanticGreen;
-      case MasteryLevel.reviewing: return AppColors.gold500;
+      case MasteryLevel.proficient: return AppColors.gold500;
       case MasteryLevel.learning: return Colors.blue;
       default: return isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.2);
     }

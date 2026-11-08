@@ -556,12 +556,12 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard> with
     switch (level) {
       case MasteryLevel.mastered:
         return AppColors.semanticGreen;
-      case MasteryLevel.reviewing:
+      case MasteryLevel.proficient:
         return AppColors.gold500;
       case MasteryLevel.learning:
         return Colors.blue;
-      default:
-        return Colors.white24;
+      case MasteryLevel.newCard:
+        return Colors.grey;
     }
   }
 
