@@ -23,10 +23,10 @@ class DailyChallenge {
       tasks: (data['tasks'] as List? ?? [])
           .map((t) => LessonTask.fromFirestore(t as Map<String, dynamic>))
           .toList(),
-      xpReward: data['xpReward'] ?? 50,
-      crystalReward: data['crystalReward'] ?? 10,
-      title: data['title'] ?? 'Ancestral Wisdom Challenge',
-      description: data['description'] ?? 'Complete today\'s spiritual exercises to keep your streak alive.',
+      xpReward: (data['xpReward'] as num?)?.toInt() ?? 50,
+      crystalReward: (data['crystalReward'] as num?)?.toInt() ?? 10,
+      title: data['title'] as String? ?? 'Ancestral Wisdom Challenge',
+      description: data['description'] as String? ?? 'Complete today\'s spiritual exercises to keep your streak alive.',
     );
   }
 

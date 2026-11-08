@@ -142,7 +142,7 @@ class StudentNotifier extends Notifier<StudentState> {
     }
 
     if (profile != null && profile.isNotEmpty) {
-      final int storedHearts = profile['hearts'] as int? ?? 5;
+      final int storedHearts = (profile['hearts'] as num?)?.toInt() ?? 5;
       final Timestamp? lastHeartTime = profile['lastHeartLossAt'] as Timestamp?;
       int resolvedHearts = storedHearts;
       if (lastHeartTime != null) {
@@ -171,13 +171,13 @@ class StudentNotifier extends Notifier<StudentState> {
       }
 
       final newState = StudentState(
-        mistCrystals: profile['mistCrystals'] ?? 0,
-        xp: profile['xp'] ?? 0,
-        dailyStreak: profile['streak'] ?? 0,
-        previousStreak: profile['previousStreak'] ?? 0,
+        mistCrystals: (profile['mistCrystals'] as num?)?.toInt() ?? 0,
+        xp: (profile['xp'] as num?)?.toInt() ?? 0,
+        dailyStreak: (profile['streak'] as num?)?.toInt() ?? 0,
+        previousStreak: (profile['previousStreak'] as num?)?.toInt() ?? 0,
         streakBrokenAt: streakBrokenAtDt,
         hearts: resolvedHearts,
-        streakShields: profile['streakShields'] ?? 0,
+        streakShields: (profile['streakShields'] as num?)?.toInt() ?? 0,
         lessonProgress: progress,
         lastActive: lastActiveDt,
         activityMap: Map<String, bool>.from(profile['activityMap'] ?? {}),
@@ -212,13 +212,13 @@ class StudentNotifier extends Notifier<StudentState> {
             cachedBrokenAt = DateTime.tryParse(cached['streakBrokenAt']);
           }
           state = StudentState(
-            mistCrystals: cached['mistCrystals'] ?? 0,
-            xp: cached['xp'] ?? 0,
-            dailyStreak: cached['streak'] ?? 0,
-            previousStreak: cached['previousStreak'] ?? 0,
+            mistCrystals: (cached['mistCrystals'] as num?)?.toInt() ?? 0,
+            xp: (cached['xp'] as num?)?.toInt() ?? 0,
+            dailyStreak: (cached['streak'] as num?)?.toInt() ?? 0,
+            previousStreak: (cached['previousStreak'] as num?)?.toInt() ?? 0,
             streakBrokenAt: cachedBrokenAt,
-            hearts: cached['hearts'] ?? 5,
-            streakShields: cached['streakShields'] ?? 0,
+            hearts: (cached['hearts'] as num?)?.toInt() ?? 5,
+            streakShields: (cached['streakShields'] as num?)?.toInt() ?? 0,
             lessonProgress: progress,
             lastActive: cachedActive,
             activityMap: Map<String, bool>.from(cached['activityMap'] ?? {}),

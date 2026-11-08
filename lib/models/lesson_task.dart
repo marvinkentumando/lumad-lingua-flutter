@@ -161,7 +161,7 @@ class LessonTask {
       ),
       questionText: map['questionText'] ?? '',
       options: List<String>.from(map['options'] ?? []),
-      correctAnswerIndex: map['correctAnswerIndex'] ?? 0,
+      correctAnswerIndex: (map['correctAnswerIndex'] as num?)?.toInt() ?? 0,
       pairs: (map['pairs'] as List?)
               ?.map((p) => Map<String, String>.from(p))
               .toList() ??
