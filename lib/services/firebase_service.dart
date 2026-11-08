@@ -5159,6 +5159,10 @@ final unreadFeedbackCountProvider = StreamProvider<int>((ref) {
   return ref.watch(firebaseServiceProvider).getUnreadFeedbackCount();
 });
 
+final completedLessonsCountProvider = StreamProvider.family<int, String>((ref, userId) {
+  return ref.watch(firebaseServiceProvider).getUserProgress(userId).map((p) => p.length);
+});
+
 final masteredWordsCountProvider = StreamProvider.family<int, String>((ref, userId) {
   return ref.watch(firebaseServiceProvider).db
       .collection('users')
@@ -5174,7 +5178,7 @@ final dueSRSCountProvider = StreamProvider.family<int, String>((ref, userId) {
       .collection('users')
       .doc(userId)
       .collection('srs_progress')
-      .where('nextReview', isLessThanOrEqualTo: DateTime.now())
+      .where('nextReview', isLessThanOrEqualTo: Timestamp.fromDate(DateTime.now()))
       .snapshots()
       .map((snap) => snap.size);
 });

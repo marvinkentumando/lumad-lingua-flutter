@@ -70,54 +70,60 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
               // Default sorting by tier index descending
               filteredList.sort((a, b) => b.tier.index.compareTo(a.tier.index));
 
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.translate('your_legacy'),
-                      style: AppTypography.display.copyWith(
-                        color: isDark ? Colors.white : AppColors.forest900,
-                        fontSize: 32,
-                      ),
-                    ).animate().fadeIn().slideY(begin: -0.2),
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.translate('legacy_desc'),
-                      style: AppTypography.body.copyWith(
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.7)
-                            : AppColors.forest900.withValues(alpha: 0.75),
-                      ),
-                    ).animate().fadeIn(delay: 100.ms),
-                    const SizedBox(height: 24),
-                    _buildSectionHeader(l10n.translate('ancestral_vault')),
-                    const SizedBox(height: 12),
-                    _buildCategoryFilterRow(isDark),
-                    const SizedBox(height: 16),
-                    if (filteredList.isEmpty)
-                      BrandedEmptyState(
-                        title: l10n.translate('vault_locked'),
-                        message: l10n.translate('unlock_treasures'),
-                        icon: Icons.lock_outline,
-                      )
-                    else
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 16,
-                          crossAxisSpacing: 16,
-                          childAspectRatio: 0.72,
-                        ),
-                        itemCount: filteredList.length,
-                        itemBuilder: (context, index) => 
-                            _buildArtifactCard(context, filteredList[index], isDark),
-                      ),
-                    const SizedBox(height: 40),
-                  ],
+              return Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1200),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.translate('your_legacy'),
+                          style: AppTypography.display.copyWith(
+                            color: isDark ? Colors.white : AppColors.forest900,
+                            fontSize: 32,
+                          ),
+                        ).animate().fadeIn().slideY(begin: -0.2),
+                        const SizedBox(height: 8),
+                        Text(
+                          l10n.translate('legacy_desc'),
+                          style: AppTypography.body.copyWith(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.7)
+                                : AppColors.forest900.withValues(alpha: 0.75),
+                          ),
+                        ).animate().fadeIn(delay: 100.ms),
+                        const SizedBox(height: 24),
+                        _buildSectionHeader(l10n.translate('ancestral_vault')),
+                        const SizedBox(height: 12),
+                        _buildCategoryFilterRow(isDark),
+                        const SizedBox(height: 16),
+                        if (filteredList.isEmpty)
+                          BrandedEmptyState(
+                            title: l10n.translate('vault_locked'),
+                            message: l10n.translate('unlock_treasures'),
+                            icon: Icons.lock_outline,
+                          )
+                        else
+                          GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 220,
+                              mainAxisSpacing: 16,
+                              crossAxisSpacing: 16,
+                              childAspectRatio: 0.72,
+                            ),
+                            itemCount: filteredList.length,
+                            itemBuilder: (context, index) => 
+                                _buildArtifactCard(context, filteredList[index], isDark),
+                          ),
+                        const SizedBox(height: 40),
+                      ],
+                    ),
+                  ),
                 ),
               );
             },
@@ -184,12 +190,16 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               Center(
                 child: Container(
                   width: 40,
@@ -377,8 +387,10 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  ),
+);
+}
 
   Widget _buildSectionHeader(String title) {
     return Row(

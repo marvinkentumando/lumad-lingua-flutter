@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -250,25 +251,34 @@ class MasteryDashboardScreen extends ConsumerWidget {
               child: _buildBreakdownItem(
                 context,
                 'NEW',
-                counts[MasteryLevel.newWord]!,
+                counts[MasteryLevel.newWord] ?? 0,
                 AppColors.semanticBlue,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 6),
             Expanded(
               child: _buildBreakdownItem(
                 context,
                 'LEARNING',
-                counts[MasteryLevel.learning]!,
+                counts[MasteryLevel.learning] ?? 0,
                 AppColors.gold500,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 6),
+            Expanded(
+              child: _buildBreakdownItem(
+                context,
+                'PROFICIENT',
+                counts[MasteryLevel.proficient] ?? 0,
+                AppColors.terracotta,
+              ),
+            ),
+            const SizedBox(width: 6),
             Expanded(
               child: _buildBreakdownItem(
                 context,
                 'MASTERED',
-                counts[MasteryLevel.mastered]!,
+                counts[MasteryLevel.mastered] ?? 0,
                 AppColors.semanticGreen,
               ),
             ),
@@ -308,6 +318,8 @@ class MasteryDashboardScreen extends ConsumerWidget {
 
   Widget _buildWeeklyTrend(BuildContext context, List<double> progress, AppLocalization l10n) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final maxVal = progress.isEmpty ? 1.0 : progress.reduce(math.max);
+    final normalizedMax = math.max(maxVal, 1.0);
 
     return BrandCard(
       theme: isDark ? BrandCardTheme.vibrant : BrandCardTheme.gold,
@@ -331,9 +343,10 @@ class MasteryDashboardScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: progress.map((val) {
+                final barHeight = ((val / normalizedMax) * 100).clamp(0.0, 100.0);
                 return Container(
                   width: 30,
-                  height: (val / 12) * 100, // Normalized to max 12
+                  height: barHeight,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,

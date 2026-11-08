@@ -315,8 +315,8 @@ class LearnerProfileScreen extends ConsumerWidget {
     if (role == UserRole.learner) {
       final student = ref.watch(studentProvider);
       final streak = student.displayedStreak;
-      final words = ref.watch(masteredWordsCountProvider(userId)).value ?? 0;
-      return _ProfileStatsRow(xp: xp, streak: streak, words: words, l10n: l10n);
+      final lessons = ref.watch(completedLessonsCountProvider(userId)).value ?? 0;
+      return _ProfileStatsRow(xp: xp, streak: streak, lessons: lessons, l10n: l10n);
     }
     return _StaffStatsRow(role: role, userId: userId, xp: xp, l10n: l10n);
   }
@@ -1269,9 +1269,9 @@ class _ProfileStatsRow extends ConsumerStatefulWidget {
 
   final int xp;
   final int streak;
-  final int words;
+  final int lessons;
   final AppLocalization l10n;
-  const _ProfileStatsRow({required this.xp, required this.streak, required this.words, required this.l10n});
+  const _ProfileStatsRow({required this.xp, required this.streak, required this.lessons, required this.l10n});
 
   @override
   ConsumerState<_ProfileStatsRow> createState() => _ProfileStatsRowState();
@@ -1282,10 +1282,10 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow>
 
   late final AnimationController _xpController;
   late final AnimationController _streakController;
-  late final AnimationController _wordsController;
+  late final AnimationController _lessonsController;
   late final Animation<double> _xpAnim;
   late final Animation<double> _streakAnim;
-  late final Animation<double> _wordsAnim;
+  late final Animation<double> _lessonsAnim;
 
   @override
   void initState() {
@@ -1299,7 +1299,7 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
-    _wordsController = AnimationController(
+    _lessonsController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1600),
     );
@@ -1312,16 +1312,16 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow>
         .animate(
           CurvedAnimation(parent: _streakController, curve: Curves.easeOut),
         );
-    _wordsAnim = Tween<double>(
+    _lessonsAnim = Tween<double>(
       begin: 0,
-      end: widget.words.toDouble(),
-    ).animate(CurvedAnimation(parent: _wordsController, curve: Curves.easeOut));
+      end: widget.lessons.toDouble(),
+    ).animate(CurvedAnimation(parent: _lessonsController, curve: Curves.easeOut));
 
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) {
         _xpController.forward();
         _streakController.forward();
-        _wordsController.forward();
+        _lessonsController.forward();
       }
     });
   }
@@ -1330,7 +1330,7 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow>
   void dispose() {
     _xpController.dispose();
     _streakController.dispose();
-    _wordsController.dispose();
+    _lessonsController.dispose();
     super.dispose();
   }
 
@@ -1374,9 +1374,9 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow>
         ),
         _buildCountCircle(
           context,
-          Icons.menu_book_rounded,
-          _wordsAnim,
-          widget.l10n.translate('words'),
+          Icons.school_rounded,
+          _lessonsAnim,
+          widget.l10n.translate('lessons_label'),
           isInt: true,
         ),
       ],
