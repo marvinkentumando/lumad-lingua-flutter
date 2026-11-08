@@ -106,37 +106,41 @@ class StreakReminderSettingsDialog extends ConsumerWidget {
                       : AppColors.creamBorder,
                 ),
               ),
-              child: SwitchListTile(
-                activeThumbColor: AppColors.gold500,
-                title: Text(
-                  'Streak Reminders',
-                  style: AppTypography.bodyLarge.copyWith(
-                    color: isDark ? Colors.white : AppColors.forest900,
-                    fontWeight: FontWeight.bold,
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+                child: SwitchListTile(
+                  activeThumbColor: AppColors.gold500,
+                  title: Text(
+                    'Streak Reminders',
+                    style: AppTypography.bodyLarge.copyWith(
+                      color: isDark ? Colors.white : AppColors.forest900,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                subtitle: Text(
-                  prefs.streakRemindersEnabled
-                      ? 'Enabled - Daily notifications active'
-                      : 'Disabled - Reminders paused',
-                  style: AppTypography.body.copyWith(
-                    color: isDark ? Colors.white54 : AppColors.forest700,
-                    fontSize: 11,
+                  subtitle: Text(
+                    prefs.streakRemindersEnabled
+                        ? 'Enabled - Daily notifications active'
+                        : 'Disabled - Reminders paused',
+                    style: AppTypography.body.copyWith(
+                      color: isDark ? Colors.white54 : AppColors.forest700,
+                      fontSize: 11,
+                    ),
                   ),
-                ),
-                value: prefs.streakRemindersEnabled,
-                onChanged: (enabled) async {
-                  HapticService.toggle();
-                  await prefsNotifier.setStreakRemindersEnabled(enabled);
+                  value: prefs.streakRemindersEnabled,
+                  onChanged: (enabled) async {
+                    HapticService.toggle();
+                    await prefsNotifier.setStreakRemindersEnabled(enabled);
 
-                  // Update schedule
-                  await NotificationService().updateStreakReminderSchedule(
-                    enabled: enabled,
-                    hour: hour,
-                    minute: minute,
-                    isCompletedToday: student.displayedStreak > 0,
-                  );
-                },
+                    // Update schedule
+                    await NotificationService().updateStreakReminderSchedule(
+                      enabled: enabled,
+                      hour: hour,
+                      minute: minute,
+                      isCompletedToday: student.displayedStreak > 0,
+                    );
+                  },
+                ),
               ),
             ),
 

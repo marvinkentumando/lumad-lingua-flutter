@@ -19,6 +19,11 @@ class NotificationService {
   Future<void> init() async {
     if (_initialized) return;
 
+    if (kIsWeb) {
+      _initialized = true;
+      return;
+    }
+
     try {
       tz.initializeTimeZones();
 

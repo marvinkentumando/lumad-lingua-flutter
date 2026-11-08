@@ -429,6 +429,15 @@ class AuthService {
       return false;
     }
   }
+
+  /// Explicitly forces a token refresh to fetch updated custom claims (e.g. after a role change)
+  /// without causing a continuous loop inside stream listeners.
+  Future<String?> forceRefreshUserRoleClaim([User? targetUser]) async {
+    final user = targetUser ?? _auth.currentUser;
+    if (user == null) return null;
+    final idTokenResult = await user.getIdTokenResult(true);
+    return idTokenResult.claims?['role']?.toString();
+  }
 }
 
 final authServiceProvider = Provider<AuthService>((ref) {
@@ -462,8 +471,8 @@ final userRoleClaimProvider = FutureProvider<String?>((ref) async {
   final user = ref.watch(authStateProvider).value;
   if (user == null) return null;
   
-  // Force refresh to get latest claims
-  final idTokenResult = await user.getIdTokenResult(true);
+  // Retrieve cached token result without forcing a network refresh that triggers userChanges()
+  final idTokenResult = await user.getIdTokenResult(false);
   return idTokenResult.claims?['role']?.toString();
 });
 
