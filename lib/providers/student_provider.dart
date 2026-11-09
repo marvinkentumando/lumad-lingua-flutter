@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../services/offline_service.dart';
 import '../services/haptic_service.dart';
+import '../services/notification_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
 
@@ -329,8 +331,20 @@ class StudentNotifier extends Notifier<StudentState> {
   }
 
   void addXp(int amount) {
-    state = state.copyWith(xp: state.xp + amount);
+    final oldXp = state.xp;
+    final newXp = oldXp + amount;
+    state = state.copyWith(xp: newXp);
     _persistLocalState();
+
+    final oldTier = oldXp ~/ 2000;
+    final newTier = newXp ~/ 2000;
+    if (newTier > oldTier) {
+      try {
+        NotificationService().showAudioUnlockNotification(newXp);
+      } catch (e) {
+        debugPrint('Failed to show audio unlock notification: $e');
+      }
+    }
 
     final user = ref.read(authStateProvider).value;
     if (user != null) {
