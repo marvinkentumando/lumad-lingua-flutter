@@ -105,9 +105,6 @@ class PronunciationModelMetrics {
 }
 
 class PronunciationService implements IPronunciationComparer {
-  /// One tunable mismatch gate instead of the previous fixed bands.
-  static const double _mismatchRejectionMultiplier = 4.5;
-
   /// Should the live path still reject clearly wrong words by distance?
   static const bool _liveMismatchEnabled = true;
 
@@ -570,27 +567,6 @@ class PronunciationService implements IPronunciationComparer {
     }
 
     return math.exp(-strictness.sensitivity * 2.5 * alignment.meanLocalCost).clamp(0.0, 1.0);
-  }
-
-  static double _cosineSimilarity(List<double> a, List<double> b) {
-    double dotProduct = 0.0;
-    double normA = 0.0;
-    double normB = 0.0;
-    for (int i = 0; i < a.length; i++) {
-      dotProduct += a[i] * b[i];
-      normA += a[i] * a[i];
-      normB += b[i] * b[i];
-    }
-    if (normA == 0 || normB == 0) return 0.0;
-    return dotProduct / (math.sqrt(normA) * math.sqrt(normB));
-  }
-
-  static double _euclideanDistance(List<double> a, List<double> b) {
-    double sum = 0;
-    for (int i = 0; i < a.length; i++) {
-      sum += math.pow(a[i] - b[i], 2);
-    }
-    return math.sqrt(sum);
   }
 
   static double _speechClarity(List<double> pcm) {
