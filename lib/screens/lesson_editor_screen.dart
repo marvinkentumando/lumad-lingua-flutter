@@ -411,12 +411,15 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
       options = [step.data['translation']!];
     }
 
+    final isOverview = step.type == ActivityType.overview;
     return LessonTask(
       id: step.id,
       type: type,
-      questionText: (step.data['question'] as String?)?.isNotEmpty ?? false
-          ? step.data['question']
-          : step.title,
+      questionText: isOverview
+          ? (step.data['title'] ?? step.title)
+          : ((step.data['question'] as String?)?.isNotEmpty ?? false
+              ? step.data['question']
+              : step.title),
       options: options,
       correctAnswerIndex: step.data['correctIndex'] ?? 0,
       pairs:
@@ -428,7 +431,10 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
       expectedSentence: step.data['expectedSentence'] ?? step.data['sentence'] ?? '',
       nativeWord: step.data['word'] ?? '',
       phoneticGuide: step.data['phonetic'] ?? '',
-      hintMetadata: step.data['scenarioText'] ?? step.data['definition'] ?? '',
+      hintMetadata: isOverview
+          ? (step.data['content'] ?? step.data['overviewText'] ?? '')
+          : (step.data['scenarioText'] ?? step.data['definition'] ?? ''),
+      grammarDescription: isOverview ? (step.data['culturalNotes'] ?? '') : null,
       imageUrl: step.data['imageUrl'],
       audioUrl: step.data['audioUrl'],
     );

@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum MasteryLevel {
-  newCard, // Level 0
-  learning, // Level 1
-  reviewing, // Level 2
-  mastered, // Level 3
+  newCard,    // Level 0
+  learning,   // Level 1-2
+  proficient, // Level 3-4
+  mastered,   // Level 5
 }
 
 class SRSProgress {
@@ -31,7 +31,7 @@ class SRSProgress {
   MasteryLevel get mastery {
     if (level == 0) return MasteryLevel.newCard;
     if (level < 3) return MasteryLevel.learning;
-    if (level < 5) return MasteryLevel.reviewing;
+    if (level < 5) return MasteryLevel.proficient;
     return MasteryLevel.mastered;
   }
 

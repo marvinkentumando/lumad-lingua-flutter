@@ -105,6 +105,7 @@ class PronunciationModelMetrics {
 }
 
 class PronunciationService implements IPronunciationComparer {
+<<<<<<< HEAD
   /// One tunable mismatch gate instead of the previous fixed bands.
   static const double _mismatchRejectionMultiplier = 4.5;
 
@@ -138,6 +139,22 @@ class PronunciationService implements IPronunciationComparer {
     return MFCCService.align(referenceFeatures, userFeatures);
   }
 
+=======
+  /// One tunable mismatch gate instead of the previous fixed bands. When live
+  /// mismatch rejection is enabled, this is the main knob that controls how far
+  /// a spoken take has to be from the target phrase before it is rejected by the
+  /// mismatch branch. Tweak only this number, with [_liveMismatchEnabled] on,
+  /// until a correct loud take can pass while a wrong word still fails.
+  static const double _mismatchRejectionMultiplier = 4.5;
+
+  /// Should the live path still reject clearly wrong words by distance? When
+  /// false, the live path never returns the mismatch score; a non-empty spoken
+  /// take gets a real score even if it is phonetically far from the target. When
+  /// true, the mismatch branch stays active and uses
+  /// [_mismatchRejectionMultiplier] as its only tuning knob right now.
+  static const bool _liveMismatchEnabled = true;
+
+>>>>>>> origin/lingua-duel
   static List<double> pitchShiftReferenceForExploration(
     List<double> samples, {
     required double semitones,
@@ -334,12 +351,19 @@ class PronunciationService implements IPronunciationComparer {
     }
 
     final distances = <double>[];
+<<<<<<< HEAD
     for (int i = 0; i < referenceSet.referenceFeatures.length; i++) {
       final referenceFeatures = referenceSet.referenceFeatures[i];
       final penalty = i < referenceSet.featurePenalties.length ? referenceSet.featurePenalties[i] : 0.0;
       final alignment = _align(referenceFeatures, userFeatures);
       if (alignment.isUsable && alignment.meanLocalCost.isFinite) {
         distances.add(alignment.meanLocalCost + penalty);
+=======
+    for (final referenceFeatures in referenceSet.referenceFeatures) {
+      final alignment = MFCCService.align(referenceFeatures, userFeatures);
+      if (alignment.isUsable && alignment.meanLocalCost.isFinite) {
+        distances.add(alignment.meanLocalCost);
+>>>>>>> origin/lingua-duel
       }
     }
     if (distances.isEmpty) {
@@ -381,8 +405,13 @@ class PronunciationService implements IPronunciationComparer {
       var best = 0.0;
       for (final referenceFeatures in referenceSet.referenceFeatures) {
         final candidate = algorithm == PronunciationAlgorithm.hmm
+<<<<<<< HEAD
             ? _calculateHMMScore(userFeatures, referenceFeatures, strictness, baseline: referenceSet.baseline)
             : _calculateCosineScore(userFeatures, referenceFeatures, strictness, baseline: referenceSet.baseline);
+=======
+            ? _calculateHMMScore(userFeatures, referenceFeatures, strictness)
+            : _calculateCosineScore(userFeatures, referenceFeatures, strictness);
+>>>>>>> origin/lingua-duel
         if (candidate > best) best = candidate;
       }
       similarity = best;
@@ -409,12 +438,27 @@ class PronunciationService implements IPronunciationComparer {
   }
 
   static double _mismatchThreshold(ReferenceBaseline baseline) {
+<<<<<<< HEAD
     if (!baseline.mean.isFinite || baseline.mean <= 0) return 0.60;
     final sigma = math.max(baseline.sigma, math.max(baseline.mean * 0.10, 1e-6));
     if (baseline.isCalibrated) {
       return baseline.mean - 0.4 * sigma;
     }
     return baseline.mean * 1.25;
+=======
+    final sigma = math.max(baseline.sigma, math.max(baseline.mean * 0.15, 1e-6));
+    final calibrated = baseline.mean + _mismatchRejectionMultiplier * sigma;
+    if (baseline.isCalibrated) return math.max(calibrated, baseline.mean * (_mismatchRejectionMultiplier - 1.0));
+    // Provisional CMN-scale band: keep the floor high enough that real speech
+    // passes, but let the multiplier control the wrong-word distance band.
+    return math.max(
+      calibrated,
+      math.max(
+        baseline.mean + (_mismatchRejectionMultiplier + 1.0) * sigma,
+        _mismatchRejectionMultiplier * 6.0,
+      ),
+    );
+>>>>>>> origin/lingua-duel
   }
 
   static double scoreFromDistance(
@@ -425,10 +469,15 @@ class PronunciationService implements IPronunciationComparer {
     if (!distance.isFinite) return 0.0;
     if (distance <= 0) return 1.0;
     final sigma = math.max(baseline.sigma, 1e-6);
+<<<<<<< HEAD
     final pivot = baseline.isCalibrated
         ? baseline.mean - 0.5 * sigma
         : baseline.mean * 0.85;
     final slope = 3.5 * (strictness.sensitivity / 3.0);
+=======
+    final pivot = baseline.mean + 2.5 * sigma;
+    final slope = 0.35 * (strictness.sensitivity / 3.0);
+>>>>>>> origin/lingua-duel
     final z = (distance - pivot) / sigma;
     if (z >= 6.0) return 0.0;
     if (z <= -6.0) return 1.0;

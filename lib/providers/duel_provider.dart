@@ -125,7 +125,6 @@ class DuelSessionState {
 
 class DuelSessionNotifier extends Notifier<DuelSessionState> {
   StreamSubscription<DuelMatch?>? _subscription;
-  StreamSubscription? _candidateSubscription;
   Timer? _roundTimer;
   Timer? _heartbeatTimer;
   Timer? _matchmakingTimer;
@@ -143,8 +142,6 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
   void _cancelTimersAndSubscriptions() {
     _subscription?.cancel();
     _subscription = null;
-    _candidateSubscription?.cancel();
-    _candidateSubscription = null;
     _roundTimer?.cancel();
     _roundTimer = null;
     _heartbeatTimer?.cancel();
@@ -239,7 +236,6 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
       _matchmakingMatchId = matchId;
       state = state.copyWith(matchId: matchId, isLoading: false);
       _listenToMatch(matchId);
-      _watchForOpponent(matchId, myId, userProfile, attempt);
     } catch (e) {
       if (attempt != _matchmakingAttempt || state.matchmakingTimedOut) return;
       debugPrint('[DuelMatchmaking] stage=provider_start_failed error=$e');
@@ -279,8 +275,6 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
     }
     _subscription?.cancel();
     _subscription = null;
-    _candidateSubscription?.cancel();
-    _candidateSubscription = null;
     final matchId = _matchmakingMatchId;
     if (matchId != null) {
       try {
@@ -299,100 +293,6 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
     );
     debugPrint(
         'Matchmaking attempt timed out; match=${stateToShow.matchId ?? matchId ?? "pending"}');
-  }
-
-  void _watchForOpponent(
-    String waitingMatchId,
-    String userId,
-    Map<String, dynamic> userProfile,
-    int attempt,
-  ) {
-    ref
-        .read(duelServiceProvider)
-        .watchForOpponent(
-          waitingMatchId: waitingMatchId,
-          userId: userId,
-          userProfile: userProfile,
-          onMatchFound: (matchId) {
-            _attachToDiscoveredMatch(waitingMatchId, matchId, attempt);
-          },
-          onError: (error) {
-            if (attempt != _matchmakingAttempt ||
-                state.phase != DuelPhase.searching) {
-              return;
-            }
-            debugPrint('[DuelMatchmaking] stage=watch_lobbies_failed error=$error');
-            _subscription?.cancel();
-            _subscription = null;
-            _candidateSubscription?.cancel();
-            _candidateSubscription = null;
-            _matchmakingTimer?.cancel();
-            _matchmakingTimer = null;
-            final waitingId = _matchmakingMatchId;
-            if (waitingId != null) {
-              ref
-                  .read(duelServiceProvider)
-                  .cancelMatch(waitingId)
-                  .catchError((e) {
-                debugPrint('Could not cancel failed matchmaking lobby: $e');
-              });
-            }
-            state = state.copyWith(
-              phase: DuelPhase.idle,
-              isLoading: false,
-              error: matchmakingFailureMessage(error),
-            );
-          },
-        )
-        .then((subscription) {
-      if (subscription == null) return;
-      if (attempt != _matchmakingAttempt ||
-          state.phase != DuelPhase.searching) {
-        subscription.cancel();
-        return;
-      }
-      _candidateSubscription?.cancel();
-      _candidateSubscription = subscription;
-    }).catchError((Object error) {
-      if (attempt != _matchmakingAttempt ||
-          state.phase != DuelPhase.searching) {
-        return;
-      }
-      debugPrint('[DuelMatchmaking] stage=watch_lobbies_setup_failed error=$error');
-      _matchmakingTimer?.cancel();
-      _matchmakingTimer = null;
-      state = state.copyWith(
-        phase: DuelPhase.idle,
-        isLoading: false,
-        error: matchmakingFailureMessage(error),
-      );
-    });
-  }
-
-  Future<void> _attachToDiscoveredMatch(
-    String ownWaitingMatchId,
-    String discoveredMatchId,
-    int attempt,
-  ) async {
-    if (attempt != _matchmakingAttempt || state.phase != DuelPhase.searching) {
-      return;
-    }
-
-    // Immediately stop listening to the old lobby BEFORE cancelling it, so any
-    // cancellation event cannot race the newly claimed active match.
-    _subscription?.cancel();
-    _subscription = null;
-    _candidateSubscription?.cancel();
-    _candidateSubscription = null;
-
-    _matchmakingMatchId = discoveredMatchId;
-    state = state.copyWith(matchId: discoveredMatchId, isLoading: false);
-    _listenToMatch(discoveredMatchId);
-
-    // Cancel old waiting lobby in background
-    ref.read(duelServiceProvider).cancelMatch(ownWaitingMatchId).catchError((error) {
-      debugPrint('Could not close duplicate waiting lobby: $error');
-    });
   }
 
   static String matchmakingFailureMessage(Object error) {
@@ -541,8 +441,6 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
       case DuelStatus.active:
         _matchmakingTimer?.cancel();
         _matchmakingTimer = null;
-        _candidateSubscription?.cancel();
-        _candidateSubscription = null;
         if (state.phase == DuelPhase.searching ||
             state.phase == DuelPhase.idle) {
           _onBattleStart(match);
@@ -558,8 +456,6 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
             state.phase == DuelPhase.searching) {
           _matchmakingTimer?.cancel();
           _matchmakingTimer = null;
-          _candidateSubscription?.cancel();
-          _candidateSubscription = null;
           _subscription?.cancel();
           _subscription = null;
           state = DuelSessionState(

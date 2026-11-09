@@ -1,12 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:csv/csv.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
-import 'package:share_plus/share_plus.dart';
-import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
@@ -147,7 +141,7 @@ class _EducatorStudentsScreenState
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      _buildExportButton(allStudents),
+                      _buildAcademicYearDropdown(),
                       const SizedBox(width: 8),
                       _buildSortDropdown(),
                     ],
@@ -211,150 +205,65 @@ class _EducatorStudentsScreenState
     );
   }
 
-  Widget _buildExportButton(List<EducatorStudent> students) {
+  Widget _buildAcademicYearDropdown() {
+    final selectedYear = ref.watch(selectedAcademicYearProvider);
+    final availableYears = ref.watch(availableAcademicYearsProvider);
+
     return PopupMenuButton<String>(
-      onSelected: (val) => _exportRosterData(val, students),
+      onSelected: (year) {
+        HapticService.selection();
+        ref.read(selectedAcademicYearProvider.notifier).state = year;
+      },
       color: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          color: AppColors.gold500.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.05)
-                : AppColors.creamBorder,
-          ),
+          border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.download_rounded, color: AppColors.gold500, size: 16),
+            const Icon(Icons.calendar_today_rounded, color: AppColors.gold500, size: 14),
             const SizedBox(width: 6),
             Text(
-              'EXPORT',
+              selectedYear == 'All' ? 'ALL YEARS' : 'SY $selectedYear',
               style: AppTypography.label.copyWith(
                 color: AppColors.gold500,
                 fontSize: 9,
                 fontWeight: FontWeight.w900,
               ),
             ),
+            const SizedBox(width: 4),
+            const Icon(Icons.arrow_drop_down_rounded, color: AppColors.gold500, size: 16),
           ],
         ),
       ),
-      itemBuilder: (context) => [
-        PopupMenuItem(
-          value: 'CSV',
-          child: Text(
-            'Export CSV Report',
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-          ),
-        ),
-        PopupMenuItem(
-          value: 'PDF',
-          child: Text(
-            'Export PDF Report',
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _exportRosterData(String format, List<EducatorStudent> students) async {
-    HapticService.selection();
-    try {
-      final now = DateTime.now();
-      final dateStr = DateFormat('yyyyMMdd_HHmm').format(now);
-      final filename = 'Village_Learners_Report_$dateStr';
-
-      if (format == 'CSV') {
-        final List<List<dynamic>> rows = [
-          ['Student Roster Metrics'],
-          ['Name', 'Municipality', 'Level', 'Progress %', 'Active Streak (Days)', 'Lessons Completed', 'Needs Help'],
-          ...students.map((s) => [
-            s.name,
-            s.municipality,
-            s.level,
-            '${(s.progress * 100).toInt()}%',
-            s.streakDays,
-            s.lessonsCompleted,
-            s.isStruggling ? 'Yes' : 'No',
-          ]),
-          [],
-          ['Quiz Accuracy Breakdown'],
-          ['Student Name', 'Lesson Title', 'Status', 'Accuracy %', 'Progress %'],
-        ];
-
-        for (var s in students) {
-          for (var lp in s.lessonBreakdown) {
-            rows.add([
-              s.name,
-              lp.lessonTitle,
-              lp.status,
-              '${(lp.accuracy * 100).toInt()}%',
-              '${(lp.progress * 100).toInt()}%',
-            ]);
-          }
-        }
-
-        final csvData = const CsvEncoder().convert(rows);
-        final directory = await getTemporaryDirectory();
-        final file = File('${directory.path}/$filename.csv');
-        await file.writeAsString(csvData);
-
-        await SharePlus.instance.share(ShareParams(
-          files: [XFile(file.path)],
-          text: 'Village Class Analytics Report (CSV)',
-        ));
-      } else {
-        // PDF Export
-        final pdf = pw.Document();
-        pdf.addPage(
-          pw.MultiPage(
-            pageFormat: PdfPageFormat.a4,
-            build: (context) => [
-              pw.Header(level: 0, child: pw.Text('Lumad Lingua - Village Learner Class Analytics')),
-              pw.Paragraph(text: 'Generated on: ${DateFormat('MMMM dd, yyyy HH:mm').format(now)}'),
-              pw.Paragraph(text: 'Total Village Learners: ${students.length}'),
-              pw.SizedBox(height: 10),
-              pw.Header(level: 1, child: pw.Text('Student Progress & Active Streak Metrics')),
-              pw.TableHelper.fromTextArray(
-                context: context,
-                data: [
-                  ['Name', 'Municipality', 'Level', 'Progress', 'Streak', 'Lessons', 'Struggling'],
-                  ...students.map((s) => [
-                    s.name,
-                    s.municipality,
-                    s.level,
-                    '${(s.progress * 100).toInt()}%',
-                    '${s.streakDays}d',
-                    '${s.lessonsCompleted}',
-                    s.isStruggling ? 'YES' : 'No',
-                  ]),
-                ],
+      itemBuilder: (context) => availableYears.map((year) {
+        final isActive = selectedYear == year;
+        return PopupMenuItem<String>(
+          value: year,
+          child: Row(
+            children: [
+              if (isActive)
+                const Padding(
+                  padding: EdgeInsets.only(right: 8),
+                  child: Icon(Icons.check_rounded, color: AppColors.gold500, size: 16),
+                ),
+              Text(
+                year == 'All' ? 'All Academic Years' : 'SY $year',
+                style: TextStyle(
+                  color: isActive ? AppColors.gold500 : Theme.of(context).colorScheme.onSurface,
+                  fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                ),
               ),
             ],
           ),
         );
-
-        final directory = await getTemporaryDirectory();
-        final file = File('${directory.path}/$filename.pdf');
-        await file.writeAsBytes(await pdf.save());
-
-        await SharePlus.instance.share(ShareParams(
-          files: [XFile(file.path)],
-          text: 'Village Class Analytics Report (PDF)',
-        ));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to export report: $e'), backgroundColor: AppColors.semanticRed),
-        );
-      }
-    }
+      }).toList(),
+    );
   }
 
   Widget _buildSortDropdown() {
@@ -624,7 +533,7 @@ class _EducatorStudentsScreenState
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          student.level.toUpperCase(),
+                          '${student.level.toUpperCase()} • SY ${student.academicYear}',
                           style: AppTypography.label.copyWith(
                             color: isDark ? AppColors.gold500 : AppColors.gold700,
                           ),
@@ -669,6 +578,28 @@ class _EducatorStudentsScreenState
               const SizedBox(height: 24),
               // Heatmap
               _buildAttendanceHeatmap(student),
+              const SizedBox(height: 20),
+              // Audio Metrics Button
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  context.push('/educator/audio-comparison', extra: student.id);
+                },
+                icon: const Icon(Icons.graphic_eq_rounded, size: 20),
+                label: const Text(
+                  'VIEW AUDIO COMPARISON METRICS',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.gold500,
+                  foregroundColor: AppColors.forest900,
+                  elevation: 0,
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
               const SizedBox(height: 24),
               // Lesson breakdown
               Text(

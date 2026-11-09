@@ -37,6 +37,10 @@ class Lesson {
   final DateTime? validatedAt;
   @HiveField(14)
   final String? validatorId;
+  @HiveField(15)
+  final String? educatorId;
+  @HiveField(16)
+  final String? originPublicId;
 
   Lesson({
     required this.id,
@@ -54,6 +58,8 @@ class Lesson {
     this.isMistUnit = false,
     this.validatedAt,
     this.validatorId,
+    this.educatorId,
+    this.originPublicId,
   });
 
   factory Lesson.fromFirestore(Map<String, dynamic> data, String id) {
@@ -90,6 +96,8 @@ class Lesson {
           data['isMistUnit'] ?? (data['category'] == 'Cultural Stories'),
       validatedAt: validatedAt,
       validatorId: data['validatorId'],
+      educatorId: data['educatorId'],
+      originPublicId: data['originPublicId'],
     );
   }
 
@@ -107,6 +115,8 @@ class Lesson {
       'status': status,
       if (prerequisiteId != null) 'prerequisiteId': prerequisiteId,
       'isMistUnit': isMistUnit,
+      if (educatorId != null) 'educatorId': educatorId,
+      if (originPublicId != null) 'originPublicId': originPublicId,
     };
   }
 }

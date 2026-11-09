@@ -186,6 +186,12 @@ class DictionaryEntry {
 
   bool get isValidated => status == ValidationStatus.approved;
 
+  bool get hasAudio =>
+      audioUrl != null &&
+      audioUrl!.trim().isNotEmpty &&
+      audioUrl != 'null' &&
+      audioUrl != 'none';
+
   String get partOfSpeechLabel => partOfSpeech.partOfSpeechLabel;
 
   factory DictionaryEntry.fromFirestore(Map<String, dynamic> data, String id) {

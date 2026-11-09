@@ -368,11 +368,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                     isDark,
                     color: AppColors.semanticRed,
                   ),
-                  const PopupMenuDivider(height: 1),
                   _buildPopupItem(
                     'delete',
                     'Delete Account',
-                    Icons.delete_outline_rounded,
+                    Icons.delete_forever_rounded,
                     isDark,
                     color: AppColors.semanticRed,
                   ),
@@ -540,6 +539,58 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   ),
                 ),
               ],
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        context.pop();
+                        _showRoleSwitcherModal(user);
+                      },
+                      icon: const Icon(Icons.shield_outlined, size: 16),
+                      label: const Text('Role', style: TextStyle(fontSize: 12)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: isDark ? Colors.white70 : AppColors.forest900,
+                        side: BorderSide(color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.2)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        context.pop();
+                        _toggleUserStatus(user);
+                      },
+                      icon: const Icon(Icons.block_flipped, size: 16),
+                      label: Text(isSuspended ? 'Unsuspend' : 'Suspend', style: const TextStyle(fontSize: 12)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.semanticRed,
+                        side: BorderSide(color: AppColors.semanticRed.withValues(alpha: 0.4)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        context.pop();
+                        _confirmDeleteUser(user);
+                      },
+                      icon: const Icon(Icons.delete_forever_rounded, size: 16),
+                      label: const Text('Delete', style: TextStyle(fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.semanticRed,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -653,14 +704,14 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
       case 'suspend':
         _toggleUserStatus(user);
         break;
+      case 'delete':
+        _confirmDeleteUser(user);
+        break;
       case 'edit':
         _showEditUserDialog(user);
         break;
       case 'reset_password':
         _handleResetPassword(user);
-        break;
-      case 'delete':
-        _confirmDeleteUser(user);
         break;
       default:
         _showEditUserDialog(user);
@@ -668,32 +719,75 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   }
 
   void _confirmDeleteUser(AdminUser user) {
-    _showConfirmAction(
-      'Delete Account?',
-      'Are you sure you want to delete ${user.name}\'s account? This action cannot be undone.',
-      () async {
-        try {
-          await ref.read(firebaseServiceProvider).deleteUser(user.id);
-          ref.read(adminUsersProvider.notifier).loadUsers();
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('User account deleted successfully'),
-                backgroundColor: AppColors.semanticRed,
+    HapticService.warning();
+    final currentUser = ref.read(authStateProvider).value;
+    if (currentUser != null && currentUser.uid == user.id) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You cannot delete your own admin account'),
+          backgroundColor: AppColors.semanticRed,
+        ),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.forest700,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: AppColors.semanticRed, size: 28),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Delete ${user.name}?',
+                style: AppTypography.h3.copyWith(color: AppColors.semanticRed),
               ),
-            );
-          }
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Failed to delete user: $e'),
-                backgroundColor: AppColors.semanticRed,
-              ),
-            );
-          }
-        }
-      },
+            ),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to permanently delete account for ${user.email.isNotEmpty ? user.email : user.name}? This action is irreversible and removes all profile data.',
+          style: AppTypography.body.copyWith(color: Colors.white70, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => ctx.pop(),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.semanticRed,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () async {
+              ctx.pop();
+              HapticService.celebration();
+              final success = await ref
+                  .read(adminUsersProvider.notifier)
+                  .deleteUser(user.id);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      success
+                          ? 'Account deleted successfully'
+                          : 'Failed to delete user account',
+                    ),
+                    backgroundColor: success ? AppColors.semanticGreen : AppColors.semanticRed,
+                  ),
+                );
+              }
+            },
+            child: const Text('Delete Account', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
     );
   }
 

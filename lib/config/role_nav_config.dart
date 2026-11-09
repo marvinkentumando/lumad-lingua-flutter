@@ -35,6 +35,11 @@ List<NavItem> getNavItemsForRole(UserRole role) {
         ),
         const NavItem(Icons.group_rounded, 'STUDENTS', '/educator/students'),
         const NavItem(
+          Icons.library_books_rounded,
+          'LESSONS',
+          '/admin/lessons',
+        ),
+        const NavItem(
           Icons.insights_rounded,
           'ANALYTICS',
           '/educator/analytics',

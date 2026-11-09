@@ -537,7 +537,7 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard> with
 
   void _togglePlay() {
     HapticService.light();
-    if (widget.entry.audioUrl == null || widget.entry.audioUrl!.isEmpty) {
+    if (!widget.entry.hasAudio) {
       return;
     }
 
@@ -556,19 +556,19 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard> with
     switch (level) {
       case MasteryLevel.mastered:
         return AppColors.semanticGreen;
-      case MasteryLevel.reviewing:
+      case MasteryLevel.proficient:
         return AppColors.gold500;
       case MasteryLevel.learning:
         return Colors.blue;
-      default:
-        return Colors.white24;
+      case MasteryLevel.newCard:
+        return Colors.grey;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final hasAudio = widget.entry.audioUrl != null && widget.entry.audioUrl!.isNotEmpty;
+    final hasAudio = widget.entry.hasAudio;
 
     return BouncyPressable(
       onTap: () {

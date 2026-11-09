@@ -4,8 +4,6 @@ import '../models/srs_models.dart';
 import 'auth_service.dart';
 import 'package:rxdart/rxdart.dart';
 
-enum MasteryLevel { newWord, learning, proficient, mastered }
-
 class SRSStats {
   final Map<MasteryLevel, int> counts;
   final double overallMastery;
@@ -39,7 +37,7 @@ class SRSService {
           .toList();
 
       final counts = {
-        MasteryLevel.newWord: 0,
+        MasteryLevel.newCard: 0,
         MasteryLevel.learning: 0,
         MasteryLevel.proficient: 0,
         MasteryLevel.mastered: 0,
@@ -47,14 +45,9 @@ class SRSService {
 
       int masteredTotal = 0;
       for (var p in progressList) {
-        if (p.level == 0) {
-          counts[MasteryLevel.newWord] = counts[MasteryLevel.newWord]! + 1;
-        } else if (p.level < 3) {
-          counts[MasteryLevel.learning] = counts[MasteryLevel.learning]! + 1;
-        } else if (p.level < 5) {
-          counts[MasteryLevel.proficient] = counts[MasteryLevel.proficient]! + 1;
-        } else {
-          counts[MasteryLevel.mastered] = counts[MasteryLevel.mastered]! + 1;
+        final m = p.mastery;
+        counts[m] = (counts[m] ?? 0) + 1;
+        if (m == MasteryLevel.mastered) {
           masteredTotal++;
         }
       }
@@ -62,13 +55,13 @@ class SRSService {
       final total = progressList.length;
       double overallMastery = 0.0;
       if (total > 0) {
-        final masteredWeight = counts[MasteryLevel.mastered]! * 1.0;
-        final proficientWeight = counts[MasteryLevel.proficient]! * 0.7;
-        final learningWeight = counts[MasteryLevel.learning]! * 0.3;
+        final masteredWeight = (counts[MasteryLevel.mastered] ?? 0) * 1.0;
+        final proficientWeight = (counts[MasteryLevel.proficient] ?? 0) * 0.7;
+        final learningWeight = (counts[MasteryLevel.learning] ?? 0) * 0.3;
         overallMastery = (masteredWeight + proficientWeight + learningWeight) / total;
       }
 
-      // Merge current mastered count into today's history slot if it's more accurate
+      // Merge current mastered count into today's history slot
       final List<double> polishedHistory = List.from(history);
       if (polishedHistory.length == 7) {
         polishedHistory[6] = masteredTotal.toDouble();
@@ -141,7 +134,7 @@ final srsStatsProvider = StreamProvider<SRSStats>((ref) {
   if (userId == null) {
     return Stream.value(SRSStats(
       counts: {
-        MasteryLevel.newWord: 0,
+        MasteryLevel.newCard: 0,
         MasteryLevel.learning: 0,
         MasteryLevel.proficient: 0,
         MasteryLevel.mastered: 0,
@@ -172,8 +165,8 @@ final lowRetentionWordsProvider = StreamProvider<List<SRSProgress>>((ref) {
         final now = DateTime.now();
         final lowRetention = list.where((p) {
           final isOverdue = p.nextReview.isBefore(now);
-          final hasLowConsecutive = p.consecutiveCorrect < 2;
-          return isOverdue || hasLowConsecutive || p.level < 3;
+          final recentFailure = p.consecutiveCorrect == 0 && p.timesReviewed > 0;
+          return isOverdue || recentFailure;
         }).toList();
 
         lowRetention.sort((a, b) => a.nextReview.compareTo(b.nextReview));

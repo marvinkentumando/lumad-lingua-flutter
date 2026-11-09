@@ -417,7 +417,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
               ],
             ),
           ),
-          if (word.audioUrl != null && word.audioUrl!.isNotEmpty)
+          if (word.hasAudio)
             PreviewAudioPlayer(
               audioUrl: word.audioUrl!,
               size: 32,

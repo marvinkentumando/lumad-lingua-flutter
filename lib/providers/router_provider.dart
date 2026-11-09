@@ -38,6 +38,7 @@ import '../screens/lesson_editor_screen.dart';
 import '../screens/educator_unit_management_screen.dart';
 import '../screens/educator_broadcast_history_screen.dart';
 import '../screens/educator_feedback_screen.dart';
+import '../screens/educator_audio_comparison_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/member_profile_screen.dart';
 
@@ -115,7 +116,10 @@ class RouterNotifier extends ChangeNotifier {
     }
 
     // Block unauthorized routes
-    if (loc.startsWith('/admin') && role != UserRole.admin) {
+    if (loc.startsWith('/admin') &&
+        !loc.startsWith('/admin/lessons') &&
+        !loc.startsWith('/admin/unit-management') &&
+        role != UserRole.admin) {
       return '/';
     }
     if (loc.startsWith('/educator') &&
@@ -123,10 +127,12 @@ class RouterNotifier extends ChangeNotifier {
         role != UserRole.admin) {
       return '/';
     }
-    if (loc.startsWith('/admin/lessons') && role != UserRole.admin) {
+    if ((loc.startsWith('/admin/lessons') || loc.startsWith('/admin/unit-management')) &&
+        role != UserRole.admin &&
+        role != UserRole.educator) {
       return '/';
     }
-    if (loc == '/lesson-editor' && role != UserRole.admin) {
+    if (loc == '/lesson-editor' && role != UserRole.admin && role != UserRole.educator) {
       return '/';
     }
 
@@ -247,6 +253,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const EducatorLessonsScreen(),
           ),
           GoRoute(
+            path: '/educator/lessons',
+            builder: (context, state) => const EducatorLessonsScreen(),
+          ),
+          GoRoute(
             path: '/educator/students',
             builder: (context, state) => const EducatorStudentsScreen(),
           ),
@@ -265,6 +275,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/educator/feedback',
             builder: (context, state) => const EducatorFeedbackScreen(),
+          ),
+          GoRoute(
+            path: '/educator/audio-comparison',
+            builder: (context, state) {
+              final studentId = state.extra as String?;
+              return EducatorAudioComparisonScreen(studentId: studentId);
+            },
           ),
           GoRoute(
             path: '/lesson-editor',

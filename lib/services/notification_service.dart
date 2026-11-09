@@ -276,4 +276,8 @@ class NotificationService {
       notificationDetails: details,
     );
   }
+
+  Future<void> showAudioUnlockNotification(int xp) async {
+    return showInstantXpUnlockNotification(currentXp: xp, unlockedCount: 10 + (xp ~/ 2000) * 10);
+  }
 }

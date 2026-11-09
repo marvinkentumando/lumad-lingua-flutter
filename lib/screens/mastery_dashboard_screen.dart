@@ -1,16 +1,15 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
-import '../services/srs_service.dart';
+import '../models/lesson.dart';
 import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_background.dart';
-import '../widgets/app_shimmer_skeleton.dart';
 import '../utils/app_localization.dart';
 
 class MasteryDashboardScreen extends ConsumerWidget {
@@ -18,25 +17,52 @@ class MasteryDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final statsAsync = ref.watch(srsStatsProvider);
     final l10n = ref.watch(localizationProvider);
+    final user = ref.watch(authServiceProvider).currentUser;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final lessonsAsync = ref.watch(allLessonsStreamProvider);
+    final progressAsync = user != null
+        ? ref.watch(userProgressStreamProvider(user.uid))
+        : const AsyncValue<Map<String, dynamic>>.data({});
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: BrandBackground(
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(context, l10n),
+              _buildHeader(context, isDark, l10n),
               Expanded(
-                child: statsAsync.when(
-                  data: (stats) => _buildContent(context, stats, l10n),
+                child: lessonsAsync.when(
+                  data: (lessons) {
+                    return progressAsync.when(
+                      data: (progressMap) => _buildContent(
+                        context,
+                        ref,
+                        lessons,
+                        progressMap,
+                        isDark,
+                        l10n,
+                      ),
+                      loading: () => const Center(
+                        child: CircularProgressIndicator(color: AppColors.gold500),
+                      ),
+                      error: (e, _) => Center(
+                        child: Text(
+                          'Error loading progress: $e',
+                          style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                        ),
+                      ),
+                    );
+                  },
                   loading: () => const Center(
                     child: CircularProgressIndicator(color: AppColors.gold500),
                   ),
                   error: (e, _) => Center(
                     child: Text(
-                      'Error: $e',
-                      style: const TextStyle(color: Colors.white),
+                      'Error loading lessons: $e',
+                      style: TextStyle(color: isDark ? Colors.white : Colors.black),
                     ),
                   ),
                 ),
@@ -48,12 +74,11 @@ class MasteryDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, AppLocalization l10n) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildHeader(BuildContext context, bool isDark, AppLocalization l10n) {
     final textColor = isDark ? Colors.white : AppColors.forest900;
-    
+
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(20.0),
       child: Row(
         children: [
           IconButton(
@@ -74,110 +99,120 @@ class MasteryDashboardScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: 16),
-          Text(
-            l10n.translate('mastery_dashboard'),
-            style: AppTypography.h2ExtraBold.copyWith(color: textColor),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Lesson Mastery & Unit Progress',
+                  style: AppTypography.h3.copyWith(
+                    color: AppColors.gold500,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                Text(
+                  'Track your performance across lesson sessions',
+                  style: AppTypography.caption.copyWith(
+                    color: isDark ? Colors.white54 : AppColors.creamText3,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildContent(BuildContext context, SRSStats stats, AppLocalization l10n) {
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        _buildOverallMasteryCard(stats.overallMastery, l10n),
-        const SizedBox(height: 32),
-        _buildMasteryBreakdown(context, stats.counts, l10n),
-        const SizedBox(height: 32),
-        _buildRetentionDecayCard(context, l10n),
-        _buildWeeklyTrend(context, stats.weeklyProgress, l10n),
-        const SizedBox(height: 32),
-        _buildReviewAction(context, l10n),
-      ],
+  Widget _buildContent(
+    BuildContext context,
+    WidgetRef ref,
+    List<Lesson> lessons,
+    Map<String, dynamic> progressMap,
+    bool isDark,
+    AppLocalization l10n,
+  ) {
+    if (lessons.isEmpty) {
+      return Center(
+        child: Text(
+          'No lessons available.',
+          style: TextStyle(color: isDark ? Colors.white54 : Colors.black54),
+        ),
+      );
+    }
+
+    int totalLessons = lessons.length;
+    int completedLessons = 0;
+    double totalScoreSum = 0;
+
+    for (var lesson in lessons) {
+      final pData = progressMap[lesson.id] as Map<String, dynamic>?;
+      if (pData != null) {
+        if (pData['completed'] == true) {
+          completedLessons++;
+        }
+        final score = (pData['bestScore'] as num?)?.toDouble() ?? 0.0;
+        totalScoreSum += score;
+      }
+    }
+
+    final double completionFactor = totalLessons > 0 ? completedLessons / totalLessons : 0.0;
+    final double avgAccuracy = totalLessons > 0 ? (totalScoreSum / totalLessons) : 0.0;
+
+    // Group lessons by unitNumber
+    final Map<int, List<Lesson>> unitMap = {};
+    for (var lesson in lessons) {
+      unitMap.putIfAbsent(lesson.unitNumber, () => []).add(lesson);
+    }
+    final sortedUnitNumbers = unitMap.keys.toList()..sort();
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildOverallCurriculumCard(
+            completedLessons,
+            totalLessons,
+            completionFactor,
+            avgAccuracy,
+            isDark,
+          ),
+          const SizedBox(height: 24),
+          _buildSectionTitle('UNIT MASTERY BREAKDOWN'),
+          const SizedBox(height: 12),
+          ...sortedUnitNumbers.map((unitNum) {
+            final unitLessons = unitMap[unitNum]!;
+            return _buildUnitCard(context, unitNum, unitLessons, progressMap, isDark);
+          }),
+          const SizedBox(height: 24),
+          _buildSectionTitle('LESSON SESSION ROSTER'),
+          const SizedBox(height: 12),
+          ...lessons.map((lesson) {
+            final pData = progressMap[lesson.id] as Map<String, dynamic>?;
+            return _buildLessonRow(context, lesson, pData, isDark);
+          }),
+          const SizedBox(height: 32),
+        ],
+      ),
     );
   }
 
-  Widget _buildRetentionDecayCard(BuildContext context, AppLocalization l10n) {
-    return Consumer(
-      builder: (context, ref, _) {
-        final lowRetentionAsync = ref.watch(lowRetentionWordsProvider);
-
-        return lowRetentionAsync.when(
-          data: (list) {
-            if (list.isEmpty) return const SizedBox.shrink();
-
-            return Container(
-              margin: const EdgeInsets.only(bottom: 32),
-              child: BrandCard(
-                theme: BrandCardTheme.cream,
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.psychology_rounded, color: AppColors.terracotta, size: 24),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            l10n.translate('memory_retention').toUpperCase(),
-                            style: AppTypography.label.copyWith(
-                              color: AppColors.forest900,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      '${list.length} terms show memory decay potential based on SuperMemo-2 intervals.',
-                      style: AppTypography.body.copyWith(color: AppColors.forest900, fontSize: 13),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: GestureDetector(
-                        onTap: () => context.push('/flashcards?mode=review'),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            color: AppColors.gold500,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            '${l10n.translate('start_srs_review')} (${list.length})',
-                            style: AppTypography.label.copyWith(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-          loading: () => const SizedBox.shrink(),
-          error: (_, __) => const SizedBox.shrink(),
-        );
-      },
-    );
-  }
-
-  Widget _buildOverallMasteryCard(double mastery, AppLocalization l10n) {
+  Widget _buildOverallCurriculumCard(
+    int completedCount,
+    int totalCount,
+    double completionFactor,
+    double avgAccuracy,
+    bool isDark,
+  ) {
     return BrandCard(
       theme: BrandCardTheme.gold,
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(24),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -186,251 +221,296 @@ class MasteryDashboardScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    l10n.translate('mastery_dashboard').toUpperCase(),
+                    'CURRICULUM MASTERY',
                     style: AppTypography.label.copyWith(
                       color: Colors.black54,
                       fontWeight: FontWeight.w900,
-                      letterSpacing: 2,
+                      letterSpacing: 1.5,
+                      fontSize: 10,
                     ),
                   ),
+                  const SizedBox(height: 4),
                   Text(
-                    '${(mastery * 100).toStringAsFixed(0)}%',
+                    '${(completionFactor * 100).toInt()}%',
                     style: AppTypography.displayBold.copyWith(
                       color: Colors.black,
-                      fontSize: 48,
+                      fontSize: 44,
                     ),
                   ),
                 ],
               ),
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(14),
                 decoration: const BoxDecoration(
                   color: Colors.black12,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
-                  Icons.auto_graph_rounded,
+                  Icons.stars_rounded,
                   color: Colors.black,
                   size: 32,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          LinearProgressIndicator(
-            value: mastery,
-            backgroundColor: Colors.black.withValues(alpha: 0.1),
-            valueColor: const AlwaysStoppedAnimation<Color>(Colors.black),
-            minHeight: 8,
+          const SizedBox(height: 16),
+          ClipRRect(
             borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: completionFactor.clamp(0.0, 1.0),
+              backgroundColor: Colors.black.withValues(alpha: 0.1),
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.black),
+              minHeight: 8,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildMiniMetric('Completed', '$completedCount / $totalCount Lessons'),
+              _buildMiniMetric('Avg. Session Score', '${avgAccuracy.toInt()}% Accuracy'),
+            ],
           ),
         ],
       ),
-    ).animate().fadeIn().scale(delay: 200.ms);
+    ).animate().fadeIn().scale(delay: 150.ms);
   }
 
-  Widget _buildMasteryBreakdown(BuildContext context, Map<MasteryLevel, int> counts, AppLocalization l10n) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+  Widget _buildMiniMetric(String label, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          l10n.translate('srs_stages_breakdown').toUpperCase(),
-          style: AppTypography.label.copyWith(
-            color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.4),
-            letterSpacing: 2,
-            fontWeight: FontWeight.w900,
-            fontSize: 10,
+          label.toUpperCase(),
+          style: const TextStyle(
+            color: Colors.black54,
+            fontSize: 9,
+            fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildBreakdownItem(
-                context,
-                'NEW',
-                counts[MasteryLevel.newWord] ?? 0,
-                AppColors.semanticBlue,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: _buildBreakdownItem(
-                context,
-                'LEARNING',
-                counts[MasteryLevel.learning] ?? 0,
-                AppColors.gold500,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: _buildBreakdownItem(
-                context,
-                'PROFICIENT',
-                counts[MasteryLevel.proficient] ?? 0,
-                AppColors.terracotta,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: _buildBreakdownItem(
-                context,
-                'MASTERED',
-                counts[MasteryLevel.mastered] ?? 0,
-                AppColors.semanticGreen,
-              ),
-            ),
-          ],
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildBreakdownItem(BuildContext context, String label, int count, Color color) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildUnitCard(
+    BuildContext context,
+    int unitNumber,
+    List<Lesson> unitLessons,
+    Map<String, dynamic> progressMap,
+    bool isDark,
+  ) {
+    int completedInUnit = 0;
+    double unitScoreSum = 0;
 
-    return BrandCard(
-      theme: isDark ? BrandCardTheme.vibrant : BrandCardTheme.gold,
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Column(
-        children: [
-          Text(
-            count.toString(),
-            style: AppTypography.h1ExtraBold.copyWith(
-              color: isDark ? color : AppColors.forest900,
-              fontSize: 24,
-            ),
-          ),
-          Text(
-            label,
-            style: AppTypography.label.copyWith(
-              color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.5),
-              fontSize: 8,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    for (var l in unitLessons) {
+      final pData = progressMap[l.id] as Map<String, dynamic>?;
+      if (pData != null) {
+        if (pData['completed'] == true) completedInUnit++;
+        unitScoreSum += (pData['bestScore'] as num?)?.toDouble() ?? 0.0;
+      }
+    }
 
-  Widget _buildWeeklyTrend(BuildContext context, List<double> progress, AppLocalization l10n) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final maxVal = progress.isEmpty ? 1.0 : progress.reduce(math.max);
-    final normalizedMax = math.max(maxVal, 1.0);
+    final double unitCompletion = unitLessons.isNotEmpty ? completedInUnit / unitLessons.length : 0.0;
+    final double avgUnitScore = unitLessons.isNotEmpty ? unitScoreSum / unitLessons.length : 0.0;
 
-    return BrandCard(
-      theme: isDark ? BrandCardTheme.vibrant : BrandCardTheme.gold,
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.translate('wisdom_progression').toUpperCase(),
-            style: AppTypography.label.copyWith(
-              color: isDark ? AppColors.gold500 : AppColors.forest900.withValues(alpha: 0.5),
-              letterSpacing: 2,
-              fontWeight: FontWeight.w900,
-              fontSize: 10,
-            ),
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            height: 100,
-            child: Row(
+    int stars = 0;
+    if (avgUnitScore >= 90) {
+      stars = 3;
+    } else if (avgUnitScore >= 70) {
+      stars = 2;
+    } else if (avgUnitScore >= 40) {
+      stars = 1;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: BrandCard(
+        theme: isDark ? BrandCardTheme.vibrant : BrandCardTheme.gold,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: progress.map((val) {
-                final barHeight = ((val / normalizedMax) * 100).clamp(0.0, 100.0);
-                return Container(
-                  width: 30,
-                  height: barHeight,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        isDark ? AppColors.gold500 : AppColors.forest900,
-                        (isDark ? AppColors.gold500 : AppColors.forest900).withValues(alpha: 0.1),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ).animate().scaleY(
-                  begin: 0,
-                  duration: 600.ms,
-                  curve: Curves.easeOutBack,
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReviewAction(BuildContext context, AppLocalization l10n) {
-    return Consumer(
-      builder: (context, ref, _) {
-        final userId = ref.watch(authServiceProvider).currentUser?.uid;
-        if (userId == null) return const SizedBox.shrink();
-
-        final dueCountAsync = ref.watch(dueSRSCountProvider(userId));
-
-        return dueCountAsync.when(
-          data: (count) {
-            final hasDue = count > 0;
-            return GestureDetector(
-              onTap: hasDue
-                  ? () => context.push('/flashcards?mode=review')
-                  : null,
-              child: BrandCard(
-                theme: hasDue ? BrandCardTheme.vibrant : BrandCardTheme.cream,
-                padding: const EdgeInsets.all(24),
-                child: Row(
+              children: [
+                Row(
                   children: [
-                    Icon(
-                      hasDue ? Icons.alarm_on_rounded : Icons.check_circle_outline_rounded,
-                      color: hasDue ? AppColors.gold500 : AppColors.semanticGreen,
-                      size: 28,
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            hasDue
-                                ? '${l10n.translate('words_due_review')} ($count)'
-                                : l10n.translate('no_words_due'),
-                            style: AppTypography.h3.copyWith(
-                              color: hasDue ? Colors.white : AppColors.forest900,
-                              fontSize: 16,
-                            ),
-                          ),
-                          Text(
-                            hasDue ? l10n.translate('keep_flame_alive') : l10n.translate('no_words_due'),
-                            style: AppTypography.body.copyWith(
-                              color: hasDue ? Colors.white60 : AppColors.forest700,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold500.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'UNIT $unitNumber',
+                        style: AppTypography.label.copyWith(
+                          color: AppColors.gold500,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                        ),
                       ),
                     ),
-                    if (hasDue)
-                      const Icon(Icons.chevron_right_rounded, color: AppColors.gold500),
+                    const SizedBox(width: 10),
+                    Text(
+                      '${(unitCompletion * 100).toInt()}% Done',
+                      style: TextStyle(
+                        color: isDark ? Colors.white70 : AppColors.forest900,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
                   ],
                 ),
+                Row(
+                  children: List.generate(3, (i) {
+                    return Icon(
+                      Icons.star_rounded,
+                      size: 18,
+                      color: i < stars ? AppColors.gold500 : (isDark ? Colors.white12 : Colors.black12),
+                    );
+                  }),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: unitCompletion.clamp(0.0, 1.0),
+                backgroundColor: isDark ? Colors.white10 : Colors.black12,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  unitCompletion == 1.0 ? AppColors.semanticGreen : AppColors.gold500,
+                ),
+                minHeight: 6,
               ),
-            ).animate(target: hasDue ? 1 : 0).shimmer(duration: const Duration(seconds: 2));
-          },
-          loading: () => const AppShimmerSkeleton(height: 80, borderRadius: 24),
-          error: (_, __) => const SizedBox.shrink(),
-        );
-      },
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '$completedInUnit of ${unitLessons.length} lessons completed • ${avgUnitScore.toInt()}% average score',
+              style: AppTypography.caption.copyWith(
+                color: isDark ? Colors.white54 : AppColors.creamText3,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLessonRow(
+    BuildContext context,
+    Lesson lesson,
+    Map<String, dynamic>? pData,
+    bool isDark,
+  ) {
+    final bool isCompleted = pData?['completed'] == true;
+    final double bestScore = (pData?['bestScore'] as num?)?.toDouble() ?? 0.0;
+    final bool isStarted = bestScore > 0 || isCompleted;
+
+    Color statusColor = Colors.grey;
+    String statusText = 'Not Started';
+
+    if (isCompleted) {
+      statusColor = AppColors.semanticGreen;
+      statusText = 'Completed';
+    } else if (isStarted) {
+      statusColor = AppColors.gold500;
+      statusText = 'In Progress';
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.forestDarkCard : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.creamBorder,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isCompleted
+                  ? Icons.check_circle_rounded
+                  : (isStarted ? Icons.play_circle_fill_rounded : Icons.menu_book_rounded),
+              color: statusColor,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  lesson.title,
+                  style: AppTypography.body.copyWith(
+                    color: isDark ? Colors.white : AppColors.forest900,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  'Unit ${lesson.unitNumber} • ${lesson.category} • ${lesson.tasks.length} Tasks',
+                  style: AppTypography.caption.copyWith(
+                    color: isDark ? Colors.white54 : AppColors.creamText3,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${bestScore.toInt()}%',
+                style: TextStyle(
+                  color: isCompleted ? AppColors.semanticGreen : AppColors.gold500,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
+              Text(
+                statusText,
+                style: TextStyle(
+                  color: statusColor,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: AppTypography.label.copyWith(
+        color: AppColors.gold500,
+        letterSpacing: 1.5,
+        fontWeight: FontWeight.w900,
+        fontSize: 10,
+      ),
     );
   }
 }

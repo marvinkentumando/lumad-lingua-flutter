@@ -98,6 +98,7 @@ class FirebaseService {
 
     await _db.collection('users').doc(userId).update({
       'educatorId': educatorId,
+      'academicYear': '2026-2027',
     });
 
     // Notify educator
@@ -365,13 +366,13 @@ class FirebaseService {
           final list = Artifact.masterArtifactCatalog.map((master) {
             final userData = userMap[master.id];
             if (userData != null) {
-              final progress = (userData['currentProgress'] as num?)?.toInt() ?? master.currentProgress;
-              final isEarned = (userData['isEarned'] as bool?) ?? (progress >= master.targetValue);
-              final DateTime? earnedAt = userData['earnedAt'] != null && userData['earnedAt'] is Timestamp
+              final currentProgress = userData['currentProgress'] ?? 0;
+              final isEarned = userData['isEarned'] ?? false;
+              final earnedAt = userData['earnedAt'] != null
                   ? (userData['earnedAt'] as Timestamp).toDate()
-                  : master.earnedAt;
+                  : null;
               return master.copyWith(
-                currentProgress: progress,
+                currentProgress: currentProgress,
                 isEarned: isEarned,
                 earnedAt: earnedAt,
               );
@@ -1194,23 +1195,20 @@ class FirebaseService {
     required String studentName,
     String? studentPhotoUrl,
     required String message,
-    required String educatorId,
   }) async {
     await _db.collection('feedback').add({
       'studentId': studentId,
       'studentName': studentName,
       'studentPhotoUrl': studentPhotoUrl,
       'message': message,
-      'educatorId': educatorId,
       'timestamp': FieldValue.serverTimestamp(),
       'isRead': false,
     });
   }
 
-  Stream<List<StudentFeedback>> getStudentFeedback(String educatorId) {
+  Stream<List<StudentFeedback>> getStudentFeedback() {
     return _db
         .collection('feedback')
-        .where('educatorId', isEqualTo: educatorId)
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snap) => snap.docs
@@ -1241,9 +1239,8 @@ class FirebaseService {
   // Gamification Operations
   Future<void> addXp(String userId, int xpToAdd) async {
     final docRef = _db.collection('users').doc(userId);
-    return _db.runTransaction((transaction) async {
-      final doc = await transaction.get(docRef);
-      if (!doc.exists) return;
+    final doc = await docRef.get();
+    if (doc.exists) {
       final data = doc.data() ?? {};
       final lastReset = (data['lastWeeklyReset'] as Timestamp?)?.toDate();
       final now = DateTime.now();
@@ -1251,17 +1248,17 @@ class FirebaseService {
       final startOfWeek = DateTime(monday.year, monday.month, monday.day);
 
       if (lastReset == null || lastReset.isBefore(startOfWeek)) {
-        transaction.update(docRef, {
+        await docRef.update({
           'xp': FieldValue.increment(xpToAdd),
           'weeklyXp': xpToAdd,
           'lastWeeklyReset': FieldValue.serverTimestamp(),
         });
-      } else {
-        transaction.update(docRef, {
-          'xp': FieldValue.increment(xpToAdd),
-          'weeklyXp': FieldValue.increment(xpToAdd),
-        });
+        return;
       }
+    }
+    await docRef.update({
+      'xp': FieldValue.increment(xpToAdd),
+      'weeklyXp': FieldValue.increment(xpToAdd),
     });
   }
 
@@ -1635,12 +1632,12 @@ class FirebaseService {
     await _db.collection('users').doc(userId).update(updates);
   }
 
-  Future<void> updateUserDetails(String userId, Map<String, dynamic> data) async {
-    await _db.collection('users').doc(userId).update(data);
+  Future<void> deleteUserByAdmin(String userId) async {
+    await _db.collection('users').doc(userId).delete();
   }
 
-  Future<void> deleteUser(String userId) async {
-    await _db.collection('users').doc(userId).delete();
+  Future<void> updateUserDetails(String userId, Map<String, dynamic> data) async {
+    await _db.collection('users').doc(userId).update(data);
   }
 
   Future<void> updatePrivacySettings(String userId, {bool? isPublic, bool? shareAnalytics}) async {
@@ -1953,12 +1950,11 @@ class FirebaseService {
           int getWeeklyXp(Map<String, dynamic> u) {
             final reset = (u['lastWeeklyReset'] as Timestamp?)?.toDate();
             final totalXp = (u['xp'] as num?)?.toInt() ?? 0;
+            if (reset != null && reset.isBefore(startOfWeek)) return 0;
             if (u.containsKey('weeklyXp') && u['weeklyXp'] != null) {
-              final wXp = (u['weeklyXp'] as num).toInt();
-              if (reset != null && reset.isBefore(startOfWeek)) return 0;
-              return wXp;
+              return (u['weeklyXp'] as num).toInt();
             }
-            return totalXp;
+            return (totalXp * 0.3).round();
           }
 
           final aWeekly = getWeeklyXp(a);
@@ -2284,6 +2280,43 @@ class FirebaseService {
     });
   }
 
+  Stream<List<Lesson>> getPublicLessons() {
+    return _db.collection('lessons').snapshots().map((snapshot) {
+      return snapshot.docs
+          .map((doc) => Lesson.fromFirestore(doc.data(), doc.id))
+          .where((l) => l.educatorId == null || l.educatorId!.isEmpty)
+          .toList();
+    });
+  }
+
+  Future<String?> importPublicLessonToVillage({
+    required String publicLessonId,
+    required String educatorId,
+  }) async {
+    final publicLesson = await getLessonById(publicLessonId);
+    if (publicLesson == null) return null;
+
+    final villageCopy = Lesson(
+      id: '',
+      title: publicLesson.title,
+      description: publicLesson.description,
+      category: publicLesson.category,
+      language: publicLesson.language,
+      level: publicLesson.level,
+      unitNumber: publicLesson.unitNumber,
+      tasks: publicLesson.tasks,
+      isPremium: publicLesson.isPremium,
+      icon: publicLesson.icon,
+      status: 'PUBLISHED',
+      prerequisiteId: publicLesson.prerequisiteId,
+      isMistUnit: publicLesson.isMistUnit,
+      educatorId: educatorId,
+      originPublicId: publicLesson.id,
+    );
+
+    return await saveLesson(villageCopy, status: 'PUBLISHED');
+  }
+
   Future<Lesson?> getLessonById(String id) async {
     final doc = await _db.collection('lessons').doc(id).get();
     if (!doc.exists) return null;
@@ -2512,7 +2545,7 @@ class FirebaseService {
         return {
           'totalXP': 0,
           'avgLessonsCompleted': 0.0,
-          'pronunciationAccuracy': 0.85,
+          'pronunciationAccuracy': 0.0,
           'quizPerformance': <Map<String, dynamic>>[],
           'commonHurdles': <Map<String, dynamic>>[],
         };
@@ -2539,13 +2572,8 @@ class FirebaseService {
       final Map<String, int> taskMistakesCount = {};
       final Map<String, String> taskToLesson = {};
 
-      final Map<String, List<Map<String, dynamic>>> lessonPassedStudents = {};
-      final Map<String, List<Map<String, dynamic>>> lessonFailedStudents = {};
-      final Map<String, List<Map<String, dynamic>>> hurdleStruggledStudents = {};
-
       for (var userDoc in learnerDocs) {
         final userData = userDoc.data();
-        final studentName = (userData['displayName'] ?? userData['name'] ?? userData['username'] ?? 'Learner') as String;
         totalXP += (userData['xp'] as num?)?.toInt() ?? 0;
 
         final progressSnap = await userDoc.reference.collection('progress').get();
@@ -2553,23 +2581,12 @@ class FirebaseService {
           final data = progDoc.data();
           final lessonId = progDoc.id;
           final completed = data['completed'] == true;
-          final bestScore = (data['bestScore'] as num?)?.toInt() ?? 0;
+
+          if (completed) totalLessonsCompleted++;
 
           lessonAttempts[lessonId] = (lessonAttempts[lessonId] ?? 0) + 1;
           if (completed) {
-            totalLessonsCompleted++;
             lessonPasses[lessonId] = (lessonPasses[lessonId] ?? 0) + 1;
-            (lessonPassedStudents[lessonId] ??= []).add({
-              'name': studentName,
-              'detail': 'Completed (Score: $bestScore%)',
-              'passed': true,
-            });
-          } else if (bestScore > 0) {
-            (lessonFailedStudents[lessonId] ??= []).add({
-              'name': studentName,
-              'detail': 'In Progress (Best: $bestScore%)',
-              'passed': false,
-            });
           }
 
           final performance = data['performance'] as Map<String, dynamic>? ?? {};
@@ -2577,14 +2594,6 @@ class FirebaseService {
             final mistakesInt = (mistakes as num?)?.toInt() ?? 0;
             taskMistakesCount[taskId] = (taskMistakesCount[taskId] ?? 0) + mistakesInt;
             taskToLesson[taskId] = lessonId;
-
-            if (mistakesInt > 0) {
-              (hurdleStruggledStudents[taskId] ??= []).add({
-                'name': studentName,
-                'detail': '$mistakesInt mistake(s) on this concept',
-                'passed': false,
-              });
-            }
 
             totalAccuracySum += (1.0 - (mistakesInt / 5.0)).clamp(0.0, 1.0);
             accuracyCount++;
@@ -2598,12 +2607,9 @@ class FirebaseService {
           final passes = lessonPasses[lessonId] ?? 0;
           final passRate = ((passes / attempts) * 100).round();
           quizPerformance.add({
-            'id': lessonId,
             'name': lessonNames[lessonId] ?? 'Lesson',
             'pass': passRate,
             'fail': 100 - passRate,
-            'passedStudents': lessonPassedStudents[lessonId] ?? [],
-            'failedStudents': lessonFailedStudents[lessonId] ?? [],
           });
         }
       });
@@ -2630,11 +2636,9 @@ class FirebaseService {
         }
 
         hurdles.add({
-          'id': taskId,
           'topic': topic,
-          'stat': '$mistakes slips identified across village',
+          'stat': '$mistakes slips identified',
           'lessonName': lessonNames[lessonId] ?? 'Ancestral Path',
-          'students': hurdleStruggledStudents[taskId] ?? [],
         });
       }
 
@@ -2860,27 +2864,11 @@ class FirebaseService {
         crystalReward = stars == 3 ? 50 : (stars == 2 ? 25 : 15);
       }
 
-      // 4. Atomic reward update (with weekly reset check)
-      final userData = userDoc.data() ?? {};
-      final lastReset = (userData['lastWeeklyReset'] as Timestamp?)?.toDate();
-      final now = DateTime.now();
-      final monday = now.subtract(Duration(days: now.weekday - 1));
-      final startOfWeek = DateTime(monday.year, monday.month, monday.day);
-
-      if (lastReset == null || lastReset.isBefore(startOfWeek)) {
-        transaction.update(userRef, {
-          'mistCrystals': FieldValue.increment(crystalReward),
-          'xp': FieldValue.increment(xpReward),
-          'weeklyXp': xpReward,
-          'lastWeeklyReset': FieldValue.serverTimestamp(),
-        });
-      } else {
-        transaction.update(userRef, {
-          'mistCrystals': FieldValue.increment(crystalReward),
-          'xp': FieldValue.increment(xpReward),
-          'weeklyXp': FieldValue.increment(xpReward),
-        });
-      }
+      // 4. Atomic reward update
+      transaction.update(userRef, {
+        'mistCrystals': FieldValue.increment(crystalReward),
+        'xp': FieldValue.increment(xpReward),
+      });
 
       // Vocabulary Mastery Logic
       if (lesson != null && stars >= 2) {
@@ -4929,11 +4917,29 @@ final municipalityRecordingsProvider =
     });
 
 final lessonsStreamProvider = StreamProvider<List<Lesson>>((ref) {
+  final userProfile = ref.watch(userProfileProvider).value;
+  final educatorId = userProfile?['educatorId'] as String?;
+  final role = userProfile?['role']?.toString().toLowerCase();
+
   final stream = ref.watch(firebaseServiceProvider).getPublishedLessons();
   return stream.map((lessons) {
+    List<Lesson> filteredLessons;
+
+    // If user is educator/admin, or has no village educator (independent learner)
+    if (role == 'educator' || role == 'admin' || educatorId == null || educatorId.isEmpty) {
+      filteredLessons = lessons.where((l) => l.educatorId == null || l.educatorId!.isEmpty).toList();
+    } else {
+      // Village learner: return educator's village lessons
+      final villageLessons = lessons.where((l) => l.educatorId == educatorId).toList();
+      // Fallback to public master lessons if educator hasn't imported any village lessons yet
+      filteredLessons = villageLessons.isNotEmpty
+          ? villageLessons
+          : lessons.where((l) => l.educatorId == null || l.educatorId!.isEmpty).toList();
+    }
+
     // Automatically cache lessons for offline use
-    ref.read(offlineServiceProvider).saveLessons(lessons);
-    return lessons;
+    ref.read(offlineServiceProvider).saveLessons(filteredLessons);
+    return filteredLessons;
   });
 });
 
@@ -5151,16 +5157,12 @@ final villageBroadcastsProvider =
   });
 });
 
-final studentFeedbackProvider = StreamProvider.family<List<StudentFeedback>, String>((ref, educatorId) {
-  return ref.watch(firebaseServiceProvider).getStudentFeedback(educatorId);
+final studentFeedbackProvider = StreamProvider<List<StudentFeedback>>((ref) {
+  return ref.watch(firebaseServiceProvider).getStudentFeedback();
 });
 
 final unreadFeedbackCountProvider = StreamProvider<int>((ref) {
   return ref.watch(firebaseServiceProvider).getUnreadFeedbackCount();
-});
-
-final completedLessonsCountProvider = StreamProvider.family<int, String>((ref, userId) {
-  return ref.watch(firebaseServiceProvider).getUserProgress(userId).map((p) => p.length);
 });
 
 final masteredWordsCountProvider = StreamProvider.family<int, String>((ref, userId) {
@@ -5173,12 +5175,22 @@ final masteredWordsCountProvider = StreamProvider.family<int, String>((ref, user
       .map((snap) => snap.size);
 });
 
+final completedLessonsCountProvider = StreamProvider.family<int, String>((ref, userId) {
+  return ref.watch(firebaseServiceProvider).db
+      .collection('users')
+      .doc(userId)
+      .collection('progress')
+      .where('completed', isEqualTo: true)
+      .snapshots()
+      .map((snap) => snap.size);
+});
+
 final dueSRSCountProvider = StreamProvider.family<int, String>((ref, userId) {
   return ref.watch(firebaseServiceProvider).db
       .collection('users')
       .doc(userId)
       .collection('srs_progress')
-      .where('nextReview', isLessThanOrEqualTo: Timestamp.fromDate(DateTime.now()))
+      .where('nextReview', isLessThanOrEqualTo: DateTime.now())
       .snapshots()
       .map((snap) => snap.size);
 });

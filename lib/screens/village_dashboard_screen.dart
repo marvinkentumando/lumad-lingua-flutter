@@ -150,12 +150,6 @@ class VillageDashboardScreen extends ConsumerWidget {
               ),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.forum_rounded, color: AppColors.gold500),
-            tooltip: l10n.translate('send_feedback'),
-            onPressed: () => _showFeedbackDialog(context, ref, ref.read(userProfileProvider).value, ref.read(userProfileProvider).value?['educatorId'] as String?, l10n, isDark),
-          ),
-          const SizedBox(width: 4),
           PopupMenuButton<String>(
             icon: Icon(
               Icons.more_vert_rounded,
@@ -1032,108 +1026,6 @@ class VillageDashboardScreen extends ConsumerWidget {
               l10n.translate('leave_village'),
               style: const TextStyle(color: Colors.white),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-
-
-  void _showFeedbackDialog(
-    BuildContext context,
-    WidgetRef ref,
-    Map<String, dynamic>? profile,
-    String? educatorId,
-    AppLocalization l10n,
-    bool isDark,
-  ) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: AppColors.gold500.withValues(alpha: 0.5), width: 2),
-        ),
-        title: Row(
-          children: [
-            const Icon(Icons.forum_rounded, color: AppColors.gold500, size: 24),
-            const SizedBox(width: 12),
-            Text(
-              l10n.translate('send_feedback'),
-              style: TextStyle(color: isDark ? Colors.white : AppColors.forest900, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.translate('feedback_prompt'),
-              style: TextStyle(
-                color: isDark ? Colors.white70 : AppColors.forest900.withValues(alpha: 0.7),
-                fontSize: 13,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              maxLines: 4,
-              style: TextStyle(color: isDark ? Colors.white : AppColors.forest900),
-              decoration: InputDecoration(
-                hintText: l10n.translate('type_message'),
-                hintStyle: TextStyle(color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3)),
-                filled: true,
-                fillColor: isDark ? AppColors.forest800 : Colors.black.withValues(alpha: 0.05),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              l10n.translate('close').toUpperCase(),
-              style: const TextStyle(color: AppColors.gold500, fontWeight: FontWeight.bold),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (controller.text.trim().isEmpty) return;
-              final user = ref.read(authStateProvider).value;
-              if (user != null) {
-                HapticService.success();
-                await ref.read(firebaseServiceProvider).submitStudentFeedback(
-                      studentId: user.uid,
-                      studentName: profile?['username'] ?? profile?['fullName'] ?? 'Tribe Member',
-                      studentPhotoUrl: profile?['photoURL'],
-                      message: controller.text.trim(),
-                      educatorId: educatorId ?? '',
-                    );
-                if (ctx.mounted) Navigator.pop(ctx);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(l10n.translate('feedback_sent')),
-                      backgroundColor: AppColors.semanticGreen,
-                    ),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.gold500,
-              foregroundColor: AppColors.forest900,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: Text(l10n.translate('send'), style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
