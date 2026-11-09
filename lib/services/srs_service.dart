@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'firebase_service.dart';
 import '../models/srs_models.dart';
 import 'auth_service.dart';
+import 'offline_service.dart';
 import 'package:rxdart/rxdart.dart';
 
 class SRSStats {
@@ -35,6 +36,8 @@ class SRSService {
       final List<SRSProgress> progressList = srsSnap.docs
           .map((doc) => SRSProgress.fromFirestore(doc.data()))
           .toList();
+
+      ref.read(offlineServiceProvider).saveSRSProgressList(progressList);
 
       final counts = {
         MasteryLevel.newCard: 0,

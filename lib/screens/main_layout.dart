@@ -237,30 +237,6 @@ class MainLayout extends ConsumerWidget {
                 if (role == UserRole.learner) ...[
                   _buildStreakStat(context, ref),
                   const SizedBox(width: 6),
-                  GestureDetector(
-                    onTap: () {
-                      HapticService.light();
-                      final isEnabled = ref.read(userPreferencesProvider).backgroundMusicEnabled;
-                      ref.read(userPreferencesProvider.notifier).setBackgroundMusicEnabled(!isEnabled);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        ref.watch(userPreferencesProvider).backgroundMusicEnabled
-                            ? Icons.music_note_rounded
-                            : Icons.music_off_rounded,
-                        color: ref.watch(userPreferencesProvider).backgroundMusicEnabled
-                            ? culturalTheme.accentColor
-                            : Colors.grey,
-                        size: 18,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
                 ],
                 GestureDetector(
                   onTap: () {

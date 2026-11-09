@@ -130,12 +130,13 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
                               l10n,
                               filter,
                             ),
-                            if (availablePos.isNotEmpty) ...[
+                            if (availablePos.isNotEmpty || filter.hasAudioOnly || filter.partOfSpeech != null) ...[
                               const SizedBox(height: 12),
                               _buildPartOfSpeechFilterRow(
                                 Theme.of(context).brightness == Brightness.dark,
                                 filter,
                                 availablePos,
+                                l10n,
                               ),
                             ],
                             const SizedBox(height: 12),
@@ -312,18 +313,15 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
     bool isDark,
     DictionaryFilter filter,
     Set<PartOfSpeech> availablePos,
+    AppLocalization l10n,
   ) {
-    if (availablePos.isEmpty) {
+    if (availablePos.isEmpty && !filter.hasAudioOnly && filter.partOfSpeech == null) {
       return const SizedBox.shrink();
     }
 
     final visiblePos = PartOfSpeech.values.where(
       (pos) => availablePos.contains(pos) || filter.partOfSpeech == pos,
     ).toList();
-
-    if (visiblePos.isEmpty) {
-      return const SizedBox.shrink();
-    }
 
     return SizedBox(
       height: 38,
@@ -333,11 +331,26 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
         children: [
           _buildFilterChip(
             label: 'All',
-            isSelected: filter.partOfSpeech == null,
+            isSelected: filter.partOfSpeech == null && !filter.hasAudioOnly,
             onTap: () {
               HapticService.selection();
               ref.read(dictionaryFilterProvider.notifier).update(
-                    (s) => s.copyWith(clearPartOfSpeech: true),
+                    (s) => s.copyWith(
+                      clearPartOfSpeech: true,
+                      hasAudioOnly: false,
+                    ),
+                  );
+            },
+            isDark: isDark,
+          ),
+          _buildFilterChip(
+            label: l10n.translate('with_audio'),
+            icon: Icons.volume_up_rounded,
+            isSelected: filter.hasAudioOnly,
+            onTap: () {
+              HapticService.selection();
+              ref.read(dictionaryFilterProvider.notifier).update(
+                    (s) => s.copyWith(hasAudioOnly: !s.hasAudioOnly),
                   );
             },
             isDark: isDark,
@@ -368,6 +381,7 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
     required bool isSelected,
     required VoidCallback onTap,
     required bool isDark,
+    IconData? icon,
   }) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
@@ -390,15 +404,30 @@ class _DictionaryScreenState extends ConsumerState<DictionaryScreen> {
               width: isSelected ? 1.5 : 1.0,
             ),
           ),
-          child: Text(
-            label,
-            style: AppTypography.label.copyWith(
-              color: isSelected
-                  ? (isDark ? Colors.white : AppColors.forest900)
-                  : Theme.of(context).colorScheme.onSurfaceVariant,
-              fontSize: 11,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(
+                  icon,
+                  size: 14,
+                  color: isSelected
+                      ? (isDark ? Colors.white : AppColors.forest900)
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 4),
+              ],
+              Text(
+                label,
+                style: AppTypography.label.copyWith(
+                  color: isSelected
+                      ? (isDark ? Colors.white : AppColors.forest900)
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ),
       ),

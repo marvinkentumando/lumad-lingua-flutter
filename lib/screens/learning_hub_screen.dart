@@ -13,7 +13,6 @@ import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import '../models/lesson.dart';
 import '../widgets/branded_empty_state.dart';
-import 'package:lumad_lingua/widgets/app_shimmer_skeleton.dart';
 import '../widgets/brand_background.dart';
 import '../widgets/mist_crystal_store.dart';
 import '../widgets/vine_progress_bar.dart';
@@ -90,70 +89,6 @@ class LearningHubScreen extends ConsumerWidget {
                           ],
                         ),
                       ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
-                      const SizedBox(height: 32),
-
-                      // Lesson Mastery & Unit Progress Entry Card
-                      GestureDetector(
-                        onTap: () {
-                          HapticService.selection();
-                          context.go('/mastery-dashboard');
-                        },
-                        child: ref.watch(userProfileProvider).when(
-                          data: (profile) {
-                            return BrandCard(
-                              theme: BrandCardTheme.gold,
-                              padding: const EdgeInsets.all(24),
-                              borderRadius: 32,
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.black12,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.stars_rounded,
-                                      color: AppColors.forest900,
-                                      size: 28,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 20),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Lesson Mastery Hub',
-                                          style: AppTypography.h3.copyWith(
-                                            color: AppColors.forest900,
-                                            fontWeight: FontWeight.w900,
-                                          ),
-                                        ),
-                                        Text(
-                                          'View unit progress and lesson session scores',
-                                          style: AppTypography.body.copyWith(
-                                            color: AppColors.forest700,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const Icon(
-                                    Icons.arrow_forward_ios_rounded,
-                                    color: AppColors.forest900,
-                                    size: 16,
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                          loading: () => const HubCardSkeleton(),
-                          error: (_, __) => const SizedBox.shrink(),
-                        ),
-                      ).animate().fadeIn(delay: 250.ms).slideX(begin: 0.1),
-
                       const SizedBox(height: 32),
 
                       // Curriculum Source Badge

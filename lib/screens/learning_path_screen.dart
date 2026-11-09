@@ -714,6 +714,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                 lessonId: lesson.id,
                 isLast: isLast,
                 isCached: isCached,
+                isVillageLesson: lesson.educatorId != null && lesson.educatorId!.isNotEmpty,
               ),
             ),
           ),
