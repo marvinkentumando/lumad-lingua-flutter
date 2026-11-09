@@ -238,4 +238,34 @@ class NotificationService {
       body: 'Learn what "$word" means in our ancestral tongue.',
     );
   }
+
+  /// Shows an instant notification when new audio recordings are unlocked via XP milestones.
+  Future<void> showAudioUnlockNotification(int xp) async {
+    await init();
+
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'audio_unlock_channel',
+      'Audio Unlocks',
+      channelDescription: 'Notifications when new audio recordings are unlocked',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+
+    await _notifications.show(
+      id: 102,
+      title: '🎉 New Audio Recordings Unlocked!',
+      body: 'Congrats! You reached $xp XP and unlocked 10 new audio recordings in Audio Comparison.',
+      notificationDetails: details,
+    );
+  }
 }
