@@ -365,6 +365,14 @@ class LearnerProfileScreen extends ConsumerWidget {
         onTap: () => context.push('/ancestral-vault-shop'),
       ),
       const SizedBox(height: 12),
+      _buildManagementTile(
+        context,
+        Icons.stars_rounded,
+        'Lesson Mastery Hub',
+        'View unit progress and lesson session scores',
+        onTap: () => context.push('/mastery-dashboard'),
+      ),
+      const SizedBox(height: 12),
     ];
 
     if (!isAdmin && !isEducator) {

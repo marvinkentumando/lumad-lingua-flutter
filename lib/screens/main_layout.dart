@@ -87,7 +87,7 @@ class MainLayout extends ConsumerWidget {
           ? null
           : Container(
               padding: EdgeInsets.only(
-                bottom: bottomPadding > 0 ? bottomPadding : 12,
+                bottom: bottomPadding > 0 ? bottomPadding : 8,
                 left: 30,
                 right: 30,
                 top: 0,
@@ -98,7 +98,7 @@ class MainLayout extends ConsumerWidget {
                 blur: 20,
                 opacity: 0.12,
                 child: Padding(
-                  padding: const EdgeInsets.only(top: 10.0),
+                  padding: const EdgeInsets.symmetric(vertical: 4.0),
                   child: BottomNavigationBar(
                     backgroundColor: Colors.transparent,
                     elevation: 0,
@@ -151,7 +151,7 @@ class MainLayout extends ConsumerWidget {
     final String localizedLabel = l10n.translate(label.toLowerCase());
     return BottomNavigationBarItem(
       icon: Padding(
-        padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
+        padding: const EdgeInsets.only(top: 4.0, bottom: 2.0),
         child: Icon(icon, size: 24),
       ),
       label: localizedLabel != label.toLowerCase() ? localizedLabel : label,

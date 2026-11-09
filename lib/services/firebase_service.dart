@@ -366,7 +366,16 @@ class FirebaseService {
           final list = Artifact.masterArtifactCatalog.map((master) {
             final userData = userMap[master.id];
             if (userData != null) {
-              return Artifact.fromFirestore(userData, master.id);
+              final currentProgress = userData['currentProgress'] ?? 0;
+              final isEarned = userData['isEarned'] ?? false;
+              final earnedAt = userData['earnedAt'] != null
+                  ? (userData['earnedAt'] as Timestamp).toDate()
+                  : null;
+              return master.copyWith(
+                currentProgress: currentProgress,
+                isEarned: isEarned,
+                earnedAt: earnedAt,
+              );
             } else {
               return master.copyWith(
                 currentProgress: 0,

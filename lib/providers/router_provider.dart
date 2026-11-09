@@ -117,10 +117,10 @@ class RouterNotifier extends ChangeNotifier {
         role != UserRole.admin) {
       return '/';
     }
-    if (loc.startsWith('/admin/lessons') && role != UserRole.admin) {
+    if (loc.startsWith('/admin/lessons') && role != UserRole.admin && role != UserRole.educator) {
       return '/';
     }
-    if (loc == '/lesson-editor' && role != UserRole.admin) {
+    if (loc == '/lesson-editor' && role != UserRole.admin && role != UserRole.educator) {
       return '/';
     }
 

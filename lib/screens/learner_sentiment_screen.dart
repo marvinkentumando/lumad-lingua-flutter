@@ -553,152 +553,155 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.all(20),
       borderRadius: 24,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.gold500.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.gold500.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.person_rounded, color: AppColors.gold500, size: 20),
+                  ),
                 ),
-                child: const Center(
-                  child: Icon(Icons.person_rounded, color: AppColors.gold500, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Lumad Community Member',
+                            style: AppTypography.h3.copyWith(
+                              color: isDark ? Colors.white : AppColors.forest900,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.verified_rounded, size: 14, color: AppColors.gold500),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        post.relativeTime,
+                        style: TextStyle(
+                          color: isDark ? Colors.white38 : Colors.black38,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
+              ],
+            ),
+            const SizedBox(height: 16),
+            Builder(
+              builder: (context) {
+                final bool isTextExpanded = _expandedPostTextIds.contains(post.id);
+                final bool isLengthy = post.redactedOriginalText.length > 160;
+                final displayText = (isLengthy && !isTextExpanded)
+                    ? '${post.redactedOriginalText.substring(0, 160)}...'
+                    : post.redactedOriginalText;
+
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Lumad Community Member',
-                          style: AppTypography.h3.copyWith(
-                            color: isDark ? Colors.white : AppColors.forest900,
-                            fontSize: 14,
+                    Text(
+                      displayText,
+                      style: AppTypography.body.copyWith(
+                        color: isDark ? Colors.white : AppColors.forest900,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                      ),
+                    ),
+                    if (isLengthy) ...[
+                      const SizedBox(height: 4),
+                      GestureDetector(
+                        onTap: () => _togglePostTextExpansion(post.id),
+                        child: Text(
+                          isTextExpanded ? 'See less' : 'See more',
+                          style: const TextStyle(
+                            color: AppColors.gold500,
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.verified_rounded, size: 14, color: AppColors.gold500),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      post.relativeTime,
-                      style: TextStyle(
-                        color: isDark ? Colors.white38 : Colors.black38,
-                        fontSize: 11,
                       ),
-                    ),
+                    ],
                   ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Builder(
-            builder: (context) {
-              final bool isTextExpanded = _expandedPostTextIds.contains(post.id);
-              final bool isLengthy = post.redactedOriginalText.length > 160;
-              final displayText = (isLengthy && !isTextExpanded)
-                  ? '${post.redactedOriginalText.substring(0, 160)}...'
-                  : post.redactedOriginalText;
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    displayText,
-                    style: AppTypography.body.copyWith(
-                      color: isDark ? Colors.white : AppColors.forest900,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      height: 1.4,
-                    ),
+                );
+              },
+            ),
+            if (post.redactedEnglishTranslation.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              InkWell(
+                onTap: () => _toggleTranslation(post.id),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold500.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.gold500.withValues(alpha: 0.4)),
                   ),
-                  if (isLengthy) ...[
-                    const SizedBox(height: 4),
-                    GestureDetector(
-                      onTap: () => _togglePostTextExpansion(post.id),
-                      child: Text(
-                        isTextExpanded ? 'See less' : 'See more',
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _expandedTranslationPostIds.contains(post.id)
+                            ? Icons.translate_rounded
+                            : Icons.g_translate_rounded,
+                        size: 14,
+                        color: AppColors.gold500,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _expandedTranslationPostIds.contains(post.id)
+                            ? 'Hide English'
+                            : 'Translate to English',
                         style: const TextStyle(
                           color: AppColors.gold500,
-                          fontSize: 13,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                  ],
-                ],
-              );
-            },
-          ),
-          if (post.redactedEnglishTranslation.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            InkWell(
-              onTap: () => _toggleTranslation(post.id),
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.gold500.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.gold500.withValues(alpha: 0.4)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      _expandedTranslationPostIds.contains(post.id)
-                          ? Icons.translate_rounded
-                          : Icons.g_translate_rounded,
-                      size: 14,
-                      color: AppColors.gold500,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _expandedTranslationPostIds.contains(post.id)
-                          ? 'Hide English'
-                          : 'Translate to English',
-                      style: const TextStyle(
-                        color: AppColors.gold500,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            if (_expandedTranslationPostIds.contains(post.id)) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
-                ),
-                child: Text(
-                  post.redactedEnglishTranslation,
-                  style: AppTypography.body.copyWith(
-                    color: isDark ? Colors.white70 : AppColors.forest700,
-                    fontSize: 13,
-                    fontStyle: FontStyle.italic,
+                    ],
                   ),
                 ),
               ),
+              if (_expandedTranslationPostIds.contains(post.id)) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                  ),
+                  child: Text(
+                    post.redactedEnglishTranslation,
+                    style: AppTypography.body.copyWith(
+                      color: isDark ? Colors.white70 : AppColors.forest700,
+                      fontSize: 13,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ],
-        ],
+        ),
       ),
     );
   }

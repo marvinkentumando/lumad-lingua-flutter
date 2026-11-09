@@ -1,5 +1,3 @@
-- [ ] Review and refine UI design for Facebook-style social sentiment post cards <!-- id: 0 -->
-- [ ] Update `LearnerSentimentScreen` to support interactive per-post sentiment classification <!-- id: 1 -->
-- [ ] Implement local persistence (`SharedPreferences`) for user guesses and XP rewards per post <!-- id: 2 -->
-- [ ] Add gamified animations (spirit particles, XP popups, correct/incorrect feedback) <!-- id: 3 -->
-- [ ] Verify functionality with manual and automated tests <!-- id: 4 -->
+- [ ] Create implementation plan for sentiment post card scrolling fix
+- [ ] Update `_buildCardFront` in `learner_sentiment_screen.dart` with a `SingleChildScrollView`
+- [ ] Verify scrolling behavior with lengthy posts and English translation toggles

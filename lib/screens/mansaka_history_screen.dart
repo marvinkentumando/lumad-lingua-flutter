@@ -24,6 +24,7 @@ class MansakaHistoryScreen extends ConsumerStatefulWidget {
 class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
   final Set<String> _bookmarkedSections = {};
   final Set<String> _exploredSections = {};
+  bool _quizPassed = false;
   final ScrollController _scrollController = ScrollController();
 
   void _exploreSection(String sectionKey, String sectionTitle) {
@@ -351,6 +352,9 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
   void _finishHeritageQuiz(int score, int total) {
     final passed = score >= 2;
     if (passed) {
+      setState(() {
+        _quizPassed = true;
+      });
       ref.read(studentProvider.notifier).addXp(50);
       ref.read(studentProvider.notifier).addMistCrystals(25);
       HapticService.celebration();
@@ -825,15 +829,40 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
             child: ElevatedButton.icon(
               onPressed: _showHeritageQuizModal,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.gold500,
-                foregroundColor: AppColors.forest900,
+                backgroundColor: _quizPassed ? AppColors.semanticGreen.withValues(alpha: 0.2) : AppColors.gold500,
+                foregroundColor: _quizPassed ? AppColors.semanticGreen : AppColors.forest900,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: _quizPassed ? const BorderSide(color: AppColors.semanticGreen, width: 1.5) : BorderSide.none,
+                ),
               ),
-              icon: const Icon(Icons.quiz_rounded, size: 18),
-              label: const Text(
-                'Test Heritage Knowledge (+50 XP / +25 Gems)',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              icon: Icon(
+                _quizPassed ? Icons.check_circle_rounded : Icons.quiz_rounded,
+                size: 18,
+                color: _quizPassed ? AppColors.semanticGreen : AppColors.forest900,
+              ),
+              label: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _quizPassed ? 'Heritage Quiz Passed ✓' : 'Test Heritage Knowledge',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: _quizPassed ? AppColors.semanticGreen : AppColors.forest900,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _quizPassed ? 'Completed (Tap to Retake)' : '(+50 XP / +25 Gems)',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
+                      color: _quizPassed ? AppColors.semanticGreen.withValues(alpha: 0.8) : AppColors.forest900,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
