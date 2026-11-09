@@ -9,9 +9,12 @@ import '../theme/app_typography.dart';
 import '../widgets/brand_card.dart';
 import '../widgets/brand_background.dart';
 import '../models/educator_models.dart';
+import '../models/voice_submission.dart';
 import '../providers/educator_provider.dart';
 import '../services/haptic_service.dart';
 import '../services/audio_service.dart';
+import '../services/firebase_service.dart';
+import '../services/auth_service.dart';
 import '../utils/app_localization.dart';
 
 class AudioMetricsData {
@@ -172,18 +175,105 @@ class _EducatorAudioComparisonScreenState
     }
   }
 
-  void _sendFeedback(String status) {
+  Future<void> _sendFeedback(String status) async {
     HapticService.success();
-    setState(() {
-      _feedbackSent = true;
-      _feedbackStatusText = 'Feedback sent ($status)';
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Audio assessment saved: $status'),
-        backgroundColor: AppColors.semanticGreen,
-      ),
-    );
+    final user = ref.read(authStateProvider).value;
+    final feedbackText = _feedbackController.text.trim();
+    final studentId = _selectedStudentId;
+
+    if (studentId == null || studentId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a student first.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final isApproved = status == 'Approved';
+      final submissions = ref.read(userVoiceSubmissionsStreamProvider(studentId)).value;
+
+      if (submissions != null && submissions.isNotEmpty) {
+        final submission = submissions[_selectedPhraseIndex.clamp(0, submissions.length - 1)];
+        if (isApproved) {
+          await ref.read(firebaseServiceProvider).approveVoiceSubmission(
+                submission.id,
+                user?.uid ?? 'educator',
+                'educator',
+              );
+        } else {
+          await ref.read(firebaseServiceProvider).flagVoiceSubmission(
+                submission.id,
+                user?.uid ?? 'educator',
+                'educator',
+                feedbackText,
+              );
+        }
+      } else {
+        final activeMetric = _getActiveMetric(submissions);
+        final newSubmission = VoiceSubmission(
+          id: '',
+          title: activeMetric.phrase,
+          dialect: activeMetric.dialect,
+          contributorId: studentId,
+          contributorName: 'Student',
+          audioUrl: activeMetric.studentAudioUrl ?? '',
+          status: isApproved ? VoiceStatus.approved : VoiceStatus.flagged,
+          validatorId: user?.uid,
+          validatorRole: 'educator',
+          validatorFeedback: feedbackText,
+          submittedAt: DateTime.now(),
+          validatedAt: DateTime.now(),
+        );
+        await ref.read(firebaseServiceProvider).addVoiceSubmission(newSubmission);
+      }
+
+      if (mounted) {
+        setState(() {
+          _feedbackSent = true;
+          _feedbackStatusText = 'Assessment saved to Firestore ($status)';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Audio assessment saved to Firestore: $status'),
+            backgroundColor: AppColors.semanticGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving feedback: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  AudioMetricsData _getActiveMetric(List<VoiceSubmission>? submissions) {
+    if (submissions != null && submissions.isNotEmpty) {
+      final index = _selectedPhraseIndex.clamp(0, submissions.length - 1);
+      final sub = submissions[index];
+      return AudioMetricsData(
+        phrase: sub.title,
+        phonetic: sub.transcript.isNotEmpty ? '/${sub.transcript}/' : '/${sub.title}/',
+        dialect: sub.dialect,
+        dtwAccuracy: sub.status == VoiceStatus.approved ? 0.92 : 0.78,
+        pitchMatch: sub.status == VoiceStatus.approved ? 0.94 : 0.81,
+        durationRatio: 0.95,
+        formantPrecision: 0.88,
+        nativePitchContour: const [180, 210, 195, 220, 240, 210, 190, 175, 160],
+        studentPitchContour: const [175, 205, 190, 225, 230, 200, 185, 170, 155],
+        nativeWaveform: const [0.2, 0.5, 0.8, 0.9, 0.6, 0.4, 0.7, 0.9, 0.3, 0.1],
+        studentWaveform: const [0.15, 0.45, 0.75, 0.85, 0.65, 0.35, 0.65, 0.8, 0.25, 0.1],
+        studentAudioUrl: sub.audioUrl,
+      );
+    }
+    return _sampleMetrics[_selectedPhraseIndex.clamp(0, _sampleMetrics.length - 1)];
   }
 
   @override
@@ -211,7 +301,9 @@ class _EducatorAudioComparisonScreenState
                     );
                     _selectedStudentId = selectedStudent.id;
 
-                    final currentMetric = _sampleMetrics[_selectedPhraseIndex];
+                    final studentSubmissionsAsync = ref.watch(userVoiceSubmissionsStreamProvider(selectedStudent.id));
+                    final studentSubmissions = studentSubmissionsAsync.value;
+                    final currentMetric = _getActiveMetric(studentSubmissions);
 
                     return SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),

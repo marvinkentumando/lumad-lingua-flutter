@@ -156,6 +156,53 @@ class LearningHubScreen extends ConsumerWidget {
 
                       const SizedBox(height: 32),
 
+                      // Curriculum Source Badge
+                      Builder(
+                        builder: (context) {
+                          final profile = ref.watch(userProfileProvider).value;
+                          final educatorId = profile?['educatorId'] as String?;
+                          final isVillageLearner = educatorId != null && educatorId.isNotEmpty;
+
+                          final isDark = Theme.of(context).brightness == Brightness.dark;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isVillageLearner
+                                        ? AppColors.gold500.withValues(alpha: 0.15)
+                                        : Colors.grey.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        isVillageLearner ? Icons.holiday_village_rounded : Icons.public_rounded,
+                                        size: 14,
+                                        color: isVillageLearner ? AppColors.gold500 : (isDark ? Colors.white70 : Colors.black54),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        isVillageLearner ? 'Village Curriculum' : 'Public Curriculum',
+                                        style: AppTypography.caption.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 11,
+                                          color: isVillageLearner ? AppColors.gold500 : (isDark ? Colors.white70 : Colors.black54),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+
                       // Progress Cards
                       ref
                           .watch(lessonsStreamProvider)

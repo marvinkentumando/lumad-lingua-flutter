@@ -1672,7 +1672,7 @@ class _EducatorAnalyticsScreenState
     final maxXp = xps.last;
     final sumXp = xps.fold(0, (a, b) => a + b);
     final meanXp = (sumXp / xps.length).round();
-    
+
     int medianXp = 0;
     if (xps.isNotEmpty) {
       if (xps.length % 2 == 1) {
@@ -1684,6 +1684,11 @@ class _EducatorAnalyticsScreenState
 
     int q1 = xps[(xps.length * 0.25).floor()];
     int q3 = xps[(xps.length * 0.75).floor()];
+    final range = (maxXp - minXp) <= 0 ? 1 : (maxXp - minXp);
+
+    final double q1Ratio = ((q1 - minXp) / range).clamp(0.0, 1.0);
+    final double q3Ratio = ((q3 - minXp) / range).clamp(0.0, 1.0);
+    final double medianRatio = ((medianXp - minXp) / range).clamp(0.0, 1.0);
 
     return BrandCard(
       theme: isDark ? BrandCardTheme.vibrant : BrandCardTheme.cream,
@@ -1696,23 +1701,23 @@ class _EducatorAnalyticsScreenState
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'XP Performance Dispersion (Spread)',
+                'XP Performance Spectrum',
                 style: AppTypography.h3.copyWith(
                   color: isDark ? Colors.white : AppColors.forest900,
                   fontSize: 16,
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.gold500.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  'IQR: ${q3 - q1} XP',
+                  'Middle 50% Spread: ${q3 - q1} XP',
                   style: AppTypography.label.copyWith(
                     color: AppColors.gold500,
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1721,30 +1726,139 @@ class _EducatorAnalyticsScreenState
           ),
           const SizedBox(height: 4),
           Text(
-            'Quartile ranges, median, and mean XP distribution across learners',
+            'Visual tier distribution showing student performance bands & class median',
             style: AppTypography.body.copyWith(
               color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.6),
               fontSize: 12,
             ),
           ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              _buildDispersionMetric('Mean XP', '$meanXp', AppColors.semanticBlue),
-              const SizedBox(width: 8),
-              _buildDispersionMetric('Median XP', '$medianXp', AppColors.gold500),
-              const SizedBox(width: 8),
-              _buildDispersionMetric('Q1 (25%)', '$q1', Colors.purpleAccent),
-              const SizedBox(width: 8),
-              _buildDispersionMetric('Q3 (75%)', '$q3', AppColors.semanticGreen),
-            ],
+          const SizedBox(height: 24),
+
+          // 3-Zone Performance Spectrum Bar
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final double width = constraints.maxWidth;
+              final double medianLeft = width * medianRatio;
+
+              return Column(
+                children: [
+                  // Median Pin Label Above Bar
+                  SizedBox(
+                    height: 28,
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          left: (medianLeft - 40).clamp(0.0, width - 80),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.gold500,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Median: $medianXp XP',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.forest900,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+
+                  // Multi-Zone Bar Track
+                  Stack(
+                    alignment: Alignment.centerLeft,
+                    children: [
+                      Container(
+                        height: 22,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(11),
+                          color: Colors.grey.withValues(alpha: 0.15),
+                        ),
+                        child: Row(
+                          children: [
+                            // Zone 1: Lower Tier (Needs Support)
+                            Expanded(
+                              flex: (q1Ratio * 100).round().clamp(1, 100),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.shade700,
+                                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(11)),
+                                ),
+                              ),
+                            ),
+                            // Zone 2: Middle Tier (Core Progress)
+                            Expanded(
+                              flex: (((q3Ratio - q1Ratio) * 100).round()).clamp(1, 100),
+                              child: Container(
+                                color: AppColors.gold500,
+                              ),
+                            ),
+                            // Zone 3: Top Tier (High Achievers)
+                            Expanded(
+                              flex: (((1.0 - q3Ratio) * 100).round()).clamp(1, 100),
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  color: AppColors.semanticGreen,
+                                  borderRadius: BorderRadius.horizontal(right: Radius.circular(11)),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Vertical Median Indicator Pin
+                      Positioned(
+                        left: (medianLeft - 2).clamp(0.0, width - 4),
+                        child: Container(
+                          width: 4,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white : AppColors.forest900,
+                            borderRadius: BorderRadius.circular(2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.3),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Min, Mean, Max Labels below the bar
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Lowest: $minXp XP', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isDark ? Colors.white60 : Colors.black54)),
+                      Text('Class Avg: $meanXp XP', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.gold500)),
+                      Text('Highest: $maxXp XP', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isDark ? Colors.white60 : Colors.black54)),
+                    ],
+                  ),
+                ],
+              );
+            },
           ),
-          const SizedBox(height: 16),
+
+          const SizedBox(height: 20),
+
+          // Simplified Tier Cards
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Min: $minXp XP', style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black54)),
-              Text('Max: $maxXp XP', style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black54)),
+              _buildSpectrumChip('Lower 25%', '$q1 XP', 'Needs Support', Colors.amber.shade700),
+              const SizedBox(width: 8),
+              _buildSpectrumChip('Middle 50%', '$medianXp XP', 'Core Progress', AppColors.gold500),
+              const SizedBox(width: 8),
+              _buildSpectrumChip('Top 25%', '$q3 XP', 'High Achievers', AppColors.semanticGreen),
             ],
           ),
         ],
@@ -1752,21 +1866,23 @@ class _EducatorAnalyticsScreenState
     );
   }
 
-  Widget _buildDispersionMetric(String label, String val, Color color) {
+  Widget _buildSpectrumChip(String tier, String val, String subtitle, Color color) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.forest900 : Colors.black.withValues(alpha: 0.03),
+          color: color.withValues(alpha: isDark ? 0.15 : 0.08),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Column(
           children: [
-            Text(label, style: TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
+            Text(tier, style: TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 2),
             Text(val, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.forest900)),
+            const SizedBox(height: 2),
+            Text(subtitle, style: TextStyle(fontSize: 9, color: isDark ? Colors.white54 : Colors.black54)),
           ],
         ),
       ),

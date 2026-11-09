@@ -109,7 +109,10 @@ class RouterNotifier extends ChangeNotifier {
     }
 
     // Block unauthorized routes
-    if (loc.startsWith('/admin') && role != UserRole.admin) {
+    if (loc.startsWith('/admin') &&
+        !loc.startsWith('/admin/lessons') &&
+        !loc.startsWith('/admin/unit-management') &&
+        role != UserRole.admin) {
       return '/';
     }
     if (loc.startsWith('/educator') &&
@@ -117,7 +120,9 @@ class RouterNotifier extends ChangeNotifier {
         role != UserRole.admin) {
       return '/';
     }
-    if (loc.startsWith('/admin/lessons') && role != UserRole.admin && role != UserRole.educator) {
+    if ((loc.startsWith('/admin/lessons') || loc.startsWith('/admin/unit-management')) &&
+        role != UserRole.admin &&
+        role != UserRole.educator) {
       return '/';
     }
     if (loc == '/lesson-editor' && role != UserRole.admin && role != UserRole.educator) {
@@ -238,6 +243,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin/lessons',
+            builder: (context, state) => const EducatorLessonsScreen(),
+          ),
+          GoRoute(
+            path: '/educator/lessons',
             builder: (context, state) => const EducatorLessonsScreen(),
           ),
           GoRoute(

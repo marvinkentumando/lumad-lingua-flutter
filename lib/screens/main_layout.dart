@@ -47,7 +47,7 @@ class MainLayout extends ConsumerWidget {
         location == '/offline-wisdom' ||
         location == '/mansaka-history' ||
         location == '/data-privacy' ||
-        location == '/sentiment' ||
+        (location == '/sentiment' && currentRole == UserRole.learner) ||
         location == '/mastery-dashboard' ||
         location == '/warriors-circle';
 

@@ -537,7 +537,7 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard> with
 
   void _togglePlay() {
     HapticService.light();
-    if (widget.entry.audioUrl == null || widget.entry.audioUrl!.isEmpty) {
+    if (!widget.entry.hasAudio) {
       return;
     }
 
@@ -568,7 +568,7 @@ class _DictionaryEntryCardState extends ConsumerState<_DictionaryEntryCard> with
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final hasAudio = widget.entry.audioUrl != null && widget.entry.audioUrl!.isNotEmpty;
+    final hasAudio = widget.entry.hasAudio;
 
     return BouncyPressable(
       onTap: () {

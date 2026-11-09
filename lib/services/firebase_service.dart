@@ -4917,11 +4917,29 @@ final municipalityRecordingsProvider =
     });
 
 final lessonsStreamProvider = StreamProvider<List<Lesson>>((ref) {
+  final userProfile = ref.watch(userProfileProvider).value;
+  final educatorId = userProfile?['educatorId'] as String?;
+  final role = userProfile?['role']?.toString().toLowerCase();
+
   final stream = ref.watch(firebaseServiceProvider).getPublishedLessons();
   return stream.map((lessons) {
+    List<Lesson> filteredLessons;
+
+    // If user is educator/admin, or has no village educator (independent learner)
+    if (role == 'educator' || role == 'admin' || educatorId == null || educatorId.isEmpty) {
+      filteredLessons = lessons.where((l) => l.educatorId == null || l.educatorId!.isEmpty).toList();
+    } else {
+      // Village learner: return educator's village lessons
+      final villageLessons = lessons.where((l) => l.educatorId == educatorId).toList();
+      // Fallback to public master lessons if educator hasn't imported any village lessons yet
+      filteredLessons = villageLessons.isNotEmpty
+          ? villageLessons
+          : lessons.where((l) => l.educatorId == null || l.educatorId!.isEmpty).toList();
+    }
+
     // Automatically cache lessons for offline use
-    ref.read(offlineServiceProvider).saveLessons(lessons);
-    return lessons;
+    ref.read(offlineServiceProvider).saveLessons(filteredLessons);
+    return filteredLessons;
   });
 });
 
