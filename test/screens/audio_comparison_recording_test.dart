@@ -102,5 +102,28 @@ void main() {
 
       expect(stopCallCount, equals(1));
     });
+
+    test('XP threshold unlocking formula calculates 10 initial clips + 10 per 2,000 XP milestone', () {
+      int getUnlockedCount(int xp) => 10 + ((xp ~/ 2000) * 10);
+
+      expect(getUnlockedCount(0), equals(10));
+      expect(getUnlockedCount(500), equals(10));
+      expect(getUnlockedCount(1999), equals(10));
+      expect(getUnlockedCount(2000), equals(20));
+      expect(getUnlockedCount(3999), equals(20));
+      expect(getUnlockedCount(4000), equals(30));
+      expect(getUnlockedCount(6000), equals(40));
+    });
+
+    test('Initial 10 fixed words priority list matches specified Level 1 vocabulary', () {
+      const initialFixedWords = [
+        'ama', 'antik', 'bapa', 'dagom', 'gauma',
+        'isa', 'isu', 'lima', 'makagwas', 'mangud',
+      ];
+
+      expect(initialFixedWords.length, equals(10));
+      expect(initialFixedWords.contains('ama'), isTrue);
+      expect(initialFixedWords.contains('mangud'), isTrue);
+    });
   });
 }

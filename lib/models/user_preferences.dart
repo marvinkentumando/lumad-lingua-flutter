@@ -10,6 +10,7 @@ class UserPreferences {
   final int streakReminderHour;
   final int streakReminderMinute;
   final bool backgroundMusicEnabled;
+  final int lastAcknowledgedAudioUnlockXp;
 
   const UserPreferences({
     this.audioAutoplay = true,
@@ -23,6 +24,7 @@ class UserPreferences {
     this.streakReminderHour = 20, // Default 8:00 PM
     this.streakReminderMinute = 0,
     this.backgroundMusicEnabled = true,
+    this.lastAcknowledgedAudioUnlockXp = 0,
   });
 
   UserPreferences copyWith({
@@ -37,6 +39,7 @@ class UserPreferences {
     int? streakReminderHour,
     int? streakReminderMinute,
     bool? backgroundMusicEnabled,
+    int? lastAcknowledgedAudioUnlockXp,
   }) {
     return UserPreferences(
       audioAutoplay: audioAutoplay ?? this.audioAutoplay,
@@ -52,6 +55,8 @@ class UserPreferences {
       streakReminderMinute: streakReminderMinute ?? this.streakReminderMinute,
       backgroundMusicEnabled:
           backgroundMusicEnabled ?? this.backgroundMusicEnabled,
+      lastAcknowledgedAudioUnlockXp:
+          lastAcknowledgedAudioUnlockXp ?? this.lastAcknowledgedAudioUnlockXp,
     );
   }
 
@@ -67,6 +72,7 @@ class UserPreferences {
         'streakReminderHour': streakReminderHour,
         'streakReminderMinute': streakReminderMinute,
         'backgroundMusicEnabled': backgroundMusicEnabled,
+        'lastAcknowledgedAudioUnlockXp': lastAcknowledgedAudioUnlockXp,
       };
 
   factory UserPreferences.fromJson(Map<String, dynamic> json) => UserPreferences(
@@ -81,5 +87,6 @@ class UserPreferences {
         streakReminderHour: json['streakReminderHour'] ?? 20,
         streakReminderMinute: json['streakReminderMinute'] ?? 0,
         backgroundMusicEnabled: json['backgroundMusicEnabled'] ?? true,
+        lastAcknowledgedAudioUnlockXp: json['lastAcknowledgedAudioUnlockXp'] ?? 0,
       );
 }

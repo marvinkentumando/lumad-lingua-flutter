@@ -3,6 +3,7 @@ import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../services/offline_service.dart';
 import '../services/haptic_service.dart';
+import '../services/notification_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
 
@@ -331,14 +332,36 @@ class StudentNotifier extends Notifier<StudentState> {
   }
 
   void addXp(int amount) {
-    state = state.copyWith(xp: state.xp + amount);
+    final oldXp = state.xp;
+    final newXp = oldXp + amount;
+    state = state.copyWith(xp: newXp);
     _persistLocalState();
+
+    final oldTier = oldXp ~/ 2000;
+    final newTier = newXp ~/ 2000;
+    if (newTier > oldTier) {
+      final unlockedCount = 10 + (newTier * 10);
+      try {
+        NotificationService().showInstantXpUnlockNotification(
+          currentXp: newXp,
+          unlockedCount: unlockedCount,
+        );
+      } catch (_) {}
+    }
 
     final user = ref.read(authStateProvider).value;
     if (user != null) {
       ref.read(firebaseServiceProvider).addXp(user.uid, amount).catchError((_) {
         _queueSyncAction('addXp', {'uid': user.uid, 'amount': amount});
       });
+
+      if (newTier > oldTier) {
+        ref.read(firebaseServiceProvider).addNotification(user.uid, {
+          'title': '🎉 New Mansaka Audio Unlocked!',
+          'message': 'Awesome job reaching ${newTier * 2000} XP! You unlocked 10 new Mansaka audio recordings in Audio Practice.',
+          'type': 'reward',
+        }).catchError((_) {});
+      }
     }
   }
 

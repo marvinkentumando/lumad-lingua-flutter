@@ -243,4 +243,37 @@ class NotificationService {
       body: 'Learn what "$word" means in our ancestral tongue.',
     );
   }
+
+  /// Shows instant notification when learner unlocks new audio recordings at an XP milestone.
+  Future<void> showInstantXpUnlockNotification({
+    required int currentXp,
+    required int unlockedCount,
+  }) async {
+    await init();
+
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'xp_unlock_channel',
+      'Audio Unlocks & XP Milestones',
+      channelDescription: 'Notifications when new audio practice recordings are unlocked',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+
+    final milestoneTier = currentXp ~/ 2000;
+    await _notifications.show(
+      id: 200 + milestoneTier,
+      title: '🎉 New Mansaka Audio Unlocked!',
+      body: 'Awesome! You reached ${milestoneTier * 2000} XP and unlocked 10 new Mansaka audio recordings in Audio Practice.',
+      notificationDetails: details,
+    );
+  }
 }

@@ -73,6 +73,11 @@ class UserPreferencesNotifier extends Notifier<UserPreferences> {
     await _save();
   }
 
+  Future<void> acknowledgeAudioUnlockXp(int xp) async {
+    state = state.copyWith(lastAcknowledgedAudioUnlockXp: xp);
+    await _save();
+  }
+
   Future<void> _save() async {
     try {
       _prefs = await SharedPreferences.getInstance();
