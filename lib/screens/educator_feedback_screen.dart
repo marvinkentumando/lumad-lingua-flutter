@@ -16,8 +16,7 @@ class EducatorFeedbackScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final educatorId = ref.watch(authStateProvider).value?.uid ?? '';
-    final feedbackAsync = ref.watch(studentFeedbackProvider(educatorId));
+    final feedbackAsync = ref.watch(studentFeedbackProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = ref.watch(localizationProvider);
 
