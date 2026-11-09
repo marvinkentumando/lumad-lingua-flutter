@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/firebase_service.dart';
 import '../models/educator_models.dart';
 import '../models/admin_models.dart';
+import '../models/lesson.dart';
 import '../services/auth_service.dart';
 
 final selectedAcademicYearProvider = StateProvider<String>((ref) => '2026-2027');
@@ -116,15 +117,22 @@ final educatorStudentsProvider = StreamProvider<List<EducatorStudent>>((ref) {
   });
 });
 
+final publicLessonsProvider = StreamProvider<List<Lesson>>((ref) {
+  return ref.watch(firebaseServiceProvider).getPublicLessons();
+});
+
 final educatorLessonsProvider = StreamProvider<List<EducatorLesson>>((ref) {
+  final userAuth = ref.watch(authStateProvider).value;
+  final educatorId = userAuth?.uid;
   final lessonsAsync = ref.watch(allLessonsStreamProvider);
   final studentsAsync = ref.watch(educatorStudentsProvider);
 
   return lessonsAsync.when(
     data: (lessons) {
+      final villageLessons = lessons.where((l) => l.educatorId == educatorId).toList();
       return studentsAsync.when(
         data: (students) {
-          return Stream.value(lessons.map((l) {
+          return Stream.value(villageLessons.map((l) {
             final eduLesson = EducatorLesson.fromLesson(l);
             
             // Calculate real student count and completion rate
@@ -140,8 +148,8 @@ final educatorLessonsProvider = StreamProvider<List<EducatorLesson>>((ref) {
                            ..completionRate = activeStudents.isEmpty ? 0 : completedStudents.length / activeStudents.length;
           }).toList());
         },
-        loading: () => Stream.value(lessons.map((l) => EducatorLesson.fromLesson(l)).toList()),
-        error: (_, __) => Stream.value(lessons.map((l) => EducatorLesson.fromLesson(l)).toList()),
+        loading: () => Stream.value(villageLessons.map((l) => EducatorLesson.fromLesson(l)).toList()),
+        error: (_, __) => Stream.value(villageLessons.map((l) => EducatorLesson.fromLesson(l)).toList()),
       );
     },
     loading: () => const Stream.empty(),

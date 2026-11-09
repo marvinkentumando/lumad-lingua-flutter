@@ -2280,6 +2280,43 @@ class FirebaseService {
     });
   }
 
+  Stream<List<Lesson>> getPublicLessons() {
+    return _db.collection('lessons').snapshots().map((snapshot) {
+      return snapshot.docs
+          .map((doc) => Lesson.fromFirestore(doc.data(), doc.id))
+          .where((l) => l.educatorId == null || l.educatorId!.isEmpty)
+          .toList();
+    });
+  }
+
+  Future<String?> importPublicLessonToVillage({
+    required String publicLessonId,
+    required String educatorId,
+  }) async {
+    final publicLesson = await getLessonById(publicLessonId);
+    if (publicLesson == null) return null;
+
+    final villageCopy = Lesson(
+      id: '',
+      title: publicLesson.title,
+      description: publicLesson.description,
+      category: publicLesson.category,
+      language: publicLesson.language,
+      level: publicLesson.level,
+      unitNumber: publicLesson.unitNumber,
+      tasks: publicLesson.tasks,
+      isPremium: publicLesson.isPremium,
+      icon: publicLesson.icon,
+      status: 'PUBLISHED',
+      prerequisiteId: publicLesson.prerequisiteId,
+      isMistUnit: publicLesson.isMistUnit,
+      educatorId: educatorId,
+      originPublicId: publicLesson.id,
+    );
+
+    return await saveLesson(villageCopy, status: 'PUBLISHED');
+  }
+
   Future<Lesson?> getLessonById(String id) async {
     final doc = await _db.collection('lessons').doc(id).get();
     if (!doc.exists) return null;

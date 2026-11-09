@@ -12,6 +12,7 @@ import '../services/firebase_service.dart';
 import '../services/haptic_service.dart';
 import '../providers/educator_provider.dart';
 import '../utils/app_localization.dart';
+import '../widgets/public_lessons_import_dialog.dart';
 
 enum LessonSort { newest, oldest, name, unit, views }
 
@@ -130,9 +131,23 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                               ),
                             ],
                           ),
-                          // View Toggles
+                          // View Toggles & Import
                           Row(
                             children: [
+                              ElevatedButton.icon(
+                                onPressed: _openImportDialog,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.gold500,
+                                  foregroundColor: AppColors.forest900,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.download_rounded, size: 18),
+                                label: const Text('Import Public', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              ),
+                              const SizedBox(width: 8),
                               _buildViewToggleBtn(
                                 Icons.grid_view_rounded,
                                 _isGridView && !_isMapView,
@@ -276,13 +291,44 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
     );
   }
 
+  void _openImportDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => const PublicLessonsImportDialog(),
+    );
+  }
+
   Widget _buildEmptyState() {
-    return BrandedEmptyState(
-      title: _searchQuery.isNotEmpty ? 'No Scrolls Found' : 'Empty Library',
-      message: _searchQuery.isNotEmpty
-          ? 'No matching lessons found for your search.'
-          : 'Start by creating your first ancestral lesson.',
-      icon: _searchQuery.isNotEmpty ? Icons.search_off_rounded : Icons.history_edu_rounded,
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            BrandedEmptyState(
+              title: _searchQuery.isNotEmpty ? 'No Scrolls Found' : 'Village Library is Empty',
+              message: _searchQuery.isNotEmpty
+                  ? 'No matching lessons found for your search.'
+                  : 'Start by importing public curriculum lessons into your village, or create your own custom lesson.',
+              icon: _searchQuery.isNotEmpty ? Icons.search_off_rounded : Icons.history_edu_rounded,
+            ),
+            if (_searchQuery.isEmpty) ...[
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: _openImportDialog,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.gold500,
+                  foregroundColor: AppColors.forest900,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                icon: const Icon(Icons.download_rounded),
+                label: const Text('Import Public Lessons', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
