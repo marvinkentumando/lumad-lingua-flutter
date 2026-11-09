@@ -589,6 +589,7 @@ class _AncestralVaultShopScreenState
                                               userId,
                                               artifact.id,
                                               artifact.crystalCost,
+                                              artifactTitle: artifact.title,
                                             );
                                         ref
                                             .read(studentProvider.notifier)
@@ -616,7 +617,9 @@ class _AncestralVaultShopScreenState
                                           context,
                                         ).showSnackBar(
                                           SnackBar(
-                                              content: Text(e.toString())),
+                                            content: Text(e.toString().replaceAll('Exception: ', '')),
+                                            backgroundColor: Colors.red.shade700,
+                                          ),
                                         );
                                       }
                                     }

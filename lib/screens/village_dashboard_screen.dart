@@ -13,7 +13,6 @@ import '../widgets/app_shimmer_skeleton.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../services/haptic_service.dart';
-import '../models/broadcast.dart';
 import '../models/educator_models.dart';
 import '../providers/learning_provider.dart';
 import '../utils/app_localization.dart';
@@ -74,7 +73,6 @@ class VillageDashboardScreen extends ConsumerWidget {
 
     final educatorProfileAsync = ref.watch(otherUserProfileProvider(educatorId));
     final leaderboardAsync = ref.watch(villageTopLearnersProvider(educatorId));
-    final broadcastsAsync = ref.watch(villageBroadcastsProvider(educatorId));
     final assignedQuizzesAsync = ref.watch(assignedVillageMiniQuizzesProvider(educatorId));
 
     return Scaffold(
@@ -93,7 +91,6 @@ class VillageDashboardScreen extends ConsumerWidget {
                     ref.invalidate(userProfileProvider);
                     ref.invalidate(otherUserProfileProvider(educatorId));
                     ref.invalidate(villageTopLearnersProvider(educatorId));
-                    ref.invalidate(villageBroadcastsProvider(educatorId));
                     ref.invalidate(assignedVillageMiniQuizzesProvider(educatorId));
                     await Future.delayed(const Duration(milliseconds: 600));
                   },
@@ -104,8 +101,6 @@ class VillageDashboardScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildVillageHeaderBanner(context, educatorProfileAsync, leaderboardAsync, l10n, isDark),
-                        const SizedBox(height: 24),
-                        _buildAnnouncementsSection(context, broadcastsAsync, l10n, isDark),
                         const SizedBox(height: 24),
                         _buildAssignedMiniQuizzesSection(context, ref, assignedQuizzesAsync, l10n, isDark),
                         const SizedBox(height: 24),
@@ -355,241 +350,6 @@ class VillageDashboardScreen extends ConsumerWidget {
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildAnnouncementsSection(
-    BuildContext context,
-    AsyncValue<List<VillageBroadcast>> broadcastsAsync,
-    AppLocalization l10n,
-    bool isDark,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.campaign_rounded, color: isDark ? AppColors.gold500 : AppColors.forest900, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              l10n.translate('village_announcements'),
-              style: AppTypography.label.copyWith(
-                color: isDark ? AppColors.gold500 : AppColors.forest900,
-                letterSpacing: 1.5,
-                fontSize: 13,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        broadcastsAsync.when(
-          loading: () => const AppShimmerSkeleton(height: 100),
-          error: (e, _) => Text(
-            '${l10n.translate('error_loading_announcements')} $e',
-            style: TextStyle(
-              color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5),
-            ),
-          ),
-          data: (broadcasts) {
-            if (broadcasts.isEmpty) {
-              return BrandCard(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    const Icon(Icons.forum_outlined, color: AppColors.gold500, size: 24),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        l10n.translate('quiet_village_no_announcements'),
-                        style: TextStyle(
-                          color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.7),
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            final visibleBroadcasts = broadcasts.take(3).toList();
-
-            return Column(
-              children: [
-                ...visibleBroadcasts.map((b) => _buildAnnouncementCard(b, l10n, isDark)),
-                if (broadcasts.length > 3) ...[
-                  const SizedBox(height: 4),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: isDark ? AppColors.gold500 : AppColors.forest900,
-                        side: BorderSide(color: isDark ? AppColors.gold500 : AppColors.forest900, width: 1.5),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      icon: const Icon(Icons.campaign_outlined, size: 18),
-                      label: Text(
-                        '${l10n.translate('view_all_announcements')} (${broadcasts.length})',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                      ),
-                      onPressed: () {
-                        HapticService.selection();
-                        _showAllBroadcastsBottomSheet(context, broadcasts, l10n, isDark);
-                      },
-                    ),
-                  ),
-                ],
-              ],
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  void _showAllBroadcastsBottomSheet(
-    BuildContext context,
-    List<VillageBroadcast> broadcasts,
-    AppLocalization l10n,
-    bool isDark,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.forest900 : AppColors.creamBg,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.75,
-          maxChildSize: 0.9,
-          minChildSize: 0.4,
-          expand: false,
-          builder: (context, scrollController) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.campaign_rounded, color: isDark ? AppColors.gold500 : AppColors.forest900, size: 22),
-                          const SizedBox(width: 8),
-                          Text(
-                            l10n.translate('village_announcements'),
-                            style: AppTypography.h2.copyWith(
-                              color: isDark ? AppColors.gold500 : AppColors.forest900,
-                              fontSize: 18,
-                            ),
-                          ),
-                        ],
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          Icons.close_rounded,
-                          color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.7),
-                        ),
-                        onPressed: () => Navigator.pop(ctx),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: ListView.builder(
-                      controller: scrollController,
-                      itemCount: broadcasts.length,
-                      physics: const BouncingScrollPhysics(),
-                      itemBuilder: (context, index) {
-                        return _buildAnnouncementCard(broadcasts[index], l10n, isDark);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildAnnouncementCard(VillageBroadcast broadcast, AppLocalization l10n, bool isDark) {
-    final timeAgo = _formatRelativeTime(broadcast.timestamp, l10n);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: BrandCard(
-        padding: const EdgeInsets.all(16),
-        borderRadius: 16,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: isDark ? AppColors.gold500 : AppColors.forest900,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.verified_rounded,
-                        color: isDark ? Colors.black : Colors.white,
-                        size: 12,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      broadcast.educatorName.isNotEmpty
-                          ? broadcast.educatorName
-                          : l10n.translate('researcher_educator'),
-                      style: AppTypography.labelBold.copyWith(
-                        color: isDark ? AppColors.gold500 : AppColors.forest900,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-                Text(
-                  timeAgo,
-                  style: AppTypography.caption.copyWith(
-                    color: isDark ? Colors.white38 : AppColors.forest900.withValues(alpha: 0.5),
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              broadcast.message,
-              style: AppTypography.body.copyWith(
-                color: isDark ? Colors.white : AppColors.forest900,
-                fontSize: 14,
-                height: 1.4,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

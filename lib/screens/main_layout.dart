@@ -16,6 +16,8 @@ import '../services/firebase_service.dart';
 import '../config/role_nav_config.dart';
 import '../services/cultural_theme_service.dart';
 import '../services/haptic_service.dart';
+import '../services/audio_service.dart';
+import '../providers/user_preferences_provider.dart';
 import '../widgets/profile_avatar.dart';
 import '../utils/app_localization.dart';
 
@@ -61,6 +63,24 @@ class MainLayout extends ConsumerWidget {
 
     final userAsync = ref.watch(authStateProvider);
     final culturalTheme = ref.watch(culturalThemeProvider);
+    final prefs = ref.watch(userPreferencesProvider);
+    final audioService = ref.read(audioServiceProvider);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final isAudioComparisonScreen =
+          location == '/audio-comparison' || location == '/educator/audio-comparison';
+
+      if (currentRole == UserRole.learner && prefs.backgroundMusicEnabled) {
+        if (isAudioComparisonScreen) {
+          audioService.pauseAmbientMusic();
+        } else {
+          audioService.ensureAmbientMusicPlaying();
+        }
+      } else {
+        audioService.pauseAmbientMusic();
+      }
+    });
+
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -216,7 +236,31 @@ class MainLayout extends ConsumerWidget {
               children: [
                 if (role == UserRole.learner) ...[
                   _buildStreakStat(context, ref),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: () {
+                      HapticService.light();
+                      final isEnabled = ref.read(userPreferencesProvider).backgroundMusicEnabled;
+                      ref.read(userPreferencesProvider.notifier).setBackgroundMusicEnabled(!isEnabled);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        ref.watch(userPreferencesProvider).backgroundMusicEnabled
+                            ? Icons.music_note_rounded
+                            : Icons.music_off_rounded,
+                        color: ref.watch(userPreferencesProvider).backgroundMusicEnabled
+                            ? culturalTheme.accentColor
+                            : Colors.grey,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
                 ],
                 GestureDetector(
                   onTap: () {

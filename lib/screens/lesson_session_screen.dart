@@ -148,8 +148,11 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
         ref.read(currentLessonProvider(lessonId).future).then((lesson) {
           if (lesson != null && mounted) {
             _activeLesson = lesson;
-            _allSessionTasks = List.from(lesson.tasks);
-            ref.read(quizSessionProvider.notifier).loadTasks(lesson.tasks);
+            // Filter out static overview tasks so the session starts directly on interactive tasks
+            final interactiveTasks = lesson.tasks.where((t) => t.type != TaskType.overview).toList();
+            final tasksToLoad = interactiveTasks.isNotEmpty ? interactiveTasks : lesson.tasks;
+            _allSessionTasks = List.from(tasksToLoad);
+            ref.read(quizSessionProvider.notifier).loadTasks(tasksToLoad);
             _initTaskState();
 
             final audioUrls = lesson.tasks
