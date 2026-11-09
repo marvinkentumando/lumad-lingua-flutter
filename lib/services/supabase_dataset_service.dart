@@ -43,12 +43,12 @@ class SupabaseDatasetService {
   }) : _storageAdapter = storageAdapter ?? SupabaseStorageAdapter(client ?? Supabase.instance.client);
 
   /// Discovers and resolves dataset entries from Supabase Storage.
-  /// Scans `audio/dataset` (primary, RUN-tagged) and `audio/dataset_2`
-  /// (additional speaker/takes) so comparison can use a wider, calibrated
-  /// reference pool. Relies on Storage object hierarchy with full pagination.
+  /// Scans `audio/dataset` (primary, RUN-tagged), `audio/dataset_2`, `audio/dataset_3`,
+  /// and `audio/dataset_4` (additional speaker/takes) so comparison can use a wider,
+  /// multi-speaker calibrated reference pool. Relies on Storage object hierarchy.
   Future<List<SupabaseDatasetEntry>> discoverDatasetEntries() async {
     try {
-      const roots = ['dataset', 'dataset_2'];
+      const roots = ['dataset', 'dataset_2', 'dataset_3', 'dataset_4'];
       List<SupabaseDatasetEntry> entries = [];
       int limit = 100;
 
@@ -96,7 +96,9 @@ class SupabaseDatasetService {
 
           Map<String, List<ReferenceAudioTake>> runTakesMap = {};
           final runTagged = RegExp(r'^(.+)_([12])__(RUN-\d{4}-\d{4})\.wav$', caseSensitive: false);
+          final singleRunTagged = RegExp(r'^(.+)__(RUN-\d{4}-\d{4})\.wav$', caseSensitive: false);
           final simpleTake = RegExp(r'^(.+)_([12])\.wav$', caseSensitive: false);
+          final simpleSingle = RegExp(r'^(.+)\.wav$', caseSensitive: false);
 
           for (var file in fileObjects) {
             final fileName = file.name;
@@ -109,19 +111,29 @@ class SupabaseDatasetService {
             String runId;
 
             final taggedMatch = runTagged.firstMatch(fileName);
+            final singleRunMatch = singleRunTagged.firstMatch(fileName);
+            final simpleMatch = simpleTake.firstMatch(fileName);
+
             if (taggedMatch != null) {
               filePhrase = taggedMatch.group(1)!;
               takeNumber = int.parse(taggedMatch.group(2)!);
               runId = taggedMatch.group(3)!;
+            } else if (singleRunMatch != null) {
+              filePhrase = singleRunMatch.group(1)!;
+              takeNumber = 1;
+              runId = singleRunMatch.group(2)!;
+            } else if (simpleMatch != null) {
+              filePhrase = simpleMatch.group(1)!;
+              takeNumber = int.parse(simpleMatch.group(2)!);
+              runId = root.toUpperCase().replaceAll('-', '_');
             } else {
-              final simpleMatch = simpleTake.firstMatch(fileName);
-              if (simpleMatch == null) {
+              final simpleSingleMatch = simpleSingle.firstMatch(fileName);
+              if (simpleSingleMatch == null) {
                 debugPrint('SupabaseDatasetService: Rejecting malformed or unsupported filename: $fileName');
                 continue;
               }
-              filePhrase = simpleMatch.group(1)!;
-              takeNumber = int.parse(simpleMatch.group(2)!);
-              // Stable synthetic run id per source root (e.g. dataset_2).
+              filePhrase = simpleSingleMatch.group(1)!;
+              takeNumber = 1;
               runId = root.toUpperCase().replaceAll('-', '_');
             }
 

@@ -420,7 +420,7 @@ class MFCCService {
         for (final step in steps) {
           final di = step[0];
           final dj = step[1];
-          final stepWeight = step[2];
+          final stepWeight = frameCost != null ? max(di, dj) : step[2];
           final previousI = i - di;
           final previousJ = j - dj;
           if (previousI < 0 || previousJ < 0) continue;

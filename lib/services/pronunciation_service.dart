@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import '../utils/wav_decoder.dart';
 import 'mfcc_service.dart';
 import 'pronunciation_comparer_interface.dart';
+import 'speech_embedding_service.dart';
 
 enum PronunciationAlgorithm {
   dtw,
@@ -34,8 +35,8 @@ class ReferenceBaseline {
   });
 
   static const ReferenceBaseline provisional = ReferenceBaseline(
-    mean: 6.0,
-    sigma: 1.5,
+    mean: 0.15,
+    sigma: 0.04,
     pairCount: 0,
     isCalibrated: false,
   );
@@ -44,12 +45,14 @@ class ReferenceBaseline {
 /// A phrase's reference recordings, pre-processed and featurized once.
 class PronunciationReferenceSet {
   final List<List<List<double>>> referenceFeatures;
+  final List<double> featurePenalties;
   final List<double> primaryPcm;
   final ReferenceBaseline baseline;
   final int baseTakeCount;
 
   const PronunciationReferenceSet({
     required this.referenceFeatures,
+    this.featurePenalties = const [],
     required this.primaryPcm,
     required this.baseline,
     this.baseTakeCount = 0,
@@ -102,19 +105,38 @@ class PronunciationModelMetrics {
 }
 
 class PronunciationService implements IPronunciationComparer {
-  /// One tunable mismatch gate instead of the previous fixed bands. When live
-  /// mismatch rejection is enabled, this is the main knob that controls how far
-  /// a spoken take has to be from the target phrase before it is rejected by the
-  /// mismatch branch. Tweak only this number, with [_liveMismatchEnabled] on,
-  /// until a correct loud take can pass while a wrong word still fails.
+  /// One tunable mismatch gate instead of the previous fixed bands.
   static const double _mismatchRejectionMultiplier = 4.5;
 
-  /// Should the live path still reject clearly wrong words by distance? When
-  /// false, the live path never returns the mismatch score; a non-empty spoken
-  /// take gets a real score even if it is phonetically far from the target. When
-  /// true, the mismatch branch stays active and uses
-  /// [_mismatchRejectionMultiplier] as its only tuning knob right now.
+  /// Should the live path still reject clearly wrong words by distance?
   static const bool _liveMismatchEnabled = true;
+
+  static List<List<double>> _extractFeatures(List<double> pcm) {
+    if (pcm.isEmpty) return [];
+    final embeddings = SpeechEmbeddingService.extractEmbeddings(pcm);
+    if (embeddings.isNotEmpty) return embeddings;
+    return MFCCService.extractMFCC(pcm);
+  }
+
+  static DtwAlignment _align(List<List<double>> referenceFeatures, List<List<double>> userFeatures) {
+    if (referenceFeatures.isEmpty || userFeatures.isEmpty) {
+      return const DtwAlignment(
+        meanLocalCost: double.infinity,
+        totalCost: double.infinity,
+        pathWeight: 0,
+        pathLength: 0,
+      );
+    }
+    final sslAlign = MFCCService.align(
+      referenceFeatures,
+      userFeatures,
+      frameCost: SpeechEmbeddingService.calculateCosineDistance,
+    );
+    if (sslAlign.isUsable && sslAlign.meanLocalCost.isFinite) {
+      return sslAlign;
+    }
+    return MFCCService.align(referenceFeatures, userFeatures);
+  }
 
   static List<double> pitchShiftReferenceForExploration(
     List<double> samples, {
@@ -194,7 +216,7 @@ class PronunciationService implements IPronunciationComparer {
       processedNative = referenceIsPreprocessed
           ? WavDecoder.prepareReferencePcm(nativeSamples)
           : WavDecoder.prepareLearnerPcm(nativeSamples);
-      nativeFeatures = MFCCService.extractMFCC(processedNative);
+      nativeFeatures = _extractFeatures(processedNative);
     } catch (_) {
       return _emptyScore(nativeSamples, userSamples);
     }
@@ -219,6 +241,7 @@ class PronunciationService implements IPronunciationComparer {
 
   static PronunciationReferenceSet buildReferenceSet(List<List<double>> referencePcmSamples) {
     final features = <List<List<double>>>[];
+    final penalties = <double>[];
     final processedPcms = <List<double>>[];
 
     for (final pcm in referencePcmSamples) {
@@ -226,17 +249,21 @@ class PronunciationService implements IPronunciationComparer {
       try {
         final processed = WavDecoder.prepareReferencePcm(pcm);
         if (processed.isEmpty) continue;
-        final mfcc = MFCCService.extractMFCC(processed);
-        if (mfcc.isEmpty) continue;
-        features.add(mfcc);
+        final feat = _extractFeatures(processed);
+        if (feat.isEmpty) continue;
+        features.add(feat);
+        penalties.add(0.0);
         processedPcms.add(processed);
         for (final factor in const [0.94, 1.06]) {
           final variantRate = (WavDecoder.targetSampleRate * factor).round();
           final variantPcm = WavDecoder.resampleToTargetRate(processed, variantRate);
           if (variantPcm.length < 200) continue;
           final variantReady = WavDecoder.prepareReferencePcm(variantPcm);
-          final variantMfcc = MFCCService.extractMFCC(variantReady);
-          if (variantMfcc.isNotEmpty) features.add(variantMfcc);
+          final variantFeat = _extractFeatures(variantReady);
+          if (variantFeat.isNotEmpty) {
+            features.add(variantFeat);
+            penalties.add(0.018);
+          }
         }
       } catch (_) {}
     }
@@ -247,6 +274,7 @@ class PronunciationService implements IPronunciationComparer {
 
     return PronunciationReferenceSet(
       referenceFeatures: features,
+      featurePenalties: penalties,
       primaryPcm: processedPcms.isEmpty ? const [] : processedPcms.first,
       baseline: _baselineFromReferences(baseFeatures),
       baseTakeCount: processedPcms.length,
@@ -259,8 +287,10 @@ class PronunciationService implements IPronunciationComparer {
     final distances = <double>[];
     for (int i = 0; i < references.length; i++) {
       for (int j = i + 1; j < references.length; j++) {
-        final distance = MFCCService.calculateMFCCDistance(references[i], references[j]);
-        if (distance.isFinite) distances.add(distance);
+        final alignment = _align(references[i], references[j]);
+        if (alignment.isUsable && alignment.meanLocalCost.isFinite) {
+          distances.add(alignment.meanLocalCost);
+        }
       }
     }
     if (distances.isEmpty) return ReferenceBaseline.provisional;
@@ -295,7 +325,7 @@ class PronunciationService implements IPronunciationComparer {
     List<List<double>> userFeatures;
     try {
       processedUser = WavDecoder.prepareLearnerPcm(userSamples);
-      userFeatures = MFCCService.extractMFCC(processedUser);
+      userFeatures = _extractFeatures(processedUser);
     } catch (_) {
       return _emptyScore(referenceSet.primaryPcm, userSamples);
     }
@@ -304,10 +334,12 @@ class PronunciationService implements IPronunciationComparer {
     }
 
     final distances = <double>[];
-    for (final referenceFeatures in referenceSet.referenceFeatures) {
-      final alignment = MFCCService.align(referenceFeatures, userFeatures);
+    for (int i = 0; i < referenceSet.referenceFeatures.length; i++) {
+      final referenceFeatures = referenceSet.referenceFeatures[i];
+      final penalty = i < referenceSet.featurePenalties.length ? referenceSet.featurePenalties[i] : 0.0;
+      final alignment = _align(referenceFeatures, userFeatures);
       if (alignment.isUsable && alignment.meanLocalCost.isFinite) {
-        distances.add(alignment.meanLocalCost);
+        distances.add(alignment.meanLocalCost + penalty);
       }
     }
     if (distances.isEmpty) {
@@ -349,8 +381,8 @@ class PronunciationService implements IPronunciationComparer {
       var best = 0.0;
       for (final referenceFeatures in referenceSet.referenceFeatures) {
         final candidate = algorithm == PronunciationAlgorithm.hmm
-            ? _calculateHMMScore(userFeatures, referenceFeatures, strictness)
-            : _calculateCosineScore(userFeatures, referenceFeatures, strictness);
+            ? _calculateHMMScore(userFeatures, referenceFeatures, strictness, baseline: referenceSet.baseline)
+            : _calculateCosineScore(userFeatures, referenceFeatures, strictness, baseline: referenceSet.baseline);
         if (candidate > best) best = candidate;
       }
       similarity = best;
@@ -377,18 +409,12 @@ class PronunciationService implements IPronunciationComparer {
   }
 
   static double _mismatchThreshold(ReferenceBaseline baseline) {
-    final sigma = math.max(baseline.sigma, math.max(baseline.mean * 0.15, 1e-6));
-    final calibrated = baseline.mean + _mismatchRejectionMultiplier * sigma;
-    if (baseline.isCalibrated) return math.max(calibrated, baseline.mean * (_mismatchRejectionMultiplier - 1.0));
-    // Provisional CMN-scale band: keep the floor high enough that real speech
-    // passes, but let the multiplier control the wrong-word distance band.
-    return math.max(
-      calibrated,
-      math.max(
-        baseline.mean + (_mismatchRejectionMultiplier + 1.0) * sigma,
-        _mismatchRejectionMultiplier * 6.0,
-      ),
-    );
+    if (!baseline.mean.isFinite || baseline.mean <= 0) return 0.60;
+    final sigma = math.max(baseline.sigma, math.max(baseline.mean * 0.10, 1e-6));
+    if (baseline.isCalibrated) {
+      return baseline.mean - 0.4 * sigma;
+    }
+    return baseline.mean * 1.25;
   }
 
   static double scoreFromDistance(
@@ -399,9 +425,13 @@ class PronunciationService implements IPronunciationComparer {
     if (!distance.isFinite) return 0.0;
     if (distance <= 0) return 1.0;
     final sigma = math.max(baseline.sigma, 1e-6);
-    final pivot = baseline.mean + 2.5 * sigma;
-    final slope = 0.35 * (strictness.sensitivity / 3.0);
+    final pivot = baseline.isCalibrated
+        ? baseline.mean - 0.5 * sigma
+        : baseline.mean * 0.85;
+    final slope = 3.5 * (strictness.sensitivity / 3.0);
     final z = (distance - pivot) / sigma;
+    if (z >= 6.0) return 0.0;
+    if (z <= -6.0) return 1.0;
     final score = 1.0 / (1.0 + math.exp(slope * z));
     return score.isFinite ? score.clamp(0.0, 1.0) : 0.0;
   }
@@ -501,8 +531,9 @@ class PronunciationService implements IPronunciationComparer {
   static double _calculateHMMScore(
     List<List<double>> modelFrames,
     List<List<double>> observationFrames,
-    PronunciationStrictness strictness
-  ) {
+    PronunciationStrictness strictness, {
+    ReferenceBaseline? baseline,
+  }) {
     if (modelFrames.isEmpty || observationFrames.isEmpty) return 0.0;
 
     double logLikelihood = 0.0;
@@ -510,29 +541,35 @@ class PronunciationService implements IPronunciationComparer {
       final obs = observationFrames[i];
       double bestFrameDist = double.infinity;
       for (final state in modelFrames) {
-        double d = _euclideanDistance(obs, state);
+        double d = SpeechEmbeddingService.calculateCosineDistance(obs, state);
         if (d < bestFrameDist) bestFrameDist = d;
       }
       logLikelihood -= bestFrameDist;
     }
 
     final avgLogLikelihood = logLikelihood / observationFrames.length;
-    return math.exp(strictness.sensitivity * 0.4 * avgLogLikelihood).clamp(0.0, 1.0);
+    final score = math.exp(strictness.sensitivity * 2.0 * avgLogLikelihood).clamp(0.0, 1.0);
+    if (baseline != null && (-avgLogLikelihood) > _mismatchThreshold(baseline)) return 0.0;
+    return score;
   }
 
   static double _calculateCosineScore(
     List<List<double>> s,
     List<List<double>> t,
-    PronunciationStrictness strictness
-  ) {
+    PronunciationStrictness strictness, {
+    ReferenceBaseline? baseline,
+  }) {
     final alignment = MFCCService.align(
       s,
       t,
-      frameCost: (a, b) => 1.0 - _cosineSimilarity(a, b),
+      frameCost: SpeechEmbeddingService.calculateCosineDistance,
     );
     if (!alignment.isUsable) return 0.0;
+    if (baseline != null && alignment.meanLocalCost > _mismatchThreshold(baseline)) {
+      return 0.0;
+    }
 
-    return math.exp(-strictness.sensitivity * 2.0 * alignment.meanLocalCost).clamp(0.0, 1.0);
+    return math.exp(-strictness.sensitivity * 2.5 * alignment.meanLocalCost).clamp(0.0, 1.0);
   }
 
   static double _cosineSimilarity(List<double> a, List<double> b) {

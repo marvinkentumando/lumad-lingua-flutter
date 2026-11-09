@@ -48,10 +48,10 @@ class SupabaseDatasetEntry {
   final bool isCompatible;
   final List<ReferenceAudioTake> takes;
   final bool isAvailable;
-  /// Storage root this entry was discovered from (`dataset` or `dataset_2`).
+  /// Storage root this entry was discovered from (`dataset`, `dataset_2`, `dataset_3`, `dataset_4`).
   /// `dataset` entries are the learner-facing main references (take 1 default);
-  /// `dataset_2` entries are supplementary references used only to improve
-  /// comparison accuracy.
+  /// `dataset_2`, `dataset_3`, and `dataset_4` entries are supplementary
+  /// references used only to improve comparison accuracy across speakers.
   final String sourceRoot;
 
   const SupabaseDatasetEntry({
