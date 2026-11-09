@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../services/firebase_service.dart';
-import '../services/auth_service.dart';
 import '../models/feedback.dart';
 import '../widgets/brand_background.dart';
 import '../widgets/branded_empty_state.dart';
