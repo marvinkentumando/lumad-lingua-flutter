@@ -1,14 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:csv/csv.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
-import 'package:share_plus/share_plus.dart';
-import 'package:go_router/go_router.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -34,6 +26,7 @@ class _EducatorAnalyticsScreenState
   bool get isDark => Theme.of(context).brightness == Brightness.dark;
   String _timeRange = 'Daily';
   int? _tappedBarIndex;
+  int? _selectedUnit;
 
   @override
   Widget build(BuildContext context) {
@@ -131,14 +124,26 @@ class _EducatorAnalyticsScreenState
                   ),
 
                   const SizedBox(height: 32),
+
+                  allUsersAsync.when(
+                    data: (users) => _buildXpDistributionCard(users, l10n),
+                    loading: () => _buildLoadingCard(120),
+                    error: (e, _) => const SizedBox.shrink(),
+                  ),
+
+                  const SizedBox(height: 32),
                   analyticsAsync.when(
                     data: (analytics) {
                       final quizPerformance = List<Map<String, dynamic>>.from(analytics['quizPerformance'] ?? []);
                       final commonHurdles = List<Map<String, dynamic>>.from(analytics['commonHurdles'] ?? []);
+                      final weeklyTrend = List<Map<String, dynamic>>.from(analytics['weeklyTrend'] ?? []);
+                      final users = allUsersAsync.value ?? [];
 
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          _buildTemporalTrendChart(weeklyTrend, l10n),
+                          const SizedBox(height: 32),
                           _buildSectionTitle(l10n.translate('quiz_performance')),
                           const SizedBox(height: 16),
                           if (quizPerformance.isEmpty)
@@ -150,7 +155,7 @@ class _EducatorAnalyticsScreenState
                               ),
                             )
                           else
-                            ...quizPerformance.map((q) => _buildQuizItem(q, l10n)),
+                            ...quizPerformance.map((q) => _buildQuizItem(q, users, l10n)),
 
                           const SizedBox(height: 32),
                           _buildSectionTitle(l10n.translate('common_hurdles')),
@@ -235,35 +240,84 @@ class _EducatorAnalyticsScreenState
     List<Map<String, dynamic>> topLearners,
     AppLocalization l10n,
   ) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Text(
-            l10n.translate('advanced_analytics'),
-            style: GoogleFonts.outfit(
-              fontSize: 26,
-              fontWeight: FontWeight.w900,
-              color: AppColors.gold500,
-            ),
-          ),
-        ),
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _buildAcademicYearFilter(),
-            const SizedBox(width: 8),
-            _buildExportButton(
-              users,
-              dialectDist,
-              analytics,
-              totalWords,
-              topLearners,
-              l10n,
+            Expanded(
+              child: Text(
+                l10n.translate('advanced_analytics'),
+                style: GoogleFonts.outfit(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.gold500,
+                ),
+              ),
             ),
-            const SizedBox(width: 8),
-            _buildFeedbackBell(),
+            Row(
+              children: [
+                _buildAcademicYearFilter(),
+                const SizedBox(width: 8),
+                _buildUnitFilter(),
+              ],
+            ),
           ],
         ),
+        const SizedBox(height: 4),
+        Text(
+          '${users.length} learners tracked',
+          style: AppTypography.body.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUnitFilter() {
+    return PopupMenuButton<int?>(
+      onSelected: (unit) {
+        HapticService.selection();
+        setState(() => _selectedUnit = unit);
+      },
+      color: isDark ? AppColors.forest800 : Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.forestDarkCard : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.creamBorder,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.filter_list_rounded, color: AppColors.gold500, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              _selectedUnit == null ? 'All Units' : 'Unit $_selectedUnit',
+              style: AppTypography.label.copyWith(
+                color: AppColors.gold500,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: null,
+          child: Text('All Units'),
+        ),
+        ...List.generate(5, (i) => PopupMenuItem(
+          value: i + 1,
+          child: Text('Unit ${i + 1}'),
+        )),
       ],
     );
   }
@@ -804,272 +858,6 @@ class _EducatorAnalyticsScreenState
     );
   }
 
-
-
-  // --- Static/Helper UI Components ---
-
-  Widget _buildExportButton(
-    List<AdminUser> users,
-    Map<String, double> dialectDist,
-    Map<String, dynamic> analytics,
-    int totalWords,
-    List<Map<String, dynamic>> topLearners,
-    AppLocalization l10n,
-  ) {
-    return PopupMenuButton<String>(
-      onSelected: (val) => _exportData(
-        val,
-        users,
-        dialectDist,
-        analytics,
-        totalWords,
-        topLearners,
-        l10n,
-      ),
-      color: isDark ? AppColors.forest800 : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.forestDarkCard : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.05)
-                : AppColors.creamBorder,
-          ),
-        ),
-        child: const Icon(
-          Icons.file_download_outlined,
-          color: AppColors.gold500,
-          size: 20,
-        ),
-      ),
-      itemBuilder: (_) => [
-        PopupMenuItem(
-          value: 'CSV',
-          child: Text(
-            l10n.translate('export_csv'),
-            style: TextStyle(
-              color: isDark ? Colors.white70 : AppColors.creamText2,
-            ),
-          ),
-        ),
-        PopupMenuItem(
-          value: 'PDF',
-          child: Text(
-            l10n.translate('export_pdf'),
-            style: TextStyle(
-              color: isDark ? Colors.white70 : AppColors.creamText2,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _exportData(
-    String format,
-    List<AdminUser> users,
-    Map<String, double> dialectDist,
-    Map<String, dynamic> analytics,
-    int totalWords,
-    List<Map<String, dynamic>> topLearners,
-    AppLocalization l10n,
-  ) async {
-    try {
-      final now = DateTime.now();
-      final dateStr = DateFormat('yyyyMMdd_HHmm').format(now);
-      final filename = 'LumadLingua_Report_$dateStr';
-
-      if (format == 'CSV') {
-        final List<List<dynamic>> rows = [];
-        // Header
-        rows.add(['Section', 'Metric', 'Value']);
-        // Overview
-        rows.add(['Overview', 'Total Users', users.length]);
-        rows.add(['Overview', 'Total Words', totalWords]);
-        rows.add(['Overview', 'Total XP', analytics['totalXP'] ?? 0]);
-        rows.add(['Overview', 'Avg Lessons Completed', analytics['avgLessonsCompleted'] ?? 0]);
-        rows.add(['Overview', 'Pronunciation Accuracy', '${((analytics['pronunciationAccuracy'] ?? 0) * 100).toInt()}%']);
-        
-        // Retention
-        final activeCount = users.where((u) => u.xp > 0).length;
-        final retention = users.isEmpty ? 0 : (activeCount / users.length * 100).toInt();
-        rows.add(['Retention', 'Overall Retention %', '$retention%']);
-
-        // Dialects
-        dialectDist.forEach((k, v) {
-          rows.add(['Dialect Mix', k, '${(v * 100).toInt()}%']);
-        });
-
-        // Top Learners
-        rows.add(['Top Learners', 'Rank', 'Username', 'XP']);
-        for (int i = 0; i < topLearners.length; i++) {
-          rows.add(['Top Learners', i + 1, topLearners[i]['username'], topLearners[i]['xp']]);
-        }
-
-        // Student Roster & Active Streak Metrics
-        rows.add([]);
-        rows.add(['Student Roster & Active Streak Metrics']);
-        rows.add(['Name', 'Email', 'Role', 'XP', 'Active Streak (Days)', 'Municipality / Group']);
-        for (var u in users) {
-          rows.add([u.name, u.email, u.role, u.xp, u.streak, u.municipality ?? u.indigenousGroup ?? 'N/A']);
-        }
-
-        final csvData = const CsvEncoder().convert(rows);
-        final directory = await getTemporaryDirectory();
-        final file = File('${directory.path}/$filename.csv');
-        await file.writeAsString(csvData);
-
-        await SharePlus.instance.share(ShareParams(
-          files: [XFile(file.path)],
-          text: l10n.translate('analytics_report_csv'),
-        ));
-      } else {
-        // PDF Implementation
-        final pdf = pw.Document();
-        
-        pdf.addPage(
-          pw.MultiPage(
-            pageFormat: PdfPageFormat.a4,
-            build: (context) => [
-              pw.Header(level: 0, child: pw.Text(l10n.translate('educator_analytics_report_title'))),
-              pw.Paragraph(text: l10n.translate('generated_on', params: {'date': DateFormat('MMMM dd, yyyy HH:mm').format(now)})),
-              
-              pw.Header(level: 1, child: pw.Text(l10n.translate('system_overview'))),
-              pw.Bullet(text: l10n.translate('total_registered_users', params: {'count': '${users.length}'})),
-              pw.Bullet(text: l10n.translate('total_dict_words', params: {'count': '$totalWords'})),
-              pw.Bullet(text: l10n.translate('total_xp_earned', params: {'count': '${analytics['totalXP'] ?? 0}'})),
-              pw.Bullet(text: l10n.translate('avg_lessons_per_student', params: {'val': (analytics['avgLessonsCompleted'] ?? 0.0).toStringAsFixed(1)})),
-              pw.Bullet(text: l10n.translate('pronunciation_accuracy_val', params: {'val': '${((analytics['pronunciationAccuracy'] ?? 0.0) * 100).toInt()}%'})),
-              pw.Bullet(text: l10n.translate('active_learners_count', params: {'count': '${users.where((u) => u.xp > 0).length}'})),
-              
-              pw.Header(level: 1, child: pw.Text(l10n.translate('dialect_distribution'))),
-              pw.TableHelper.fromTextArray(
-                context: context,
-                data: [
-                  [l10n.translate('dialect'), l10n.translate('percentage')],
-                  ...dialectDist.entries.map((e) => [e.key, '${(e.value * 100).toInt()}%']),
-                ],
-              ),
-
-              pw.Header(level: 1, child: pw.Text(l10n.translate('quiz_performance'))),
-              pw.TableHelper.fromTextArray(
-                context: context,
-                data: [
-                  [l10n.translate('lesson_name'), l10n.translate('pass_rate'), l10n.translate('fail_rate')],
-                  ...List<Map<String, dynamic>>.from(analytics['quizPerformance'] ?? []).map((q) => [
-                    q['name'], '${q['pass']}%', '${q['fail']}%'
-                  ]),
-                ],
-              ),
-
-              pw.Header(level: 1, child: pw.Text(l10n.translate('top_learners'))),
-              pw.TableHelper.fromTextArray(
-                context: context,
-                data: [
-                  [l10n.translate('rank'), l10n.translate('username'), l10n.translate('municipality'), 'XP'],
-                  ...topLearners.asMap().entries.map((e) => [
-                    e.key + 1, e.value['username'], e.value['municipality'] ?? l10n.translate('unknown'), e.value['xp']
-                  ]),
-                ],
-              ),
-
-              pw.Header(level: 1, child: pw.Text(l10n.translate('student_roster_streak_metrics'))),
-              pw.TableHelper.fromTextArray(
-                context: context,
-                data: [
-                  [l10n.translate('name'), l10n.translate('email'), 'XP', l10n.translate('active_streak'), l10n.translate('group_municipality')],
-                  ...users.map((u) => [
-                    u.name, u.email, '${u.xp} XP', '${u.streak}d', u.municipality ?? u.indigenousGroup ?? 'N/A'
-                  ]),
-                ],
-              ),
-            ],
-          ),
-        );
-
-        final directory = await getTemporaryDirectory();
-        final file = File('${directory.path}/$filename.pdf');
-        await file.writeAsBytes(await pdf.save());
-
-        await SharePlus.instance.share(ShareParams(
-          files: [XFile(file.path)],
-          text: l10n.translate('analytics_report_pdf'),
-        ));
-      }
-    } catch (e) {
-      debugPrint('Export Error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.translate('failed_to_export', params: {'error': '$e'})),
-            backgroundColor: AppColors.semanticRed,
-          ),
-        );
-      }
-    }
-  }
-
-  Widget _buildFeedbackBell() {
-    final unreadCountAsync = ref.watch(unreadFeedbackCountProvider);
-    final count = unreadCountAsync.value ?? 0;
-
-    return GestureDetector(
-      onTap: () {
-        HapticService.selection();
-        context.push('/educator/feedback');
-      },
-      child: Stack(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.forestDarkCard : Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.05)
-                    : AppColors.creamBorder,
-              ),
-            ),
-            child: const Icon(
-              Icons.mark_email_unread_rounded,
-              color: AppColors.gold500,
-              size: 20,
-            ),
-          ),
-          if (count > 0)
-            Positioned(
-              top: -2,
-              right: -2,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: AppColors.semanticRed,
-                  shape: BoxShape.circle,
-                ),
-                constraints: const BoxConstraints(
-                  minWidth: 16,
-                  minHeight: 16,
-                ),
-                child: Text(
-                  count > 9 ? '9+' : '$count',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 8,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ).animate().scale().shake(),
-            ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildTimeRangeSelector(AppLocalization l10n) {
     return Row(
       children: ['Daily', 'Weekly', 'Monthly'].map((range) {
@@ -1120,14 +908,14 @@ class _EducatorAnalyticsScreenState
     );
   }
 
-  Widget _buildQuizItem(Map<String, dynamic> quiz, AppLocalization l10n) {
+  Widget _buildQuizItem(Map<String, dynamic> quiz, List<AdminUser> users, AppLocalization l10n) {
     final pass = quiz['pass'] as int;
     final fail = quiz['fail'] as int;
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       onTap: () {
         HapticService.selection();
-        _showQuizStudentBreakdown(context, quiz, isDark, l10n);
+        _showQuizStudentBreakdown(context, quiz, users, isDark, l10n);
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -1229,9 +1017,12 @@ class _EducatorAnalyticsScreenState
     );
   }
 
-  void _showQuizStudentBreakdown(BuildContext context, Map<String, dynamic> quiz, bool isDark, AppLocalization l10n) {
+  void _showQuizStudentBreakdown(BuildContext context, Map<String, dynamic> quiz, List<AdminUser> users, bool isDark, AppLocalization l10n) {
     final passRate = quiz['pass'] as int;
     final lessonName = quiz['name'] as String;
+
+    final passedUsers = users.where((u) => u.xp > 0).toList();
+    final strugglingUsers = users.where((u) => u.xp == 0).toList();
 
     showModalBottomSheet(
       context: context,
@@ -1285,25 +1076,36 @@ class _EducatorAnalyticsScreenState
                       controller: scrollController,
                       children: [
                         Text(
-                          'Passed Students',
+                          'Passed Students (${passedUsers.length})',
                           style: AppTypography.h3.copyWith(
                             color: AppColors.semanticGreen,
                             fontSize: 14,
                           ),
                         ),
                         const SizedBox(height: 8),
-                        _buildStudentRow('Apo Bago', 'Completed with distinction', true, isDark),
-                        _buildStudentRow('Mansaka Youth Lead', 'Passed on first attempt', true, isDark),
+                        if (passedUsers.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Text('No students passed yet.', style: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontSize: 12)),
+                          )
+                        else
+                          ...passedUsers.map((u) => _buildStudentRow(u.name, '${u.xp} XP • ${u.streak}d streak', true, isDark)),
                         const SizedBox(height: 24),
                         Text(
-                          'Needs Review / Failed',
+                          'Needs Review / Inactive (${strugglingUsers.length})',
                           style: AppTypography.h3.copyWith(
                             color: AppColors.semanticRed,
                             fontSize: 14,
                           ),
                         ),
                         const SizedBox(height: 8),
-                        _buildStudentRow('Lumad Apprentice', 'Struggling with vocabulary matching', false, isDark),
+                        if (strugglingUsers.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Text('No students need review.', style: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontSize: 12)),
+                          )
+                        else
+                          ...strugglingUsers.map((u) => _buildStudentRow(u.name, 'No activity recorded yet', false, isDark)),
                       ],
                     ),
                   ),
@@ -1698,6 +1500,273 @@ class _EducatorAnalyticsScreenState
                 fontSize: 9,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTemporalTrendChart(List<Map<String, dynamic>> weeklyTrend, AppLocalization l10n) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    if (weeklyTrend.isEmpty) return const SizedBox.shrink();
+
+    final passSpots = weeklyTrend.asMap().entries.map((e) {
+      return FlSpot(e.key.toDouble(), (e.value['passRate'] as num).toDouble());
+    }).toList();
+
+    final accSpots = weeklyTrend.asMap().entries.map((e) {
+      return FlSpot(e.key.toDouble(), (e.value['accuracy'] as num).toDouble());
+    }).toList();
+
+    return BrandCard(
+      theme: isDark ? BrandCardTheme.vibrant : BrandCardTheme.cream,
+      padding: const EdgeInsets.all(20),
+      borderRadius: 20,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Weekly Performance Trend',
+                style: AppTypography.h3.copyWith(
+                  color: isDark ? Colors.white : AppColors.forest900,
+                  fontSize: 16,
+                ),
+              ),
+              Row(
+                children: [
+                  _buildLegendItem('Pass Rate (%)', AppColors.semanticGreen),
+                  const SizedBox(width: 12),
+                  _buildLegendItem('Accuracy (%)', AppColors.gold500),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Week-over-week quiz pass rate and pronunciation accuracy',
+            style: AppTypography.body.copyWith(
+              color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.6),
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 180,
+            child: LineChart(
+              LineChartData(
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: isDark ? Colors.white10 : Colors.black12,
+                    strokeWidth: 1,
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 32,
+                      interval: 25,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          '${value.toInt()}%',
+                          style: TextStyle(
+                            color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.5),
+                            fontSize: 10,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 24,
+                      getTitlesWidget: (value, meta) {
+                        final index = value.toInt();
+                        if (index >= 0 && index < weeklyTrend.length) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              weeklyTrend[index]['label'] as String,
+                              style: TextStyle(
+                                color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.6),
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                minX: 0,
+                maxX: (weeklyTrend.length - 1).toDouble(),
+                minY: 0,
+                maxY: 100,
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: passSpots,
+                    isCurved: true,
+                    color: AppColors.semanticGreen,
+                    barWidth: 3,
+                    dotData: const FlDotData(show: true),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: AppColors.semanticGreen.withValues(alpha: 0.1),
+                    ),
+                  ),
+                  LineChartBarData(
+                    spots: accSpots,
+                    isCurved: true,
+                    color: AppColors.gold500,
+                    barWidth: 3,
+                    dotData: const FlDotData(show: true),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(String label, Color color) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: isDark ? Colors.white70 : AppColors.forest900,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildXpDistributionCard(List<AdminUser> users, AppLocalization l10n) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    if (users.isEmpty) return const SizedBox.shrink();
+
+    final xps = users.map((u) => u.xp).toList()..sort();
+    final minXp = xps.first;
+    final maxXp = xps.last;
+    final sumXp = xps.fold(0, (a, b) => a + b);
+    final meanXp = (sumXp / xps.length).round();
+    
+    int medianXp = 0;
+    if (xps.isNotEmpty) {
+      if (xps.length % 2 == 1) {
+        medianXp = xps[xps.length ~/ 2];
+      } else {
+        medianXp = ((xps[xps.length ~/ 2 - 1] + xps[xps.length ~/ 2]) / 2).round();
+      }
+    }
+
+    int q1 = xps[(xps.length * 0.25).floor()];
+    int q3 = xps[(xps.length * 0.75).floor()];
+
+    return BrandCard(
+      theme: isDark ? BrandCardTheme.vibrant : BrandCardTheme.cream,
+      padding: const EdgeInsets.all(20),
+      borderRadius: 20,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'XP Performance Dispersion (Spread)',
+                style: AppTypography.h3.copyWith(
+                  color: isDark ? Colors.white : AppColors.forest900,
+                  fontSize: 16,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.gold500.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'IQR: ${q3 - q1} XP',
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.gold500,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Quartile ranges, median, and mean XP distribution across learners',
+            style: AppTypography.body.copyWith(
+              color: isDark ? Colors.white60 : AppColors.forest900.withValues(alpha: 0.6),
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              _buildDispersionMetric('Mean XP', '$meanXp', AppColors.semanticBlue),
+              const SizedBox(width: 8),
+              _buildDispersionMetric('Median XP', '$medianXp', AppColors.gold500),
+              const SizedBox(width: 8),
+              _buildDispersionMetric('Q1 (25%)', '$q1', Colors.purpleAccent),
+              const SizedBox(width: 8),
+              _buildDispersionMetric('Q3 (75%)', '$q3', AppColors.semanticGreen),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Min: $minXp XP', style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black54)),
+              Text('Max: $maxXp XP', style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black54)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDispersionMetric(String label, String val, Color color) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.forest900 : Colors.black.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          children: [
+            Text(label, style: TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text(val, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.forest900)),
           ],
         ),
       ),

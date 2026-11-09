@@ -5111,6 +5111,16 @@ final masteredWordsCountProvider = StreamProvider.family<int, String>((ref, user
       .map((snap) => snap.size);
 });
 
+final completedLessonsCountProvider = StreamProvider.family<int, String>((ref, userId) {
+  return ref.watch(firebaseServiceProvider).db
+      .collection('users')
+      .doc(userId)
+      .collection('progress')
+      .where('completed', isEqualTo: true)
+      .snapshots()
+      .map((snap) => snap.size);
+});
+
 final dueSRSCountProvider = StreamProvider.family<int, String>((ref, userId) {
   return ref.watch(firebaseServiceProvider).db
       .collection('users')

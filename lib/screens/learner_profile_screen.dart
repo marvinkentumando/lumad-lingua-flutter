@@ -315,8 +315,8 @@ class LearnerProfileScreen extends ConsumerWidget {
     if (role == UserRole.learner) {
       final student = ref.watch(studentProvider);
       final streak = student.displayedStreak;
-      final words = ref.watch(masteredWordsCountProvider(userId)).value ?? 0;
-      return _ProfileStatsRow(xp: xp, streak: streak, words: words, l10n: l10n);
+      final lessons = ref.watch(completedLessonsCountProvider(userId)).value ?? 0;
+      return _ProfileStatsRow(xp: xp, streak: streak, words: lessons, l10n: l10n);
     }
     return _StaffStatsRow(role: role, userId: userId, xp: xp, l10n: l10n);
   }
@@ -1376,7 +1376,7 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow>
           context,
           Icons.menu_book_rounded,
           _wordsAnim,
-          widget.l10n.translate('words'),
+          widget.l10n.translate('lessons_label'),
           isInt: true,
         ),
       ],

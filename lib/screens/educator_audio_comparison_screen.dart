@@ -11,6 +11,7 @@ import '../widgets/brand_background.dart';
 import '../models/educator_models.dart';
 import '../providers/educator_provider.dart';
 import '../services/haptic_service.dart';
+import '../services/audio_service.dart';
 import '../utils/app_localization.dart';
 
 class AudioMetricsData {
@@ -25,6 +26,8 @@ class AudioMetricsData {
   final List<double> studentPitchContour;
   final List<double> nativeWaveform;
   final List<double> studentWaveform;
+  final String? nativeAudioUrl;
+  final String? studentAudioUrl;
 
   const AudioMetricsData({
     required this.phrase,
@@ -38,6 +41,8 @@ class AudioMetricsData {
     required this.studentPitchContour,
     required this.nativeWaveform,
     required this.studentWaveform,
+    this.nativeAudioUrl,
+    this.studentAudioUrl,
   });
 }
 
@@ -127,22 +132,37 @@ class _EducatorAudioComparisonScreenState
     super.dispose();
   }
 
-  void _playSimulatedAudio(bool isNative) async {
+  Future<void> _playAudio(bool isNative) async {
     HapticService.selection();
-    if (isNative) {
-      setState(() {
+    final metric = _sampleMetrics[_selectedPhraseIndex];
+    final url = isNative ? metric.nativeAudioUrl : metric.studentAudioUrl;
+    final audioService = ref.read(audioServiceProvider);
+
+    setState(() {
+      if (isNative) {
         _isPlayingNative = !_isPlayingNative;
         _isPlayingStudent = false;
-      });
-    } else {
-      setState(() {
+      } else {
         _isPlayingStudent = !_isPlayingStudent;
         _isPlayingNative = false;
-      });
-    }
+      }
+    });
 
-    if (_isPlayingNative || _isPlayingStudent) {
-      await Future.delayed(const Duration(seconds: 3));
+    try {
+      final playing = isNative ? _isPlayingNative : _isPlayingStudent;
+      if (playing) {
+        if (url != null && url.isNotEmpty) {
+          await audioService.playFromUrl(url);
+        } else {
+          // Real backend TTS speech fallback for phrase
+          await audioService.speak(metric.phrase);
+        }
+      } else {
+        await audioService.stopPlayback();
+      }
+    } catch (e) {
+      debugPrint('Educator audio playback error: $e');
+    } finally {
       if (mounted) {
         setState(() {
           _isPlayingNative = false;
@@ -422,7 +442,7 @@ class _EducatorAudioComparisonScreenState
             icon: Icons.volume_up_rounded,
             accentColor: AppColors.gold500,
             isPlaying: _isPlayingNative,
-            onTap: () => _playSimulatedAudio(true),
+            onTap: () => _playAudio(true),
           ),
         ),
         const SizedBox(width: 12),
@@ -433,7 +453,7 @@ class _EducatorAudioComparisonScreenState
             icon: Icons.record_voice_over_rounded,
             accentColor: AppColors.semanticBlue,
             isPlaying: _isPlayingStudent,
-            onTap: () => _playSimulatedAudio(false),
+            onTap: () => _playAudio(false),
           ),
         ),
       ],
