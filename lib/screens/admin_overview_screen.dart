@@ -75,16 +75,23 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                       const SizedBox(height: 32),
                       _sectionLabel(l10n.translate('platform_stats')),
                       const SizedBox(height: 16),
-                      GridView(
-                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 220,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 1.45,
-                        ),
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        children: [
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final crossAxisCount = constraints.maxWidth >= 900
+                              ? 5
+                              : constraints.maxWidth >= 600
+                                  ? 3
+                                  : 2;
+                          return GridView(
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 1.35,
+                            ),
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            children: [
                       ref.watch(totalUsersCountProvider).when(
                             data: (count) => _statCard(
                               count.toString(),
@@ -177,6 +184,8 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                         .animate(interval: 80.ms)
                         .fadeIn(delay: 100.ms)
                         .scale(begin: const Offset(0.92, 0.92)),
+                          );
+                        },
                       ),
                   const SizedBox(height: 20),
                   SizedBox(
