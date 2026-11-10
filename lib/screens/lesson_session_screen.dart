@@ -39,7 +39,6 @@ import '../widgets/assessment_overlay.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:audio_waveforms/audio_waveforms.dart';
 import '../widgets/parallax_background.dart';
-import '../widgets/elders_wisdom_panel.dart';
 import '../utils/icon_utils.dart';
 import '../widgets/brand_button.dart';
 import '../services/task_evaluator.dart';
@@ -367,13 +366,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
       ref.read(questActionProvider.notifier).updateProgress(QuestType.pronunciation, 1);
     }
 
-    final savedIsCorrect = ref
-        .read(quizSessionProvider.notifier)
-        .submitAnswer(
-          isCorrect,
-          isFirstTry: (_taskMistakes[task.id] ?? 0) == 0,
-          logicalTaskId: task.id, 
-        );
+    final savedIsCorrect = isCorrect;
 
     if (mounted) {
       setState(() {
@@ -454,6 +447,16 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
   void _handleContinue() {
     if (_isContinuing) return;
     _isContinuing = true;
+
+    final stateBeforeSubmit = ref.read(quizSessionProvider);
+    final currentTask = stateBeforeSubmit.currentTask;
+    if (!_isSuddenDeath && currentTask != null) {
+      ref.read(quizSessionProvider.notifier).submitAnswer(
+        _lastAnswerCorrect,
+        isFirstTry: (_taskMistakes[currentTask.id] ?? 0) == 0,
+        logicalTaskId: currentTask.id,
+      );
+    }
 
     final state = ref.read(quizSessionProvider);
     final l10n = ref.read(localizationProvider);
@@ -1711,8 +1714,6 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
                                   : Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        if (effectiveTask.hintMetadata.isNotEmpty)
-                                          _buildEldersWisdomButton(context, effectiveTask, l10n),
                                         _buildTaskContent(effectiveTask)
                                             .animate(key: ValueKey(_shakeCounter))
                                             .shakeX(
@@ -1826,39 +1827,5 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
     ).animate().slideY(begin: -1.0).fadeIn();
   }
 
-  Widget _buildEldersWisdomButton(BuildContext context, LessonTask task, AppLocalization l10n) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
-      child: GestureDetector(
-        onTap: () {
-          HapticService.selection();
-          showEldersWisdom(context, task.hintMetadata);
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: AppColors.gold500.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.auto_awesome, size: 16, color: AppColors.gold500),
-              const SizedBox(width: 8),
-              Text(
-                l10n.translate('elders_wisdom'),
-                style: AppTypography.label.copyWith(
-                  color: AppColors.gold500,
-                  fontSize: 10,
-                  letterSpacing: 2,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-        ).animate(onPlay: (c) => c.repeat(reverse: true)).shimmer(duration: 2.seconds, color: Colors.white12),
-      ),
-    );
-  }
+
 }
