@@ -224,7 +224,7 @@ class Artifact {
       type: 'title',
       tier: ArtifactTier.legendary,
       crystalCost: 250,
-      passiveBonus: '+15% Mist Crystals from quests',
+      passiveBonus: '+15% Crystals from quests',
       isAvailableInShop: true,
     ),
     Artifact(

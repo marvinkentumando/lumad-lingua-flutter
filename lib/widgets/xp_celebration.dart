@@ -169,31 +169,6 @@ class _XPCelebrationState extends ConsumerState<XPCelebration> {
                 letterSpacing: 1.5,
               ),
             ).animate().fade(delay: 800.ms).slideY(begin: 0.5),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.gold500.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.psychology_rounded, color: AppColors.gold500, size: 16),
-                  const SizedBox(width: 8),
-                  Text(
-                    "LEITNER SRS MASTERY EXPANDED",
-                    style: AppTypography.label.copyWith(
-                      color: AppColors.gold500,
-                      fontSize: 10,
-                      letterSpacing: 2,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ).animate().fade(delay: 1100.ms).scale(begin: const Offset(0.9, 0.9)),
           ],
         ),
       ],

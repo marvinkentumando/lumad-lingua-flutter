@@ -3570,7 +3570,7 @@ class FirebaseService {
 
       final crystals = (userDoc.data()?['mistCrystals'] as num?)?.toInt() ?? 0;
       if (crystals < cost) {
-        throw Exception("Not enough Mist Crystals! You need $cost crystals.");
+        throw Exception("Not enough Crystals! You need $cost crystals.");
       }
 
       final artifactRef = userRef.collection('artifacts').doc(artifactId);

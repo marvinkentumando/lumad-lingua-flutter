@@ -69,6 +69,10 @@ class OverviewEditor extends StatelessWidget {
             step.data['imageUrl'] = url;
             onUpdated();
           },
+          onDelete: () {
+            step.data['imageUrl'] = null;
+            onUpdated();
+          },
         ),
         const SizedBox(height: 16),
         EditorUtils.buildAudioRecorderPlaceholder(

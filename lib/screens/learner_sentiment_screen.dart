@@ -291,7 +291,7 @@ class _LearnerSentimentScreenState extends ConsumerState<LearnerSentimentScreen>
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Read real community posts, identify their tone as Positive, Neutral, or Negative, and throw completed cards away to earn XP and Mist Crystals!',
+                  'Read real community posts, identify their tone as Positive, Neutral, or Negative, and throw completed cards away to earn XP and Crystals!',
                   style: AppTypography.body.copyWith(
                     color: Colors.white.withValues(alpha: 0.9),
                     fontSize: 14,

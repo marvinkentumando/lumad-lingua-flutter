@@ -53,12 +53,36 @@ class VocabularyEditor extends StatelessWidget {
             onUpdated();
           },
         ),
+        if ((step.data['word'] ?? '').toString().isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              ActionChip(
+                avatar: const Icon(Icons.add_rounded, size: 16, color: AppColors.gold500),
+                label: Text('Insert Word: "${step.data['word']}"', style: const TextStyle(fontSize: 12)),
+                backgroundColor: AppColors.gold500.withValues(alpha: 0.15),
+                labelStyle: const TextStyle(color: AppColors.gold500),
+                onPressed: () {
+                  final currentDef = step.data['definition'] ?? '';
+                  final wordToInsert = step.data['word'];
+                  final newDef = currentDef.isEmpty ? wordToInsert : '$currentDef $wordToInsert';
+                  step.data['definition'] = newDef;
+                  onUpdated();
+                },
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: 24),
         EditorUtils.buildImageAttachment(
           context: context,
           currentImageUrl: step.data['imageUrl'],
           onUploadComplete: (url) {
             step.data['imageUrl'] = url;
+            onUpdated();
+          },
+          onDelete: () {
+            step.data['imageUrl'] = null;
             onUpdated();
           },
         ),

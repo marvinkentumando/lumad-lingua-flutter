@@ -41,7 +41,7 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
         ref.read(studentProvider.notifier).addMistCrystals(50);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('🎉 Mastered Mansaka History! +100 XP & +50 Mist Crystals earned!'),
+            content: Text('🎉 Mastered Mansaka History! +100 XP & +50 Crystals earned!'),
             backgroundColor: AppColors.semanticGreen,
             behavior: SnackBarBehavior.floating,
           ),
@@ -366,7 +366,7 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
       SnackBar(
         content: Text(
           passed
-              ? 'Quiz passed ($score/$total)! Earned +50 XP & +25 Mist Crystals 💎🎉'
+              ? 'Quiz passed ($score/$total)! Earned +50 XP & +25 Crystals 💎🎉'
               : 'Score: $score/$total. Review the history archive and try again!',
         ),
         backgroundColor: passed ? AppColors.semanticGreen : AppColors.gold500,
