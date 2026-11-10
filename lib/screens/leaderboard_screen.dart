@@ -153,7 +153,15 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     final user = ref.watch(authStateProvider).value;
     final l10n = ref.watch(localizationProvider);
 
-    final leaderboardData = ref.watch(topLearnersFamilyProvider(_timeFilter)).value;
+    final profile = user != null ? ref.watch(userProfileProvider).value : null;
+    final educatorId = profile?['educatorId'] as String?;
+    final bool isPartOfVillage = educatorId != null && educatorId.isNotEmpty;
+
+    final leaderboardProvider = isPartOfVillage
+        ? villageTopLearnersProvider(educatorId)
+        : topLearnersFamilyProvider(_timeFilter);
+
+    final leaderboardData = ref.watch(leaderboardProvider).value;
 
     LeaderboardEntry? myEntry;
     LeaderboardEntry? nextEntry;
@@ -242,7 +250,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                       // The Podium
                       Padding(
                         padding: const EdgeInsets.only(top: 180),
-                        child: ref.watch(topLearnersFamilyProvider(_timeFilter)).when(
+                        child: ref.watch(leaderboardProvider).when(
                                   data: (data) {
                                     final entries = _mapToEntries(
                                       data,
@@ -291,7 +299,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                   horizontal: 16,
                   vertical: 8,
                 ),
-                sliver: ref.watch(topLearnersFamilyProvider(_timeFilter)).when(
+                sliver: ref.watch(leaderboardProvider).when(
                           data: (data) {
                             final entries = _applyFilter(
                               _mapToEntries(data, true, _timeFilter),

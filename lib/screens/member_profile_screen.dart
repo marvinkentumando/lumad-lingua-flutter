@@ -147,16 +147,15 @@ class MemberProfileScreen extends ConsumerWidget {
   }
 
   String _getRoleBadge(UserRole role, Map<String, dynamic> profile, AppLocalization l10n) {
-    final location = profile['location'] ?? l10n.translate('unknown');
     switch (role) {
       case UserRole.admin:
-        return '${l10n.translate('system_overseer')}  •  $location';
+        return l10n.translate('system_overseer');
       case UserRole.staff:
-        return '${l10n.translate('researcher_staff')}  •  $location';
+        return l10n.translate('researcher_staff');
       case UserRole.educator:
-        return '${l10n.translate('wisdom_guide')}  •  $location';
+        return l10n.translate('wisdom_guide');
       case UserRole.learner:
-        return '${l10n.translate('elder_pathfinder')}  •  $location';
+        return l10n.translate('elder_pathfinder');
     }
   }
 

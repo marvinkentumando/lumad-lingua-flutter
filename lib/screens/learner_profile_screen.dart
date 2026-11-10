@@ -108,19 +108,18 @@ class LearnerProfileScreen extends ConsumerWidget {
   }
 
   String _getRoleBadge(UserRole role, Map<String, dynamic>? profile, WidgetRef ref, AppLocalization l10n) {
-    final location = profile?['location'] ?? l10n.translate('philippines');
     switch (role) {
       case UserRole.admin:
-        return '${l10n.translate('system_overseer')}  \u2022  $location';
+        return l10n.translate('system_overseer');
       case UserRole.staff:
-        return '${l10n.translate('researcher_staff')}  \u2022  $location';
+        return l10n.translate('researcher_staff');
       case UserRole.educator:
-        return '${l10n.translate('wisdom_guide')}  \u2022  $location';
+        return l10n.translate('wisdom_guide');
       case UserRole.learner:
         final studentState = ref.watch(studentProvider);
         final equippedTitle = studentState.equippedTitle ?? profile?['equippedTitle'];
         if (equippedTitle != null && equippedTitle.toString().trim().isNotEmpty) {
-          return '${equippedTitle.toString().trim()}  \u2022  $location';
+          return equippedTitle.toString().trim();
         }
 
         final config = ref.watch(appConfigProvider).value;
@@ -144,7 +143,7 @@ class LearnerProfileScreen extends ConsumerWidget {
             rankTitle = 'Novice';
           }
         }
-        return '$rankTitle  \u2022  $location';
+        return rankTitle;
     }
   }
 
@@ -974,80 +973,6 @@ class LearnerProfileScreen extends ConsumerWidget {
     );
     final bioController = TextEditingController(text: profile?['bio'] ?? '');
 
-    final Map<String, List<String>> regionData = {
-      'Davao del Sur': [
-        'Davao City',
-        'Digos City',
-        'Santa Cruz',
-        'Bansalan',
-        'Hagonoy',
-        'Magsaysay',
-        'Matanao',
-        'Padada',
-        'Santa Maria',
-        'Sulop',
-      ],
-      'Davao del Norte': [
-        'Tagum City',
-        'Panabo City',
-        'Island Garden City of Samal',
-        'Carmen',
-        'Kapalong',
-        'New Corella',
-        'Santo Tomas',
-        'Talaingod',
-      ],
-      'Davao de Oro': [
-        'Nabunturan',
-        'Compostela',
-        'Laak',
-        'Mabini',
-        'Maco',
-        'Maragusan',
-        'Mawab',
-        'Monkayo',
-        'Montevista',
-        'Pantukan',
-      ],
-      'Davao Oriental': [
-        'Mati City',
-        'Baganga',
-        'Banaybanay',
-        'Boston',
-        'Caraga',
-        'Cateel',
-        'Lupon',
-        'Manay',
-        'San Isidro',
-        'Tarragona',
-      ],
-      'Davao Occidental': [
-        'Malita',
-        'Don Marcelino',
-        'Jose Abad Santos',
-        'Sarangani',
-        'Santa Maria',
-      ],
-    };
-
-    String? selectedProvince;
-    String? selectedMunicipality;
-
-    final currentLocation = profile?['location'] as String?;
-    if (currentLocation != null && currentLocation.contains(', ')) {
-      final parts = currentLocation.split(', ');
-      if (parts.length == 2) {
-        final prov = parts[1].trim();
-        final muni = parts[0].trim();
-        if (regionData.containsKey(prov)) {
-          selectedProvince = prov;
-          if (regionData[prov]!.contains(muni)) {
-            selectedMunicipality = muni;
-          }
-        }
-      }
-    }
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1075,38 +1000,6 @@ class LearnerProfileScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
                   _buildEditField(l10n.translate('tribe_name'), nameController),
                   const SizedBox(height: 16),
-                  
-                  // Province Dropdown
-                  _buildLabel(l10n.translate('province'), true),
-                  _buildDropdown(
-                    context,
-                    value: selectedProvince,
-                    hint: l10n.translate('select_province'),
-                    items: regionData.keys.toList(),
-                    onChanged: (val) {
-                      setDialogState(() {
-                        selectedProvince = val;
-                        selectedMunicipality = null;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Municipality Dropdown
-                  _buildLabel(l10n.translate('municipality'), true),
-                  _buildDropdown(
-                    context,
-                    value: selectedMunicipality,
-                    hint: l10n.translate('select_municipality'),
-                    items: selectedProvince != null ? regionData[selectedProvince]! : [],
-                    onChanged: (val) {
-                      setDialogState(() {
-                        selectedMunicipality = val;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  
                   _buildEditField(
                     l10n.translate('bio'),
                     bioController,
@@ -1131,9 +1024,6 @@ class LearnerProfileScreen extends ConsumerWidget {
                                 'username': nameController.text,
                                 'bio': bioController.text,
                               };
-                              if (selectedProvince != null && selectedMunicipality != null) {
-                                updates['location'] = "$selectedMunicipality, $selectedProvince";
-                              }
 
                               await ref.read(firebaseServiceProvider).updateUserProfile(userId, updates);
                               if (context.mounted) Navigator.pop(context);
@@ -1206,72 +1096,9 @@ class LearnerProfileScreen extends ConsumerWidget {
       ],
     );
   }
-
-  Widget _buildLabel(String text, bool enabled) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 8, left: 4),
-        child: Text(
-          text.toUpperCase(),
-          style: AppTypography.label.copyWith(
-            color: enabled ? AppColors.gold500 : Colors.white24,
-            fontSize: 10,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDropdown(
-    BuildContext context, {
-    required String? value,
-    required String hint,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          hint: Text(
-            hint,
-            style: const TextStyle(
-              color: Colors.white24,
-              fontSize: 14,
-            ),
-          ),
-          dropdownColor: AppColors.forest900,
-          isExpanded: true,
-          icon: const Icon(
-            Icons.keyboard_arrow_down_rounded,
-            color: AppColors.gold500,
-          ),
-          items: items.map((String item) {
-            return DropdownMenuItem<String>(
-              value: item,
-              child: Text(
-                item,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                ),
-              ),
-            );
-          }).toList(),
-          onChanged: onChanged,
-        ),
-      ),
-    );
-  }
 }
 
-// \u2500\u2500\u2500 Animated Stats Row \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ───────────────────────────────────────────────
 
 class _ProfileStatsRow extends ConsumerStatefulWidget {
 

@@ -22,7 +22,6 @@ class MansakaHistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
-  final Set<String> _bookmarkedSections = {};
   final Set<String> _exploredSections = {};
   bool _quizPassed = false;
   final ScrollController _scrollController = ScrollController();
@@ -376,28 +375,7 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
     );
   }
 
-  void _toggleBookmark(String sectionTitle) {
-    HapticService.light();
-    setState(() {
-      if (_bookmarkedSections.contains(sectionTitle)) {
-        _bookmarkedSections.remove(sectionTitle);
-      } else {
-        _bookmarkedSections.add(sectionTitle);
-      }
-    });
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _bookmarkedSections.contains(sectionTitle)
-              ? 'Saved "$sectionTitle" to reading bookmarks'
-              : 'Removed "$sectionTitle" from bookmarks',
-        ),
-        duration: const Duration(seconds: 2),
-        backgroundColor: AppColors.forest800,
-      ),
-    );
-  }
+
 
   void _copyCitation(String citationText) {
     HapticService.light();
@@ -508,8 +486,6 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildHeroCard(context, isDark),
-                      const SizedBox(height: 20),
                       _buildGlossaryQuickAccess(isDark),
                       const SizedBox(height: 24),
 
@@ -618,6 +594,8 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
 
                       const SizedBox(height: 8),
                       _buildInteractiveCallout(context, isDark),
+                      const SizedBox(height: 20),
+                      _buildHeroCard(context, isDark),
                       const SizedBox(height: 40),
                     ],
                   ),
@@ -661,8 +639,8 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                     Expanded(
                       child: Text(
                         l10n.translate('cultural_heritage_archive'),
-                        style: const TextStyle(
-                          color: AppColors.gold500,
+                        style: TextStyle(
+                          color: isDark ? AppColors.gold500 : AppColors.forest700,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.5,
@@ -686,29 +664,7 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
               ],
             ),
           ),
-          if (_bookmarkedSections.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.gold500.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.gold500.withValues(alpha: 0.5)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.bookmark_rounded, color: AppColors.gold500, size: 14),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${_bookmarkedSections.length}',
-                    style: const TextStyle(
-                      color: AppColors.gold500,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+
           const SizedBox(width: 4),
           IconButton(
             onPressed: () => _showTableOfContentsModal(isDark),
@@ -806,7 +762,7 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                 child: Text(
                   'The Sacred Heritage of Davao de Oro',
                   style: AppTypography.h2.copyWith(
-                    color: AppColors.gold500,
+                    color: isDark ? AppColors.gold500 : AppColors.forest900,
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
                   ),
@@ -961,7 +917,7 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                 child: Text(
                   title,
                   style: AppTypography.label.copyWith(
-                    color: AppColors.gold500,
+                    color: isDark ? AppColors.gold500 : AppColors.forest800,
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.5,
@@ -990,19 +946,7 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
             ],
           ),
         ),
-        IconButton(
-          onPressed: () => _toggleBookmark(sectionKey),
-          icon: Icon(
-            _bookmarkedSections.contains(sectionKey)
-                ? Icons.bookmark_rounded
-                : Icons.bookmark_border_rounded,
-            color: AppColors.gold500,
-            size: 20,
-          ),
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          tooltip: 'Bookmark section',
-        ),
+
       ],
     );
   }
@@ -1229,7 +1173,6 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
     required bool isDark,
   }) {
     final isExplored = _exploredSections.contains(sectionKey);
-    final isBookmarked = _bookmarkedSections.contains(sectionKey);
 
     return BrandCard(
       padding: const EdgeInsets.all(20),
@@ -1274,15 +1217,7 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                   ],
                 ),
               ),
-              IconButton(
-                onPressed: () => _toggleBookmark(sectionKey),
-                icon: Icon(
-                  isBookmarked ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-                  color: AppColors.gold500,
-                  size: 20,
-                ),
-                tooltip: 'Bookmark',
-              ),
+
             ],
           ),
           const SizedBox(height: 16),
