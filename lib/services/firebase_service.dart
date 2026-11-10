@@ -235,7 +235,7 @@ class FirebaseService {
   }
 
   Stream<List<DictionaryEntry>> getGlobalDictionaryWords({
-    int limit = 50,
+    int limit = 10000,
     String? search,
     String? dialect,
   }) {

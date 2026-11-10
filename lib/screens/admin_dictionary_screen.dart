@@ -182,7 +182,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
     final l10n = ref.watch(localizationProvider);
 
     final wordsAsync = ref.watch(globalDictionaryStreamProvider(
-      ValidatorQuery('', 500, search: _searchQuery, dialect: _selectedDialect),
+      ValidatorQuery('', 10000, search: _searchQuery, dialect: _selectedDialect),
     ));
     final dialectsAsync = ref.watch(dialectsProvider);
 
