@@ -205,6 +205,98 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
     );
   }
 
+  Future<void> _showGameHistory(BuildContext context) async {
+    final user = ref.read(authServiceProvider).currentUser;
+    if (user == null) return;
+    HapticService.light();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.forest800,
+        title: Row(
+          children: [
+            const Icon(Icons.history_rounded, color: AppColors.gold500),
+            const SizedBox(width: 12),
+            Text('Lingua Duel History', style: AppTypography.h3.copyWith(color: Colors.white)),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: FutureBuilder<List<DuelHistoryItem>>(
+            future: ref.read(duelServiceProvider).fetchUserDuelHistory(user.uid),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator(color: AppColors.gold500));
+              }
+              final history = snapshot.data ?? [];
+              if (history.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Text(
+                    'No past duels recorded yet. Enter the arena and battle other learners!',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.body.copyWith(color: Colors.white70),
+                  ),
+                );
+              }
+              return ListView.builder(
+                shrinkWrap: true,
+                itemCount: history.length,
+                itemBuilder: (context, index) {
+                  final item = history[index];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.forest700,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: item.isWinner ? AppColors.semanticGreen.withValues(alpha: 0.5) : AppColors.semanticRed.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(item.isWinner ? '🏆' : '💀', style: const TextStyle(fontSize: 24)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.isWinner ? 'Victory vs ${item.opponentName}' : 'Defeat vs ${item.opponentName}',
+                                style: AppTypography.label.copyWith(
+                                  color: item.isWinner ? AppColors.semanticGreen : AppColors.semanticRed,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Items: ${item.roundsPlayed} • XP: +${item.xpEarned} • Crystals: +${item.mistCrystalsEarned}',
+                                style: AppTypography.caption.copyWith(color: Colors.white60, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          BrandButton(
+            text: 'CLOSE',
+            onTap: () => Navigator.pop(ctx),
+            type: BrandButtonType.primary,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCurrentPhase(DuelSessionState sessionState, AppLocalization l10n) {
     switch (sessionState.phase) {
       case DuelPhase.idle:
@@ -345,6 +437,13 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
                 text: l10n.translate('enter_arena'),
                 onTap: _isOnline ? _startMatchmaking : null,
                 type: BrandButtonType.primary,
+              ),
+              const SizedBox(height: 12),
+              BrandButton(
+                text: 'BATTLE HISTORY',
+                onTap: () => _showGameHistory(context),
+                type: BrandButtonType.secondary,
+                icon: Icons.history_rounded,
               ),
               const SizedBox(height: 12),
               TextButton(
@@ -498,6 +597,37 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
                   ),
                 ],
               ),
+            ),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.gold500.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.gold500.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline_rounded, color: AppColors.gold500, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Lingua Duel Instructions: Answer each item correctly before time runs out. The battle continues through all items, and the winner is decided after all items complete!',
+                        style: AppTypography.caption.copyWith(color: Colors.white70, fontSize: 11),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            Text(
+              'Item ${sessionState.currentQuestionIndex + 1} of ${sessionState.battleQuestions.length}',
+              style: AppTypography.mono.copyWith(color: AppColors.gold500, fontSize: 13, fontWeight: FontWeight.bold),
             ),
 
             const Spacer(),

@@ -263,77 +263,131 @@ class DuelService {
   }
 
   Future<List<DuelQuestion>> _generateQuestions() async {
+    List<DuelQuestion> generated = [];
     try {
+      // 1. Fetch published lessons and tasks from educators
+      final lessonsRes = await _supabase
+          .from('lessons')
+          .select()
+          .eq('status', 'PUBLISHED')
+          .limit(10);
+
+      for (var l in (lessonsRes as List)) {
+        final tasks = l['tasks'] as List?;
+        if (tasks != null) {
+          for (var t in tasks) {
+            final taskMap = Map<String, dynamic>.from(t);
+            final questionText = taskMap['questionText'] ?? '';
+            final options = List<String>.from(taskMap['options'] ?? []);
+            final correctIndex = taskMap['correctAnswerIndex'] ?? 0;
+            if (questionText.isNotEmpty && options.length >= 2) {
+              generated.add(DuelQuestion(
+                question: questionText,
+                options: options,
+                correctIndex: correctIndex,
+                type: taskMap['type'] ?? 'multipleChoice',
+              ));
+            }
+          }
+        }
+      }
+
+      // 2. Fetch approved dictionary words for diverse question types (MCQ, Reverse Translation, Matching)
       final response = await _supabase
           .from('words')
           .select()
           .eq('status', 'approved')
-          .limit(20);
+          .limit(30);
 
       final allWords = (response as List)
           .map((d) => DictionaryEntry.fromFirestore(d as Map<String, dynamic>, d['id']?.toString() ?? ''))
           .toList();
 
-      final distinctTranslations = allWords.map((w) => w.translation).toSet();
-      if (allWords.length >= 4 && distinctTranslations.length >= 4) {
+      if (allWords.length >= 4) {
         final random = Random();
-        final List<DuelQuestion> generated = [];
-        final questionCount = allWords.length >= 5 ? 5 : allWords.length;
+        for (int i = 0; i < 10 && generated.length < 10; i++) {
+          final word = allWords[random.nextInt(allWords.length)];
+          final typeChoice = random.nextInt(3);
 
-        for (int i = 0; i < questionCount; i++) {
-          final correctWord = allWords[random.nextInt(allWords.length)];
-          final List<String> options = [correctWord.translation];
-
-          var attempts = 0;
-          while (options.length < 4 && attempts < 60) {
-            attempts++;
-            final distractor =
-                allWords[random.nextInt(allWords.length)].translation;
-            if (!options.contains(distractor)) {
-              options.add(distractor);
+          if (typeChoice == 0) {
+            // Mansaka to English MCQ
+            final options = [word.translation];
+            while (options.length < 4) {
+              final dist = allWords[random.nextInt(allWords.length)].translation;
+              if (!options.contains(dist)) options.add(dist);
             }
-          }
-
-          if (options.length < 4) {
-            for (final t in distinctTranslations) {
-              if (!options.contains(t)) options.add(t);
-              if (options.length >= 4) break;
+            options.shuffle();
+            generated.add(DuelQuestion(
+              question: 'What is the English meaning of "${word.indigenousWord}"?',
+              options: options,
+              correctIndex: options.indexOf(word.translation),
+              type: 'multipleChoice',
+            ));
+          } else if (typeChoice == 1) {
+            // Reverse Translation: English to Mansaka
+            final options = [word.indigenousWord];
+            while (options.length < 4) {
+              final dist = allWords[random.nextInt(allWords.length)].indigenousWord;
+              if (!options.contains(dist)) options.add(dist);
             }
+            options.shuffle();
+            generated.add(DuelQuestion(
+              question: 'How do you say "${word.translation}" in Mansaka?',
+              options: options,
+              correctIndex: options.indexOf(word.indigenousWord),
+              type: 'reverseTranslation',
+            ));
+          } else {
+            // Matching / Definition style
+            final options = [word.translation];
+            while (options.length < 4) {
+              final dist = allWords[random.nextInt(allWords.length)].translation;
+              if (!options.contains(dist)) options.add(dist);
+            }
+            options.shuffle();
+            generated.add(DuelQuestion(
+              question: 'Select the correct translation or match for: "${word.translation}"',
+              options: options,
+              correctIndex: options.indexOf(word.translation),
+              type: 'matchingType',
+            ));
           }
-          if (options.length < 4) continue;
-
-          options.shuffle();
-          generated.add(DuelQuestion(
-            question: 'What is the meaning of "${correctWord.indigenousWord}"?',
-            options: options,
-            correctIndex: options.indexOf(correctWord.translation),
-          ));
         }
-
-        if (generated.isNotEmpty) return generated;
       }
     } catch (e) {
-      debugPrint('Error generating questions from Supabase words: $e');
+      debugPrint('Error generating questions from published lessons and words: $e');
     }
 
-    // Fallback hardcoded if not enough words / network issue
-    return [
-      DuelQuestion(
-        question: 'How do you say "Good Morning" in Mansaka?',
-        options: [
-          'Madyaw na gabi',
-          'Madyaw na allaw',
-          'Madyaw na amase',
-          'Madyaw na hapon'
-        ],
-        correctIndex: 2,
-      ),
-      DuelQuestion(
-        question: 'What is the meaning of "Duta"?',
-        options: ['Land / Earth', 'Lake / River', 'Sun / Day', 'Night / Sky'],
-        correctIndex: 0,
-      ),
-    ];
+    if (generated.isEmpty) {
+      generated = [
+        DuelQuestion(question: 'How do you say "Good Morning" in Mansaka?', options: ['Madyaw na gabi', 'Madyaw na allaw', 'Madyaw na amase', 'Madyaw na hapon'], correctIndex: 2, type: 'multipleChoice'),
+        DuelQuestion(question: 'What is the meaning of "Duta"?', options: ['Land / Earth', 'Lake / River', 'Sun / Day', 'Night / Sky'], correctIndex: 0, type: 'multipleChoice'),
+        DuelQuestion(question: 'How do you say "Water" in Mansaka?', options: ['Tubig', 'Duta', 'Langit', 'Bulan'], correctIndex: 0, type: 'reverseTranslation'),
+      ];
+    }
+
+    if (generated.length > 10) {
+      generated = generated.sublist(0, 10);
+    }
+    return generated;
+  }
+
+  Future<List<DuelHistoryItem>> fetchUserDuelHistory(String userId) async {
+    try {
+      final response = await _supabase
+          .from('duel_history')
+          .select()
+          .eq('user_id', userId)
+          .order('created_at', ascending: false)
+          .limit(20);
+
+      return (response as List)
+          .map((d) => DuelHistoryItem.fromMap(d as Map<String, dynamic>, d['id']?.toString() ?? ''))
+          .toList();
+    } catch (e) {
+      debugPrint('Error fetching duel history: $e');
+      return [];
+    }
   }
 
   // ── Battle state transitions ──────────────────────────────────────────────
@@ -359,19 +413,6 @@ class DuelService {
         targetIsPlayer1 ? 'player1_hp' : 'player2_hp': newHp,
         'updated_at': DateTime.now().toIso8601String(),
       };
-
-      final winnerId = DuelService.winnerFromHp(
-        match.player1Id,
-        match.player2Id ?? '',
-        targetIsPlayer1 ? newHp : match.player1Hp,
-        targetIsPlayer1 ? match.player2Hp : newHp,
-      );
-
-      if (winnerId != null && winnerId.isNotEmpty) {
-        updates['status'] = DuelStatus.finished.name;
-        updates['winner_id'] = winnerId;
-        updates['finished_at'] = DateTime.now().toIso8601String();
-      }
 
       await _supabase.from('duel_matches').update(updates).eq('id', matchId);
     } catch (e) {

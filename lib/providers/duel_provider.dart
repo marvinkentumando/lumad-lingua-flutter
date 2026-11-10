@@ -675,17 +675,12 @@ class DuelSessionNotifier extends Notifier<DuelSessionState> {
 
     await Future.delayed(const Duration(seconds: 1));
 
-    final outOfHp = state.playerHp <= 0 || state.opponentHp <= 0;
     final lastQuestion =
         state.currentQuestionIndex >= state.battleQuestions.length - 1;
 
-    if (outOfHp || lastQuestion) {
-      if (state.opponentHp <= 0 ||
-          (state.playerHp > state.opponentHp && lastQuestion)) {
-        _finishLocally(won: true);
-      } else {
-        _finishLocally(won: false);
-      }
+    if (lastQuestion) {
+      final won = state.playerHp >= state.opponentHp;
+      _finishLocally(won: won);
       return;
     }
 
