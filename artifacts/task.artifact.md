@@ -1,3 +1,5 @@
-- [ ] Create implementation plan for sentiment post card scrolling fix
-- [ ] Update `_buildCardFront` in `learner_sentiment_screen.dart` with a `SingleChildScrollView`
-- [ ] Verify scrolling behavior with lengthy posts and English translation toggles
+- [ ] Create `LearnerAttempt` model (`lib/models/learner_attempt.dart`)
+- [ ] Add attempt persistence methods in `FirebaseService` (`lib/services/firebase_service.dart`)
+- [ ] Update `AudioComparisonScreen` to save attempts on $\ge$ 60% scores
+- [ ] Refactor educator audio metrics screen to display cohort and individual pronunciation analytics and align with `supabaseDatasetEntriesProvider`
+- [ ] Run `flutter analyze` and verify code correctness

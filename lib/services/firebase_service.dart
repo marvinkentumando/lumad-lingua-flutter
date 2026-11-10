@@ -31,6 +31,7 @@ import '../models/assessment.dart';
 import '../models/daily_challenge.dart';
 import '../models/warrior_friend.dart';
 import '../models/school_year.dart';
+import '../models/learner_attempt.dart';
 
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
@@ -969,6 +970,61 @@ class FirebaseService {
     } catch (e) {
       debugPrint('Error deleting all words in dictionary: $e');
       rethrow;
+    }
+  }
+
+  Future<void> saveOrUpdateLearnerAttempt({
+    required String learnerId,
+    required String phraseId,
+    required String phraseTitle,
+    required double score,
+  }) async {
+    try {
+      final existing = await Supabase.instance.client
+          .from('learner_pronunciation_attempts')
+          .select()
+          .eq('learner_id', learnerId)
+          .eq('phrase_id', phraseId)
+          .maybeSingle();
+
+      if (existing != null) {
+        final currentBest = (existing['best_score'] as num).toDouble();
+        final currentCount = (existing['attempt_count'] as num).toInt();
+        final newBest = score > currentBest ? score : currentBest;
+
+        await Supabase.instance.client.from('learner_pronunciation_attempts').update({
+          'best_score': newBest,
+          'attempt_count': currentCount + 1,
+          'last_attempted_at': DateTime.now().toIso8601String(),
+        }).eq('learner_id', learnerId).eq('phrase_id', phraseId);
+      } else {
+        await Supabase.instance.client.from('learner_pronunciation_attempts').insert({
+          'learner_id': learnerId,
+          'phrase_id': phraseId,
+          'phrase_title': phraseTitle,
+          'best_score': score,
+          'attempt_count': 1,
+          'last_attempted_at': DateTime.now().toIso8601String(),
+        });
+      }
+    } catch (e) {
+      debugPrint('Error upserting learner pronunciation attempt: $e');
+    }
+  }
+
+  Future<List<LearnerAttempt>> fetchLearnerPronunciationAttempts() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('learner_pronunciation_attempts')
+          .select()
+          .order('last_attempted_at', ascending: false);
+
+      return (response as List)
+          .map((d) => LearnerAttempt.fromMap(d as Map<String, dynamic>, d['id']?.toString() ?? ''))
+          .toList();
+    } catch (e) {
+      debugPrint('Error fetching learner pronunciation attempts: $e');
+      return [];
     }
   }
 
