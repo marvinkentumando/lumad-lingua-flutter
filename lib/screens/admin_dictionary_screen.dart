@@ -199,7 +199,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
                 IconButton(
                   icon: const Icon(Icons.delete_sweep_rounded, color: AppColors.semanticRed, size: 20),
                   tooltip: 'Delete All Words',
-                  onPressed: () => _confirmDeleteAll(wordsAsync.value ?? [], l10n),
+                  onPressed: () => _confirmDeleteAll(l10n),
                 ),
                 IconButton(
                   icon: const Icon(Icons.download_rounded, color: AppColors.gold500, size: 20),
@@ -489,14 +489,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
     );
   }
 
-  void _confirmDeleteAll(List<DictionaryEntry> words, AppLocalization l10n) {
-    if (words.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.translate('no_entries_export'))),
-      );
-      return;
-    }
-
+  void _confirmDeleteAll(AppLocalization l10n) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -512,7 +505,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
           ],
         ),
         content: Text(
-          l10n.translate('delete_entry_confirm', params: {'word': '${words.length} entries'}),
+          'Are you sure you want to delete ALL words in the dictionary? This action cannot be undone.',
           style: TextStyle(
             color: Theme.of(context).brightness == Brightness.dark
                 ? Colors.white70
@@ -531,22 +524,21 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
 
               final scaffoldMessenger = ScaffoldMessenger.of(context);
               scaffoldMessenger.showSnackBar(
-                SnackBar(
-                  content: Text(l10n.translate('deleting_entries', params: {'count': '${words.length}'})),
-                  duration: const Duration(seconds: 10),
+                const SnackBar(
+                  content: Text('Deleting all dictionary words...'),
+                  duration: Duration(seconds: 15),
                 ),
               );
 
               try {
-                final ids = words.map((w) => w.id).toList();
-                await ref.read(firebaseServiceProvider).bulkDeleteWords(ids);
+                await ref.read(firebaseServiceProvider).deleteAllWordsInDictionary();
                 ref.invalidate(globalDictionaryStreamProvider);
                 ref.invalidate(dictionaryStreamProvider);
 
                 scaffoldMessenger.hideCurrentSnackBar();
                 scaffoldMessenger.showSnackBar(
-                  SnackBar(
-                    content: Text(l10n.translate('entry_deleted', params: {'term': '${words.length} entries'})),
+                  const SnackBar(
+                    content: Text('All dictionary words have been successfully deleted.'),
                     backgroundColor: AppColors.semanticGreen,
                   ),
                 );
@@ -554,7 +546,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
                 scaffoldMessenger.hideCurrentSnackBar();
                 scaffoldMessenger.showSnackBar(
                   SnackBar(
-                    content: Text(l10n.translate('export_failed_msg', params: {'error': '$e'})),
+                    content: Text('Failed to delete all words: $e'),
                     backgroundColor: AppColors.semanticRed,
                   ),
                 );
@@ -564,7 +556,7 @@ class _AdminDictionaryScreenState extends ConsumerState<AdminDictionaryScreen> {
               backgroundColor: AppColors.semanticRed,
               foregroundColor: Colors.white,
             ),
-            child: Text('${l10n.translate('delete').toUpperCase()} ALL (${words.length})'),
+            child: const Text('DELETE ALL WORDS'),
           ),
         ],
       ),

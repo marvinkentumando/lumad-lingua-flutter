@@ -949,6 +949,29 @@ class FirebaseService {
     await OfflineService().removeDictionaryEntries(ids);
   }
 
+  Future<void> deleteAllWordsInDictionary() async {
+    try {
+      final snapshot = await _db.collection('words').get();
+      final ids = snapshot.docs.map((doc) => doc.id).toList();
+      if (ids.isEmpty) return;
+
+      const chunkSize = 400;
+      for (var i = 0; i < ids.length; i += chunkSize) {
+        final end = (i + chunkSize < ids.length) ? i + chunkSize : ids.length;
+        final chunk = ids.sublist(i, end);
+        final batch = _db.batch();
+        for (var id in chunk) {
+          batch.delete(_db.collection('words').doc(id));
+        }
+        await batch.commit();
+      }
+      await OfflineService().clearDictionaryCache();
+    } catch (e) {
+      debugPrint('Error deleting all words in dictionary: $e');
+      rethrow;
+    }
+  }
+
   // Bookmark Operations
   Future<void> toggleBookmark(String userId, String wordId) async {
     final docRef = _db
