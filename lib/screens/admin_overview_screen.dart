@@ -34,7 +34,6 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final healthAsync = ref.watch(systemHealthProvider);
     final activityAsync = ref.watch(platformActivityProvider);
     final l10n = ref.watch(localizationProvider);
 
@@ -200,14 +199,6 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                       ],
                     ),
                   ).animate().fadeIn(delay: 200.ms),
-                  const SizedBox(height: 32),
-                  _sectionLabel(l10n.translate('system_health_label')),
-                  const SizedBox(height: 16),
-                  healthAsync.when(
-                    data: (health) => _buildSystemHealthGrid(health, l10n),
-                    loading: () => _buildSystemHealthGrid(null, l10n),
-                    error: (_, __) => _buildSystemHealthGrid(null, l10n),
-                  ),
                   const SizedBox(height: 32),
                   _sectionLabel(l10n.translate('user_growth_label')),
                   const SizedBox(height: 16),
@@ -448,133 +439,6 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildSystemHealthGrid(Map<String, dynamic>? data, AppLocalization l10n) {
-    final defaultHealth = [
-      {
-        'labelKey': 'api_status',
-        'valueKey': 'online',
-        'value': 'Online',
-        'color': AppColors.semanticGreen,
-        'icon': Icons.cloud_done_rounded,
-      },
-      {
-        'labelKey': 'storage_label',
-        'valueKey': null,
-        'value': '75%',
-        'color': AppColors.gold500,
-        'icon': Icons.storage_rounded,
-      },
-      {
-        'labelKey': 'database_label',
-        'valueKey': 'healthy',
-        'value': 'Healthy',
-        'color': AppColors.semanticGreen,
-        'icon': Icons.dns_rounded,
-      },
-      {
-        'labelKey': 'uptime_label',
-        'valueKey': null,
-        'value': '99.8%',
-        'color': AppColors.semanticBlue,
-        'icon': Icons.timer_rounded,
-      },
-    ];
-
-    return Row(
-      children: defaultHealth.map((h) {
-        String value = h['value'] as String;
-        if (data != null) {
-          switch (h['labelKey']) {
-            case 'api_status':
-              value = data['apiStatus'] ?? value;
-              break;
-            case 'storage_label':
-              value = data['storage'] ?? value;
-              break;
-            case 'database_label':
-              value = data['database'] ?? value;
-              break;
-            case 'uptime_label':
-              value = data['uptime'] ?? value;
-              break;
-          }
-        }
-
-        final isPulsing = value == 'Online' || value == 'Healthy' || value == l10n.translate('online') || value == l10n.translate('healthy');
-
-        String displayVal = value;
-        if (value == 'Online') {
-          displayVal = l10n.translate('online');
-        } else if (value == 'Healthy') {
-          displayVal = l10n.translate('healthy');
-        }
-
-        return Expanded(
-          child: Container(
-            margin: EdgeInsets.only(right: h == defaultHealth.last ? 0 : 10),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isDark
-                    ? (h['color'] as Color).withValues(alpha: 0.15)
-                    : AppColors.creamBorder,
-              ),
-            ),
-            child: Column(
-              children: [
-                Icon(
-                  h['icon'] as IconData,
-                  color: h['color'] as Color,
-                  size: 20,
-                )
-                    .animate(
-                      onPlay: (c) =>
-                          isPulsing ? c.repeat(reverse: true) : c.stop(),
-                    )
-                    .tint(
-                      color: (h['color'] as Color).withValues(alpha: 0.4),
-                      duration: 2.seconds,
-                    ),
-                const SizedBox(height: 8),
-                Text(
-                  displayVal,
-                  style: AppTypography.h3.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 13,
-                  ),
-                )
-                    .animate(
-                      onPlay: (c) =>
-                          isPulsing ? c.repeat(reverse: true) : c.stop(),
-                    )
-                    .custom(
-                      duration: 2.seconds,
-                      builder: (context, val, child) => Opacity(
-                        opacity: 0.6 + (val * 0.4),
-                        child: child,
-                      ),
-                    ),
-                Text(
-                  l10n.translate(h['labelKey'] as String).toUpperCase(),
-                  style: AppTypography.label.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurfaceVariant
-                        .withValues(alpha: 0.5),
-                    fontSize: 7,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
     );
   }
 
