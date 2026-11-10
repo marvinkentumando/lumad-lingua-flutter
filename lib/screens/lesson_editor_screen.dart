@@ -833,7 +833,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
             onReorderStart: (index) {
               HapticService.selection();
             },
-            onReorderItem: _onReorderSteps,
+            onReorder: _onReorderSteps,
             children: _steps.map((step) {
               final isSelected = _selectedStep == step;
               final isStepValid = step.isValid;
