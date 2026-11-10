@@ -540,6 +540,7 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
               }
             })
             .catchError((error) async {
+              debugPrint('Lesson completion error: $error');
               // SAVE OFFLINE if online sync fails
               final offlineProgress = {
                 'lessonId': lessonId,

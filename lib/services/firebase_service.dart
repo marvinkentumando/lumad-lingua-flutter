@@ -2800,7 +2800,16 @@ class FirebaseService {
       }
 
       if (!userDoc.exists) {
-        throw Exception("User profile not found. Please log in again.");
+        transaction.set(userRef, {
+          'username': 'Tribe Member',
+          'email': '',
+          'role': 'learner',
+          'xp': 0,
+          'mistCrystals': 0,
+          'streak': 0,
+          'createdAt': FieldValue.serverTimestamp(),
+          'lastLogin': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
       }
 
       final existingData = progressDoc.data();
