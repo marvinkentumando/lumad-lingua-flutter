@@ -265,15 +265,21 @@ class DuelService {
   Future<List<DuelQuestion>> _generateQuestions() async {
     List<DuelQuestion> generated = [];
     try {
-      // 1. Fetch published lessons and tasks from educators
+      // 1. Fetch published public lessons and tasks (educatorId is null or empty)
       final lessonsRes = await _supabase
           .from('lessons')
           .select()
           .eq('status', 'PUBLISHED')
-          .limit(10);
+          .limit(20);
 
       for (var l in (lessonsRes as List)) {
-        final tasks = l['tasks'] as List?;
+        final lessonMap = Map<String, dynamic>.from(l as Map);
+        final docEducatorId = lessonMap['educator_id'] ?? lessonMap['educatorId'];
+        if (docEducatorId != null && docEducatorId.toString().isNotEmpty) {
+          continue; // Skip village/educator lessons, use public lessons only
+        }
+
+        final tasks = lessonMap['tasks'] as List?;
         if (tasks != null) {
           for (var t in tasks) {
             final taskMap = Map<String, dynamic>.from(t);
