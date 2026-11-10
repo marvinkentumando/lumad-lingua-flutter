@@ -323,16 +323,16 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Learner Audio Metrics',
+                  'Pronunciation & Learning Effectiveness Analytics',
                   style: AppTypography.h3.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Acoustic waveform & pitch contour analysis',
+                  'Descriptive analytics of pronunciation accuracy & learning effectiveness',
                   style: AppTypography.body.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                     fontSize: 11,
