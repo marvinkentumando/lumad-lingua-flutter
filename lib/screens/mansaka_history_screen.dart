@@ -181,12 +181,18 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                   children: [
                     const Icon(Icons.fact_check_rounded, color: AppColors.gold500, size: 22),
                     const SizedBox(width: 8),
-                    Text(
-                      'Review Your Answers ($correctCount/${questions.length})',
-                      style: AppTypography.h3.copyWith(
-                        color: isDark ? Colors.white : AppColors.forest900,
-                        fontSize: 16,
+                    Expanded(
+                      child: Text(
+                        'Review Your Answers ($correctCount/${questions.length})',
+                        style: AppTypography.h3.copyWith(
+                          color: isDark ? Colors.white : AppColors.forest900,
+                          fontSize: 16,
+                        ),
                       ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close_rounded, color: isDark ? Colors.white70 : Colors.black54),
+                      onPressed: () => Navigator.of(ctx).pop(),
                     ),
                   ],
                 ),
@@ -196,7 +202,7 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                     shrinkWrap: true,
                     children: [
                       Text(
-                        'Review your answers below. Correct choices are highlighted in green, your wrong choices in red. Tap "Edit Answers" if you need to correct any selection.',
+                        'Review your answers below. Correct choices are highlighted in green, your wrong choices in red. Tap "Retake Quiz" to try again.',
                         style: AppTypography.caption.copyWith(color: isDark ? Colors.white70 : Colors.black54, fontSize: 12),
                       ),
                       const SizedBox(height: 16),
@@ -283,14 +289,15 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                   TextButton(
                     onPressed: () {
                       setStateQuiz(() {
+                        selectedAnswers.clear();
                         isReviewMode = false;
                         currentQuestion = 0;
                       });
                     },
-                    child: const Text('EDIT ANSWERS'),
+                    child: const Text('RETAKE QUIZ', style: TextStyle(color: AppColors.gold500)),
                   ),
                   ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500, foregroundColor: AppColors.forest900),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticGreen, foregroundColor: Colors.white),
                     onPressed: () {
                       Navigator.of(ctx).pop();
                       _finishHeritageQuiz(correctCount, questions.length);
@@ -315,12 +322,18 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                 children: [
                   const Icon(Icons.quiz_rounded, color: AppColors.gold500, size: 22),
                   const SizedBox(width: 8),
-                  Text(
-                    'Heritage Quiz (${currentQuestion + 1}/${questions.length})',
-                    style: AppTypography.h3.copyWith(
-                      color: isDark ? Colors.white : AppColors.forest900,
-                      fontSize: 16,
+                  Expanded(
+                    child: Text(
+                      'Heritage Quiz (${currentQuestion + 1}/${questions.length})',
+                      style: AppTypography.h3.copyWith(
+                        color: isDark ? Colors.white : AppColors.forest900,
+                        fontSize: 16,
+                      ),
                     ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close_rounded, color: isDark ? Colors.white70 : Colors.black54),
+                    onPressed: () => Navigator.of(ctx).pop(),
                   ),
                 ],
               ),
