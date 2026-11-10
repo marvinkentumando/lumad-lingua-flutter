@@ -30,6 +30,7 @@ import '../models/assessment.dart';
 
 import '../models/daily_challenge.dart';
 import '../models/warrior_friend.dart';
+import '../models/school_year.dart';
 
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
@@ -4714,6 +4715,25 @@ class FirebaseService {
       'senderName': senderName,
       'senderPhotoUrl': senderAvatar,
     });
+  }
+
+  // ── School Year Operations ──────────────────────────────────────────────
+  Stream<List<SchoolYear>> getSchoolYears() {
+    return _db.collection('school_years').orderBy('startDate', descending: true).snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => SchoolYear.fromFirestore(doc.data(), doc.id)).toList();
+    });
+  }
+
+  Future<void> addSchoolYear(SchoolYear schoolYear) async {
+    await _db.collection('school_years').add(schoolYear.toMap());
+  }
+
+  Future<void> updateSchoolYear(SchoolYear schoolYear) async {
+    await _db.collection('school_years').doc(schoolYear.id).update(schoolYear.toMap());
+  }
+
+  Future<void> deleteSchoolYear(String id) async {
+    await _db.collection('school_years').doc(id).delete();
   }
 }
 

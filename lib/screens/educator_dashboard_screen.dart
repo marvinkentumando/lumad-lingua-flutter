@@ -91,6 +91,8 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
                   const SizedBox(height: 24),
                   _buildAudioMetricsShortcutCard(l10n),
                   const SizedBox(height: 24),
+                  _buildUnitManagementShortcutCard(l10n),
+                  const SizedBox(height: 24),
                   _buildMiniQuizManagementSection(userAuth?.uid ?? '', l10n),
                   const SizedBox(height: 24),
                   _buildRecentActivity(
@@ -354,6 +356,51 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
             child: const Text('INSPECT', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildUnitManagementShortcutCard(AppLocalization l10n) {
+    return GestureDetector(
+      onTap: () {
+        HapticService.selection();
+        context.push('/educator/unit-management');
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.gold500.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.library_books_rounded,
+                color: AppColors.gold500,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Unit & School Year Management', style: AppTypography.h3.copyWith(color: isDark ? Colors.white : AppColors.creamText, fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Text('Manage lesson units & custom academic year ranges', style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.gold500, size: 16),
+          ],
+        ),
       ),
     );
   }
