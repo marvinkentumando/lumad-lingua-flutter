@@ -986,6 +986,16 @@ class AppLocalization {
       'search_tribal_kin_prompt': 'Type a username or email to search for tribal kin.',
       'search_error': 'Search error: {error}',
       'error_prefix': 'Error: {error}',
+      // Settings & Preferences
+      'settings_preferences': 'Settings & Preferences',
+      'appearance_language': 'APPEARANCE & LANGUAGE',
+      'app_language': 'App Language',
+      'select_app_language': 'Select App Language / Dialect',
+      'background_music': 'Background Music',
+      'background_music_desc': 'Play ambient forest music during lessons',
+      'reminders_alerts': 'REMINDERS & ALERTS',
+      'daily_streak_reminders_desc': 'Set daily practice alerts & schedule',
+      'data_privacy_section': 'DATA & PRIVACY',
     },
     'tl': {
       'hub_next_label': 'ANG SUSUNOD MONG HAKBANG',
@@ -1912,6 +1922,16 @@ class AppLocalization {
       'search_tribal_kin_prompt': 'Mag-type ng username o email para maghanap ng katribu.',
       'search_error': 'Mali sa paghahanap: {error}',
       'error_prefix': 'Error: {error}',
+      // Settings & Preferences
+      'settings_preferences': 'Mga Setting at Kagustuhan',
+      'appearance_language': 'ANYO AT WIKA',
+      'app_language': 'Wika ng App',
+      'select_app_language': 'Pumili ng Wika / Diyalekto',
+      'background_music': 'Tugtog sa Likuran',
+      'background_music_desc': 'Magpatugtog ng musika ng gubat habang nag-aaral',
+      'reminders_alerts': 'MGA PAALALA AT BABALA',
+      'daily_streak_reminders_desc': 'I-set ang araw-araw na paalala at iskedyul',
+      'data_privacy_section': 'DATA AT PRIVACY',
     },
     'bis': {
       'hub_next_label': 'ANG IMONG SUNOD NGA LAKANG',
@@ -2806,11 +2826,24 @@ class AppLocalization {
       'search_tribal_kin_prompt': 'Pag-type og username o email aron mangita og kaubang tribu.',
       'search_error': 'Sayop sa pagpangita: {error}',
       'error_prefix': 'Error: {error}',
+      // Settings & Preferences
+      'settings_preferences': 'Mga Setting ug Gusto',
+      'appearance_language': 'HITSURA UG EDITING',
+      'app_language': 'Pinulongan sa App',
+      'select_app_language': 'Pili og Pinulongan / Diyalekto',
+      'background_music': 'Tugtog sa Luyo',
+      'background_music_desc': 'Magpatugtog og musika sa kagubatan samtang nagkat-on',
+      'reminders_alerts': 'MGA PAALALA UG PAHINUMDOM',
+      'daily_streak_reminders_desc': 'I-set ang adlaw-adlaw nga pahinumdom ug iskedyul',
+      'data_privacy_section': 'DATA UG PRIVACY',
     },
   };
 
   String translate(String key, {Map<String, String>? params}) {
-    String value = _localizedValues[languageCode]?[key] ?? _localizedValues['en']?[key] ?? key;
+    String lang = languageCode;
+    if (lang == 'fil') lang = 'tl';
+    if (lang == 'ceb') lang = 'bis';
+    String value = _localizedValues[lang]?[key] ?? _localizedValues['en']?[key] ?? key;
     if (params != null) {
       params.forEach((k, v) {
         value = value.replaceAll('{$k}', v);
