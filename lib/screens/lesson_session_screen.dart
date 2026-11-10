@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../services/audio_service.dart';
 import '../services/offline_service.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../widgets/xp_celebration.dart';
 import '../models/lesson.dart';
 import '../models/lesson_task.dart';
@@ -541,25 +542,40 @@ class _LessonSessionScreenState extends ConsumerState<LessonSessionScreen> {
             })
             .catchError((error) async {
               debugPrint('Lesson completion error: $error');
-              // SAVE OFFLINE if online sync fails
-              final offlineProgress = {
-                'lessonId': lessonId,
-                'score': state.completedCount * 10,
-                'stars': stars,
-                'taskPerformance': _taskMistakes,
-                'bonusXp': _bonusXp,
-                'timestamp': DateTime.now().toIso8601String(),
-              };
               
-              await ref.read(offlineServiceProvider).saveOfflineProgress(lessonId, offlineProgress);
+              final connectivityResult = await Connectivity().checkConnectivity();
+              final isReallyOffline = connectivityResult.contains(ConnectivityResult.none) || connectivityResult.isEmpty;
 
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(l10n.translate('saved_offline_desc')),
-                    backgroundColor: AppColors.gold500,
-                  ),
-                );
+              if (isReallyOffline) {
+                // SAVE OFFLINE only if truly offline
+                final offlineProgress = {
+                  'lessonId': lessonId,
+                  'score': state.completedCount * 10,
+                  'stars': stars,
+                  'taskPerformance': _taskMistakes,
+                  'bonusXp': _bonusXp,
+                  'timestamp': DateTime.now().toIso8601String(),
+                };
+                
+                await ref.read(offlineServiceProvider).saveOfflineProgress(lessonId, offlineProgress);
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(l10n.translate('saved_offline_desc')),
+                      backgroundColor: AppColors.gold500,
+                    ),
+                  );
+                }
+              } else {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Sync error: $error'),
+                      backgroundColor: Colors.red.shade700,
+                    ),
+                  );
+                }
               }
             })
             .whenComplete(() {

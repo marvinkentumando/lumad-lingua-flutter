@@ -316,16 +316,18 @@ class StudentNotifier extends Notifier<StudentState> {
     }
   }
 
-  void spendMistCrystals(int amount) {
+  void spendMistCrystals(int amount, {bool syncFirebase = true}) {
     if (state.mistCrystals >= amount) {
       state = state.copyWith(mistCrystals: state.mistCrystals - amount);
       _persistLocalState();
 
-      final user = ref.read(authStateProvider).value;
-      if (user != null) {
-        ref.read(firebaseServiceProvider).addMistCrystals(user.uid, -amount).catchError((_) {
-          _queueSyncAction('addMistCrystals', {'uid': user.uid, 'amount': -amount});
-        });
+      if (syncFirebase) {
+        final user = ref.read(authStateProvider).value;
+        if (user != null) {
+          ref.read(firebaseServiceProvider).addMistCrystals(user.uid, -amount).catchError((_) {
+            _queueSyncAction('addMistCrystals', {'uid': user.uid, 'amount': -amount});
+          });
+        }
       }
     }
   }

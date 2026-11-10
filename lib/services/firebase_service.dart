@@ -2874,230 +2874,258 @@ class FirebaseService {
       }
     }
 
-    return _db.runTransaction((transaction) async {
-      final userRef = _db.collection('users').doc(userId);
-      final progressRef = _db
-          .collection('users')
-          .doc(userId)
-          .collection('progress')
-          .doc(lessonId);
-
-      // PRE-FETCH REFERENCES FOR LATER (To keep READS at the start)
-      final badgeRef = _db
-          .collection('users')
-          .doc(userId)
-          .collection('achievements')
-          .doc('perfect_lesson');
-
-      DocumentReference? userArtifactRef;
-      final artifact = droppedArtifact;
-      if (artifact != null) {
-        userArtifactRef = _db
+    try {
+      return await _db.runTransaction((transaction) async {
+        final userRef = _db.collection('users').doc(userId);
+        final progressRef = _db
             .collection('users')
             .doc(userId)
-            .collection('artifacts')
-            .doc(artifact.id);
-      }
+            .collection('progress')
+            .doc(lessonId);
 
-      // Fetch all necessary data at the START of the transaction (READS)
-      final userDoc = await transaction.get(userRef);
-      final progressDoc = await transaction.get(progressRef);
-      final badgeDoc = await transaction.get(badgeRef);
+        // PRE-FETCH REFERENCES FOR LATER (To keep READS at the start)
+        final badgeRef = _db
+            .collection('users')
+            .doc(userId)
+            .collection('achievements')
+            .doc('perfect_lesson');
 
-      DocumentSnapshot? userArtifactDoc;
-      if (userArtifactRef != null) {
-        userArtifactDoc = await transaction.get(userArtifactRef);
-      }
+        DocumentReference? userArtifactRef;
+        final artifact = droppedArtifact;
+        if (artifact != null) {
+          userArtifactRef = _db
+              .collection('users')
+              .doc(userId)
+              .collection('artifacts')
+              .doc(artifact.id);
+        }
 
-      if (!userDoc.exists) {
-        transaction.set(userRef, {
-          'username': 'Tribe Member',
-          'email': '',
-          'role': 'learner',
-          'xp': 0,
-          'mistCrystals': 0,
-          'streak': 0,
-          'createdAt': FieldValue.serverTimestamp(),
-          'lastLogin': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-      }
+        // Fetch all necessary data at the START of the transaction (READS)
+        final userDoc = await transaction.get(userRef);
+        final progressDoc = await transaction.get(progressRef);
+        final badgeDoc = await transaction.get(badgeRef);
 
-      final existingData = progressDoc.data();
-      final int currentBestScore = existingData?['bestScore'] as int? ?? 0;
-      final int currentStars = existingData?['stars'] as int? ?? 0;
+        DocumentSnapshot? userArtifactDoc;
+        if (userArtifactRef != null) {
+          userArtifactDoc = await transaction.get(userArtifactRef);
+        }
 
-      // Update lesson progress if it's the first completion or a better score
-      final Map<String, dynamic> updateData = {
-        'completed': true,
-        'bestScore': score > currentBestScore ? score : currentBestScore,
-        'stars': stars > currentStars ? stars : currentStars,
-        'lastAttempt': FieldValue.serverTimestamp(),
-      };
+        if (!userDoc.exists) {
+          transaction.set(userRef, {
+            'username': 'Tribe Member',
+            'email': '',
+            'role': 'learner',
+            'xp': 0,
+            'mistCrystals': 0,
+            'streak': 0,
+            'createdAt': FieldValue.serverTimestamp(),
+            'lastLogin': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+        }
 
-      if (taskPerformance != null) {
-        // Track analytics: merges existing mistakes with new ones
-        final existingPerformance =
-            existingData?['performance'] as Map<String, dynamic>? ?? {};
-        taskPerformance.forEach((key, value) {
-          existingPerformance[key] = (existingPerformance[key] ?? 0) + value;
-        });
-        updateData['performance'] = existingPerformance;
-      }
+        final existingData = progressDoc.data();
+        final int currentBestScore = existingData?['bestScore'] as int? ?? 0;
+        final int currentStars = existingData?['stars'] as int? ?? 0;
 
-      // 1. Save Progress
-      transaction.set(progressRef, updateData, SetOptions(merge: true));
+        // Update lesson progress if it's the first completion or a better score
+        final Map<String, dynamic> updateData = {
+          'completed': true,
+          'bestScore': score > currentBestScore ? score : currentBestScore,
+          'stars': stars > currentStars ? stars : currentStars,
+          'lastAttempt': FieldValue.serverTimestamp(),
+        };
 
-      // 2. Struggle Point Telemetry
-      if (taskPerformance != null) {
-        for (var entry in taskPerformance.entries) {
-          if (entry.value > 0) {
-            final telemetryRef = _db
-                .collection('telemetry')
-                .doc('struggle_points')
-                .collection('points')
-                .doc(entry.key);
-            transaction.set(telemetryRef, {
-              'taskId': entry.key,
-              'totalMistakes': FieldValue.increment(entry.value),
-              'userImpactCount': FieldValue.increment(1),
-              'lastReported': FieldValue.serverTimestamp(),
-            }, SetOptions(merge: true));
+        if (taskPerformance != null) {
+          // Track analytics: merges existing mistakes with new ones
+          final existingPerformance =
+              existingData?['performance'] as Map<String, dynamic>? ?? {};
+          taskPerformance.forEach((key, value) {
+            existingPerformance[key] = (existingPerformance[key] ?? 0) + value;
+          });
+          updateData['performance'] = existingPerformance;
+        }
+
+        // 1. Save Progress
+        transaction.set(progressRef, updateData, SetOptions(merge: true));
+
+        // 2. Struggle Point Telemetry
+        if (taskPerformance != null) {
+          for (var entry in taskPerformance.entries) {
+            if (entry.value > 0) {
+              final telemetryRef = _db
+                  .collection('telemetry')
+                  .doc('struggle_points')
+                  .collection('points')
+                  .doc(entry.key);
+              transaction.set(telemetryRef, {
+                'taskId': entry.key,
+                'totalMistakes': FieldValue.increment(entry.value),
+                'userImpactCount': FieldValue.increment(1),
+                'lastReported': FieldValue.serverTimestamp(),
+              }, SetOptions(merge: true));
+            }
           }
         }
-      }
 
-      // 3. Calculate rewards
-      int xpReward = 0;
+        // 3. Calculate rewards
+        int xpReward = 0;
 
-      if (lesson != null) {
-        for (var task in lesson.tasks) {
-          final mistakes = taskPerformance?[task.id] ?? 0;
-          if (mistakes == 0) {
-            xpReward += config.lessonTaskPerfectXp;
-          } else {
-            xpReward += config.lessonTaskRetryXp;
-          }
-        }
-      } else {
-        xpReward = score * 2;
-      }
-
-      xpReward += config.lessonCompletionBaseXp + bonusXp;
-
-      int crystalReward;
-      if (lesson?.isMistUnit ?? false) {
-        crystalReward = 30;
-      } else {
-        crystalReward = stars == 3 ? 50 : (stars == 2 ? 25 : 15);
-      }
-
-      // 4. Atomic reward update
-      transaction.update(userRef, {
-        'mistCrystals': FieldValue.increment(crystalReward),
-        'xp': FieldValue.increment(xpReward),
-      });
-
-      // Vocabulary Mastery Logic
-      if (lesson != null && stars >= 2) {
-        for (var task in lesson.tasks) {
-          if (task.type == TaskType.vocabulary) {
+        if (lesson != null) {
+          for (var task in lesson.tasks) {
             final mistakes = taskPerformance?[task.id] ?? 0;
-            final wordId = task.nativeWord;
-            if (wordId.isNotEmpty) {
-              final masterRef = _db
-                  .collection('users')
-                  .doc(userId)
-                  .collection('mastery')
-                  .doc(wordId);
+            if (mistakes == 0) {
+              xpReward += config.lessonTaskPerfectXp;
+            } else {
+              xpReward += config.lessonTaskRetryXp;
+            }
+          }
+        } else {
+          xpReward = score * 2;
+        }
 
-              if (mistakes == 0) {
-                transaction.set(masterRef, {
-                  'word': wordId,
-                  'masteryLevel': FieldValue.increment(1),
-                  'lastSeen': FieldValue.serverTimestamp(),
-                }, SetOptions(merge: true));
-              } else {
-                transaction.set(masterRef, {
-                  'lastSeen': FieldValue.serverTimestamp(),
-                }, SetOptions(merge: true));
+        xpReward += config.lessonCompletionBaseXp + bonusXp;
+
+        int crystalReward;
+        if (lesson?.isMistUnit ?? false) {
+          crystalReward = 30;
+        } else {
+          crystalReward = stars == 3 ? 50 : (stars == 2 ? 25 : 15);
+        }
+
+        // 4. Atomic reward update
+        transaction.update(userRef, {
+          'mistCrystals': FieldValue.increment(crystalReward),
+          'xp': FieldValue.increment(xpReward),
+        });
+
+        // Vocabulary Mastery Logic
+        if (lesson != null && stars >= 2) {
+          for (var task in lesson.tasks) {
+            if (task.type == TaskType.vocabulary) {
+              final mistakes = taskPerformance?[task.id] ?? 0;
+              final wordId = task.nativeWord;
+              if (wordId.isNotEmpty) {
+                final masterRef = _db
+                    .collection('users')
+                    .doc(userId)
+                    .collection('mastery')
+                    .doc(wordId);
+
+                if (mistakes == 0) {
+                  transaction.set(masterRef, {
+                    'word': wordId,
+                    'masteryLevel': FieldValue.increment(1),
+                    'lastSeen': FieldValue.serverTimestamp(),
+                  }, SetOptions(merge: true));
+                } else {
+                  transaction.set(masterRef, {
+                    'lastSeen': FieldValue.serverTimestamp(),
+                  }, SetOptions(merge: true));
+                }
               }
             }
           }
         }
-      }
 
-      bool unlockedBadge = false;
-      if (stars == 3) {
-        if (!badgeDoc.exists) {
-          unlockedBadge = true;
-          transaction.set(badgeRef, {
-            'id': 'perfect_lesson',
-            'title': 'Perfect Scholar',
-            'description': 'Completed a lesson with 3 stars.',
-            'iconName': 'star',
-            'colorHex': '#FFD700',
-            'earnedAt': FieldValue.serverTimestamp(),
-          });
+        bool unlockedBadge = false;
+        if (stars == 3) {
+          if (!badgeDoc.exists) {
+            unlockedBadge = true;
+            transaction.set(badgeRef, {
+              'id': 'perfect_lesson',
+              'title': 'Perfect Scholar',
+              'description': 'Completed a lesson with 3 stars.',
+              'iconName': 'star',
+              'colorHex': '#FFD700',
+              'earnedAt': FieldValue.serverTimestamp(),
+            });
+          }
         }
-      }
 
-      // Grant Dropped Artifact (if any)
-      if (droppedArtifact != null && userArtifactRef != null && userArtifactDoc != null) {
-        if (!userArtifactDoc.exists) {
-          final artifactData = droppedArtifact!.toFirestore();
-          artifactData['isEarned'] = true;
-          artifactData['earnedAt'] = FieldValue.serverTimestamp();
-          transaction.set(userArtifactRef, artifactData);
+        // Grant Dropped Artifact (if any)
+        if (droppedArtifact != null && userArtifactRef != null && userArtifactDoc != null) {
+          if (!userArtifactDoc.exists) {
+            final artifactData = droppedArtifact!.toFirestore();
+            artifactData['isEarned'] = true;
+            artifactData['earnedAt'] = FieldValue.serverTimestamp();
+            transaction.set(userArtifactRef, artifactData);
 
-          // Community Feed: Artifact Unlocked
+            // Community Feed: Artifact Unlocked
+            final feedRef = _db.collection('community_feed').doc();
+            transaction.set(feedRef, {
+              'userId': userId,
+              'userName': userDoc.data()?['username'] ?? 'A tribe member',
+              'userPhotoUrl': userDoc.data()?['photoURL'],
+              'type': 'achievement',
+              'message': 'discovered the "${droppedArtifact?.title}" artifact!',
+              'emoji': '🏺',
+              'likeCount': 0,
+              'commentCount': 0,
+              'likedBy': [],
+              'createdAt': FieldValue.serverTimestamp(),
+            });
+          } else {
+            // User already has this artifact, grant 25 crystals instead
+            droppedArtifact = null;
+            transaction.update(userRef, {
+              'mistCrystals': FieldValue.increment(25),
+            });
+          }
+        }
+
+        // Community Feed: Lesson Completion (only if new best stars)
+        if (stars >= 2 && (existingData?['stars'] ?? 0) < stars) {
           final feedRef = _db.collection('community_feed').doc();
           transaction.set(feedRef, {
             'userId': userId,
             'userName': userDoc.data()?['username'] ?? 'A tribe member',
             'userPhotoUrl': userDoc.data()?['photoURL'],
-            'type': 'achievement',
-            'message': 'discovered the "${droppedArtifact?.title}" artifact!',
-            'emoji': '🏺',
+            'type': 'lesson_completed',
+            'message': stars == 3
+                ? 'perfected "${lesson?.title ?? 'a lesson'}"!'
+                : 'completed "${lesson?.title ?? 'a lesson'}"!',
+            'emoji': stars == 3 ? '🌟' : '📚',
             'likeCount': 0,
             'commentCount': 0,
             'likedBy': [],
             'createdAt': FieldValue.serverTimestamp(),
           });
-        } else {
-          // User already has this artifact, grant 25 crystals instead
-          droppedArtifact = null;
-          transaction.update(userRef, {
-            'mistCrystals': FieldValue.increment(25),
-          });
         }
-      }
 
-      // Community Feed: Lesson Completion (only if new best stars)
-      if (stars >= 2 && (existingData?['stars'] ?? 0) < stars) {
-        final feedRef = _db.collection('community_feed').doc();
-        transaction.set(feedRef, {
-          'userId': userId,
-          'userName': userDoc.data()?['username'] ?? 'A tribe member',
-          'userPhotoUrl': userDoc.data()?['photoURL'],
-          'type': 'lesson_completed',
-          'message': stars == 3
-              ? 'perfected "${lesson?.title ?? 'a lesson'}"!'
-              : 'completed "${lesson?.title ?? 'a lesson'}"!',
-          'emoji': stars == 3 ? '🌟' : '📚',
-          'likeCount': 0,
-          'commentCount': 0,
-          'likedBy': [],
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-      }
+        return {
+          'unlockedBadge': unlockedBadge,
+          'droppedArtifact': droppedArtifact,
+          'xpEarned': xpReward,
+          'crystalsEarned': crystalReward,
+        };
+      });
+    } catch (e) {
+      debugPrint('Transaction failed for completeLesson, attempting fallback update: $e');
+      final userRef = _db.collection('users').doc(userId);
+      final progressRef = _db.collection('users').doc(userId).collection('progress').doc(lessonId);
+
+      int xpReward = (lesson != null ? lesson.tasks.length * 15 : score * 2) + config.lessonCompletionBaseXp + bonusXp;
+      int crystalReward = (lesson?.isMistUnit ?? false) ? 30 : (stars == 3 ? 50 : (stars == 2 ? 25 : 15));
+
+      await progressRef.set({
+        'completed': true,
+        'bestScore': score,
+        'stars': stars,
+        'lastAttempt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      await userRef.set({
+        'mistCrystals': FieldValue.increment(crystalReward),
+        'xp': FieldValue.increment(xpReward),
+      }, SetOptions(merge: true));
 
       return {
-        'unlockedBadge': unlockedBadge,
-        'droppedArtifact': droppedArtifact,
+        'unlockedBadge': false,
+        'droppedArtifact': null,
         'xpEarned': xpReward,
         'crystalsEarned': crystalReward,
       };
-    });
+    }
   }
 
   Future<void> applyIdempotentCurrencyOp({

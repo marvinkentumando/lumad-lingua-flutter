@@ -594,7 +594,8 @@ class _AncestralVaultShopScreenState
                                         ref
                                             .read(studentProvider.notifier)
                                             .spendMistCrystals(
-                                                artifact.crystalCost);
+                                                artifact.crystalCost,
+                                                syncFirebase: false);
 
                                         ref.invalidate(userProfileProvider);
                                         ref.invalidate(cachedArtifactsProvider);
