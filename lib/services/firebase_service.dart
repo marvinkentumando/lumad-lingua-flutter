@@ -2569,12 +2569,15 @@ class FirebaseService {
 
       final Map<String, int> lessonAttempts = {};
       final Map<String, int> lessonPasses = {};
+      final Map<String, Set<String>> lessonPassedUsers = {};
+      final Map<String, Set<String>> lessonAttemptedUsers = {};
       final Map<String, int> taskMistakesCount = {};
       final Map<String, String> taskToLesson = {};
 
       for (var userDoc in learnerDocs) {
         final userData = userDoc.data();
         totalXP += (userData['xp'] as num?)?.toInt() ?? 0;
+        final userId = userDoc.id;
 
         final progressSnap = await userDoc.reference.collection('progress').get();
         for (var progDoc in progressSnap.docs) {
@@ -2587,6 +2590,9 @@ class FirebaseService {
           lessonAttempts[lessonId] = (lessonAttempts[lessonId] ?? 0) + 1;
           if (completed) {
             lessonPasses[lessonId] = (lessonPasses[lessonId] ?? 0) + 1;
+            lessonPassedUsers.putIfAbsent(lessonId, () => {}).add(userId);
+          } else {
+            lessonAttemptedUsers.putIfAbsent(lessonId, () => {}).add(userId);
           }
 
           final performance = data['performance'] as Map<String, dynamic>? ?? {};
@@ -2610,6 +2616,8 @@ class FirebaseService {
             'name': lessonNames[lessonId] ?? 'Lesson',
             'pass': passRate,
             'fail': 100 - passRate,
+            'passedUserIds': lessonPassedUsers[lessonId]?.toList() ?? [],
+            'attemptedUserIds': lessonAttemptedUsers[lessonId]?.toList() ?? [],
           });
         }
       });

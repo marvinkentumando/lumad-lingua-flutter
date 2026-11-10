@@ -101,115 +101,123 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
           data: (allEduLessons) {
             final lessons = _filterAndSortLessons(allEduLessons);
             final rawLessons = rawLessonsAsync.value ?? [];
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l10n.translate('lessons_library'),
-                                style: AppTypography.displayBold.copyWith(
-                                  color: AppColors.gold500,
-                                  fontSize: 32,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${allEduLessons.length} lessons • ${allEduLessons.where((l) => l.status == 'PUBLISHED').length} published',
-                                style: AppTypography.body.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                                ),
-                              ),
-                            ],
-                          ),
-                          // View Toggles & Import
-                          Row(
-                            children: [
-                              ElevatedButton.icon(
-                                onPressed: _openImportDialog,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.gold500,
-                                  foregroundColor: AppColors.forest900,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+            return CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  l10n.translate('lessons_library'),
+                                  style: AppTypography.displayBold.copyWith(
+                                    color: AppColors.gold500,
+                                    fontSize: 32,
                                   ),
                                 ),
-                                icon: const Icon(Icons.download_rounded, size: 18),
-                                label: const Text('Import Public', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                              ),
-                              const SizedBox(width: 8),
-                              _buildViewToggleBtn(
-                                Icons.grid_view_rounded,
-                                _isGridView && !_isMapView,
-                                () => setState(() {
-                                  _isGridView = true;
-                                  _isMapView = false;
-                                }),
-                              ),
-                              const SizedBox(width: 8),
-                              _buildViewToggleBtn(
-                                Icons.view_list_rounded,
-                                !_isGridView && !_isMapView,
-                                () => setState(() {
-                                  _isGridView = false;
-                                  _isMapView = false;
-                                }),
-                              ),
-                              const SizedBox(width: 8),
-                              _buildViewToggleBtn(
-                                Icons.account_tree_rounded,
-                                _isMapView,
-                                () => setState(() {
-                                  _isMapView = true;
-                                }),
-                                tooltip: 'Curriculum Map',
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${allEduLessons.length} lessons • ${allEduLessons.where((l) => l.status == 'PUBLISHED').length} published',
+                                  style: AppTypography.body.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            // View Toggles & Import
+                            Row(
+                              children: [
+                                ElevatedButton.icon(
+                                  onPressed: _openImportDialog,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.gold500,
+                                    foregroundColor: AppColors.forest900,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  icon: const Icon(Icons.download_rounded, size: 18),
+                                  label: const Text('Import Public', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                ),
+                                const SizedBox(width: 8),
+                                _buildViewToggleBtn(
+                                  Icons.grid_view_rounded,
+                                  _isGridView && !_isMapView,
+                                  () => setState(() {
+                                    _isGridView = true;
+                                    _isMapView = false;
+                                  }),
+                                ),
+                                const SizedBox(width: 8),
+                                _buildViewToggleBtn(
+                                  Icons.view_list_rounded,
+                                  !_isGridView && !_isMapView,
+                                  () => setState(() {
+                                    _isGridView = false;
+                                    _isMapView = false;
+                                  }),
+                                ),
+                                const SizedBox(width: 8),
+                                _buildViewToggleBtn(
+                                  Icons.account_tree_rounded,
+                                  _isMapView,
+                                  () => setState(() {
+                                    _isMapView = true;
+                                  }),
+                                  tooltip: 'Curriculum Map',
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: _buildSearchBar(),
-                ),
-                const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Row(
-                    children: [
-                      Expanded(child: _buildTabs()),
-                      const SizedBox(width: 8),
-                      _buildSortDropdown(),
-                    ],
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                    child: _buildSearchBar(),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: lessons.isEmpty
-                      ? _buildEmptyState()
-                      : _isMapView
-                      ? _CurriculumMapView(lessons: rawLessons, onEditLesson: _editLessonById)
-                      : _isGridView
-                      ? GridView.builder(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 8,
-                          ),
-                          physics: const BouncingScrollPhysics(),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                    child: Row(
+                      children: [
+                        Expanded(child: _buildTabs()),
+                        const SizedBox(width: 8),
+                        _buildSortDropdown(),
+                      ],
+                    ),
+                  ),
+                ),
+                lessons.isEmpty
+                    ? SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: _buildEmptyState(),
+                      )
+                    : _isMapView
+                    ? SliverFillRemaining(
+                        hasScrollBody: true,
+                        child: _CurriculumMapView(lessons: rawLessons, onEditLesson: _editLessonById),
+                      )
+                    : _isGridView
+                    ? SliverPadding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 8,
+                        ),
+                        sliver: SliverGrid(
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 2,
@@ -217,21 +225,24 @@ class _EducatorLessonsScreenState extends ConsumerState<EducatorLessonsScreen> {
                                 mainAxisSpacing: 16,
                                 childAspectRatio: 0.72,
                               ),
-                          itemCount: lessons.length,
-                          itemBuilder: (context, index) =>
-                              _buildLibraryCard(lessons[index]),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 8,
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) => _buildLibraryCard(lessons[index]),
+                            childCount: lessons.length,
                           ),
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: lessons.length,
-                          itemBuilder: (context, index) =>
-                              _buildListItem(lessons[index]),
                         ),
-                ),
+                      )
+                    : SliverPadding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 8,
+                        ),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) => _buildListItem(lessons[index]),
+                            childCount: lessons.length,
+                          ),
+                        ),
+                      ),
               ],
             );
           },

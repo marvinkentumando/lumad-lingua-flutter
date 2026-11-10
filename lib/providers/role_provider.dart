@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_service.dart';
+import '../services/haptic_service.dart';
 
 enum UserRole { learner, staff, educator, admin }
 
@@ -9,6 +10,12 @@ class RoleNotifier extends Notifier<UserRole> {
   @override
   UserRole build() {
     final isSimulating = ref.watch(isSimulatingProvider);
+    final role = _computeRole(isSimulating);
+    HapticService.currentRole = role.toString().split('.').last;
+    return role;
+  }
+
+  UserRole _computeRole(bool isSimulating) {
     if (isSimulating) return UserRole.learner;
 
     final claimRole = ref.watch(userRoleClaimProvider).valueOrNull?.toLowerCase();
@@ -31,7 +38,10 @@ class RoleNotifier extends Notifier<UserRole> {
     }
   }
 
-  void setRole(UserRole role) => state = role;
+  void setRole(UserRole role) {
+    state = role;
+    HapticService.currentRole = role.toString().split('.').last;
+  }
 }
 
 final roleProvider = NotifierProvider<RoleNotifier, UserRole>(RoleNotifier.new);

@@ -4,8 +4,12 @@ import 'package:audioplayers/audioplayers.dart';
 
 class HapticService {
   static final AudioPlayer _sfxPlayer = AudioPlayer();
+  static String? currentRole; // 'admin', 'educator', 'learner', 'staff'
 
   static void _playClick() {
+    if (currentRole == 'admin' || currentRole == 'educator') {
+      return;
+    }
     try {
       _sfxPlayer.play(AssetSource('audio/click.MP3'));
     } catch (_) {}
