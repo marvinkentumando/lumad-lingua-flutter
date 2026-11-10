@@ -46,6 +46,16 @@ class _EducatorAnalyticsScreenState
     final analyticsAsync = ref.watch(educatorAnalyticsProvider((educatorId: educatorId, academicYear: selectedYear)));
     final totalWordsAsync = ref.watch(totalWordsCountProvider);
 
+    final eduLessonsAsync = ref.watch(educatorLessonsProvider);
+    final availableUnits = eduLessonsAsync.when(
+      data: (lessons) {
+        final units = lessons.map((l) => l.unitNumber).toSet().toList()..sort();
+        return units.isEmpty ? [1] : units;
+      },
+      loading: () => [1],
+      error: (_, __) => [1],
+    );
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: BrandBackground(
@@ -71,6 +81,7 @@ class _EducatorAnalyticsScreenState
                     analyticsAsync.value ?? {},
                     totalWordsAsync.value ?? 0,
                     topLearnersAsync.value ?? [],
+                    availableUnits,
                     l10n,
                   ),
                   const SizedBox(height: 24),
@@ -244,6 +255,7 @@ class _EducatorAnalyticsScreenState
     Map<String, dynamic> analytics,
     int totalWords,
     List<Map<String, dynamic>> topLearners,
+    List<int> availableUnits,
     AppLocalization l10n,
   ) {
     return Column(
@@ -266,7 +278,7 @@ class _EducatorAnalyticsScreenState
               children: [
                 _buildAcademicYearFilter(),
                 const SizedBox(width: 8),
-                _buildUnitFilter(),
+                _buildUnitFilter(availableUnits),
               ],
             ),
           ],
@@ -282,7 +294,7 @@ class _EducatorAnalyticsScreenState
     );
   }
 
-  Widget _buildUnitFilter() {
+  Widget _buildUnitFilter(List<int> availableUnits) {
     return PopupMenuButton<int?>(
       onSelected: (unit) {
         HapticService.selection();
@@ -320,9 +332,9 @@ class _EducatorAnalyticsScreenState
           value: null,
           child: Text('All Units'),
         ),
-        ...List.generate(5, (i) => PopupMenuItem(
-          value: i + 1,
-          child: Text('Unit ${i + 1}'),
+        ...availableUnits.map((uNum) => PopupMenuItem(
+          value: uNum,
+          child: Text('Unit $uNum'),
         )),
       ],
     );

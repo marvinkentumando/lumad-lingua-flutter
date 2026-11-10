@@ -2335,6 +2335,7 @@ class FirebaseService {
     final isOccupied = await isUnitUnique(
       lesson.language,
       lesson.unitNumber,
+      educatorId: lesson.educatorId,
       excludeLessonId: (lesson.id.isNotEmpty && !lesson.id.startsWith('temp_')) ? lesson.id : null,
     ).then((unique) => !unique);
 
@@ -2344,6 +2345,7 @@ class FirebaseService {
         language: lesson.language,
         startUnit: lesson.unitNumber,
         offset: 1,
+        educatorId: lesson.educatorId,
       );
     }
 
@@ -2363,13 +2365,22 @@ class FirebaseService {
   Future<bool> isUnitUnique(
     String language,
     int unitNumber, {
+    String? educatorId,
     String? excludeLessonId,
   }) async {
     final snapshot = await _db.collection('lessons').get();
 
     final matchingDocs = snapshot.docs.where((doc) {
       final data = doc.data();
-      return data['language'] == language && data['unitNumber'] == unitNumber;
+      if (data['language'] != language || data['unitNumber'] != unitNumber) {
+        return false;
+      }
+      final docEducatorId = data['educatorId'] as String?;
+      if (educatorId == null || educatorId.isEmpty) {
+        return docEducatorId == null || docEducatorId.isEmpty;
+      } else {
+        return docEducatorId == educatorId;
+      }
     }).toList();
 
     if (excludeLessonId != null) {
@@ -2496,6 +2507,7 @@ class FirebaseService {
     required String language,
     required int startUnit,
     int offset = 1,
+    String? educatorId,
   }) async {
     final snapshot = await _db.collection('lessons').get();
 
@@ -2503,9 +2515,16 @@ class FirebaseService {
     for (var doc in snapshot.docs) {
       final data = doc.data();
       if (data['language'] == language) {
-        final currentUnit = (data['unitNumber'] as num?)?.toInt() ?? 0;
-        if (currentUnit >= startUnit) {
-          batch.update(doc.reference, {'unitNumber': FieldValue.increment(offset)});
+        final docEducatorId = data['educatorId'] as String?;
+        final matchesScope = (educatorId == null || educatorId.isEmpty)
+            ? (docEducatorId == null || docEducatorId.isEmpty)
+            : (docEducatorId == educatorId);
+
+        if (matchesScope) {
+          final currentUnit = (data['unitNumber'] as num?)?.toInt() ?? 0;
+          if (currentUnit >= startUnit) {
+            batch.update(doc.reference, {'unitNumber': FieldValue.increment(offset)});
+          }
         }
       }
     }

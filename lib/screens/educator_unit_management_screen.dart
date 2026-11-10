@@ -5,6 +5,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../models/lesson.dart';
 import '../services/firebase_service.dart';
+import '../services/auth_service.dart';
 import '../services/haptic_service.dart';
 import '../utils/app_localization.dart';
 
@@ -23,6 +24,12 @@ class _EducatorUnitManagementScreenState
 
   @override
   Widget build(BuildContext context) {
+    final userAuth = ref.watch(authStateProvider).value;
+    final profile = ref.watch(userProfileProvider).value;
+    final role = profile?['role']?.toString().toLowerCase();
+    final educatorId = userAuth?.uid ?? '';
+    final isAdmin = role == 'admin';
+
     final lessonsAsync = ref.watch(allLessonsStreamProvider);
     final dialectsAsync = ref.watch(dialectsProvider);
     final l10n = ref.watch(localizationProvider);
@@ -47,9 +54,13 @@ class _EducatorUnitManagementScreenState
           Expanded(
             child: lessonsAsync.when(
               data: (lessons) {
-                final filteredLessons = lessons
-                    .where((l) => l.language == _selectedLanguage)
-                    .toList();
+                final filteredLessons = lessons.where((l) {
+                  if (l.language != _selectedLanguage) return false;
+                  if (isAdmin) {
+                    return l.educatorId == null || l.educatorId!.isEmpty || l.educatorId == educatorId;
+                  }
+                  return l.educatorId == educatorId;
+                }).toList();
 
                 // Sort by unit number
                 filteredLessons.sort(
