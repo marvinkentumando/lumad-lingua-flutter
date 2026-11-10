@@ -189,13 +189,6 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                           icon: Icons.analytics_rounded,
                           onTap: () => context.push('/admin/analytics'),
                         ),
-                        const SizedBox(height: 12),
-                        BrandButton(
-                          text: l10n.translate('view_test_assessments'),
-                          type: BrandButtonType.secondary,
-                          icon: Icons.assignment_turned_in_rounded,
-                          onTap: () => context.push('/admin/assessments'),
-                        ),
                       ],
                     ),
                   ).animate().fadeIn(delay: 200.ms),
