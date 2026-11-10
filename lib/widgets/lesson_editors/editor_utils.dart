@@ -366,11 +366,10 @@ class EditorUtils {
       final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: allowedExtensions,
-        withData: true,
       );
 
-      if (result != null && result.files.isNotEmpty) {
-        final platformFile = result.files.single;
+      if (result.isNotEmpty) {
+        final platformFile = result.single;
         final isAudio = path.contains('audio');
         
         if (isAudio && platformFile.path != null && !kIsWeb) {
@@ -398,8 +397,8 @@ class EditorUtils {
         final String bucket = isAudio ? 'audio' : 'images';
         final String fileName = '${DateTime.now().millisecondsSinceEpoch}_${platformFile.name}';
         
-        if (kIsWeb || platformFile.bytes != null) {
-          final bytes = platformFile.bytes!;
+        final bytes = await platformFile.xFile.readAsBytes();
+        if (kIsWeb || bytes.isNotEmpty) {
           await Supabase.instance.client.storage.from(bucket).uploadBinary(
             fileName,
             bytes,

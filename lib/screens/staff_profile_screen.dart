@@ -559,12 +559,10 @@ class StaffProfileScreen extends ConsumerWidget {
 
     final result = await FilePicker.pickFiles(
       type: FileType.image,
-      allowMultiple: false,
-      withData: true,
     );
 
-    if (result != null && result.files.isNotEmpty) {
-      final platformFile = result.files.single;
+    if (result.isNotEmpty) {
+      final platformFile = result.single;
       try {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -575,10 +573,11 @@ class StaffProfileScreen extends ConsumerWidget {
         final fileName = 'profile_${userId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
         String? url;
 
-        if (kIsWeb || platformFile.bytes != null) {
+        final bytes = await platformFile.xFile.readAsBytes();
+        if (kIsWeb || bytes.isNotEmpty) {
           url = await ref
               .read(supabaseStorageServiceProvider)
-              .uploadImageBytes(platformFile.bytes!, fileName);
+              .uploadImageBytes(bytes, fileName);
         } else if (platformFile.path != null) {
           url = await ref
               .read(supabaseStorageServiceProvider)

@@ -240,19 +240,19 @@ class _ImportDictionaryModalState extends ConsumerState<ImportDictionaryModal> {
       final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['csv'],
-        withData: true,
       );
 
-      if (result == null || result.files.isEmpty) {
+      if (result.isEmpty) {
         setState(() => _isImporting = false);
         return;
       }
 
-      final file = result.files.single;
+      final file = result.single;
       List<List<dynamic>> fields;
 
-      if (file.bytes != null) {
-        final content = utf8.decode(file.bytes!);
+      final bytes = await file.xFile.readAsBytes();
+      if (bytes.isNotEmpty) {
+        final content = utf8.decode(bytes);
         fields = const CsvDecoder().convert(content);
       } else if (file.path != null) {
         final input = File(file.path!).openRead();

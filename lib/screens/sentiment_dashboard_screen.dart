@@ -120,14 +120,17 @@ class _SentimentDashboardScreenState
                                   final result = await FilePicker.pickFiles(
                                     type: FileType.custom,
                                     allowedExtensions: ['json'],
-                                    withData: true,
                                   );
-                                  if (result != null && result.files.single.bytes != null) {
-                                    final str = utf8.decode(result.files.single.bytes!);
-                                    textController.text = str;
-                                  } else if (result != null && result.files.single.path != null) {
-                                    final file = await File(result.files.single.path!).readAsString();
-                                    textController.text = file;
+                                  if (result.isNotEmpty) {
+                                    final singleFile = result.single;
+                                    final bytes = await singleFile.xFile.readAsBytes();
+                                    if (bytes.isNotEmpty) {
+                                      final str = utf8.decode(bytes);
+                                      textController.text = str;
+                                    } else if (singleFile.path != null) {
+                                      final file = await File(singleFile.path!).readAsString();
+                                      textController.text = file;
+                                    }
                                   }
                                 },
                           icon: const Icon(Icons.file_open_rounded, size: 18),
