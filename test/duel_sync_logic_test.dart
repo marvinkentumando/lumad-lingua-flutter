@@ -10,11 +10,11 @@ void main() {
     test('deadline is round length × (round + 1) after battle start', () {
       expect(
         DuelService.deadlineForRound(start, 0),
-        start.add(const Duration(seconds: 15)),
+        start.add(const Duration(seconds: 30)),
       );
       expect(
         DuelService.deadlineForRound(start, 2),
-        start.add(const Duration(seconds: 45)),
+        start.add(const Duration(seconds: 90)),
       );
     });
 
@@ -25,54 +25,49 @@ void main() {
     });
 
     test('seconds left counts down within the round window', () {
-      expect(DuelService.secondsLeftForRound(start, start, 0), 15);
+      expect(DuelService.secondsLeftForRound(start, start, 0), 30);
       expect(
         DuelService.secondsLeftForRound(
-          start.add(const Duration(seconds: 14)),
+          start.add(const Duration(seconds: 29)),
           start,
           0,
         ),
         1,
       );
-      // Round 1 keeps its full window even though the battle started long ago.
       expect(
         DuelService.secondsLeftForRound(
-          start.add(const Duration(seconds: 15)),
+          start.add(const Duration(seconds: 30)),
           start,
           1,
         ),
-        15,
+        30,
       );
     });
 
     test('lifecycle resume re-syncs correctly from the anchored deadline', () {
-      // A client backgrounded for 7 seconds mid-round resumes with the right
-      // remaining time instead of the drifted local timer value.
       final resumeAt = start.add(const Duration(seconds: 7));
-      expect(DuelService.secondsLeftForRound(resumeAt, start, 0), 8);
+      expect(DuelService.secondsLeftForRound(resumeAt, start, 0), 23);
     });
   });
 
   group('Winner determination (server-side, single source of truth)', () {
     test('player dropping to zero HP loses', () {
       expect(
-        DuelService.winnerFromHp('p1', 'p2', 0.0, 0.5),
+        DuelService.winnerFromHp('p1', 'p2', 0.0, 50.0),
         'p2',
       );
       expect(
-        DuelService.winnerFromHp('p1', 'p2', 0.5, 0.0),
+        DuelService.winnerFromHp('p1', 'p2', 50.0, 0.0),
         'p1',
       );
     });
 
     test('both alive means no winner yet', () {
-      expect(DuelService.winnerFromHp('p1', 'p2', 0.5, 0.5), isNull);
-      expect(DuelService.winnerFromHp('p1', 'p2', 1.0, 1.0), isNull);
+      expect(DuelService.winnerFromHp('p1', 'p2', 100.0, 100.0), isNull);
+      expect(DuelService.winnerFromHp('p1', 'p2', 50.0, 50.0), isNull);
     });
 
     test('double-KO resolves to the opponent of the first zero', () {
-      // player1Hp is evaluated first, so simultaneous zeros favor p2 — a
-      // deterministic, identical result on both clients.
       expect(DuelService.winnerFromHp('p1', 'p2', 0.0, 0.0), 'p2');
     });
   });
@@ -111,7 +106,6 @@ void main() {
     });
 
     test('missing heartbeat record is treated as still present', () {
-      // The field may not exist on legacy matches; never forfeit on absence.
       final match = matchWithLastSeen({'p1': now});
       expect(DuelService.isOpponentStale(match, 'p1', now), isFalse);
     });
@@ -124,8 +118,8 @@ void main() {
   });
 
   group('Sync config invariants', () {
-    test('damage rounds finish a duel in at most 4 hits', () {
-      expect(DuelMatch.damagePerHit * 4, 1.0);
+    test('damage rounds finish a duel in at most 10 hits', () {
+      expect(DuelMatch.damagePerHit * 10, 100.0);
     });
 
     test('staleness window is safely above the heartbeat interval', () {
@@ -189,9 +183,9 @@ void main() {
         opponentName: 'Warrior Chief',
         opponentAvatar: '🛡️',
         isWinner: true,
-        finalPlayerHp: 0.75,
+        finalPlayerHp: 75.0,
         finalOpponentHp: 0.0,
-        roundsPlayed: 3,
+        roundsPlayed: 10,
         xpEarned: 150,
         mistCrystalsEarned: 25,
         timestamp: DateTime(2026, 9, 28, 14, 30),
@@ -201,7 +195,7 @@ void main() {
       expect(map['opponentId'], 'user_456');
       expect(map['opponentName'], 'Warrior Chief');
       expect(map['isWinner'], true);
-      expect(map['roundsPlayed'], 3);
+      expect(map['roundsPlayed'], 10);
       expect(map['xpEarned'], 150);
 
       final restored = DuelHistoryItem.fromMap({
@@ -209,9 +203,9 @@ void main() {
         'opponentName': 'Warrior Chief',
         'opponentAvatar': '🛡️',
         'isWinner': true,
-        'finalPlayerHp': 0.75,
+        'finalPlayerHp': 75.0,
         'finalOpponentHp': 0.0,
-        'roundsPlayed': 3,
+        'roundsPlayed': 10,
         'xpEarned': 150,
         'mistCrystalsEarned': 25,
         'timestamp': DateTime(2026, 9, 28, 14, 30),

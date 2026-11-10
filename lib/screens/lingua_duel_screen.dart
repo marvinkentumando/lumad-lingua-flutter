@@ -86,37 +86,73 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
 
     if (dictionary.length >= 4) {
       final sample = List<DictionaryEntry>.from(dictionary)..shuffle();
-      for (int i = 0; i < 5 && i < sample.length; i++) {
+      for (int i = 0; i < 10 && i < sample.length; i++) {
         final entry = sample[i];
+        final typeChoice = i % 3;
 
-        final options = <String>[entry.translation];
-        final distractors = dictionary.where((w) => w.id != entry.id).toList()
-          ..shuffle();
-        options.addAll(distractors.take(3).map((w) => w.translation));
-        options.shuffle();
+        if (typeChoice == 0) {
+          final options = <String>[entry.translation];
+          final distractors = dictionary.where((w) => w.id != entry.id).toList()..shuffle();
+          options.addAll(distractors.take(3).map((w) => w.translation));
+          options.shuffle();
 
-        questions.add(DuelQuestion(
-          question: l10n.translate('duel_question_prefix',
-              params: {'word': entry.indigenousWord}),
-          options: options,
-          correctIndex: options.indexOf(entry.translation),
-        ));
+          questions.add(DuelQuestion(
+            question: l10n.translate('duel_question_prefix', params: {'word': entry.indigenousWord}),
+            options: options,
+            correctIndex: options.indexOf(entry.translation),
+            type: 'multipleChoice',
+          ));
+        } else if (typeChoice == 1) {
+          final options = <String>[entry.indigenousWord];
+          final distractors = dictionary.where((w) => w.id != entry.id).toList()..shuffle();
+          options.addAll(distractors.take(3).map((w) => w.indigenousWord));
+          options.shuffle();
+
+          questions.add(DuelQuestion(
+            question: 'How do you say "${entry.translation}" in Mansaka?',
+            options: options,
+            correctIndex: options.indexOf(entry.indigenousWord),
+            type: 'reverseTranslation',
+          ));
+        } else {
+          final options = <String>[entry.translation];
+          final distractors = dictionary.where((w) => w.id != entry.id).toList()..shuffle();
+          options.addAll(distractors.take(3).map((w) => w.translation));
+          options.shuffle();
+
+          questions.add(DuelQuestion(
+            question: 'Select the correct translation for: "${entry.translation}"',
+            options: options,
+            correctIndex: options.indexOf(entry.translation),
+            type: 'matchingType',
+          ));
+        }
       }
     }
 
-    if (questions.isEmpty) {
-      questions = [
-        DuelQuestion(
-          question: l10n.translate('duel_question_gm'),
-          options: ['Madyaw na gabi', 'Madyaw na allaw', 'Madyaw na amase', 'Madyaw na hapon'],
-          correctIndex: 2,
-        ),
-        DuelQuestion(
-          question: l10n.translate('duel_question_land'),
-          options: ['Duta', 'Danaw', 'Allaw', 'Gabi'],
-          correctIndex: 0,
-        ),
-      ];
+    while (questions.length < 10) {
+      questions.add(DuelQuestion(
+        question: 'How do you say "Good Morning" in Mansaka?',
+        options: ['Madyaw na gabi', 'Madyaw na allaw', 'Madyaw na amase', 'Madyaw na hapon'],
+        correctIndex: 2,
+        type: 'multipleChoice',
+      ));
+      questions.add(DuelQuestion(
+        question: 'What is the meaning of "Duta"?',
+        options: ['Land / Earth', 'Lake / River', 'Sun / Day', 'Night / Sky'],
+        correctIndex: 0,
+        type: 'multipleChoice',
+      ));
+      questions.add(DuelQuestion(
+        question: 'How do you say "Water" in Mansaka?',
+        options: ['Tubig', 'Duta', 'Langit', 'Bulan'],
+        correctIndex: 0,
+        type: 'reverseTranslation',
+      ));
+    }
+
+    if (questions.length > 10) {
+      questions = questions.sublist(0, 10);
     }
 
     return questions;
@@ -141,7 +177,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
   }
 
   Future<bool> _handlePop(BuildContext context, DuelSessionState sessionState) async {
-    if (sessionState.phase == DuelPhase.battling) {
+    if (sessionState.phase == DuelPhase.battling || sessionState.phase == DuelPhase.introduction || sessionState.phase == DuelPhase.countdown) {
       final confirm = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -184,7 +220,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
     final l10n = ref.watch(localizationProvider);
 
     return PopScope(
-      canPop: sessionState.phase != DuelPhase.battling && sessionState.phase != DuelPhase.searching,
+      canPop: sessionState.phase != DuelPhase.battling && sessionState.phase != DuelPhase.introduction && sessionState.phase != DuelPhase.countdown && sessionState.phase != DuelPhase.searching,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         final shouldPop = await _handlePop(context, sessionState);
@@ -272,7 +308,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Items: ${item.roundsPlayed} • XP: +${item.xpEarned} • Crystals: +${item.mistCrystalsEarned}',
+                                'HP: ${item.finalPlayerHp.toInt()} vs ${item.finalOpponentHp.toInt()} • XP: +${item.xpEarned} • Crystals: +${item.mistCrystalsEarned}',
                                 style: AppTypography.caption.copyWith(color: Colors.white60, fontSize: 11),
                               ),
                             ],
@@ -303,12 +339,15 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
         return _buildIdle(l10n);
       case DuelPhase.searching:
         return _buildSearching(l10n);
-      case DuelPhase.matchFound:
-        return _buildMatchFound(l10n);
+      case DuelPhase.introduction:
+      case DuelPhase.countdown:
+        return _buildIntroductionAndCountdown(sessionState, l10n);
       case DuelPhase.battling:
         return _buildBattling(sessionState, l10n);
       case DuelPhase.results:
         return _buildResults(sessionState, l10n);
+      case DuelPhase.rematchPending:
+        return _buildRematchPending(l10n);
     }
   }
 
@@ -355,8 +394,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.hourglass_bottom_rounded,
-                          color: AppColors.semanticRed, size: 18),
+                      const Icon(Icons.hourglass_bottom_rounded, color: AppColors.semanticRed, size: 18),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -382,8 +420,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline_rounded,
-                          color: AppColors.semanticRed, size: 18),
+                      const Icon(Icons.error_outline_rounded, color: AppColors.semanticRed, size: 18),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -402,12 +439,10 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
-                  color: (isDark ? AppColors.gold500 : AppColors.forest500)
-                      .withValues(alpha: 0.12),
+                  color: (isDark ? AppColors.gold500 : AppColors.forest500).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: (isDark ? AppColors.gold500 : AppColors.forest500)
-                        .withValues(alpha: 0.3),
+                    color: (isDark ? AppColors.gold500 : AppColors.forest500).withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
@@ -515,26 +550,106 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
     );
   }
 
-  Widget _buildMatchFound(AppLocalization l10n) {
+  Widget _buildIntroductionAndCountdown(DuelSessionState sessionState, AppLocalization l10n) {
+    final isCountdown = sessionState.phase == DuelPhase.countdown;
+
     return Center(
-      key: const ValueKey('matchFound'),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.flash_on_rounded, size: 80, color: AppColors.gold500)
-              .animate()
-              .shake(duration: 500.ms),
-          const SizedBox(height: 24),
-          Text(
-            l10n.translate('match_found'),
-            style: AppTypography.displayBold.copyWith(color: Colors.white, fontSize: 32),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.translate('prepare_combat'),
-            style: AppTypography.body.copyWith(color: Colors.white60),
-          ),
-        ],
+      key: const ValueKey('introduction'),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '⚔️ LINGUA DUEL ARENA ⚔️',
+              style: AppTypography.label.copyWith(color: AppColors.gold500, letterSpacing: 3, fontSize: 16),
+            ),
+            const SizedBox(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Column(
+                  children: [
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        color: AppColors.forest700,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.semanticGreen, width: 3),
+                      ),
+                      child: Center(child: Text(sessionState.myAvatar, style: const TextStyle(fontSize: 32))),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      sessionState.myName,
+                      style: AppTypography.h3.copyWith(color: Colors.white, fontSize: 16),
+                    ),
+                    const SizedBox(height: 2),
+                    Text('100 HP', style: AppTypography.caption.copyWith(color: AppColors.semanticGreen, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    'VS',
+                    style: TextStyle(color: AppColors.gold500, fontSize: 28, fontWeight: FontWeight.bold, fontStyle: FontStyle.italic),
+                  ),
+                ).animate().scale(duration: 800.ms, curve: Curves.elasticOut),
+                Column(
+                  children: [
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        color: AppColors.forest700,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.semanticRed, width: 3),
+                      ),
+                      child: Center(child: Text(sessionState.opponentAvatar, style: const TextStyle(fontSize: 32))),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      sessionState.opponentName,
+                      style: AppTypography.h3.copyWith(color: Colors.white, fontSize: 16),
+                    ),
+                    const SizedBox(height: 2),
+                    Text('100 HP', style: AppTypography.caption.copyWith(color: AppColors.semanticRed, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 48),
+            if (isCountdown) ...[
+              Text(
+                'BATTLE COMMENCING IN',
+                style: AppTypography.label.copyWith(color: Colors.white60, letterSpacing: 2),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.gold500,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(color: AppColors.gold500.withValues(alpha: 0.4), blurRadius: 16, spreadRadius: 2),
+                  ],
+                ),
+                child: Text(
+                  '${sessionState.countdownSecondsLeft}',
+                  style: AppTypography.displayBold.copyWith(color: AppColors.forest900, fontSize: 42),
+                ),
+              ).animate(onPlay: (c) => c.repeat()).scale(begin: const Offset(1, 1), end: const Offset(1.1, 1.1), duration: 600.ms),
+            ] else ...[
+              const CircularProgressIndicator(color: AppColors.gold500),
+              const SizedBox(height: 16),
+              Text(
+                'Preparing 10 duel questions…',
+                style: AppTypography.body.copyWith(color: Colors.white70),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -560,14 +675,16 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
                       const SizedBox(height: 4),
                       Container(
                         width: 120,
-                        height: 12,
-                        decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(6)),
+                        height: 14,
+                        decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(7)),
                         child: FractionallySizedBox(
                           alignment: Alignment.centerLeft,
-                          widthFactor: sessionState.playerHp.clamp(0.0, 1.0),
-                          child: Container(decoration: BoxDecoration(color: AppColors.semanticGreen, borderRadius: BorderRadius.circular(6))),
+                          widthFactor: (sessionState.playerHp / 100.0).clamp(0.0, 1.0),
+                          child: Container(decoration: BoxDecoration(color: AppColors.semanticGreen, borderRadius: BorderRadius.circular(7))),
                         ),
                       ),
+                      const SizedBox(height: 2),
+                      Text('${sessionState.playerHp.toInt()} / 100 HP', style: const TextStyle(color: Colors.white70, fontSize: 10)),
                     ],
                   ),
                   Container(
@@ -585,14 +702,16 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
                       const SizedBox(height: 4),
                       Container(
                         width: 120,
-                        height: 12,
-                        decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(6)),
+                        height: 14,
+                        decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(7)),
                         child: FractionallySizedBox(
                           alignment: Alignment.centerRight,
-                          widthFactor: sessionState.opponentHp.clamp(0.0, 1.0),
-                          child: Container(decoration: BoxDecoration(color: AppColors.semanticRed, borderRadius: BorderRadius.circular(6))),
+                          widthFactor: (sessionState.opponentHp / 100.0).clamp(0.0, 1.0),
+                          child: Container(decoration: BoxDecoration(color: AppColors.semanticRed, borderRadius: BorderRadius.circular(7))),
                         ),
                       ),
+                      const SizedBox(height: 2),
+                      Text('${sessionState.opponentHp.toInt()} / 100 HP', style: const TextStyle(color: Colors.white70, fontSize: 10)),
                     ],
                   ),
                 ],
@@ -600,33 +719,20 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
             ),
 
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.gold500.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.gold500.withValues(alpha: 0.4)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline_rounded, color: AppColors.gold500, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Lingua Duel Instructions: Answer each item correctly before time runs out. The battle continues through all items, and the winner is decided after all items complete!',
-                        style: AppTypography.caption.copyWith(color: Colors.white70, fontSize: 11),
-                      ),
-                    ),
-                  ],
-                ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+              child: LinearProgressIndicator(
+                value: (sessionState.currentQuestionIndex + 1) / sessionState.battleQuestions.length,
+                backgroundColor: Colors.white24,
+                color: AppColors.gold500,
+                minHeight: 6,
+                borderRadius: BorderRadius.circular(3),
               ),
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
 
             Text(
-              'Item ${sessionState.currentQuestionIndex + 1} of ${sessionState.battleQuestions.length}',
+              'QUESTION ${sessionState.currentQuestionIndex + 1} OF ${sessionState.battleQuestions.length}',
               style: AppTypography.mono.copyWith(color: AppColors.gold500, fontSize: 13, fontWeight: FontWeight.bold),
             ),
 
@@ -646,7 +752,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
               ),
             ),
 
-            const SizedBox(height: 40),
+            const SizedBox(height: 32),
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -711,7 +817,8 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
         ),
         const SizedBox(height: 12),
         Text(
-          won ? l10n.translate('victory_reward') : l10n.translate('defeat_desc'),
+          won ? 'Final HP: You ${sessionState.playerHp.toInt()} vs ${sessionState.opponentName} ${sessionState.opponentHp.toInt()}\nXP +150 • Crystals +25' : 'Final HP: You ${sessionState.playerHp.toInt()} vs ${sessionState.opponentName} ${sessionState.opponentHp.toInt()}',
+          textAlign: TextAlign.center,
           style: AppTypography.bodyLarge.copyWith(color: Colors.white70),
         ),
         const SizedBox(height: 48),
@@ -723,13 +830,7 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
                 text: 'REMATCH ⚔️',
                 onTap: () {
                   HapticService.light();
-                  final user = ref.read(authStateProvider).value;
-                  if (user == null) return;
-                  final userProfile = {
-                    'username': user.displayName ?? 'Warrior',
-                    'avatar': '👤',
-                  };
-                  ref.read(duelSessionProvider.notifier).startRematch(userProfile: userProfile);
+                  ref.read(duelSessionProvider.notifier).requestRematch();
                 },
                 type: BrandButtonType.primary,
               ),
@@ -746,6 +847,43 @@ class _LinguaDuelScreenState extends ConsumerState<LinguaDuelScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildRematchPending(AppLocalization l10n) {
+    return Center(
+      key: const ValueKey('rematchPending'),
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(color: AppColors.gold500)
+                .animate(onPlay: (c) => c.repeat())
+                .scale(begin: const Offset(1, 1), end: const Offset(1.2, 1.2), duration: 1.seconds),
+            const SizedBox(height: 32),
+            Text(
+              'WAITING FOR REMATCH...',
+              style: AppTypography.h2.copyWith(color: AppColors.gold500, letterSpacing: 2),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Waiting for opponent to accept rematch invitation.',
+              textAlign: TextAlign.center,
+              style: AppTypography.body.copyWith(color: Colors.white70),
+            ),
+            const SizedBox(height: 36),
+            BrandButton(
+              text: 'CANCEL',
+              onTap: () {
+                ref.read(duelSessionProvider.notifier).reset();
+                context.pop();
+              },
+              type: BrandButtonType.secondary,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

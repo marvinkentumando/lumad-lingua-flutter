@@ -1,11 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum DuelStatus { waiting, active, finished, cancelled }
+enum DuelStatus { waiting, introduction, countdown, active, finished, rematchPending, cancelled }
 
 class DuelMatch {
-  /// HP removed per round outcome (correct answer damages the opponent,
-  /// wrong/timeout damages the answerer).
-  static const double damagePerHit = 0.25;
+  /// HP removed per correct answer (10 damage per hit, max 100 HP per player).
+  static const double damagePerHit = 10.0;
+  static const double maxHp = 100.0;
 
   final String id;
   final String player1Id;
@@ -36,6 +36,8 @@ class DuelMatch {
   /// True while this snapshot contains uncommitted local writes. Damage
   /// effects must only trigger on remote (committed) changes.
   final bool hasPendingWrites;
+  final bool player1Rematch;
+  final bool player2Rematch;
 
   DuelMatch({
     required this.id,
@@ -47,8 +49,8 @@ class DuelMatch {
     this.player2Avatar,
     required this.status,
     required this.questions,
-    this.player1Hp = 1.0,
-    this.player2Hp = 1.0,
+    this.player1Hp = 100.0,
+    this.player2Hp = 100.0,
     this.currentRound = 0,
     this.winnerId,
     required this.createdAt,
@@ -57,14 +59,28 @@ class DuelMatch {
     this.roundStartedAt,
     this.finishedAt,
     this.hasPendingWrites = false,
+    this.player1Rematch = false,
+    this.player2Rematch = false,
   }) : lastSeen = lastSeen ?? const {};
 
   /// The other duelist's uid, from this player's point of view.
   String? opponentIdOf(String myId) =>
       myId == player1Id ? player2Id : player1Id;
 
+  String opponentNameOf(String myId) =>
+      myId == player1Id ? (player2Name ?? 'Opponent') : player1Name;
+
+  String opponentAvatarOf(String myId) =>
+      myId == player1Id ? (player2Avatar ?? '👤') : player1Avatar;
+
+  double myHpOf(String myId) =>
+      myId == player1Id ? player1Hp : player2Hp;
+
+  double opponentHpOf(String myId) =>
+      myId == player1Id ? player2Hp : player1Hp;
+
   bool isActiveAndStarted(DuelStatus status) =>
-      status == DuelStatus.active && battleStartedAt != null;
+      (status == DuelStatus.active || status == DuelStatus.countdown || status == DuelStatus.introduction) && battleStartedAt != null;
 
   factory DuelMatch.fromMap(Map<String, dynamic> data, {String? docId}) {
     final rawQuestions = data['questions'];
@@ -75,6 +91,11 @@ class DuelMatch {
         return DuelQuestion(question: '', options: [], correctIndex: 0);
       }).toList();
     }
+
+    double p1Hp = (data['player1_hp'] ?? data['player1Hp'] ?? 100.0 as num).toDouble();
+    if (p1Hp <= 1.0 && p1Hp > 0.0) p1Hp *= 100.0;
+    double p2Hp = (data['player2_hp'] ?? data['player2Hp'] ?? 100.0 as num).toDouble();
+    if (p2Hp <= 1.0 && p2Hp > 0.0) p2Hp *= 100.0;
 
     return DuelMatch(
       hasPendingWrites: false,
@@ -90,8 +111,8 @@ class DuelMatch {
         orElse: () => DuelStatus.waiting,
       ),
       questions: parsedQuestions,
-      player1Hp: (data['player1_hp'] ?? data['player1Hp'] ?? 1.0 as num).toDouble(),
-      player2Hp: (data['player2_hp'] ?? data['player2Hp'] ?? 1.0 as num).toDouble(),
+      player1Hp: p1Hp,
+      player2Hp: p2Hp,
       currentRound: (data['current_round'] ?? data['currentRound'] ?? 0 as num).toInt(),
       winnerId: data['winner_id'] ?? data['winnerId'],
       createdAt: DuelMatch.parseTimestamp(data['created_at'] ?? data['createdAt']) ?? DateTime.now(),
@@ -99,6 +120,8 @@ class DuelMatch {
       lastSeen: DuelMatch.parseLastSeen(data['last_seen'] ?? data['lastSeen']),
       roundStartedAt: DuelMatch.parseTimestamp(data['round_started_at'] ?? data['roundStartedAt']),
       finishedAt: DuelMatch.parseTimestamp(data['finished_at'] ?? data['finishedAt']),
+      player1Rematch: data['player1_rematch'] ?? data['player1Rematch'] ?? false,
+      player2Rematch: data['player2_rematch'] ?? data['player2Rematch'] ?? false,
     );
   }
 
@@ -140,6 +163,8 @@ class DuelMatch {
       'currentRound': currentRound,
       'winnerId': winnerId,
       'createdAt': FieldValue.serverTimestamp(),
+      'player1Rematch': player1Rematch,
+      'player2Rematch': player2Rematch,
     };
   }
 
@@ -163,6 +188,8 @@ class DuelMatch {
       'current_round': currentRound,
       'winner_id': winnerId,
       'last_seen': lastSeenMap,
+      'player1_rematch': player1Rematch,
+      'player2_rematch': player2Rematch,
     };
   }
 }
@@ -227,14 +254,19 @@ class DuelHistoryItem {
   });
 
   factory DuelHistoryItem.fromMap(Map<String, dynamic> map, String id) {
+    double pHp = (map['finalPlayerHp'] ?? map['final_player_hp'] ?? 100.0 as num).toDouble();
+    if (pHp <= 1.0 && pHp > 0.0) pHp *= 100.0;
+    double oHp = (map['finalOpponentHp'] ?? map['final_opponent_hp'] ?? 100.0 as num).toDouble();
+    if (oHp <= 1.0 && oHp > 0.0) oHp *= 100.0;
+
     return DuelHistoryItem(
       id: id,
       opponentId: map['opponentId'] ?? map['opponent_id'] ?? '',
       opponentName: map['opponentName'] ?? map['opponent_name'] ?? 'Warrior',
       opponentAvatar: map['opponentAvatar'] ?? map['opponent_avatar'] ?? '👤',
       isWinner: map['isWinner'] ?? map['is_winner'] ?? false,
-      finalPlayerHp: (map['finalPlayerHp'] ?? map['final_player_hp'] ?? 0.0 as num).toDouble(),
-      finalOpponentHp: (map['finalOpponentHp'] ?? map['final_opponent_hp'] ?? 0.0 as num).toDouble(),
+      finalPlayerHp: pHp,
+      finalOpponentHp: oHp,
       roundsPlayed: (map['roundsPlayed'] ?? map['rounds_played'] ?? 0 as num).toInt(),
       xpEarned: (map['xpEarned'] ?? map['xp_earned'] ?? 0 as num).toInt(),
       mistCrystalsEarned: (map['mistCrystalsEarned'] ?? map['mist_crystals_earned'] ?? 0 as num).toInt(),

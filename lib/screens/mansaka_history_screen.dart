@@ -24,6 +24,7 @@ class MansakaHistoryScreen extends ConsumerStatefulWidget {
 class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
   final Set<String> _exploredSections = {};
   bool _quizPassed = false;
+  int _quizAttemptsCount = 0;
   final ScrollController _scrollController = ScrollController();
 
   void _exploreSection(String sectionKey, String sectionTitle) {
@@ -419,11 +420,14 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                     onPressed: selectedOpt == null
                         ? null
                         : () {
-                            setStateQuiz(() {
-                              isReviewMode = true;
-                            });
+                            int correctCount = 0;
+                            for (int i = 0; i < questions.length; i++) {
+                              if (selectedAnswers[i] == questions[i]['answer']) correctCount++;
+                            }
+                            Navigator.of(ctx).pop();
+                            _showQuizResultPopup(correctCount, questions.length, selectedAnswers, questions);
                           },
-                    child: const Text('REVIEW ANSWERS'),
+                    child: const Text('SUBMIT ANSWERS', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
               ],
             );
@@ -433,31 +437,175 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
     );
   }
 
-  void _finishHeritageQuiz(int score, int total) {
+  void _showQuizResultPopup(int score, int total, Map<int, int> selectedAnswers, List<Map<String, dynamic>> questions) {
     final passed = score >= 2;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (passed) {
       setState(() {
         _quizPassed = true;
+        _quizAttemptsCount++;
       });
+    }
+
+    final bool earnsReward = passed && (_quizAttemptsCount <= 4); // First take + first 3 retakes = 4
+    if (earnsReward) {
       ref.read(studentProvider.notifier).addXp(50);
       ref.read(studentProvider.notifier).addMistCrystals(25);
       HapticService.celebration();
       showSpiritParticles(context, duration: const Duration(seconds: 3));
+    } else if (passed) {
+      HapticService.light();
     } else {
       HapticService.error();
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          passed
-              ? 'Quiz passed ($score/$total)! Earned +50 XP & +25 Crystals 💎🎉'
-              : 'Score: $score/$total. Review the history archive and try again!',
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? AppColors.forest900 : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: AppColors.gold500, width: 1.5),
         ),
-        backgroundColor: passed ? AppColors.semanticGreen : AppColors.gold500,
-        behavior: SnackBarBehavior.floating,
+        title: Row(
+          children: [
+            Icon(
+              passed ? Icons.emoji_events_rounded : Icons.sentiment_dissatisfied_rounded,
+              color: passed ? AppColors.gold500 : AppColors.semanticRed,
+              size: 26,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                passed ? 'Quiz Passed ($score/$total)' : 'Quiz Score: $score/$total',
+                style: AppTypography.h3.copyWith(
+                  color: isDark ? Colors.white : AppColors.forest900,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.close_rounded, color: isDark ? Colors.white70 : Colors.black54),
+              onPressed: () => Navigator.of(ctx).pop(),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: (passed ? AppColors.semanticGreen : AppColors.gold500).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: passed ? AppColors.semanticGreen : AppColors.gold500),
+                ),
+                child: Row(
+                  children: [
+                    Icon(passed ? Icons.star_rounded : Icons.info_outline_rounded, color: passed ? AppColors.semanticGreen : AppColors.gold500),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        passed
+                            ? (_quizAttemptsCount <= 4
+                                ? 'Congratulations! You earned +50 XP & +25 Crystals 💎🎉 (Attempt $_quizAttemptsCount of 4)'
+                                : 'Quiz passed! (Practice Mode: 4 reward attempts limit reached)')
+                            : 'You need at least 2 correct answers to pass. Review your answers below and retake!',
+                        style: AppTypography.label.copyWith(
+                          color: isDark ? Colors.white : AppColors.forest900,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Answer Review:',
+                style: AppTypography.label.copyWith(color: AppColors.gold500, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              ...List.generate(questions.length, (qIdx) {
+                final q = questions[qIdx];
+                final options = q['options'] as List<String>;
+                final userAns = selectedAnswers[qIdx];
+                final correctAns = q['answer'] as int;
+                final isCorrect = userAns == correctAns;
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.forest700 : AppColors.creamBg,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isCorrect ? AppColors.semanticGreen.withValues(alpha: 0.5) : AppColors.semanticRed.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Q${qIdx + 1}: ${q['question']}',
+                        style: AppTypography.label.copyWith(color: isDark ? Colors.white : AppColors.forest900, fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Your Answer: ${userAns != null ? options[userAns] : 'No answer'}',
+                        style: TextStyle(
+                          color: isCorrect ? AppColors.semanticGreen : AppColors.semanticRed,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      if (!isCorrect) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'Correct Answer: ${options[correctAns]}',
+                          style: const TextStyle(
+                            color: AppColors.semanticGreen,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _showHeritageQuizModal();
+            },
+            child: const Text('RETAKE QUIZ', style: TextStyle(color: AppColors.gold500)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: passed ? AppColors.semanticGreen : AppColors.gold500,
+              foregroundColor: passed ? Colors.white : AppColors.forest900,
+            ),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('CLOSE', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
+  }
+
+  void _finishHeritageQuiz(int score, int total) {
+    // Handled via _showQuizResultPopup
   }
 
 
@@ -887,7 +1035,7 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    _quizPassed ? 'Heritage Quiz Passed ✓' : 'Test Heritage Knowledge',
+                    _quizPassed ? 'Retake Quiz' : 'Test Heritage Knowledge',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
@@ -896,7 +1044,9 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    _quizPassed ? 'Completed (Tap to Retake)' : '(+50 XP / +25 Gems)',
+                    _quizPassed
+                        ? (_quizAttemptsCount < 4 ? 'Retake Quiz (+50 XP / +25 Gems - ${4 - _quizAttemptsCount} rewarded left)' : 'Retake Quiz (Practice Mode)')
+                        : '(+50 XP / +25 Gems)',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 11,
