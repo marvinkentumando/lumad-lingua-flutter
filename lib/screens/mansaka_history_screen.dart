@@ -1408,28 +1408,45 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
     ];
 
     return BrandCard(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       borderRadius: 24,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.school_rounded, color: AppColors.gold500, size: 22),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Academic References & Sources',
-                  style: AppTypography.h3.copyWith(
-                    color: isDark ? Colors.white : AppColors.forest900,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+      child: ExpansionTile(
+        initiallyExpanded: false,
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: EdgeInsets.zero,
+        iconColor: AppColors.gold500,
+        collapsedIconColor: AppColors.gold500,
+        title: Row(
+          children: [
+            const Icon(Icons.school_rounded, color: AppColors.gold500, size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Academic References & Sources',
+                    style: AppTypography.h3.copyWith(
+                      color: isDark ? Colors.white : AppColors.forest900,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Tap to view published ethnographies and government reports (${sources.length} sources)',
+                    style: AppTypography.body.copyWith(
+                      color: isDark ? Colors.white70 : Colors.black87,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 6),
+            ),
+          ],
+        ),
+        children: [
+          const SizedBox(height: 8),
           Text(
             'Below are the published ethnographies, government reports, and linguistic studies utilized to compile this cultural history archive:',
             style: AppTypography.body.copyWith(
