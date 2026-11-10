@@ -20,7 +20,6 @@ import '../widgets/feedback_panel.dart';
 import '../widgets/xp_celebration.dart';
 import '../widgets/claim_reward_modal.dart';
 import '../widgets/brand_background.dart';
-import '../widgets/elders_wisdom_panel.dart';
 import '../widgets/lesson_session/session_widgets.dart';
 import '../widgets/activity_views/mcq_view.dart';
 import '../widgets/activity_views/overview_view.dart';
@@ -253,8 +252,6 @@ class _DailyChallengeSessionScreenState
     bool isCorrect = evaluation.isCorrect;
     _feedbackSubtitle = evaluation.feedbackSubtitle;
 
-    ref.read(quizSessionProvider.notifier).submitAnswer(isCorrect);
-
     setState(() {
       _lastAnswerCorrect = isCorrect;
       _showFeedback = true;
@@ -274,6 +271,14 @@ class _DailyChallengeSessionScreenState
   }
 
   void _handleContinue() async {
+    final currentTask = ref.read(quizSessionProvider).currentTask;
+    if (currentTask != null) {
+      ref.read(quizSessionProvider.notifier).submitAnswer(
+        _lastAnswerCorrect,
+        isFirstTry: true,
+        logicalTaskId: currentTask.id,
+      );
+    }
     final state = ref.read(quizSessionProvider);
 
     if (state.isCompleted) {
@@ -344,8 +349,6 @@ class _DailyChallengeSessionScreenState
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                if (task.hintMetadata.isNotEmpty)
-                                  _buildEldersWisdomButton(context, task),
                                 _buildTaskContent(task)
                                     .animate(key: ValueKey(_shakeCounter))
                                     .shakeX(),
@@ -404,30 +407,7 @@ class _DailyChallengeSessionScreenState
     );
   }
 
-  Widget _buildEldersWisdomButton(BuildContext context, LessonTask task) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
-      child: GestureDetector(
-        onTap: () => showEldersWisdom(context, task.hintMetadata),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: AppColors.gold500.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.auto_awesome, size: 16, color: AppColors.gold500),
-              SizedBox(width: 8),
-              Text("ELDERS' WISDOM", style: TextStyle(color: AppColors.gold500, fontSize: 10, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+
 
   bool _isTaskComplete(LessonTask task) {
     switch (task.type) {

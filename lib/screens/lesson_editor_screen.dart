@@ -15,6 +15,7 @@ import '../services/offline_service.dart';
 import '../models/lesson_task.dart';
 import '../models/lesson_step.dart';
 import '../services/firebase_service.dart';
+import '../services/auth_service.dart';
 import '../widgets/lesson_editors/configuration_editor.dart';
 import '../widgets/lesson_editors/overview_editor.dart';
 import '../widgets/lesson_editors/vocabulary_editor.dart';
@@ -500,12 +501,18 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         return;
       }
 
+      final user = ref.read(authStateProvider).value;
+      final profile = ref.read(userProfileProvider).value;
+      final role = profile?['role']?.toString().toLowerCase();
+      final educatorId = (role == 'educator' || (role != 'admin' && user != null)) ? (user?.uid ?? '') : '';
+
       // Check for unit uniqueness
       final isUnique = await ref
           .read(firebaseServiceProvider)
           .isUnitUnique(
             _dialect,
             _unitNumber,
+            educatorId: educatorId,
             excludeLessonId: _currentLessonId,
           );
 
@@ -528,6 +535,11 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
     setState(() => _saveStatus = SaveStatus.saving);
 
     try {
+      final user = ref.read(authStateProvider).value;
+      final profile = ref.read(userProfileProvider).value;
+      final role = profile?['role']?.toString().toLowerCase();
+      final educatorId = (role == 'educator' || (role != 'admin' && user != null)) ? (user?.uid ?? '') : '';
+
       final lesson = Lesson(
         id: _currentLessonId ?? 'temp_${DateTime.now().millisecondsSinceEpoch}',
         title: _titleController.text,
@@ -543,6 +555,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
             : 'psychology',
         status: isDraft ? 'DRAFT' : 'PUBLISHED',
         prerequisiteId: _prerequisiteId,
+        educatorId: educatorId.isNotEmpty ? educatorId : null,
         tasks: _steps
             .where((s) => s.type != ActivityType.configuration)
             .map((s) => _stepToTask(s))

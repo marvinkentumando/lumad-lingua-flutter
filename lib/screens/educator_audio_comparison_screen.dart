@@ -118,6 +118,7 @@ class _EducatorAudioComparisonScreenState
   @override
   void initState() {
     super.initState();
+    HapticService.enableClickAudio = false;
     _audioPlayer.onPlayerComplete.listen((_) {
       if (mounted) {
         setState(() {
@@ -130,6 +131,7 @@ class _EducatorAudioComparisonScreenState
 
   @override
   void dispose() {
+    HapticService.enableClickAudio = true;
     _audioPlayer.dispose();
     _feedbackController.dispose();
     super.dispose();

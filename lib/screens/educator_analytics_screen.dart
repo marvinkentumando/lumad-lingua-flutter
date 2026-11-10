@@ -34,11 +34,27 @@ class _EducatorAnalyticsScreenState
     final userAuth = ref.watch(authStateProvider).value;
     final educatorId = userAuth?.uid ?? '';
 
+    final selectedYear = ref.watch(selectedAcademicYearProvider);
     final allUsersAsync = ref.watch(educatorLearnersProvider(educatorId));
+    final usersAsync = allUsersAsync.whenData((users) {
+      if (selectedYear == 'All') return users;
+      return users.where((u) => (u.academicYear ?? '2026-2027') == selectedYear).toList();
+    });
+
     final dialectDistAsync = ref.watch(dialectDistributionProvider);
     final topLearnersAsync = ref.watch(villageTopLearnersProvider(educatorId));
-    final analyticsAsync = ref.watch(educatorAnalyticsProvider(educatorId));
+    final analyticsAsync = ref.watch(educatorAnalyticsProvider((educatorId: educatorId, academicYear: selectedYear)));
     final totalWordsAsync = ref.watch(totalWordsCountProvider);
+
+    final eduLessonsAsync = ref.watch(educatorLessonsProvider);
+    final availableUnits = eduLessonsAsync.when(
+      data: (lessons) {
+        final units = lessons.map((l) => l.unitNumber).toSet().toList()..sort();
+        return units.isEmpty ? [1] : units;
+      },
+      loading: () => [1],
+      error: (_, __) => [1],
+    );
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -48,7 +64,7 @@ class _EducatorAnalyticsScreenState
             onRefresh: () async {
               ref.invalidate(educatorLearnersProvider(educatorId));
               ref.invalidate(villageTopLearnersProvider(educatorId));
-              ref.invalidate(educatorAnalyticsProvider(educatorId));
+              ref.invalidate(educatorAnalyticsProvider((educatorId: educatorId, academicYear: selectedYear)));
             },
             color: AppColors.gold500,
             backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -60,16 +76,17 @@ class _EducatorAnalyticsScreenState
                 children: [
                   const SizedBox(height: 32),
                   _buildHeader(
-                    allUsersAsync.value ?? [],
+                    usersAsync.value ?? [],
                     dialectDistAsync.value ?? {},
                     analyticsAsync.value ?? {},
                     totalWordsAsync.value ?? 0,
                     topLearnersAsync.value ?? [],
+                    availableUnits,
                     l10n,
                   ),
                   const SizedBox(height: 24),
                   
-                  allUsersAsync.when(
+                  usersAsync.when(
                     data: (users) => _buildActiveLearnersStats(users, l10n),
                     loading: () => _buildLoadingCard(100),
                     error: (e, _) => const SizedBox.shrink(),
@@ -109,7 +126,7 @@ class _EducatorAnalyticsScreenState
                   _buildTimeRangeSelector(l10n),
                   const SizedBox(height: 24),
 
-                  allUsersAsync.when(
+                  usersAsync.when(
                     data: (users) => _buildActivityChart(users, l10n),
                     loading: () => _buildLoadingCard(220),
                     error: (e, _) => _buildErrorCard(e),
@@ -117,7 +134,7 @@ class _EducatorAnalyticsScreenState
 
                   const SizedBox(height: 32),
 
-                  allUsersAsync.when(
+                  usersAsync.when(
                     data: (users) => _buildStudentGrowth(users, l10n),
                     loading: () => _buildLoadingCard(120),
                     error: (e, _) => const SizedBox.shrink(),
@@ -125,7 +142,7 @@ class _EducatorAnalyticsScreenState
 
                   const SizedBox(height: 32),
 
-                  allUsersAsync.when(
+                  usersAsync.when(
                     data: (users) => _buildXpDistributionCard(users, l10n),
                     loading: () => _buildLoadingCard(120),
                     error: (e, _) => const SizedBox.shrink(),
@@ -137,7 +154,7 @@ class _EducatorAnalyticsScreenState
                       final quizPerformance = List<Map<String, dynamic>>.from(analytics['quizPerformance'] ?? []);
                       final commonHurdles = List<Map<String, dynamic>>.from(analytics['commonHurdles'] ?? []);
                       final weeklyTrend = List<Map<String, dynamic>>.from(analytics['weeklyTrend'] ?? []);
-                      final users = allUsersAsync.value ?? [];
+                      final users = usersAsync.value ?? [];
 
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,6 +255,7 @@ class _EducatorAnalyticsScreenState
     Map<String, dynamic> analytics,
     int totalWords,
     List<Map<String, dynamic>> topLearners,
+    List<int> availableUnits,
     AppLocalization l10n,
   ) {
     return Column(
@@ -260,7 +278,7 @@ class _EducatorAnalyticsScreenState
               children: [
                 _buildAcademicYearFilter(),
                 const SizedBox(width: 8),
-                _buildUnitFilter(),
+                _buildUnitFilter(availableUnits),
               ],
             ),
           ],
@@ -276,7 +294,7 @@ class _EducatorAnalyticsScreenState
     );
   }
 
-  Widget _buildUnitFilter() {
+  Widget _buildUnitFilter(List<int> availableUnits) {
     return PopupMenuButton<int?>(
       onSelected: (unit) {
         HapticService.selection();
@@ -314,9 +332,9 @@ class _EducatorAnalyticsScreenState
           value: null,
           child: Text('All Units'),
         ),
-        ...List.generate(5, (i) => PopupMenuItem(
-          value: i + 1,
-          child: Text('Unit ${i + 1}'),
+        ...availableUnits.map((uNum) => PopupMenuItem(
+          value: uNum,
+          child: Text('Unit $uNum'),
         )),
       ],
     );

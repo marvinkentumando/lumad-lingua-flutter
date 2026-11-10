@@ -71,7 +71,7 @@ class LearningHubScreen extends ConsumerWidget {
                             const SizedBox(width: 16),
                             _buildStatCard(
                               context,
-                              'Mist Crystals',
+                              'Crystals',
                               '${studentState.mistCrystals}',
                               'EARNED',
                               '✨',
@@ -366,7 +366,7 @@ class LearningHubScreen extends ConsumerWidget {
               ),
               _buildXpRow(
                 context,
-                'Total Mist Crystals',
+                'Total Crystals',
                 '${student.mistCrystals}',
                 Icons.auto_awesome_rounded,
               ),

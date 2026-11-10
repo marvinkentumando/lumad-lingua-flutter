@@ -85,6 +85,7 @@ class EditorUtils {
     required BuildContext context,
     required String? currentImageUrl,
     required Function(String) onUploadComplete,
+    VoidCallback? onDelete,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
@@ -93,19 +94,37 @@ class EditorUtils {
         if (currentImageUrl != null && currentImageUrl.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                currentImageUrl,
-                height: 150,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  height: 150,
-                  color: Colors.white10,
-                  child: const Icon(Icons.broken_image, color: Colors.white24),
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    currentImageUrl,
+                    height: 150,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      height: 150,
+                      color: Colors.white10,
+                      child: const Icon(Icons.broken_image, color: Colors.white24),
+                    ),
+                  ),
                 ),
-              ),
+                if (onDelete != null)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Material(
+                      color: Colors.black54,
+                      shape: const CircleBorder(),
+                      child: IconButton(
+                        icon: const Icon(Icons.delete_rounded, color: Colors.redAccent, size: 20),
+                        onPressed: onDelete,
+                        tooltip: 'Delete Image',
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         InkWell(

@@ -171,11 +171,13 @@ class DuelQuestion {
   final String question;
   final List<String> options;
   final int correctIndex;
+  final String type;
 
   DuelQuestion({
     required this.question,
     required this.options,
     required this.correctIndex,
+    this.type = 'multipleChoice',
   });
 
   factory DuelQuestion.fromMap(Map<String, dynamic> map) {
@@ -183,6 +185,7 @@ class DuelQuestion {
       question: map['question'] ?? '',
       options: List<String>.from(map['options'] ?? []),
       correctIndex: (map['correctIndex'] ?? map['correct_index'] ?? 0 as num).toInt(),
+      type: map['type'] ?? 'multipleChoice',
     );
   }
 
@@ -191,6 +194,7 @@ class DuelQuestion {
       'question': question,
       'options': options,
       'correctIndex': correctIndex,
+      'type': type,
     };
   }
 }

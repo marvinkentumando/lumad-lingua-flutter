@@ -3,12 +3,23 @@ import '../services/firebase_service.dart';
 import '../models/educator_models.dart';
 import '../models/admin_models.dart';
 import '../models/lesson.dart';
+import '../models/school_year.dart';
 import '../services/auth_service.dart';
 
 final selectedAcademicYearProvider = StateProvider<String>((ref) => '2026-2027');
 
+final schoolYearsStreamProvider = StreamProvider<List<SchoolYear>>((ref) {
+  return ref.watch(firebaseServiceProvider).getSchoolYears();
+});
+
 final availableAcademicYearsProvider = Provider<List<String>>((ref) {
-  return const ['All', '2026-2027', '2025-2026', '2024-2025'];
+  final yearsAsync = ref.watch(schoolYearsStreamProvider);
+  final years = yearsAsync.value ?? [];
+  final yearNames = years.map((y) => y.name).toList();
+  if (yearNames.isEmpty) {
+    return const ['All', '2026-2027', '2025-2026', '2024-2025'];
+  }
+  return ['All', ...yearNames];
 });
 
 final educatorStudentsProvider = StreamProvider<List<EducatorStudent>>((ref) {

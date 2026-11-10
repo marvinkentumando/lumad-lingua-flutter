@@ -5,9 +5,10 @@ import 'package:audioplayers/audioplayers.dart';
 class HapticService {
   static final AudioPlayer _sfxPlayer = AudioPlayer();
   static String? currentRole; // 'admin', 'educator', 'learner', 'staff'
+  static bool enableClickAudio = true;
 
   static void _playClick() {
-    if (currentRole == 'admin' || currentRole == 'educator') {
+    if (!enableClickAudio || currentRole == 'admin' || currentRole == 'educator') {
       return;
     }
     try {

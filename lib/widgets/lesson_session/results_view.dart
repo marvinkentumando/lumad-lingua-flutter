@@ -119,7 +119,7 @@ class _SessionResultsViewState extends ConsumerState<SessionResultsView> {
                         AnimatedSummaryStatRow(
                           icon: Icons.diamond_rounded,
                           iconColor: Colors.cyanAccent,
-                          label: 'Mist Crystals Earned',
+                          label: 'Crystals Earned',
                           endValue: widget.crystalsEarned,
                           prefix: '+',
                           suffix: ' Crystals',
@@ -157,11 +157,6 @@ class _SessionResultsViewState extends ConsumerState<SessionResultsView> {
                             delay: 600.ms,
                           ),
                         ],
-                        const SizedBox(height: 20),
-                        SrsMasteryBadgeWidget(
-                          stars: widget.stars,
-                          accuracy: accuracy,
-                        ),
                         const SizedBox(height: 16),
                         Consumer(
                           builder: (context, ref, child) {

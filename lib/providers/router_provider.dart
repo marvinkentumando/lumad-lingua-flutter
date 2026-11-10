@@ -118,6 +118,7 @@ class RouterNotifier extends ChangeNotifier {
     if (loc.startsWith('/admin') &&
         !loc.startsWith('/admin/lessons') &&
         !loc.startsWith('/admin/unit-management') &&
+        !loc.startsWith('/educator/unit-management') &&
         role != UserRole.admin) {
       return '/';
     }
@@ -126,7 +127,7 @@ class RouterNotifier extends ChangeNotifier {
         role != UserRole.admin) {
       return '/';
     }
-    if ((loc.startsWith('/admin/lessons') || loc.startsWith('/admin/unit-management')) &&
+    if ((loc.startsWith('/admin/lessons') || loc.startsWith('/admin/unit-management') || loc.startsWith('/educator/unit-management')) &&
         role != UserRole.admin &&
         role != UserRole.educator) {
       return '/';
@@ -265,6 +266,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin/unit-management',
+            builder: (context, state) => const EducatorUnitManagementScreen(),
+          ),
+          GoRoute(
+            path: '/educator/unit-management',
             builder: (context, state) => const EducatorUnitManagementScreen(),
           ),
           GoRoute(

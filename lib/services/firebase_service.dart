@@ -30,6 +30,7 @@ import '../models/assessment.dart';
 
 import '../models/daily_challenge.dart';
 import '../models/warrior_friend.dart';
+import '../models/school_year.dart';
 
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
@@ -2335,6 +2336,7 @@ class FirebaseService {
     final isOccupied = await isUnitUnique(
       lesson.language,
       lesson.unitNumber,
+      educatorId: lesson.educatorId,
       excludeLessonId: (lesson.id.isNotEmpty && !lesson.id.startsWith('temp_')) ? lesson.id : null,
     ).then((unique) => !unique);
 
@@ -2344,6 +2346,7 @@ class FirebaseService {
         language: lesson.language,
         startUnit: lesson.unitNumber,
         offset: 1,
+        educatorId: lesson.educatorId,
       );
     }
 
@@ -2363,13 +2366,22 @@ class FirebaseService {
   Future<bool> isUnitUnique(
     String language,
     int unitNumber, {
+    String? educatorId,
     String? excludeLessonId,
   }) async {
     final snapshot = await _db.collection('lessons').get();
 
     final matchingDocs = snapshot.docs.where((doc) {
       final data = doc.data();
-      return data['language'] == language && data['unitNumber'] == unitNumber;
+      if (data['language'] != language || data['unitNumber'] != unitNumber) {
+        return false;
+      }
+      final docEducatorId = data['educatorId'] as String?;
+      if (educatorId == null || educatorId.isEmpty) {
+        return docEducatorId == null || docEducatorId.isEmpty;
+      } else {
+        return docEducatorId == educatorId;
+      }
     }).toList();
 
     if (excludeLessonId != null) {
@@ -2496,6 +2508,7 @@ class FirebaseService {
     required String language,
     required int startUnit,
     int offset = 1,
+    String? educatorId,
   }) async {
     final snapshot = await _db.collection('lessons').get();
 
@@ -2503,9 +2516,16 @@ class FirebaseService {
     for (var doc in snapshot.docs) {
       final data = doc.data();
       if (data['language'] == language) {
-        final currentUnit = (data['unitNumber'] as num?)?.toInt() ?? 0;
-        if (currentUnit >= startUnit) {
-          batch.update(doc.reference, {'unitNumber': FieldValue.increment(offset)});
+        final docEducatorId = data['educatorId'] as String?;
+        final matchesScope = (educatorId == null || educatorId.isEmpty)
+            ? (docEducatorId == null || docEducatorId.isEmpty)
+            : (docEducatorId == educatorId);
+
+        if (matchesScope) {
+          final currentUnit = (data['unitNumber'] as num?)?.toInt() ?? 0;
+          if (currentUnit >= startUnit) {
+            batch.update(doc.reference, {'unitNumber': FieldValue.increment(offset)});
+          }
         }
       }
     }
@@ -2527,7 +2547,7 @@ class FirebaseService {
         });
   }
 
-  Future<Map<String, dynamic>> getEducatorAnalytics(String educatorId) async {
+  Future<Map<String, dynamic>> getEducatorAnalytics(String educatorId, {String? academicYear}) async {
     try {
       // 1. Get learners linked to this educator
       final usersSnap = await _db
@@ -2536,7 +2556,16 @@ class FirebaseService {
           .get();
 
       final learnerDocs = usersSnap.docs
-          .where((doc) => doc.data()['role'] == null || doc.data()['role'] == 'learner')
+          .where((doc) {
+            final data = doc.data();
+            final role = data['role'];
+            if (role != null && role != 'learner') return false;
+            if (academicYear != null && academicYear != 'All') {
+              final year = data['academicYear'] ?? '2026-2027';
+              if (year != academicYear) return false;
+            }
+            return true;
+          })
           .toList();
 
       final List<String> studentIds = learnerDocs.map((doc) => doc.id).toList();
@@ -2800,7 +2829,16 @@ class FirebaseService {
       }
 
       if (!userDoc.exists) {
-        throw Exception("User profile not found. Please log in again.");
+        transaction.set(userRef, {
+          'username': 'Tribe Member',
+          'email': '',
+          'role': 'learner',
+          'xp': 0,
+          'mistCrystals': 0,
+          'streak': 0,
+          'createdAt': FieldValue.serverTimestamp(),
+          'lastLogin': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
       }
 
       final existingData = progressDoc.data();
@@ -3533,7 +3571,7 @@ class FirebaseService {
 
       final crystals = (userDoc.data()?['mistCrystals'] as num?)?.toInt() ?? 0;
       if (crystals < cost) {
-        throw Exception("Not enough Mist Crystals! You need $cost crystals.");
+        throw Exception("Not enough Crystals! You need $cost crystals.");
       }
 
       final artifactRef = userRef.collection('artifacts').doc(artifactId);
@@ -4678,6 +4716,25 @@ class FirebaseService {
       'senderPhotoUrl': senderAvatar,
     });
   }
+
+  // ── School Year Operations ──────────────────────────────────────────────
+  Stream<List<SchoolYear>> getSchoolYears() {
+    return _db.collection('school_years').orderBy('startDate', descending: true).snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => SchoolYear.fromFirestore(doc.data(), doc.id)).toList();
+    });
+  }
+
+  Future<void> addSchoolYear(SchoolYear schoolYear) async {
+    await _db.collection('school_years').add(schoolYear.toMap());
+  }
+
+  Future<void> updateSchoolYear(SchoolYear schoolYear) async {
+    await _db.collection('school_years').doc(schoolYear.id).update(schoolYear.toMap());
+  }
+
+  Future<void> deleteSchoolYear(String id) async {
+    await _db.collection('school_years').doc(id).delete();
+  }
 }
 
 
@@ -5042,8 +5099,8 @@ final userBadgesStreamProvider =
     });
 
 final educatorAnalyticsProvider =
-    FutureProvider.family<Map<String, dynamic>, String>((ref, educatorId) async {
-  return ref.watch(firebaseServiceProvider).getEducatorAnalytics(educatorId);
+    FutureProvider.family<Map<String, dynamic>, ({String educatorId, String academicYear})>((ref, arg) async {
+  return ref.watch(firebaseServiceProvider).getEducatorAnalytics(arg.educatorId, academicYear: arg.academicYear);
 });
 
 final villageTopLearnersProvider =

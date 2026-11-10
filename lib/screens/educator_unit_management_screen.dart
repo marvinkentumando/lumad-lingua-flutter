@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../models/lesson.dart';
+import '../models/school_year.dart';
+import '../providers/educator_provider.dart';
 import '../services/firebase_service.dart';
+import '../services/auth_service.dart';
 import '../services/haptic_service.dart';
 import '../utils/app_localization.dart';
 
@@ -23,6 +26,12 @@ class _EducatorUnitManagementScreenState
 
   @override
   Widget build(BuildContext context) {
+    final userAuth = ref.watch(authStateProvider).value;
+    final profile = ref.watch(userProfileProvider).value;
+    final role = profile?['role']?.toString().toLowerCase();
+    final educatorId = userAuth?.uid ?? '';
+    final isAdmin = role == 'admin';
+
     final lessonsAsync = ref.watch(allLessonsStreamProvider);
     final dialectsAsync = ref.watch(dialectsProvider);
     final l10n = ref.watch(localizationProvider);
@@ -40,6 +49,13 @@ class _EducatorUnitManagementScreenState
           icon: const Icon(Icons.arrow_back_rounded, color: AppColors.gold500),
           onPressed: () => context.pop(),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.date_range_rounded, color: AppColors.gold500),
+            tooltip: 'Manage School Years',
+            onPressed: () => _showManageSchoolYearsDialog(context, ref),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -47,9 +63,13 @@ class _EducatorUnitManagementScreenState
           Expanded(
             child: lessonsAsync.when(
               data: (lessons) {
-                final filteredLessons = lessons
-                    .where((l) => l.language == _selectedLanguage)
-                    .toList();
+                final filteredLessons = lessons.where((l) {
+                  if (l.language != _selectedLanguage) return false;
+                  if (isAdmin) {
+                    return l.educatorId == null || l.educatorId!.isEmpty || l.educatorId == educatorId;
+                  }
+                  return l.educatorId == educatorId;
+                }).toList();
 
                 // Sort by unit number
                 filteredLessons.sort(
@@ -244,6 +264,153 @@ class _EducatorUnitManagementScreenState
         );
       }
     }
+  }
+
+  void _showManageSchoolYearsDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => Consumer(
+        builder: (context, ref, child) {
+          final schoolYearsAsync = ref.watch(schoolYearsStreamProvider);
+          return AlertDialog(
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            title: Row(
+              children: [
+                const Icon(Icons.date_range_rounded, color: AppColors.gold500),
+                const SizedBox(width: 8),
+                Text('Manage School Years', style: AppTypography.h3.copyWith(color: AppColors.gold500)),
+              ],
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 300,
+              child: schoolYearsAsync.when(
+                data: (years) {
+                  if (years.isEmpty) {
+                    return const Center(child: Text('No custom school years configured. Using default presets.'));
+                  }
+                  return ListView.builder(
+                    itemCount: years.length,
+                    itemBuilder: (context, index) {
+                      final sy = years[index];
+                      return ListTile(
+                        title: Text(sy.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text('${sy.startDate.toLocal().toString().split(' ')[0]} to ${sy.endDate.toLocal().toString().split(' ')[0]}'),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_rounded, color: Colors.redAccent),
+                          onPressed: () async {
+                            HapticService.medium();
+                            await ref.read(firebaseServiceProvider).deleteSchoolYear(sy.id);
+                          },
+                        ),
+                      );
+                    },
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold500)),
+                error: (e, _) => Center(child: Text('Error: $e')),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500),
+                icon: const Icon(Icons.add_rounded, color: Colors.black),
+                label: const Text('Add School Year', style: TextStyle(color: Colors.black)),
+                onPressed: () {
+                  Navigator.pop(context);
+                  _showAddSchoolYearDialog(context, ref);
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showAddSchoolYearDialog(BuildContext context, WidgetRef ref) {
+    final nameController = TextEditingController();
+    DateTime startDate = DateTime.now();
+    DateTime endDate = DateTime.now().add(const Duration(days: 365));
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateModal) => AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: Text('Add New School Year', style: AppTypography.h3.copyWith(color: AppColors.gold500)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'School Year Name (e.g. 2027-2028)'),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                title: const Text('Start Date'),
+                subtitle: Text(startDate.toLocal().toString().split(' ')[0]),
+                trailing: const Icon(Icons.calendar_month_rounded, color: AppColors.gold500),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: startDate,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime(2035),
+                  );
+                  if (picked != null) {
+                    setStateModal(() => startDate = picked);
+                  }
+                },
+              ),
+              ListTile(
+                title: const Text('End Date'),
+                subtitle: Text(endDate.toLocal().toString().split(' ')[0]),
+                trailing: const Icon(Icons.calendar_month_rounded, color: AppColors.gold500),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: endDate,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime(2035),
+                  );
+                  if (picked != null) {
+                    setStateModal(() => endDate = picked);
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500),
+              child: const Text('Save', style: TextStyle(color: Colors.black)),
+              onPressed: () async {
+                if (nameController.text.trim().isEmpty) return;
+                HapticService.celebration();
+                final sy = SchoolYear(
+                  id: '',
+                  name: nameController.text.trim(),
+                  startDate: startDate,
+                  endDate: endDate,
+                  isActive: true,
+                );
+                await ref.read(firebaseServiceProvider).addSchoolYear(sy);
+                if (context.mounted) Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

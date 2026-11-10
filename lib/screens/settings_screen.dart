@@ -21,6 +21,11 @@ class SettingsScreen extends ConsumerWidget {
     final role = ref.watch(roleProvider);
     final isEducatorOrAdmin = role == UserRole.educator || role == UserRole.admin;
 
+    final appLang = ref.watch(userPreferencesProvider).appLanguage;
+    final displayLang = appLang == 'fil' || appLang == 'tl'
+        ? 'FILIPINO'
+        : (appLang == 'ceb' || appLang == 'bis' ? 'CEBUANO' : 'ENGLISH');
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: BrandBackground(
@@ -37,7 +42,7 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Settings & Preferences',
+                      l10n.translate('settings_preferences'),
                       style: AppTypography.h2.copyWith(
                         color: AppColors.gold500,
                         fontWeight: FontWeight.bold,
@@ -51,7 +56,7 @@ class SettingsScreen extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   children: [
                     Text(
-                      'APPEARANCE & LANGUAGE',
+                      l10n.translate('appearance_language'),
                       style: AppTypography.label.copyWith(
                         color: AppColors.gold500,
                         letterSpacing: 1.5,
@@ -62,8 +67,8 @@ class SettingsScreen extends ConsumerWidget {
                     _buildTile(
                       context,
                       Icons.translate_rounded,
-                      'App Language',
-                      ref.watch(userPreferencesProvider).appLanguage.toUpperCase(),
+                      l10n.translate('app_language'),
+                      displayLang,
                       onTap: () => _showLanguageSelector(context, ref, l10n),
                     ),
                     const SizedBox(height: 12),
@@ -84,8 +89,8 @@ class SettingsScreen extends ConsumerWidget {
                     _buildTile(
                       context,
                       Icons.music_note_rounded,
-                      'Background Music',
-                      'Play ambient forest music during lessons',
+                      l10n.translate('background_music'),
+                      l10n.translate('background_music_desc'),
                       onTap: () => ref.read(userPreferencesProvider.notifier).setBackgroundMusicEnabled(!ref.read(userPreferencesProvider).backgroundMusicEnabled),
                       trailing: Switch(
                         value: ref.watch(userPreferencesProvider).backgroundMusicEnabled,
@@ -96,7 +101,7 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'REMINDERS & ALERTS',
+                      l10n.translate('reminders_alerts'),
                       style: AppTypography.label.copyWith(
                         color: AppColors.gold500,
                         letterSpacing: 1.5,
@@ -116,14 +121,14 @@ class SettingsScreen extends ConsumerWidget {
                       _buildTile(
                         context,
                         Icons.alarm_rounded,
-                        'Daily Streak Reminders',
-                        'Set daily practice alerts & schedule',
+                        l10n.translate('daily_streak_reminders'),
+                        l10n.translate('daily_streak_reminders_desc'),
                         onTap: () => showStreakReminderSettingsDialog(context),
                       ),
                     ],
                     const SizedBox(height: 24),
                     Text(
-                      'DATA & PRIVACY',
+                      l10n.translate('data_privacy_section'),
                       style: AppTypography.label.copyWith(
                         color: AppColors.gold500,
                         letterSpacing: 1.5,
@@ -217,7 +222,7 @@ class SettingsScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Select App Language / Dialect',
+                l10n.translate('select_app_language'),
                 style: AppTypography.h3.copyWith(
                   color: AppColors.gold500,
                   fontWeight: FontWeight.bold,
@@ -237,7 +242,9 @@ class SettingsScreen extends ConsumerWidget {
 
   Widget _languageOption(BuildContext context, WidgetRef ref, String label, String code) {
     final current = ref.watch(userPreferencesProvider).appLanguage;
-    final isSelected = current == code;
+    final isSelected = current == code ||
+        (code == 'fil' && current == 'tl') ||
+        (code == 'ceb' && current == 'bis');
 
     return ListTile(
       title: Text(label, style: AppTypography.body.copyWith(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),

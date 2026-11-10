@@ -72,5 +72,17 @@ void main() {
     test('HapticService.streak completes without throwing', () async {
       await expectLater(HapticService.streak(), completes);
     });
+
+    test('enableClickAudio can be toggled to silence click.mp3 on audio comparison screen', () async {
+      expect(HapticService.enableClickAudio, isTrue);
+
+      HapticService.enableClickAudio = false;
+      expect(HapticService.enableClickAudio, isFalse);
+      await expectLater(HapticService.selection(), completes);
+      await expectLater(HapticService.light(), completes);
+
+      HapticService.enableClickAudio = true;
+      expect(HapticService.enableClickAudio, isTrue);
+    });
   });
 }

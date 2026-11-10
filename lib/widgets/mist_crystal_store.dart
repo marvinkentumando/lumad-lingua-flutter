@@ -44,7 +44,7 @@ void showMistCrystalStore(BuildContext context, WidgetRef ref) {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Mist Crystal Store',
+                          'Crystal Store',
                           style: AppTypography.h1ExtraBold.copyWith(
                             color: AppColors.gold500,
                             fontSize: 28,
