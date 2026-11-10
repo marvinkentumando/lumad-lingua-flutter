@@ -2672,8 +2672,6 @@ class FirebaseService {
 
       int totalXP = 0;
       int totalLessonsCompleted = 0;
-      double totalAccuracySum = 0;
-      int accuracyCount = 0;
 
       final Map<String, int> lessonAttempts = {};
       final Map<String, int> lessonPasses = {};
@@ -2708,9 +2706,6 @@ class FirebaseService {
             final mistakesInt = (mistakes as num?)?.toInt() ?? 0;
             taskMistakesCount[taskId] = (taskMistakesCount[taskId] ?? 0) + mistakesInt;
             taskToLesson[taskId] = lessonId;
-
-            totalAccuracySum += (1.0 - (mistakesInt / 5.0)).clamp(0.0, 1.0);
-            accuracyCount++;
           });
         }
       }
@@ -2758,10 +2753,17 @@ class FirebaseService {
         });
       }
 
+      int totalBookmarks = 0;
+      for (var userDoc in learnerDocs) {
+        final bookmarksSnap = await userDoc.reference.collection('bookmarks').get();
+        totalBookmarks += bookmarksSnap.docs.length;
+      }
+      final avgVocabulary = studentIds.isEmpty ? 0 : (totalBookmarks / studentIds.length).round();
+
       return {
         'totalXP': totalXP,
         'avgLessonsCompleted': totalLessonsCompleted / studentIds.length,
-        'pronunciationAccuracy': accuracyCount > 0 ? totalAccuracySum / accuracyCount : 0.85,
+        'vocabularyMastery': avgVocabulary,
         'quizPerformance': quizPerformance,
         'commonHurdles': hurdles,
       };
@@ -2772,7 +2774,7 @@ class FirebaseService {
         'commonHurdles': <Map<String, dynamic>>[],
         'totalXP': 0,
         'avgLessonsCompleted': 0.0,
-        'pronunciationAccuracy': 0.0,
+        'vocabularyMastery': 0,
       };
     }
   }

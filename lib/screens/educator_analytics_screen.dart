@@ -111,9 +111,9 @@ class _EducatorAnalyticsScreenState
                         ),
                         const SizedBox(width: 12),
                         _buildStatCard(
-                          l10n.translate('accuracy'),
-                          '${((analytics['pronunciationAccuracy'] as double? ?? 0) * 100).toInt()}%',
-                          l10n.translate('pronunciation'),
+                          'MASTERY',
+                          '${analytics['vocabularyMastery'] ?? 0} Words',
+                          'Vocabulary Acquired',
                           AppColors.semanticGreen,
                         ),
                       ],
