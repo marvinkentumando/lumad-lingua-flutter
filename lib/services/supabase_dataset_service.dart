@@ -43,12 +43,12 @@ class SupabaseDatasetService {
   }) : _storageAdapter = storageAdapter ?? SupabaseStorageAdapter(client ?? Supabase.instance.client);
 
   /// Discovers and resolves dataset entries from Supabase Storage.
-  /// Scans `audio/dataset` (primary, RUN-tagged) and `audio/dataset_2`
-  /// (additional speaker/takes) so comparison can use a wider, calibrated
-  /// reference pool. Relies on Storage object hierarchy with full pagination.
+  /// Scans `audio/dataset` (primary, RUN-tagged) and supplementary storage roots
+  /// (`dataset_2`, `dataset_3`, `dataset_4`) so comparison can use a wider,
+  /// calibrated reference pool. Relies on Storage object hierarchy with full pagination.
   Future<List<SupabaseDatasetEntry>> discoverDatasetEntries() async {
     try {
-      const roots = ['dataset', 'dataset_2'];
+      const roots = ['dataset', 'dataset_2', 'dataset_3', 'dataset_4'];
       List<SupabaseDatasetEntry> entries = [];
       int limit = 100;
 
@@ -96,6 +96,7 @@ class SupabaseDatasetService {
 
           Map<String, List<ReferenceAudioTake>> runTakesMap = {};
           final runTagged = RegExp(r'^(.+)_([12])__(RUN-\d{4}-\d{4})\.wav$', caseSensitive: false);
+          final singleRunTagged = RegExp(r'^(.+)__(RUN-\d{4}-\d{4})\.wav$', caseSensitive: false);
           final simpleTake = RegExp(r'^(.+)_([12])\.wav$', caseSensitive: false);
 
           for (var file in fileObjects) {
@@ -114,15 +115,22 @@ class SupabaseDatasetService {
               takeNumber = int.parse(taggedMatch.group(2)!);
               runId = taggedMatch.group(3)!;
             } else {
-              final simpleMatch = simpleTake.firstMatch(fileName);
-              if (simpleMatch == null) {
-                debugPrint('SupabaseDatasetService: Rejecting malformed or unsupported filename: $fileName');
-                continue;
+              final singleRunMatch = singleRunTagged.firstMatch(fileName);
+              if (singleRunMatch != null) {
+                filePhrase = singleRunMatch.group(1)!;
+                takeNumber = 1;
+                runId = singleRunMatch.group(2)!;
+              } else {
+                final simpleMatch = simpleTake.firstMatch(fileName);
+                if (simpleMatch == null) {
+                  debugPrint('SupabaseDatasetService: Rejecting malformed or unsupported filename: $fileName');
+                  continue;
+                }
+                filePhrase = simpleMatch.group(1)!;
+                takeNumber = int.parse(simpleMatch.group(2)!);
+                // Stable synthetic run id per source root (e.g. dataset_2).
+                runId = root.toUpperCase().replaceAll('-', '_');
               }
-              filePhrase = simpleMatch.group(1)!;
-              takeNumber = int.parse(simpleMatch.group(2)!);
-              // Stable synthetic run id per source root (e.g. dataset_2).
-              runId = root.toUpperCase().replaceAll('-', '_');
             }
 
             if (filePhrase != name) {
@@ -142,7 +150,7 @@ class SupabaseDatasetService {
           }
 
           if (runTakesMap.isEmpty) {
-            debugPrint('SupabaseDatasetService: Folder "$name" has no valid preprocessed reference WAVs.');
+            debugPrint('SupabaseDatasetService: Folder "$name" has no valid reference WAVs.');
             continue;
           }
 
@@ -182,16 +190,24 @@ class SupabaseDatasetService {
                 isCompatibleRun = true;
               }
             } else {
-              // Additional-source references (e.g. dataset_2) are preprocessed
-              // takes; treat as compatible for multi-reference comparison.
+              // Additional-source references (e.g. dataset_2) are treated as compatible
+              // for multi-reference comparison (with preprocessing applied).
               isCompatibleRun = true;
             }
 
             final title = SupabaseDatasetEntry.formatTitleFromFolder(name);
-            final isSupplementary = root != 'dataset';
-            final subtitle = isSupplementary
-                ? 'Additional reference'
-                : 'Verified';
+            String subtitle;
+            if (root == 'dataset_3') {
+              subtitle = 'Female Speaker 1';
+            } else if (root == 'dataset_4') {
+              subtitle = 'Female Speaker 2';
+            } else if (root == 'dataset_2') {
+              subtitle = 'Additional reference (Raw)';
+            } else if (root != 'dataset') {
+              subtitle = 'Additional reference';
+            } else {
+              subtitle = 'Verified';
+            }
             entries.add(SupabaseDatasetEntry(
               folderName: name,
               title: title,

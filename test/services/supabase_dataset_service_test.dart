@@ -337,5 +337,37 @@ void main() {
       expect(folderRequests[1].offset, equals(100));
       expect(folderRequests[1].limit, equals(100));
     });
+
+    test('Discovers dataset_3 and dataset_4 single-take run-tagged reference audio correctly', () async {
+      final adapter = FakeSupabaseStorageAdapter();
+
+      adapter.listResponses['dataset_3'] = [
+        FileObject.fromJson({'name': 'madakmul_yang_abol', 'bucket_id': 'audio'}),
+      ];
+      adapter.listResponses['dataset_3/madakmul_yang_abol'] = [
+        FileObject.fromJson({'name': 'madakmul_yang_abol__RUN-2026-0003.wav', 'bucket_id': 'audio', 'id': '1'}),
+      ];
+
+      adapter.listResponses['dataset_4'] = [
+        FileObject.fromJson({'name': 'madakmul_yang_abol', 'bucket_id': 'audio'}),
+      ];
+      adapter.listResponses['dataset_4/madakmul_yang_abol'] = [
+        FileObject.fromJson({'name': 'madakmul_yang_abol__RUN-2026-0003.wav', 'bucket_id': 'audio', 'id': '2'}),
+      ];
+
+      final service = SupabaseDatasetService(storageAdapter: adapter);
+      final entries = await service.discoverDatasetEntries();
+
+      expect(entries.length, equals(2));
+      expect(entries[0].sourceRoot, equals('dataset_3'));
+      expect(entries[0].subtitle, equals('Female Speaker 1'));
+      expect(entries[0].takes.length, equals(1));
+      expect(entries[0].takes[0].takeNumber, equals(1));
+
+      expect(entries[1].sourceRoot, equals('dataset_4'));
+      expect(entries[1].subtitle, equals('Female Speaker 2'));
+      expect(entries[1].takes.length, equals(1));
+      expect(entries[1].takes[0].takeNumber, equals(1));
+    });
   });
 }
