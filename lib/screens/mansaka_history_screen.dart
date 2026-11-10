@@ -59,115 +59,6 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
     }
   }
 
-  void _playAudioSimulation(String title, String description) {
-    HapticService.light();
-    bool isPlaying = true;
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-
-            return AlertDialog(
-              backgroundColor: isDark ? AppColors.forest900 : Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(color: AppColors.gold500, width: 1.5),
-              ),
-              title: Row(
-                children: [
-                  const Icon(Icons.volume_up_rounded, color: AppColors.gold500, size: 24),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Audio Archive: $title',
-                      style: AppTypography.h3.copyWith(
-                        color: isDark ? Colors.white : AppColors.forest900,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isPlaying ? 'Playing authentic Mansaka pronunciation...' : 'Paused audio archive',
-                    style: AppTypography.body.copyWith(
-                      color: isDark ? Colors.white70 : Colors.black87,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.gold500.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          onPressed: () {
-                            setStateDialog(() {
-                              isPlaying = !isPlaying;
-                            });
-                            HapticService.light();
-                          },
-                          icon: Icon(
-                            isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_filled_rounded,
-                            color: AppColors.gold500,
-                            size: 36,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                description,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: AppColors.gold500,
-                                  fontSize: 11,
-                                  fontStyle: FontStyle.italic,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              LinearProgressIndicator(
-                                value: isPlaying ? null : 0.4,
-                                backgroundColor: AppColors.gold500.withValues(alpha: 0.2),
-                                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold500),
-                                minHeight: 4,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('CLOSE', style: TextStyle(color: AppColors.gold500, fontWeight: FontWeight.bold)),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
   void _showTableOfContentsModal(bool isDark) {
     HapticService.light();
     final chapters = [
@@ -251,7 +142,8 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
       builder: (ctx) {
         final isDark = Theme.of(ctx).brightness == Brightness.dark;
         int currentQuestion = 0;
-        int score = 0;
+        final Map<int, int> selectedAnswers = {};
+        bool isReviewMode = false;
 
         final questions = [
           {
@@ -273,8 +165,145 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
 
         return StatefulBuilder(
           builder: (context, setStateQuiz) {
+            if (isReviewMode) {
+              int correctCount = 0;
+              for (int i = 0; i < questions.length; i++) {
+                if (selectedAnswers[i] == questions[i]['answer']) correctCount++;
+              }
+
+              return AlertDialog(
+                backgroundColor: isDark ? AppColors.forest900 : Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  side: const BorderSide(color: AppColors.gold500, width: 1.5),
+                ),
+                title: Row(
+                  children: [
+                    const Icon(Icons.fact_check_rounded, color: AppColors.gold500, size: 22),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Review Your Answers ($correctCount/${questions.length})',
+                      style: AppTypography.h3.copyWith(
+                        color: isDark ? Colors.white : AppColors.forest900,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+                content: SizedBox(
+                  width: double.maxFinite,
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: [
+                      Text(
+                        'Review your answers below. Correct choices are highlighted in green, your wrong choices in red. Tap "Edit Answers" if you need to correct any selection.',
+                        style: AppTypography.caption.copyWith(color: isDark ? Colors.white70 : Colors.black54, fontSize: 12),
+                      ),
+                      const SizedBox(height: 16),
+                      ...List.generate(questions.length, (qIdx) {
+                        final q = questions[qIdx];
+                        final options = q['options'] as List<String>;
+                        final userAns = selectedAnswers[qIdx];
+                        final correctAns = q['answer'] as int;
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.forest700 : AppColors.creamBg,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.gold500.withValues(alpha: 0.3)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Q${qIdx + 1}: ${q['question']}',
+                                style: AppTypography.label.copyWith(color: isDark ? Colors.white : AppColors.forest900, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 8),
+                              ...List.generate(options.length, (optIdx) {
+                                final isCorrectOpt = optIdx == correctAns;
+                                final isUserOpt = optIdx == userAns;
+
+                                Color? btnColor;
+                                Color textColor = isDark ? Colors.white : AppColors.forest900;
+                                if (isCorrectOpt) {
+                                  btnColor = AppColors.semanticGreen.withValues(alpha: 0.25);
+                                  textColor = AppColors.semanticGreen;
+                                } else if (isUserOpt && !isCorrectOpt) {
+                                  btnColor = AppColors.semanticRed.withValues(alpha: 0.25);
+                                  textColor = AppColors.semanticRed;
+                                }
+
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 4),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: btnColor,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isCorrectOpt
+                                          ? AppColors.semanticGreen
+                                          : isUserOpt
+                                              ? AppColors.semanticRed
+                                              : Colors.white24,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        isCorrectOpt
+                                            ? Icons.check_circle_rounded
+                                            : isUserOpt
+                                                ? Icons.cancel_rounded
+                                                : Icons.radio_button_unchecked_rounded,
+                                        size: 16,
+                                        color: textColor,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          options[optIdx],
+                                          style: TextStyle(color: textColor, fontSize: 12, fontWeight: isCorrectOpt || isUserOpt ? FontWeight.bold : FontWeight.normal),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      setStateQuiz(() {
+                        isReviewMode = false;
+                        currentQuestion = 0;
+                      });
+                    },
+                    child: const Text('EDIT ANSWERS'),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500, foregroundColor: AppColors.forest900),
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      _finishHeritageQuiz(correctCount, questions.length);
+                    },
+                    child: const Text('SUBMIT & CLAIM REWARD', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              );
+            }
+
             final q = questions[currentQuestion];
             final options = q['options'] as List<String>;
+            final selectedOpt = selectedAnswers[currentQuestion];
 
             return AlertDialog(
               backgroundColor: isDark ? AppColors.forest900 : Colors.white,
@@ -309,6 +338,7 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                   ),
                   const SizedBox(height: 16),
                   ...List.generate(options.length, (optIdx) {
+                    final isSelected = selectedOpt == optIdx;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: SizedBox(
@@ -316,31 +346,73 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                         child: OutlinedButton(
                           onPressed: () {
                             HapticService.selection();
-                            final correct = optIdx == q['answer'];
-                            if (correct) score++;
-                            if (currentQuestion < questions.length - 1) {
-                              setStateQuiz(() {
-                                currentQuestion++;
-                              });
-                            } else {
-                              Navigator.of(ctx).pop();
-                              _finishHeritageQuiz(score, questions.length);
-                            }
+                            setStateQuiz(() {
+                              selectedAnswers[currentQuestion] = optIdx;
+                            });
                           },
                           style: OutlinedButton.styleFrom(
+                            backgroundColor: isSelected ? AppColors.gold500.withValues(alpha: 0.2) : Colors.transparent,
                             foregroundColor: isDark ? Colors.white : AppColors.forest900,
-                            side: BorderSide(color: AppColors.gold500.withValues(alpha: 0.5)),
+                            side: BorderSide(
+                              color: isSelected ? AppColors.gold500 : AppColors.gold500.withValues(alpha: 0.5),
+                              width: isSelected ? 2 : 1,
+                            ),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                             alignment: Alignment.centerLeft,
                           ),
-                          child: Text(options[optIdx], style: const TextStyle(fontSize: 13)),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_unchecked_rounded,
+                                size: 16,
+                                color: isSelected ? AppColors.gold500 : Colors.white54,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(child: Text(options[optIdx], style: const TextStyle(fontSize: 13))),
+                            ],
+                          ),
                         ),
                       ),
                     );
                   }),
                 ],
               ),
+              actions: [
+                if (currentQuestion > 0)
+                  TextButton(
+                    onPressed: () {
+                      setStateQuiz(() {
+                        currentQuestion--;
+                      });
+                    },
+                    child: const Text('PREVIOUS'),
+                  ),
+                if (currentQuestion < questions.length - 1)
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold500, foregroundColor: AppColors.forest900),
+                    onPressed: selectedOpt == null
+                        ? null
+                        : () {
+                            setStateQuiz(() {
+                              currentQuestion++;
+                            });
+                          },
+                    child: const Text('NEXT'),
+                  )
+                else
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.semanticGreen, foregroundColor: Colors.white),
+                    onPressed: selectedOpt == null
+                        ? null
+                        : () {
+                            setStateQuiz(() {
+                              isReviewMode = true;
+                            });
+                          },
+                    child: const Text('REVIEW ANSWERS'),
+                  ),
+              ],
             );
           },
         );
@@ -1104,24 +1176,6 @@ class _MansakaHistoryScreenState extends ConsumerState<MansakaHistoryScreen> {
                         ),
                       ],
                       const SizedBox(height: 30),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _playAudioSimulation(title, subtitle),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.gold500,
-                                side: BorderSide(color: AppColors.gold500.withValues(alpha: 0.6)),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                              icon: const Icon(Icons.volume_up_rounded, size: 18),
-                              label: const Text('Listen Audio Archive', style: TextStyle(fontWeight: FontWeight.bold)),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
                       Row(
                         children: [
                           Expanded(
