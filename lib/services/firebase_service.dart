@@ -2527,7 +2527,7 @@ class FirebaseService {
         });
   }
 
-  Future<Map<String, dynamic>> getEducatorAnalytics(String educatorId) async {
+  Future<Map<String, dynamic>> getEducatorAnalytics(String educatorId, {String? academicYear}) async {
     try {
       // 1. Get learners linked to this educator
       final usersSnap = await _db
@@ -2536,7 +2536,16 @@ class FirebaseService {
           .get();
 
       final learnerDocs = usersSnap.docs
-          .where((doc) => doc.data()['role'] == null || doc.data()['role'] == 'learner')
+          .where((doc) {
+            final data = doc.data();
+            final role = data['role'];
+            if (role != null && role != 'learner') return false;
+            if (academicYear != null && academicYear != 'All') {
+              final year = data['academicYear'] ?? '2026-2027';
+              if (year != academicYear) return false;
+            }
+            return true;
+          })
           .toList();
 
       final List<String> studentIds = learnerDocs.map((doc) => doc.id).toList();
@@ -5051,8 +5060,8 @@ final userBadgesStreamProvider =
     });
 
 final educatorAnalyticsProvider =
-    FutureProvider.family<Map<String, dynamic>, String>((ref, educatorId) async {
-  return ref.watch(firebaseServiceProvider).getEducatorAnalytics(educatorId);
+    FutureProvider.family<Map<String, dynamic>, ({String educatorId, String academicYear})>((ref, arg) async {
+  return ref.watch(firebaseServiceProvider).getEducatorAnalytics(arg.educatorId, academicYear: arg.academicYear);
 });
 
 final villageTopLearnersProvider =
