@@ -175,8 +175,13 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         break;
       case TaskType.overview:
         type = ActivityType.overview;
+        final overviewTitle = task.questionText.isNotEmpty && task.questionText != 'overview'
+            ? task.questionText
+            : (task.grammarTitle?.isNotEmpty == true && task.grammarTitle != 'overview'
+                ? task.grammarTitle!
+                : 'Lesson Overview');
         data = {
-          'title': task.questionText,
+          'title': overviewTitle,
           'content': task.hintMetadata.isNotEmpty ? task.hintMetadata : task.questionText,
           'culturalNotes': task.grammarDescription ?? '',
           'imageUrl': task.imageUrl,
@@ -256,10 +261,18 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
         break;
     }
 
+    final overviewTitle = task.type == TaskType.overview
+        ? (task.questionText.isNotEmpty && task.questionText != 'overview'
+            ? task.questionText
+            : (task.grammarTitle?.isNotEmpty == true && task.grammarTitle != 'overview'
+                ? task.grammarTitle!
+                : 'Lesson Overview'))
+        : task.type.toString().split('.').last;
+
     return LessonStep(
       id: task.id,
       type: type,
-      title: task.type.toString().split('.').last,
+      title: overviewTitle,
       data: data,
     );
   }
@@ -412,11 +425,16 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
     }
 
     final isOverview = step.type == ActivityType.overview;
+    final overviewTitle = (step.data['title'] as String?)?.isNotEmpty == true && step.data['title'] != 'overview'
+        ? step.data['title']!
+        : (step.title.isNotEmpty && step.title != 'overview'
+            ? step.title
+            : 'Lesson Overview');
     return LessonTask(
       id: step.id,
       type: type,
       questionText: isOverview
-          ? (step.data['title'] ?? step.title)
+          ? overviewTitle
           : ((step.data['question'] as String?)?.isNotEmpty ?? false
               ? step.data['question']
               : step.title),
@@ -435,6 +453,7 @@ class _LessonEditorScreenState extends ConsumerState<LessonEditorScreen>
           ? (step.data['content'] ?? step.data['overviewText'] ?? '')
           : (step.data['scenarioText'] ?? step.data['definition'] ?? ''),
       grammarDescription: isOverview ? (step.data['culturalNotes'] ?? '') : null,
+      grammarTitle: isOverview ? overviewTitle : null,
       imageUrl: step.data['imageUrl'],
       audioUrl: step.data['audioUrl'],
     );

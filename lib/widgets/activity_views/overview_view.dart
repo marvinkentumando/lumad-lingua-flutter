@@ -77,7 +77,7 @@ class OverviewView extends ConsumerWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            title.isNotEmpty ? title : 'Lesson Overview',
+            title.isNotEmpty && title != 'overview' ? title : 'Lesson Overview',
             style: AppTypography.h2.copyWith(
               color: isDark ? Colors.white : AppColors.forest900,
               fontSize: 20,

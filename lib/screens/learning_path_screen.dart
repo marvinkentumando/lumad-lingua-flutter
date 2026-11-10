@@ -26,6 +26,7 @@ import '../models/assessment.dart';
 import '../services/auth_service.dart';
 import '../services/certificate_service.dart';
 import '../services/haptic_service.dart';
+import '../widgets/lesson_abstract_modal.dart';
 
 class LearningPathScreen extends ConsumerStatefulWidget {
   const LearningPathScreen({super.key});
@@ -109,6 +110,17 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
     _pulseController.dispose();
     _confettiController.dispose();
     super.dispose();
+  }
+
+  void _openLessonAbstractModal(Lesson lesson) {
+    ref.read(lessonAudioPreCacheNotifierProvider.notifier).preCacheLesson(lesson);
+    LessonAbstractModal.show(
+      context,
+      lesson: lesson,
+      onBeginLesson: () {
+        context.push('/lesson_session?lessonId=${lesson.id}');
+      },
+    );
   }
 
   void _scrollToActiveLesson() {
@@ -702,8 +714,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                 ? null
                 : () {
                     HapticFeedback.lightImpact();
-                    ref.read(lessonAudioPreCacheNotifierProvider.notifier).preCacheLesson(lesson);
-                    context.push('/lesson_session?lessonId=${lesson.id}');
+                    _openLessonAbstractModal(lesson);
                   },
             child: Opacity(
               opacity: isLocked ? 0.4 : 1.0,
@@ -715,6 +726,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                 lessonId: lesson.id,
                 isLast: isLast,
                 isCached: isCached,
+                isVillageLesson: lesson.educatorId != null && lesson.educatorId!.isNotEmpty,
               ),
             ),
           ),
@@ -734,8 +746,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
           stars: totalStars,
           onTap: !showChildren
               ? () {
-                  ref.read(lessonAudioPreCacheNotifierProvider.notifier).preCacheLesson(unitLessons.first);
-                  context.push('/lesson_session?lessonId=${unitLessons.first.id}');
+                  _openLessonAbstractModal(unitLessons.first);
                 }
               : null,
           children: showChildren ? lessonWidgets : const [],
@@ -857,8 +868,7 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen>
                   ? null
                   : () {
                       HapticService.light();
-                      ref.read(lessonAudioPreCacheNotifierProvider.notifier).preCacheLesson(lesson);
-                      context.push('/lesson_session?lessonId=${lesson.id}');
+                      _openLessonAbstractModal(lesson);
                     },
               index: totalLessons - globalIndex,
             ),

@@ -10,12 +10,14 @@ class DictionaryFilter {
   final String category;
   final DictionarySort sort;
   final PartOfSpeech? partOfSpeech;
+  final bool hasAudioOnly;
 
   DictionaryFilter({
     this.query = '',
     this.category = 'ALL',
     this.sort = DictionarySort.alphabetical,
     this.partOfSpeech,
+    this.hasAudioOnly = false,
   });
 
   DictionaryFilter copyWith({
@@ -24,12 +26,14 @@ class DictionaryFilter {
     DictionarySort? sort,
     PartOfSpeech? partOfSpeech,
     bool clearPartOfSpeech = false,
+    bool? hasAudioOnly,
   }) {
     return DictionaryFilter(
       query: query ?? this.query,
       category: category ?? this.category,
       sort: sort ?? this.sort,
       partOfSpeech: clearPartOfSpeech ? null : (partOfSpeech ?? this.partOfSpeech),
+      hasAudioOnly: hasAudioOnly ?? this.hasAudioOnly,
     );
   }
 }
@@ -54,7 +58,12 @@ final filteredDictionaryProvider = Provider<AsyncValue<List<DictionaryEntry>>>((
       items = items.where((e) => e.partOfSpeech == filter.partOfSpeech).toList();
     }
 
-    // 3. Filter by search query with basic optimization
+    // 3. Filter by Audio availability
+    if (filter.hasAudioOnly) {
+      items = items.where((e) => e.hasAudio).toList();
+    }
+
+    // 4. Filter by search query with basic optimization
     if (filter.query.isNotEmpty) {
       final q = filter.query.toLowerCase();
       items = items.where((e) {
@@ -63,7 +72,7 @@ final filteredDictionaryProvider = Provider<AsyncValue<List<DictionaryEntry>>>((
       }).toList();
     }
 
-    // 4. Apply Sorting
+    // 5. Apply Sorting
     final sorted = List<DictionaryEntry>.from(items);
     switch (filter.sort) {
       case DictionarySort.alphabetical:
@@ -98,7 +107,12 @@ final availablePartOfSpeechProvider = Provider<Set<PartOfSpeech>>((ref) {
         items = items.where((e) => savedIds.contains(e.id)).toList();
       }
 
-      // 2. Filter by search query
+      // 2. Filter by audio availability
+      if (filter.hasAudioOnly) {
+        items = items.where((e) => e.hasAudio).toList();
+      }
+
+      // 3. Filter by search query
       if (filter.query.isNotEmpty) {
         final q = filter.query.toLowerCase();
         items = items.where((e) {

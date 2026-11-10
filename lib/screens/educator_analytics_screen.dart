@@ -1021,8 +1021,12 @@ class _EducatorAnalyticsScreenState
     final passRate = quiz['pass'] as int;
     final lessonName = quiz['name'] as String;
 
-    final passedUsers = users.where((u) => u.xp > 0).toList();
-    final strugglingUsers = users.where((u) => u.xp == 0).toList();
+    final passedUserIds = List<String>.from(quiz['passedUserIds'] ?? []);
+    final attemptedUserIds = List<String>.from(quiz['attemptedUserIds'] ?? []);
+
+    final passedUsers = users.where((u) => passedUserIds.contains(u.id)).toList();
+    final strugglingUsers = users.where((u) => attemptedUserIds.contains(u.id)).toList();
+    final unattemptedUsers = users.where((u) => !passedUserIds.contains(u.id) && !attemptedUserIds.contains(u.id)).toList();
 
     showModalBottomSheet(
       context: context,
@@ -1089,10 +1093,10 @@ class _EducatorAnalyticsScreenState
                             child: Text('No students passed yet.', style: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontSize: 12)),
                           )
                         else
-                          ...passedUsers.map((u) => _buildStudentRow(u.name, '${u.xp} XP • ${u.streak}d streak', true, isDark)),
+                          ...passedUsers.map((u) => _buildStudentRow(u.name, '${u.xp} XP • ${u.streak}d streak', true, isDark, status: 'passed')),
                         const SizedBox(height: 24),
                         Text(
-                          'Needs Review / Inactive (${strugglingUsers.length})',
+                          'Needs Review / Failed (${strugglingUsers.length})',
                           style: AppTypography.h3.copyWith(
                             color: AppColors.semanticRed,
                             fontSize: 14,
@@ -1105,7 +1109,23 @@ class _EducatorAnalyticsScreenState
                             child: Text('No students need review.', style: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontSize: 12)),
                           )
                         else
-                          ...strugglingUsers.map((u) => _buildStudentRow(u.name, 'No activity recorded yet', false, isDark)),
+                          ...strugglingUsers.map((u) => _buildStudentRow(u.name, 'Attempted • Needs review', false, isDark, status: 'failed')),
+                        const SizedBox(height: 24),
+                        Text(
+                          "Haven't Taken / Not Taken (${unattemptedUsers.length})",
+                          style: AppTypography.h3.copyWith(
+                            color: AppColors.gold500,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (unattemptedUsers.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Text('All students have taken this lesson.', style: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontSize: 12)),
+                          )
+                        else
+                          ...unattemptedUsers.map((u) => _buildStudentRow(u.name, 'Not taken yet', false, isDark, status: 'unattempted')),
                       ],
                     ),
                   ),
@@ -1118,7 +1138,21 @@ class _EducatorAnalyticsScreenState
     );
   }
 
-  Widget _buildStudentRow(String name, String detail, bool passed, bool isDark) {
+  Widget _buildStudentRow(String name, String detail, bool passed, bool isDark, {String? status}) {
+    final effectiveStatus = status ?? (passed ? 'passed' : 'failed');
+    Color color;
+    IconData icon;
+    if (effectiveStatus == 'passed') {
+      color = AppColors.semanticGreen;
+      icon = Icons.check;
+    } else if (effectiveStatus == 'failed') {
+      color = AppColors.semanticRed;
+      icon = Icons.priority_high;
+    } else {
+      color = AppColors.gold500;
+      icon = Icons.schedule_rounded;
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
@@ -1126,38 +1160,22 @@ class _EducatorAnalyticsScreenState
         color: isDark ? AppColors.forest900 : Colors.black.withValues(alpha: 0.02),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: passed ? AppColors.semanticGreen.withValues(alpha: 0.3) : AppColors.semanticRed.withValues(alpha: 0.3),
+          color: color.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: passed ? AppColors.semanticGreen.withValues(alpha: 0.2) : AppColors.semanticRed.withValues(alpha: 0.2),
-            child: Icon(
-              passed ? Icons.check : Icons.priority_high,
-              color: passed ? AppColors.semanticGreen : AppColors.semanticRed,
-              size: 18,
-            ),
+            backgroundColor: color.withValues(alpha: 0.2),
+            child: Icon(icon, color: color, size: 16),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  name,
-                  style: AppTypography.body.copyWith(
-                    color: isDark ? Colors.white : AppColors.forest900,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  detail,
-                  style: AppTypography.label.copyWith(
-                    color: isDark ? Colors.white54 : AppColors.forest900.withValues(alpha: 0.6),
-                    fontSize: 10,
-                  ),
-                ),
+                Text(name, style: AppTypography.body.copyWith(fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.forest900)),
+                Text(detail, style: AppTypography.caption.copyWith(color: isDark ? Colors.white54 : Colors.black54)),
               ],
             ),
           ),

@@ -72,79 +72,32 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   // Step 1: Roots
   final _usernameController = TextEditingController();
   final _villageCodeController = TextEditingController();
-  String? _selectedProvince;
-  String? _selectedMunicipality;
-
-  final Map<String, List<String>> _regionData = {
-    'Davao del Sur': [
-      'Davao City',
-      'Digos City',
-      'Santa Cruz',
-      'Bansalan',
-      'Hagonoy',
-      'Magsaysay',
-      'Matanao',
-      'Padada',
-      'Santa Maria',
-      'Sulop',
-    ],
-    'Davao del Norte': [
-      'Tagum City',
-      'Panabo City',
-      'Island Garden City of Samal',
-      'Carmen',
-      'Kapalong',
-      'New Corella',
-      'Santo Tomas',
-      'Talaingod',
-    ],
-    'Davao de Oro': [
-      'Nabunturan',
-      'Compostela',
-      'Laak',
-      'Mabini',
-      'Maco',
-      'Maragusan',
-      'Mawab',
-      'Monkayo',
-      'Montevista',
-      'Pantukan',
-    ],
-    'Davao Oriental': [
-      'Mati City',
-      'Baganga',
-      'Banaybanay',
-      'Boston',
-      'Caraga',
-      'Cateel',
-      'Lupon',
-      'Manay',
-      'San Isidro',
-      'Tarragona',
-    ],
-    'Davao Occidental': [
-      'Malita',
-      'Don Marcelino',
-      'Jose Abad Santos',
-      'Sarangani',
-      'Santa Maria',
-    ],
-  };
+  String _studyPace = 'Regular (10 mins/day)';
+  final List<String> _studyPaces = [
+    'Casual (5 mins/day)',
+    'Regular (10 mins/day)',
+    'Intensive (20 mins/day)',
+  ];
 
   // Step 2: Path
-  String? _selectedNativeLanguage;
-  final List<String> _nativeLanguages = [
+  String? _selectedSpokenLanguage;
+  final List<String> _spokenLanguages = [
     'Mansaka',
+    'Tagalog / Filipino',
+    'Bisaya / Cebuano',
+    'English',
     'Other'
   ];
 
-  String _learningGoal = "Culture";
+  String _learningGoal = "Ancestral Connection";
   final List<String> _goals = [
-    "Culture",
-    "Travel",
-    "Ancestry",
-    "Community",
-    "Research",
+    "Ancestral Connection",
+    "Community Revitalization",
+    "Elder Communication",
+    "Cultural Preservation",
+    "Academic & Research",
+    "School / IPEd Curriculum",
+    "Personal Enrichment",
   ];
 
   bool _acceptedTerms = false;
@@ -242,15 +195,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           _confirmPasswordController.text.isNotEmpty &&
           _passwordController.text == _confirmPasswordController.text;
     } else if (_currentStep == 1) {
-      final baseValid = _usernameController.text.length >= 3 &&
-          _selectedProvince != null &&
-          _selectedMunicipality != null;
+      final baseValid = _usernameController.text.length >= 3;
       if (_isValidatorInvite) {
         return baseValid && _acceptedTerms;
       }
       return baseValid;
     } else if (_currentStep == 2 && !_isValidatorInvite) {
-      return _selectedNativeLanguage != null && _acceptedTerms;
+      return _selectedSpokenLanguage != null && _acceptedTerms;
     }
     return true;
   }
@@ -302,10 +253,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             _emailController.text.trim(),
             _passwordController.text.trim(),
             _usernameController.text.trim(),
-            location: "$_selectedMunicipality, $_selectedProvince",
+            location: _studyPace,
             tribe: "Learner", // Defaulting since tribe interest was removed
             avatar: "👤", // Defaulting since totem was removed
-            nativeLanguage: _selectedNativeLanguage ?? "Unknown",
+            nativeLanguage: _selectedSpokenLanguage ?? "Unknown",
             learningGoal: _learningGoal,
             assessment: _assessmentAnswers,
             villageCode: _villageCodeController.text.trim(),
@@ -766,45 +717,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 16),
-        Text(
-          l10n.translate('province'),
-          style: AppTypography.label.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 8),
-        _buildDropdown(
-          value: _selectedProvince,
-          hint: l10n.translate('select_province'),
-          items: _regionData.keys.toList(),
-          onChanged: (val) {
-            setState(() {
-              _selectedProvince = val;
-              _selectedMunicipality = null;
-            });
-          },
-        ),
-        const SizedBox(height: 16),
-        Text(
-          l10n.translate('municipality'),
-          style: AppTypography.label.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 8),
-        _buildDropdown(
-          value: _selectedMunicipality,
-          hint: l10n.translate('select_municipality'),
-          items: _selectedProvince != null ? _regionData[_selectedProvince]! : [],
-          onChanged: (val) {
-            setState(() {
-              _selectedMunicipality = val;
-            });
-          },
-        ),
-        const SizedBox(height: 24),
         BrandTextField(
           controller: _villageCodeController,
           labelText: l10n.translate('village_code_optional'),
@@ -817,6 +729,36 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             color: isDark ? Colors.white24 : AppColors.forest900.withValues(alpha: 0.3),
             fontSize: 9,
           ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Daily Study Goal / Pace',
+          style: AppTypography.label.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _studyPaces.map((pace) {
+            final isSelected = _studyPace == pace;
+            return ChoiceChip(
+              label: Text(pace),
+              selected: isSelected,
+              onSelected: (val) {
+                HapticService.selection();
+                setState(() => _studyPace = pace);
+              },
+              selectedColor: AppColors.gold500,
+              labelStyle: TextStyle(
+                color: isSelected
+                    ? AppColors.forest900
+                    : Theme.of(context).colorScheme.onSurface,
+              ),
+            );
+          }).toList(),
         ),
         if (_isValidatorInvite) ...[
           const SizedBox(height: 24),
@@ -880,7 +822,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          l10n.translate('native_language'),
+          l10n.translate('spoken_language'),
           style: AppTypography.label.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 12,
@@ -888,18 +830,18 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         ),
         const SizedBox(height: 8),
         _buildDropdown(
-          value: _selectedNativeLanguage,
-          hint: l10n.translate('select_native_language'),
-          items: _nativeLanguages,
+          value: _selectedSpokenLanguage,
+          hint: l10n.translate('select_spoken_language'),
+          items: _spokenLanguages,
           onChanged: (val) {
             setState(() {
-              _selectedNativeLanguage = val;
+              _selectedSpokenLanguage = val;
             });
           },
         ),
         const SizedBox(height: 24),
         Text(
-          l10n.translate('learning_goal'),
+          'Primary Motivation',
           style: AppTypography.label.copyWith(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
@@ -912,12 +854,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           children: _goals.map((goal) {
             final isSelected = _learningGoal == goal;
             return ChoiceChip(
-              label: Text(l10n.translate(goal.toLowerCase())),
+              label: Text(goal),
               selected: isSelected,
               onSelected: (val) {
-            HapticService.selection();
-            setState(() => _learningGoal = goal);
-          },
+                HapticService.selection();
+                setState(() => _learningGoal = goal);
+              },
               selectedColor: AppColors.gold500,
               labelStyle: TextStyle(
                 color: isSelected

@@ -2569,12 +2569,15 @@ class FirebaseService {
 
       final Map<String, int> lessonAttempts = {};
       final Map<String, int> lessonPasses = {};
+      final Map<String, Set<String>> lessonPassedUsers = {};
+      final Map<String, Set<String>> lessonAttemptedUsers = {};
       final Map<String, int> taskMistakesCount = {};
       final Map<String, String> taskToLesson = {};
 
       for (var userDoc in learnerDocs) {
         final userData = userDoc.data();
         totalXP += (userData['xp'] as num?)?.toInt() ?? 0;
+        final userId = userDoc.id;
 
         final progressSnap = await userDoc.reference.collection('progress').get();
         for (var progDoc in progressSnap.docs) {
@@ -2587,6 +2590,9 @@ class FirebaseService {
           lessonAttempts[lessonId] = (lessonAttempts[lessonId] ?? 0) + 1;
           if (completed) {
             lessonPasses[lessonId] = (lessonPasses[lessonId] ?? 0) + 1;
+            lessonPassedUsers.putIfAbsent(lessonId, () => {}).add(userId);
+          } else {
+            lessonAttemptedUsers.putIfAbsent(lessonId, () => {}).add(userId);
           }
 
           final performance = data['performance'] as Map<String, dynamic>? ?? {};
@@ -2610,6 +2616,8 @@ class FirebaseService {
             'name': lessonNames[lessonId] ?? 'Lesson',
             'pass': passRate,
             'fail': 100 - passRate,
+            'passedUserIds': lessonPassedUsers[lessonId]?.toList() ?? [],
+            'attemptedUserIds': lessonAttemptedUsers[lessonId]?.toList() ?? [],
           });
         }
       });
@@ -3512,34 +3520,41 @@ class FirebaseService {
   Future<void> purchaseArtifact(
     String userId,
     String artifactId,
-    int cost,
-  ) async {
+    int cost, {
+    String? artifactTitle,
+  }) async {
     return _db.runTransaction((transaction) async {
       final userRef = _db.collection('users').doc(userId);
       final userDoc = await transaction.get(userRef);
-      final crystals = userDoc.data()?['mistCrystals'] ?? 0;
 
-      if (crystals < cost) {
-        throw Exception("Not enough Mist Crystals!");
+      if (!userDoc.exists) {
+        throw Exception("User profile not found in database.");
       }
 
-      final artifactRef = _db
-          .collection('users')
-          .doc(userId)
-          .collection('artifacts')
-          .doc(artifactId);
+      final crystals = (userDoc.data()?['mistCrystals'] as num?)?.toInt() ?? 0;
+      if (crystals < cost) {
+        throw Exception("Not enough Mist Crystals! You need $cost crystals.");
+      }
 
-      // Fetch global artifact for details
-      final artifactGlobalDoc = await transaction.get(_db.collection('artifacts').doc(artifactId));
-      final artifactName = artifactGlobalDoc.data()?['name'] ?? artifactId;
+      final artifactRef = userRef.collection('artifacts').doc(artifactId);
+
+      // Perform all reads first BEFORE any writes
+      final globalDocRef = _db.collection('artifacts').doc(artifactId);
+      final artifactGlobalDoc = await transaction.get(globalDocRef);
+      String? globalName;
+      if (artifactGlobalDoc.exists && artifactGlobalDoc.data() != null) {
+        globalName = artifactGlobalDoc.data()!['name'] as String?;
+      }
+      final artifactName = artifactTitle ?? globalName ?? artifactId;
 
       transaction.update(userRef, {
         'mistCrystals': FieldValue.increment(-cost),
       });
+
       transaction.set(artifactRef, {
         'earnedAt': FieldValue.serverTimestamp(),
         'isEarned': true,
-        'currentProgress': 1, // Set to 1 if it was a discrete item, or target value
+        'currentProgress': 1,
       }, SetOptions(merge: true));
 
       // Community Feed: Artifact Purchased
@@ -3549,7 +3564,7 @@ class FirebaseService {
         'userName': userDoc.data()?['username'] ?? 'A tribe member',
         'userPhotoUrl': userDoc.data()?['photoURL'],
         'type': 'achievement',
-        'message': 'acquired the "$artifactName" from the Mist Store!',
+        'message': 'acquired "$artifactName" from the Ancestral Vault!',
         'emoji': '✨',
         'likeCount': 0,
         'commentCount': 0,

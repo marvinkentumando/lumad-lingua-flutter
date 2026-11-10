@@ -16,6 +16,8 @@ import '../services/firebase_service.dart';
 import '../config/role_nav_config.dart';
 import '../services/cultural_theme_service.dart';
 import '../services/haptic_service.dart';
+import '../services/audio_service.dart';
+import '../providers/user_preferences_provider.dart';
 import '../widgets/profile_avatar.dart';
 import '../utils/app_localization.dart';
 
@@ -61,6 +63,24 @@ class MainLayout extends ConsumerWidget {
 
     final userAsync = ref.watch(authStateProvider);
     final culturalTheme = ref.watch(culturalThemeProvider);
+    final prefs = ref.watch(userPreferencesProvider);
+    final audioService = ref.read(audioServiceProvider);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final isAudioComparisonScreen =
+          location == '/audio-comparison' || location == '/educator/audio-comparison';
+
+      if (currentRole == UserRole.learner && prefs.backgroundMusicEnabled) {
+        if (isAudioComparisonScreen) {
+          audioService.pauseAmbientMusic();
+        } else {
+          audioService.ensureAmbientMusicPlaying();
+        }
+      } else {
+        audioService.pauseAmbientMusic();
+      }
+    });
+
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -216,7 +236,7 @@ class MainLayout extends ConsumerWidget {
               children: [
                 if (role == UserRole.learner) ...[
                   _buildStreakStat(context, ref),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                 ],
                 GestureDetector(
                   onTap: () {

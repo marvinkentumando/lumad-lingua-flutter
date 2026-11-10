@@ -32,20 +32,56 @@ class AudioService {
     }
   }
 
+  bool _isBgPlaying = false;
+  bool get isBgPlaying => _isBgPlaying;
+
   Future<void> playAmbientMusic(String theme) async {
+    await ensureAmbientMusicPlaying();
+  }
+
+  Future<void> ensureAmbientMusicPlaying([String assetPath = 'audio/forest_bg.MP3']) async {
     try {
-      // Mapping to actual file: forest_bg.MP3
-      String assetPath = 'audio/forest_bg.MP3';
-      
-      await _bgPlayer.stop();
-      await _bgPlayer.play(AssetSource(assetPath), volume: 0.4);
+      if (_isBgPlaying && _bgPlayer.state == PlayerState.playing) return;
+      _isBgPlaying = true;
+      if (_bgPlayer.state == PlayerState.paused) {
+        await _bgPlayer.resume();
+      } else {
+        await _bgPlayer.play(AssetSource(assetPath), volume: 0.3);
+      }
     } catch (e) {
       debugPrint("Error playing ambient music: $e");
     }
   }
 
+  Future<void> pauseAmbientMusic() async {
+    try {
+      _isBgPlaying = false;
+      await _bgPlayer.pause();
+    } catch (e) {
+      debugPrint("Error pausing ambient music: $e");
+    }
+  }
+
+  Future<void> resumeAmbientMusic() async {
+    try {
+      if (_bgPlayer.state == PlayerState.paused) {
+        _isBgPlaying = true;
+        await _bgPlayer.resume();
+      } else {
+        await ensureAmbientMusicPlaying();
+      }
+    } catch (e) {
+      debugPrint("Error resuming ambient music: $e");
+    }
+  }
+
   Future<void> stopAmbientMusic() async {
-    await _bgPlayer.stop();
+    try {
+      _isBgPlaying = false;
+      await _bgPlayer.stop();
+    } catch (e) {
+      debugPrint("Error stopping ambient music: $e");
+    }
   }
 
   Future<void> playSFX(String type) async {

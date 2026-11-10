@@ -74,107 +74,112 @@ class _EducatorStudentsScreenState
         return Scaffold(
           backgroundColor: Theme.of(context).colorScheme.surface,
           body: SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.translate('student_roster'),
-                        style: AppTypography.displayBold.copyWith(
-                          color: AppColors.gold500,
-                          fontSize: 32,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Text(
-                            '${allStudents.length} learners',
-                            style: AppTypography.body.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                            ),
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.translate('student_roster'),
+                          style: AppTypography.displayBold.copyWith(
+                            color: AppColors.gold500,
+                            fontSize: 32,
                           ),
-                          if (strugglingCount > 0) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              '${allStudents.length} learners',
+                              style: AppTypography.body.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                               ),
-                              decoration: BoxDecoration(
-                                color: AppColors.semanticRed.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                '$strugglingCount STRUGGLING',
-                                style: AppTypography.label.copyWith(
-                                  color: AppColors.semanticRed,
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.w900,
+                            ),
+                            if (strugglingCount > 0) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.semanticRed.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '$strugglingCount STRUGGLING',
+                                  style: AppTypography.label.copyWith(
+                                    color: AppColors.semanticRed,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w900,
+                                  ),
                                 ),
                               ),
-                            ),
+                            ],
                           ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                // Search bar
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: BrandSearchBar(
-                    controller: _searchController,
-                    hintText: 'Search students...',
-                    onChanged: (val) => setState(() => _searchQuery = val),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Filters + sort row
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      _buildAcademicYearDropdown(),
-                      const SizedBox(width: 8),
-                      _buildSortDropdown(),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // Result count
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Text(
-                    '${filteredStudents.length} result${filteredStudents.length == 1 ? '' : 's'}',
-                    style: AppTypography.label.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                      fontSize: 10,
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: filteredStudents.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: filteredStudents.length + 1, // +1 for bottom spacing
-                          itemBuilder: (context, index) {
-                            if (index == filteredStudents.length) {
-                              return const SizedBox(height: 100);
-                            }
-                            return _buildStudentCard(filteredStudents[index]);
-                          },
-                        ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                    child: BrandSearchBar(
+                      controller: _searchController,
+                      hintText: 'Search students...',
+                      onChanged: (val) => setState(() => _searchQuery = val),
+                    ),
+                  ),
                 ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        _buildAcademicYearDropdown(),
+                        const SizedBox(width: 8),
+                        _buildSortDropdown(),
+                      ],
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
+                    child: Text(
+                      '${filteredStudents.length} result${filteredStudents.length == 1 ? '' : 's'}',
+                      style: AppTypography.label.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                ),
+                filteredStudents.isEmpty
+                    ? SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: _buildEmptyState(),
+                      )
+                    : SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              if (index == filteredStudents.length) {
+                                return const SizedBox(height: 100);
+                              }
+                              return _buildStudentCard(filteredStudents[index]);
+                            },
+                            childCount: filteredStudents.length + 1,
+                          ),
+                        ),
+                      ),
               ],
             ),
           ),

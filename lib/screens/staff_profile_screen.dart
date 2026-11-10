@@ -107,16 +107,15 @@ class StaffProfileScreen extends ConsumerWidget {
   }
 
   String _getRoleBadge(UserRole role, Map<String, dynamic>? profile, AppLocalization l10n) {
-    final location = profile?['location'] ?? l10n.translate('philippines');
     switch (role) {
       case UserRole.admin:
-        return '${l10n.translate('system_overseer')}  \u2022  $location';
+        return l10n.translate('system_overseer');
       case UserRole.staff:
-        return '${l10n.translate('researcher_staff')}  \u2022  $location';
+        return l10n.translate('researcher_staff');
       case UserRole.educator:
-        return '${l10n.translate('wisdom_guide')}  \u2022  $location';
+        return l10n.translate('wisdom_guide');
       case UserRole.learner:
-        return '${l10n.translate('elder_pathfinder')}  \u2022  $location';
+        return l10n.translate('elder_pathfinder');
     }
   }
 
@@ -364,13 +363,20 @@ class StaffProfileScreen extends ConsumerWidget {
           onTap: () => context.push('/settings'),
         ),
         const SizedBox(height: 12),
-        if (role == UserRole.admin) ...[
+        if (role == UserRole.admin || role == UserRole.educator) ...[
           _buildManagementTile(
             context,
-            Icons.supervised_user_circle_rounded,
-            l10n.translate('simulation_mode'),
-            l10n.translate('test_content_desc'),
-            onTap: () => ref.read(isSimulatingProvider.notifier).state = true,
+            ref.watch(isSimulatingProvider)
+                ? Icons.admin_panel_settings_rounded
+                : Icons.supervised_user_circle_rounded,
+            ref.watch(isSimulatingProvider)
+                ? l10n.translate('exit_simulation')
+                : l10n.translate('simulation_mode'),
+            ref.watch(isSimulatingProvider)
+                ? l10n.translate('admin_overview')
+                : l10n.translate('test_content_desc'),
+            onTap: () => ref.read(isSimulatingProvider.notifier).state =
+                !ref.read(isSimulatingProvider),
           ),
           const SizedBox(height: 12),
         ],

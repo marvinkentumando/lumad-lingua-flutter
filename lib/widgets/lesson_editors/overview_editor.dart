@@ -26,7 +26,11 @@ class OverviewEditor extends StatelessWidget {
         const SizedBox(height: 16),
         EditorUtils.buildDataTextField(
           label: 'Overview Title',
-          initialValue: step.title,
+          initialValue: (step.data['title'] as String?)?.isNotEmpty == true && step.data['title'] != 'overview'
+              ? step.data['title']!
+              : (step.title.isNotEmpty && step.title != 'overview'
+                  ? step.title
+                  : 'Lesson Overview'),
           maxLength: 80,
           onChanged: (val) {
             step.title = val;

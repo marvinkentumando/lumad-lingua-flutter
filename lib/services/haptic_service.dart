@@ -1,7 +1,19 @@
 import 'package:flutter/services.dart';
 import 'package:vibration/vibration.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class HapticService {
+  static final AudioPlayer _sfxPlayer = AudioPlayer();
+  static String? currentRole; // 'admin', 'educator', 'learner', 'staff'
+
+  static void _playClick() {
+    if (currentRole == 'admin' || currentRole == 'educator') {
+      return;
+    }
+    try {
+      _sfxPlayer.play(AssetSource('audio/click.MP3'));
+    } catch (_) {}
+  }
   static Future<void> success() async {
     try {
       if (await Vibration.hasVibrator() == true) {
@@ -77,18 +89,21 @@ class HapticService {
   }
 
   static Future<void> light() async {
+    _playClick();
     try {
       await HapticFeedback.lightImpact();
     } catch (_) {}
   }
 
   static Future<void> selection() async {
+    _playClick();
     try {
       await HapticFeedback.selectionClick();
     } catch (_) {}
   }
 
   static Future<void> toggle() async {
+    _playClick();
     try {
       if (await Vibration.hasVibrator() == true) {
         await Vibration.vibrate(duration: 20, amplitude: 100);
@@ -151,6 +166,7 @@ class HapticService {
 
   /// Button press feedback — subtle tactile acknowledgment for primary CTAs.
   static Future<void> buttonPress() async {
+    _playClick();
     try {
       if (await Vibration.hasVibrator() == true) {
         await Vibration.vibrate(duration: 25, amplitude: 80);
@@ -202,6 +218,7 @@ class HapticService {
 
   /// Tab/navigation switch — very subtle click.
   static Future<void> navigation() async {
+    _playClick();
     try {
       if (await Vibration.hasVibrator() == true) {
         await Vibration.vibrate(duration: 15, amplitude: 40);

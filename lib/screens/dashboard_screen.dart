@@ -68,6 +68,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(userProfileProvider);
+    final profile = profileAsync.value;
+    final educatorId = profile?['educatorId'] as String?;
+    final bool isPartOfVillage = educatorId != null && educatorId.isNotEmpty;
     final student = ref.watch(studentProvider);
     final questsAsync = ref.watch(dailyQuestsProvider);
     final currentRole = ref.watch(roleProvider);
@@ -177,10 +180,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             _buildMansakaHistoryCard(context, l10n),
                             const SizedBox(height: 24),
                           ],
-                          _buildLeaderboardHeader(context, l10n),
-                          const SizedBox(height: 16),
-                          _buildClimbersList(context, ref, l10n),
-                          const SizedBox(height: 40),
+                          if (!isPartOfVillage) ...[
+                            _buildLeaderboardHeader(context, l10n),
+                            const SizedBox(height: 16),
+                            _buildClimbersList(context, ref, l10n),
+                            const SizedBox(height: 40),
+                          ],
                         ],
                       ),
                     ),

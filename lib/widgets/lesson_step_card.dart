@@ -15,6 +15,7 @@ class LessonStepCard extends StatelessWidget {
   final String? lessonId;
   final bool isLast;
   final bool isCached;
+  final bool isVillageLesson;
 
   const LessonStepCard({
     super.key,
@@ -26,6 +27,7 @@ class LessonStepCard extends StatelessWidget {
     this.lessonId,
     this.isLast = false,
     this.isCached = false,
+    this.isVillageLesson = false,
   });
 
   @override
@@ -105,6 +107,36 @@ class LessonStepCard extends StatelessWidget {
                             ),
                           ),
                         ),
+                        if (isVillageLesson)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 6),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.gold500.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.holiday_village_rounded,
+                                    color: AppColors.gold500,
+                                    size: 11,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    'Village',
+                                    style: AppTypography.label.copyWith(
+                                      color: AppColors.gold500,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         if (isCached)
                           const Padding(
                             padding: EdgeInsets.only(left: 8),

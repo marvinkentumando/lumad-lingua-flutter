@@ -11,7 +11,11 @@ class OverviewPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = step.title.isNotEmpty ? step.title : 'Lesson Overview';
+    final title = (step.data['title'] as String?)?.isNotEmpty == true && step.data['title'] != 'overview'
+        ? step.data['title']!
+        : (step.title.isNotEmpty && step.title != 'overview'
+            ? step.title
+            : 'Lesson Overview');
     final content = (step.data['content'] ?? step.data['overviewText'] ?? '').toString();
     final culturalNotes = (step.data['culturalNotes'] ?? '').toString();
     final imageUrl = step.data['imageUrl'] as String?;

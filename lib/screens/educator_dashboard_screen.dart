@@ -58,7 +58,6 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
         ? ref.watch(userNotificationsStreamProvider(userAuth.uid))
         : const AsyncValue<List<Map<String, dynamic>>>.data([]);
     final educatorStudentsAsync = ref.watch(educatorStudentsProvider);
-    final totalWordsAsync = ref.watch(totalWordsCountProvider);
     final communityActivitiesAsync = ref.watch(communityFeedProvider);
     final pendingSubmissionsAsync = ref.watch(
       pendingDictionaryStreamProvider(const ValidatorQuery('all', 10)),
@@ -72,7 +71,6 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
             onRefresh: () async {
               ref.invalidate(allLessonsStreamProvider);
               ref.invalidate(educatorStudentsProvider);
-              ref.invalidate(totalWordsCountProvider);
               ref.invalidate(communityFeedProvider);
               await Future.delayed(const Duration(seconds: 1));
             },
@@ -94,8 +92,6 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
                   _buildAudioMetricsShortcutCard(l10n),
                   const SizedBox(height: 24),
                   _buildMiniQuizManagementSection(userAuth?.uid ?? '', l10n),
-                  const SizedBox(height: 24),
-                  _buildCulturalMilestone(totalWordsAsync, l10n),
                   const SizedBox(height: 24),
                   _buildRecentActivity(
                     educatorStudentsAsync,
@@ -359,58 +355,6 @@ class _EducatorDashboardScreenState extends ConsumerState<EducatorDashboardScree
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildCulturalMilestone(
-    AsyncValue<int> totalWordsAsync,
-    AppLocalization l10n,
-  ) {
-    final wordsCount = totalWordsAsync.value ?? 0;
-    final target = ((wordsCount / 100).floor() + 1) * 100;
-    final progress = (wordsCount % 100) / 100.0;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle(l10n.translate('village_milestone')),
-        const SizedBox(height: 12),
-        BrandCard(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    l10n.translate('dictionary_expansion'),
-                    style: AppTypography.h3.copyWith(color: Theme.of(context).colorScheme.onSurface),
-                  ),
-                  Text(
-                    '${(progress * 100).toInt()}%',
-                    style: AppTypography.h3.copyWith(color: AppColors.gold500),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  backgroundColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
-                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold500),
-                  minHeight: 8,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n.translate('words_until_next_milestone', params: {'count': '${target - wordsCount}'}),
-                style: AppTypography.body.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 11),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 

@@ -6,6 +6,8 @@ import '../models/lesson.dart';
 import '../models/lesson_task.dart';
 import '../models/dictionary_entry.dart';
 import '../models/artifact.dart';
+import '../models/srs_models.dart';
+import '../models/daily_challenge.dart';
 
 class OfflineService {
   static const String lessonsBoxName = 'offline_lessons';
@@ -16,6 +18,8 @@ class OfflineService {
   static const String progressBoxName = 'offline_progress';
   static const String studentProfileBoxName = 'student_profile';
   static const String pendingSyncBoxName = 'pending_sync_queue';
+  static const String srsProgressBoxName = 'offline_srs_progress';
+  static const String dailyChallengeBoxName = 'offline_daily_challenges';
 
   bool _initialized = false;
 
@@ -45,6 +49,8 @@ class OfflineService {
       await Hive.openBox<Map>(progressBoxName);
       await Hive.openBox<Map>(studentProfileBoxName);
       await Hive.openBox<Map>(pendingSyncBoxName);
+      await Hive.openBox<Map>(srsProgressBoxName);
+      await Hive.openBox<Map>(dailyChallengeBoxName);
 
       _initialized = true;
     } catch (e) {
@@ -296,6 +302,61 @@ class OfflineService {
     await profileBox.clear();
   }
 
+  // SRS Progress Local Caching
+  Future<void> saveSRSProgressList(List<SRSProgress> progressList) async {
+    final box = await _getBox<Map>(srsProgressBoxName);
+    final Map<String, Map<String, dynamic>> mapData = {
+      for (var p in progressList)
+        p.wordId: {
+          'wordId': p.wordId,
+          'level': p.level,
+          'nextReview': p.nextReview.toIso8601String(),
+          'lastReview': p.lastReview?.toIso8601String(),
+          'lastFailure': p.lastFailure?.toIso8601String(),
+          'timesReviewed': p.timesReviewed,
+          'consecutiveCorrect': p.consecutiveCorrect,
+          'easeFactor': p.easeFactor,
+        }
+    };
+    await box.putAll(mapData);
+  }
+
+  Future<List<SRSProgress>> getCachedSRSProgress() async {
+    final box = await _getBox<Map>(srsProgressBoxName);
+    return box.values.map((item) {
+      final data = Map<String, dynamic>.from(item);
+      return SRSProgress(
+        wordId: data['wordId'] ?? '',
+        level: data['level'] ?? 0,
+        nextReview: data['nextReview'] != null
+            ? DateTime.parse(data['nextReview'])
+            : DateTime.now(),
+        lastReview: data['lastReview'] != null
+            ? DateTime.parse(data['lastReview'])
+            : null,
+        lastFailure: data['lastFailure'] != null
+            ? DateTime.parse(data['lastFailure'])
+            : null,
+        timesReviewed: data['timesReviewed'] ?? 0,
+        consecutiveCorrect: data['consecutiveCorrect'] ?? 0,
+        easeFactor: (data['easeFactor'] ?? 2.5).toDouble(),
+      );
+    }).toList();
+  }
+
+  // Daily Challenge Local Caching
+  Future<void> saveDailyChallenge(DailyChallenge challenge) async {
+    final box = await _getBox<Map>(dailyChallengeBoxName);
+    await box.put(challenge.id, challenge.toFirestore());
+  }
+
+  Future<DailyChallenge?> getCachedDailyChallenge(String id) async {
+    final box = await _getBox<Map>(dailyChallengeBoxName);
+    final data = box.get(id);
+    if (data == null) return null;
+    return DailyChallenge.fromFirestore(Map<String, dynamic>.from(data), id);
+  }
+
   Future<int> getLessonCount() async {
     final box = await _getBox<Lesson>(lessonsBoxName);
     return box.length;
@@ -323,4 +384,8 @@ final offlineArtifactCountProvider = FutureProvider<int>((ref) {
 
 final cachedArtifactsProvider = FutureProvider<List<Artifact>>((ref) {
   return ref.watch(offlineServiceProvider).getCachedArtifacts();
+});
+
+final cachedSRSProgressProvider = FutureProvider<List<SRSProgress>>((ref) {
+  return ref.watch(offlineServiceProvider).getCachedSRSProgress();
 });
