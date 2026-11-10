@@ -610,7 +610,11 @@ class _DailyChallengeSessionScreenState
         );
       case TaskType.overview:
         return OverviewView(
-          title: task.questionText,
+          title: task.questionText.isNotEmpty && task.questionText != 'overview'
+              ? task.questionText
+              : (task.grammarTitle?.isNotEmpty == true && task.grammarTitle != 'overview'
+                  ? task.grammarTitle!
+                  : 'Lesson Overview'),
           content: task.hintMetadata.isNotEmpty ? task.hintMetadata : task.questionText,
           culturalNotes: task.grammarDescription,
           imageUrl: task.imageUrl,

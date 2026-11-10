@@ -363,13 +363,20 @@ class StaffProfileScreen extends ConsumerWidget {
           onTap: () => context.push('/settings'),
         ),
         const SizedBox(height: 12),
-        if (role == UserRole.admin) ...[
+        if (role == UserRole.admin || role == UserRole.educator) ...[
           _buildManagementTile(
             context,
-            Icons.supervised_user_circle_rounded,
-            l10n.translate('simulation_mode'),
-            l10n.translate('test_content_desc'),
-            onTap: () => ref.read(isSimulatingProvider.notifier).state = true,
+            ref.watch(isSimulatingProvider)
+                ? Icons.admin_panel_settings_rounded
+                : Icons.supervised_user_circle_rounded,
+            ref.watch(isSimulatingProvider)
+                ? l10n.translate('exit_simulation')
+                : l10n.translate('simulation_mode'),
+            ref.watch(isSimulatingProvider)
+                ? l10n.translate('admin_overview')
+                : l10n.translate('test_content_desc'),
+            onTap: () => ref.read(isSimulatingProvider.notifier).state =
+                !ref.read(isSimulatingProvider),
           ),
           const SizedBox(height: 12),
         ],

@@ -419,7 +419,7 @@ class LearnerProfileScreen extends ConsumerWidget {
 
 
 
-    if (isAdmin) {
+    if (isAdmin || isEducator) {
       items.add(
         _buildManagementTile(
           context,

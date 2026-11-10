@@ -102,6 +102,24 @@ class VillageDashboardScreen extends ConsumerWidget {
                         _buildVillageHeaderBanner(context, educatorProfileAsync, leaderboardAsync, l10n, isDark),
                         const SizedBox(height: 24),
                         _buildAssignedMiniQuizzesSection(context, ref, assignedQuizzesAsync, l10n, isDark),
+                        const SizedBox(height: 24),
+                        Center(
+                          child: TextButton.icon(
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.semanticRed,
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            ),
+                            icon: const Icon(Icons.exit_to_app_rounded, size: 18),
+                            label: Text(
+                              l10n.translate('leave_village'),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            onPressed: () {
+                              HapticService.selection();
+                              _confirmLeaveVillage(context, ref, user.uid, l10n, isDark);
+                            },
+                          ),
+                        ),
                         const SizedBox(height: 32),
                       ],
                     ),
