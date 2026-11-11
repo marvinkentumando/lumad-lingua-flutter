@@ -10,7 +10,7 @@ import audioplayers_darwin
 import cloud_firestore
 import connectivity_plus
 import device_info_plus
-import file_picker_darwin
+import file_picker
 import firebase_auth
 import firebase_core
 import firebase_crashlytics
