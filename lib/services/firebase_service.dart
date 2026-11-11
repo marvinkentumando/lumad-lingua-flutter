@@ -973,11 +973,26 @@ class FirebaseService {
     }
   }
 
+  Future<String?> uploadLearnerAttemptAudio(Uint8List audioBytes, String fileName) async {
+    try {
+      await Supabase.instance.client.storage
+          .from('learner_attempts')
+          .uploadBinary(fileName, audioBytes, fileOptions: const FileOptions(upsert: true));
+      return Supabase.instance.client.storage
+          .from('learner_attempts')
+          .getPublicUrl(fileName);
+    } catch (e) {
+      debugPrint('Error uploading learner attempt audio to bucket: $e');
+      return null;
+    }
+  }
+
   Future<void> saveOrUpdateLearnerAttempt({
     required String learnerId,
     required String phraseId,
     required String phraseTitle,
     required double score,
+    String? audioUrl,
   }) async {
     try {
       final existing = await Supabase.instance.client
@@ -992,11 +1007,18 @@ class FirebaseService {
         final currentCount = (existing['attempt_count'] as num).toInt();
         final newBest = score > currentBest ? score : currentBest;
 
-        await Supabase.instance.client.from('learner_pronunciation_attempts').update({
+        final updateData = <String, dynamic>{
           'best_score': newBest,
           'attempt_count': currentCount + 1,
           'last_attempted_at': DateTime.now().toIso8601String(),
-        }).eq('learner_id', learnerId).eq('phrase_id', phraseId);
+        };
+        if (audioUrl != null) updateData['audio_url'] = audioUrl;
+
+        await Supabase.instance.client
+            .from('learner_pronunciation_attempts')
+            .update(updateData)
+            .eq('learner_id', learnerId)
+            .eq('phrase_id', phraseId);
       } else {
         await Supabase.instance.client.from('learner_pronunciation_attempts').insert({
           'learner_id': learnerId,
@@ -1005,6 +1027,7 @@ class FirebaseService {
           'best_score': score,
           'attempt_count': 1,
           'last_attempted_at': DateTime.now().toIso8601String(),
+          if (audioUrl != null) 'audio_url': audioUrl,
         });
       }
     } catch (e) {

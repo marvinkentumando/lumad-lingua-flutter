@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS public.learner_pronunciation_attempts (
   phrase_title TEXT NOT NULL,
   best_score NUMERIC NOT NULL,
   attempt_count INT NOT NULL DEFAULT 1,
+  audio_url TEXT,
   last_attempted_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

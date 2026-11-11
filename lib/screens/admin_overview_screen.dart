@@ -155,18 +155,7 @@ class _AdminOverviewScreenState extends ConsumerState<AdminOverviewScreen> {
                               AppColors.semanticRed,
                             ),
                           ),
-                      GestureDetector(
-                        onTap: () {
-                          HapticService.selection();
-                          context.push('/admin/dictionary');
-                        },
-                        child: _statCard(
-                          l10n.translate('manage_label'),
-                          l10n.translate('dictionary_label'),
-                          Icons.book_rounded,
-                          AppColors.gold500,
-                        ),
-                      ),
+
 
                       GestureDetector(
                         onTap: () {

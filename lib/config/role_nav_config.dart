@@ -56,7 +56,6 @@ List<NavItem> getNavItemsForRole(UserRole role) {
           '/admin/lessons',
         ),
         const NavItem(Icons.insights_rounded, 'VITALITY', '/sentiment'),
-        const NavItem(Icons.book_rounded, 'WORDS', '/admin/dictionary'),
         profile,
       ];
   }
