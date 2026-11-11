@@ -581,42 +581,7 @@ class _SentimentDashboardScreenState
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
-                      width: 84,
-                      height: 84,
-                      child: CircularProgressIndicator(
-                        value: hasData ? overallIndex / 100 : 0,
-                        strokeWidth: 10,
-                        backgroundColor: Colors.white10,
-                        color: statusColor,
-                        strokeCap: StrokeCap.round,
-                      ),
-                    ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          hasData ? '$overallIndex%' : '--',
-                          style: AppTypography.h3.copyWith(
-                            color: Colors.white,
-                            fontSize: 18,
-                          ),
-                        ),
-                        Text(
-                          'INDEX',
-                          style: AppTypography.label.copyWith(
-                            color: Colors.white24,
-                            fontSize: 8,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+
               ],
             ),
           ],
