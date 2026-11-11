@@ -242,12 +242,12 @@ class _ImportDictionaryModalState extends ConsumerState<ImportDictionaryModal> {
         allowedExtensions: ['csv'],
       );
 
-      if (result == null || result.files.isEmpty) {
+      if (result.isEmpty) {
         setState(() => _isImporting = false);
         return;
       }
 
-      final file = result.files.single;
+      final file = result.single;
       List<List<dynamic>> fields;
 
       final bytes = await file.xFile.readAsBytes();

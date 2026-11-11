@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS public.duel_matches (
   round_started_at TIMESTAMPTZ,
   finished_at TIMESTAMPTZ,
   last_seen JSONB NOT NULL DEFAULT '{}'::jsonb,
+  player1_rematch BOOLEAN NOT NULL DEFAULT false,
+  player2_rematch BOOLEAN NOT NULL DEFAULT false,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -67,3 +69,21 @@ CREATE POLICY "Allow public full access on duel_history" ON public.duel_history
 
 -- Enable Supabase Realtime for duel_history
 ALTER PUBLICATION supabase_realtime ADD TABLE public.duel_history;
+
+-- 3. Create table for learner pronunciation attempts
+CREATE TABLE IF NOT EXISTS public.learner_pronunciation_attempts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  learner_id TEXT NOT NULL,
+  phrase_id TEXT NOT NULL,
+  phrase_title TEXT NOT NULL,
+  best_score NUMERIC NOT NULL,
+  attempt_count INT NOT NULL DEFAULT 1,
+  last_attempted_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Enable RLS for learner_pronunciation_attempts
+ALTER TABLE public.learner_pronunciation_attempts ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public full access on learner_pronunciation_attempts" ON public.learner_pronunciation_attempts
+  FOR ALL USING (true) WITH CHECK (true);
+

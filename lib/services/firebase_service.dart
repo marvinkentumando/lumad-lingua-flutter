@@ -3669,18 +3669,30 @@ class FirebaseService {
     String artifactId,
     int cost, {
     String? artifactTitle,
+    int? clientCrystals,
   }) async {
     return _db.runTransaction((transaction) async {
       final userRef = _db.collection('users').doc(userId);
       final userDoc = await transaction.get(userRef);
 
-      if (!userDoc.exists) {
-        throw Exception("User profile not found in database.");
-      }
+      final data = userDoc.data() ?? {};
+      final serverCrystals = (data['mistCrystals'] as num?)?.toInt() ?? 0;
+      final crystals = clientCrystals != null && clientCrystals > serverCrystals ? clientCrystals : serverCrystals;
 
-      final crystals = (userDoc.data()?['mistCrystals'] as num?)?.toInt() ?? 0;
       if (crystals < cost) {
         throw Exception("Not enough Crystals! You need $cost crystals.");
+      }
+
+      if (!userDoc.exists) {
+        transaction.set(userRef, {
+          'mistCrystals': crystals - cost,
+          'xp': data['xp'] ?? 0,
+          'username': data['username'] ?? 'A tribe member',
+        }, SetOptions(merge: true));
+      } else {
+        transaction.update(userRef, {
+          'mistCrystals': crystals - cost,
+        });
       }
 
       final artifactRef = userRef.collection('artifacts').doc(artifactId);
@@ -3694,10 +3706,6 @@ class FirebaseService {
       }
       final artifactName = artifactTitle ?? globalName ?? artifactId;
 
-      transaction.update(userRef, {
-        'mistCrystals': FieldValue.increment(-cost),
-      });
-
       transaction.set(artifactRef, {
         'earnedAt': FieldValue.serverTimestamp(),
         'isEarned': true,
@@ -3708,8 +3716,8 @@ class FirebaseService {
       final feedRef = _db.collection('community_feed').doc();
       transaction.set(feedRef, {
         'userId': userId,
-        'userName': userDoc.data()?['username'] ?? 'A tribe member',
-        'userPhotoUrl': userDoc.data()?['photoURL'],
+        'userName': data['username'] ?? 'A tribe member',
+        'userPhotoUrl': data['photoURL'],
         'type': 'achievement',
         'message': 'acquired "$artifactName" from the Ancestral Vault!',
         'emoji': '✨',

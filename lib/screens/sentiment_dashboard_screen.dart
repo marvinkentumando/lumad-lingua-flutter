@@ -121,8 +121,8 @@ class _SentimentDashboardScreenState
                                     type: FileType.custom,
                                     allowedExtensions: ['json'],
                                   );
-                                  if (result != null && result.files.isNotEmpty) {
-                                    final singleFile = result.files.single;
+                                  if (result.isNotEmpty) {
+                                    final singleFile = result.single;
                                     final bytes = await singleFile.xFile.readAsBytes();
                                     if (bytes.isNotEmpty) {
                                       final str = utf8.decode(bytes);

@@ -590,6 +590,7 @@ class _AncestralVaultShopScreenState
                                               artifact.id,
                                               artifact.crystalCost,
                                               artifactTitle: artifact.title,
+                                              clientCrystals: ref.read(studentProvider).mistCrystals,
                                             );
                                         ref
                                             .read(studentProvider.notifier)

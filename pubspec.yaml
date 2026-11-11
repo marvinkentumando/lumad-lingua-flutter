@@ -42,7 +42,7 @@ dependencies:
   firebase_auth: ^6.4.0
   firebase_crashlytics: ^5.0.0
   google_sign_in: ^6.2.2
-  share_plus: ^13.1.0
+  share_plus: ^13.3.1
   cross_file: ^0.3.4+2
   speech_to_text: ^7.3.0
   flutter_dotenv: ^6.0.1
@@ -53,7 +53,7 @@ dependencies:
   flutter_animate: ^4.5.2
   shared_preferences: ^2.5.5
   firebase_storage: ^13.3.0
-  file_picker: ^12.0.0-beta.1
+  file_picker: ^13.3.3
   geocoding: ^4.0.0
   geolocator: ^14.0.1
   intl: ^0.20.2
