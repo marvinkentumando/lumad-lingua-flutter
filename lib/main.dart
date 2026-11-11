@@ -78,8 +78,8 @@ Future<void> _runApp() async {
 
   try {
     await Supabase.initialize(
-      url: dotenv.env['SUPABASE_URL'] ?? '',
-      anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
+      url: (dotenv.env['SUPABASE_URL'] ?? '').replaceAll('"', '').trim(),
+      anonKey: (dotenv.env['SUPABASE_ANON_KEY'] ?? '').replaceAll('"', '').trim(),
     );
   } catch (e) {
     debugPrint("Supabase Initialization Error: $e");

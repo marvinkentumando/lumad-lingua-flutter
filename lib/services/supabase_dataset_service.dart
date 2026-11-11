@@ -69,16 +69,26 @@ class SupabaseDatasetService {
         }
 
         for (var obj in rootObjects) {
-          final name = obj.name;
-          if (name.isEmpty) continue;
+          final rawName = obj.name;
+          if (rawName.isEmpty) continue;
+          final cleanName = rawName.endsWith('/') ? rawName.substring(0, rawName.length - 1) : rawName;
+          if (cleanName.isEmpty) continue;
 
-          final isFileAtRoot = name.toLowerCase().endsWith('.wav') || (obj.id != null && obj.metadata != null);
+          // A file directly at root level of dataset will have a file extension (.wav, .json, .txt, etc.)
+          final isFileAtRoot = cleanName.contains('.') &&
+              (cleanName.toLowerCase().endsWith('.wav') ||
+               cleanName.toLowerCase().endsWith('.json') ||
+               cleanName.toLowerCase().endsWith('.txt') ||
+               cleanName.toLowerCase().endsWith('.png') ||
+               cleanName.toLowerCase().endsWith('.jpg') ||
+               cleanName.toLowerCase().endsWith('.jpeg') ||
+               cleanName.toLowerCase().endsWith('.csv'));
           if (isFileAtRoot) {
-            debugPrint('SupabaseDatasetService: Ignoring root-level file in $root: $name');
+            debugPrint('SupabaseDatasetService: Ignoring root-level file in $root: $cleanName');
             continue;
           }
 
-          final folderPath = '$root/$name';
+          final folderPath = '$root/$cleanName';
           List<FileObject> fileObjects = [];
           int fileOffset = 0;
           while (true) {
@@ -90,13 +100,14 @@ class SupabaseDatasetService {
           }
 
           if (fileObjects.isEmpty) {
-            debugPrint('SupabaseDatasetService: Target folder "$name" is empty.');
+            debugPrint('SupabaseDatasetService: Target folder "$cleanName" is empty.');
             continue;
           }
 
           Map<String, List<ReferenceAudioTake>> runTakesMap = {};
-          final runTagged = RegExp(r'^(.+)_([12])__(RUN-\d{4}-\d{4})\.wav$', caseSensitive: false);
+          final runTagged = RegExp(r'^(.+)_([12])__(RUN-[A-Za-z0-9_-]+)\.wav$', caseSensitive: false);
           final simpleTake = RegExp(r'^(.+)_([12])\.wav$', caseSensitive: false);
+          final fallbackWav = RegExp(r'^(.+)\.wav$', caseSensitive: false);
 
           for (var file in fileObjects) {
             final fileName = file.name;
@@ -105,7 +116,7 @@ class SupabaseDatasetService {
             if (nameLower.contains('raw')) continue;
 
             String filePhrase;
-            int takeNumber;
+            int takeNumber = 1;
             String runId;
 
             final taggedMatch = runTagged.firstMatch(fileName);
@@ -115,18 +126,30 @@ class SupabaseDatasetService {
               runId = taggedMatch.group(3)!;
             } else {
               final simpleMatch = simpleTake.firstMatch(fileName);
-              if (simpleMatch == null) {
-                debugPrint('SupabaseDatasetService: Rejecting malformed or unsupported filename: $fileName');
-                continue;
+              if (simpleMatch != null) {
+                filePhrase = simpleMatch.group(1)!;
+                takeNumber = int.parse(simpleMatch.group(2)!);
+                runId = root.toUpperCase().replaceAll('-', '_');
+              } else {
+                final fallbackMatch = fallbackWav.firstMatch(fileName);
+                if (fallbackMatch == null) {
+                  debugPrint('SupabaseDatasetService: Rejecting malformed or unsupported filename: $fileName');
+                  continue;
+                }
+                var rawBase = fallbackMatch.group(1)!;
+                if (RegExp(r'_([12])$').hasMatch(rawBase)) {
+                  takeNumber = int.parse(rawBase.substring(rawBase.length - 1));
+                  filePhrase = rawBase.substring(0, rawBase.length - 2);
+                } else {
+                  filePhrase = rawBase;
+                  takeNumber = 1;
+                }
+                runId = root.toUpperCase().replaceAll('-', '_');
               }
-              filePhrase = simpleMatch.group(1)!;
-              takeNumber = int.parse(simpleMatch.group(2)!);
-              // Stable synthetic run id per source root (e.g. dataset_2).
-              runId = root.toUpperCase().replaceAll('-', '_');
             }
 
-            if (filePhrase != name) {
-              debugPrint('SupabaseDatasetService: Rejecting filename "$fileName" because target phrase "$filePhrase" does not match folder "$name".');
+            if (filePhrase.toLowerCase() != cleanName.toLowerCase()) {
+              debugPrint('SupabaseDatasetService: Rejecting filename "$fileName" because target phrase "$filePhrase" does not match folder "$cleanName".');
               continue;
             }
 
@@ -142,7 +165,7 @@ class SupabaseDatasetService {
           }
 
           if (runTakesMap.isEmpty) {
-            debugPrint('SupabaseDatasetService: Folder "$name" has no valid preprocessed reference WAVs.');
+            debugPrint('SupabaseDatasetService: Folder "$cleanName" has no valid preprocessed reference WAVs.');
             continue;
           }
 
@@ -187,13 +210,13 @@ class SupabaseDatasetService {
               isCompatibleRun = true;
             }
 
-            final title = SupabaseDatasetEntry.formatTitleFromFolder(name);
+            final title = SupabaseDatasetEntry.formatTitleFromFolder(cleanName);
             final isSupplementary = root != 'dataset';
             final subtitle = isSupplementary
                 ? 'Additional reference'
                 : 'Verified';
             entries.add(SupabaseDatasetEntry(
-              folderName: name,
+              folderName: cleanName,
               title: title,
               subtitle: subtitle,
               runId: entryRunId,
@@ -201,6 +224,113 @@ class SupabaseDatasetService {
               takes: takes,
               isAvailable: isCompatibleRun,
               sourceRoot: root,
+            ));
+          }
+        }
+      }
+
+      // Fallback: If no dataset entries found in 'dataset' or 'dataset_2', search bucket root directly
+      if (entries.isEmpty) {
+        debugPrint('SupabaseDatasetService: Checking bucket root as fallback...');
+        List<FileObject> rootObjects = [];
+        int offset = 0;
+        while (true) {
+          final batch = await _storageAdapter.listObjects(path: '', limit: limit, offset: offset);
+          if (batch.isEmpty) break;
+          rootObjects.addAll(batch);
+          if (batch.length < limit) break;
+          offset += limit;
+        }
+
+        for (var obj in rootObjects) {
+          final rawName = obj.name;
+          final cleanName = rawName.endsWith('/') ? rawName.substring(0, rawName.length - 1) : rawName;
+          if (cleanName.isEmpty || cleanName == 'dataset' || cleanName == 'dataset_2' || cleanName == 'images') continue;
+
+          final isFileAtRoot = cleanName.contains('.') &&
+              (cleanName.toLowerCase().endsWith('.wav') ||
+               cleanName.toLowerCase().endsWith('.json') ||
+               cleanName.toLowerCase().endsWith('.txt'));
+          if (isFileAtRoot) continue;
+
+          final folderPath = cleanName;
+          List<FileObject> fileObjects = [];
+          int fileOffset = 0;
+          while (true) {
+            final batch = await _storageAdapter.listObjects(path: folderPath, limit: limit, offset: fileOffset);
+            if (batch.isEmpty) break;
+            fileObjects.addAll(batch);
+            if (batch.length < limit) break;
+            fileOffset += limit;
+          }
+
+          if (fileObjects.isEmpty) continue;
+
+          Map<String, List<ReferenceAudioTake>> runTakesMap = {};
+          final runTagged = RegExp(r'^(.+)_([12])__(RUN-[A-Za-z0-9_-]+)\.wav$', caseSensitive: false);
+          final simpleTake = RegExp(r'^(.+)_([12])\.wav$', caseSensitive: false);
+          final fallbackWav = RegExp(r'^(.+)\.wav$', caseSensitive: false);
+
+          for (var file in fileObjects) {
+            final fileName = file.name;
+            final nameLower = fileName.toLowerCase();
+            if (!nameLower.endsWith('.wav')) continue;
+            if (nameLower.contains('raw')) continue;
+
+            String filePhrase;
+            int takeNumber = 1;
+            String runId = 'ROOT';
+
+            final taggedMatch = runTagged.firstMatch(fileName);
+            if (taggedMatch != null) {
+              filePhrase = taggedMatch.group(1)!;
+              takeNumber = int.parse(taggedMatch.group(2)!);
+              runId = taggedMatch.group(3)!;
+            } else {
+              final simpleMatch = simpleTake.firstMatch(fileName);
+              if (simpleMatch != null) {
+                filePhrase = simpleMatch.group(1)!;
+                takeNumber = int.parse(simpleMatch.group(2)!);
+              } else {
+                final fallbackMatch = fallbackWav.firstMatch(fileName);
+                if (fallbackMatch == null) continue;
+                var rawBase = fallbackMatch.group(1)!;
+                if (RegExp(r'_([12])$').hasMatch(rawBase)) {
+                  takeNumber = int.parse(rawBase.substring(rawBase.length - 1));
+                  filePhrase = rawBase.substring(0, rawBase.length - 2);
+                } else {
+                  filePhrase = rawBase;
+                  takeNumber = 1;
+                }
+              }
+            }
+
+            if (filePhrase.toLowerCase() != cleanName.toLowerCase()) continue;
+
+            final relativePath = '$folderPath/$fileName';
+            final publicUrl = _storageAdapter.getPublicUrl(relativePath);
+            runTakesMap.putIfAbsent(runId, () => []).add(ReferenceAudioTake(
+              takeNumber: takeNumber,
+              fileName: fileName,
+              audioPath: relativePath,
+              audioUrl: publicUrl,
+              runId: runId,
+            ));
+          }
+
+          for (var entryRunId in runTakesMap.keys) {
+            final takes = runTakesMap[entryRunId]!;
+            takes.sort((a, b) => a.takeNumber.compareTo(b.takeNumber));
+            final title = SupabaseDatasetEntry.formatTitleFromFolder(cleanName);
+            entries.add(SupabaseDatasetEntry(
+              folderName: cleanName,
+              title: title,
+              subtitle: 'Verified',
+              runId: entryRunId,
+              isCompatible: true,
+              takes: takes,
+              isAvailable: true,
+              sourceRoot: 'dataset',
             ));
           }
         }
