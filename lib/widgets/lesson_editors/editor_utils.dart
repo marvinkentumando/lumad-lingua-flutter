@@ -368,8 +368,8 @@ class EditorUtils {
         allowedExtensions: allowedExtensions,
       );
 
-      if (result.isNotEmpty) {
-        final platformFile = result.single;
+      if (result != null && result.files.isNotEmpty) {
+        final platformFile = result.files.single;
         final isAudio = path.contains('audio');
         
         if (isAudio && platformFile.path != null && !kIsWeb) {

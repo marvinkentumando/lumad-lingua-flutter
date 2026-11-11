@@ -561,8 +561,8 @@ class StaffProfileScreen extends ConsumerWidget {
       type: FileType.image,
     );
 
-    if (result.isNotEmpty) {
-      final platformFile = result.single;
+    if (result != null && result.files.isNotEmpty) {
+      final platformFile = result.files.single;
       try {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
